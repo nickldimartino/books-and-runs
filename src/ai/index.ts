@@ -1,5 +1,5 @@
 import { attemptMeldContract, discardAndAdvance, drawFromDiscard, drawFromPile, layOffCard } from "../gameEngine";
-import { Difficulty, GameState } from "../types";
+import { Difficulty, GameState, Player } from "../types";
 import { beginnerStrategy } from "./beginner";
 import { easyStrategy } from "./easy";
 import { expertStrategy } from "./expert";
@@ -14,6 +14,19 @@ const STRATEGIES: Record<Difficulty, AIStrategy> = {
   hard: hardStrategy,
   expert: expertStrategy,
 };
+
+/**
+ * Whether an AI player wants to buy the current top discard (taking it plus
+ * a penalty card, out of turn). Reuses the same per-difficulty "is this
+ * discard useful to me" judgment the AI already applies to its own normal
+ * discard-pile draw decision — buying is a strictly worse deal (it costs an
+ * extra penalty card), so declining whenever a normal draw wouldn't want it
+ * either is a reasonable bar.
+ */
+export function aiWantsToBuyDiscard(state: GameState, player: Player): boolean {
+  const strategy = STRATEGIES[player.difficulty ?? "medium"];
+  return strategy.wantsDiscardPileDraw(state, player);
+}
 
 /** Plays one full AI turn: draw, meld if possible, lay off, discard. Mutates state. */
 export function playAITurn(state: GameState): void {

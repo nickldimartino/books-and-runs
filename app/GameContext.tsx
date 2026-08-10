@@ -1,16 +1,18 @@
 "use client";
 
 import {
+  buyDiscard,
   createGame,
   discardAndAdvance,
   drawFromDiscard,
   drawFromPile,
+  eligibleBuyers,
   layOffCard,
   meldChosenGroups,
   PlayerConfig,
   startNextRound,
 } from "@/gameEngine";
-import { playAITurn } from "@/ai/index";
+import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { RoundHistoryEntry } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
@@ -25,6 +27,12 @@ import {
   useState,
 } from "react";
 
+export interface BuyOffer {
+  playerId: string;
+  playerName: string;
+  card: Card;
+}
+
 interface GameContextValue {
   state: GameState | null;
   hasDrawn: boolean;
@@ -34,6 +42,7 @@ interface GameContextValue {
   roundStartScores: Record<string, number>;
   roundHistory: RoundHistoryEntry[];
   lastDrawnCardId: string | null;
+  buyOffer: BuyOffer | null;
   startNewGame: (configs: PlayerConfig[], contracts?: ContractRequirement[]) => void;
   continueGame: () => void;
   revealHand: () => void;
@@ -43,6 +52,7 @@ interface GameContextValue {
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
   reorderHand: (cardIdsInOrder: string[]) => void;
+  respondToBuy: (accept: boolean) => void;
   advanceRound: () => void;
   quitToHome: () => void;
 }
@@ -82,6 +92,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [roundStartScores, setRoundStartScores] = useState<Record<string, number>>({});
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>([]);
   const [lastDrawnCardId, setLastDrawnCardId] = useState<string | null>(null);
+  const [buyOffer, setBuyOffer] = useState<BuyOffer | null>(null);
+  const buyQueueRef = useRef<string[]>([]);
   const recordedRoundsRef = useRef<Set<number>>(new Set());
 
   // Refs mirror the persistence-relevant state synchronously, so commit()
@@ -179,6 +191,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundHistoryRef.current = [];
       setRoundHistory([]);
       setLastDrawnCardId(null);
+      setBuyOffer(null);
+      buyQueueRef.current = [];
       persist();
       if (state.players[state.currentPlayerIndex].isAI) {
         runAiLoop();
@@ -199,6 +213,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setRoundHistory(saved.roundHistory);
     recordedRoundsRef.current = new Set(saved.roundHistory.map((r) => r.round));
     setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
 
     const current = saved.state.players[saved.state.currentPlayerIndex];
     if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
@@ -282,6 +298,55 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [hasDrawn, commit]
   );
 
+  /**
+   * Advances the pending "buy the discard" queue after a discard, in turn
+   * order: AI candidates decide immediately via a quick heuristic and are
+   * skipped over if they pass; the first human candidate reached pauses the
+   * flow (via buyOffer) until they respond. Once the queue empties with no
+   * takers, or someone buys, hands off to the normal next-player turn flow.
+   */
+  const advanceBuyQueue = useCallback(() => {
+    const s = stateRef.current;
+    if (!s) return;
+    while (buyQueueRef.current.length > 0) {
+      const candidateId = buyQueueRef.current.shift()!;
+      const candidate = s.players.find((p) => p.id === candidateId);
+      if (!candidate) continue;
+      if (candidate.isAI) {
+        if (aiWantsToBuyDiscard(s, candidate)) {
+          buyDiscard(s, candidate.id);
+          commit();
+          setBuyOffer(null);
+          runAiLoop();
+          return;
+        }
+        continue;
+      }
+      const topCard = s.discardPile[s.discardPile.length - 1];
+      setBuyOffer({ playerId: candidate.id, playerName: candidate.name, card: topCard });
+      return;
+    }
+    setBuyOffer(null);
+    runAiLoop();
+  }, [commit, runAiLoop]);
+
+  const respondToBuy = useCallback(
+    (accept: boolean) => {
+      const s = stateRef.current;
+      if (!s || !buyOffer) return;
+      if (accept) {
+        buyDiscard(s, buyOffer.playerId);
+        commit();
+        setBuyOffer(null);
+        runAiLoop();
+        return;
+      }
+      setBuyOffer(null);
+      advanceBuyQueue();
+    },
+    [buyOffer, commit, runAiLoop, advanceBuyQueue]
+  );
+
   const discard = useCallback(
     (cardId: string) => {
       const s = stateRef.current;
@@ -292,10 +357,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastDrawnCardId(null);
       if (!s.roundOver && !s.gameOver) {
         setAwaitingReveal(false);
-        runAiLoop();
+        const buyers = eligibleBuyers(s);
+        if (buyers.length > 0) {
+          buyQueueRef.current = buyers.map((p) => p.id);
+          advanceBuyQueue();
+        } else {
+          runAiLoop();
+        }
       }
     },
-    [hasDrawn, commit, runAiLoop, setHasDrawnBoth]
+    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue]
   );
 
   const advanceRound = useCallback(() => {
@@ -307,6 +378,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setHasDrawnBoth(false);
     setAwaitingReveal(false);
     setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
     setRoundStartScoresBoth(Object.fromEntries(next.players.map((p) => [p.id, p.cumulativeScore])));
     persist();
     if (next.players[next.currentPlayerIndex].isAI) {
@@ -322,6 +395,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setHasDrawnBoth(false);
     setAwaitingReveal(false);
     setAiThinking(false);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
     clearSavedGame();
     setHasSavedGame(false);
   }, [setHasDrawnBoth]);
@@ -336,6 +411,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundStartScores,
       roundHistory,
       lastDrawnCardId,
+      buyOffer,
       startNewGame,
       continueGame,
       revealHand,
@@ -345,6 +421,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       discard,
       sortHand,
       reorderHand,
+      respondToBuy,
       advanceRound,
       quitToHome,
     }),
@@ -357,6 +434,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundStartScores,
       roundHistory,
       lastDrawnCardId,
+      buyOffer,
       startNewGame,
       continueGame,
       revealHand,
@@ -366,6 +444,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       discard,
       sortHand,
       reorderHand,
+      respondToBuy,
       advanceRound,
       quitToHome,
     ]

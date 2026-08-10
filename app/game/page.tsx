@@ -7,6 +7,7 @@ import { useGame } from "../GameContext";
 import { PlayingCard } from "../components/PlayingCard";
 import { DraggableHand } from "../components/DraggableHand";
 import { PassGate } from "../components/PassGate";
+import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { canLayOff, validateManualGroup } from "@/meld";
@@ -38,6 +39,7 @@ export default function GamePage() {
     aiThinking,
     roundStartScores,
     lastDrawnCardId,
+    buyOffer,
     revealHand,
     draw,
     confirmMeld,
@@ -45,6 +47,7 @@ export default function GamePage() {
     discard,
     sortHand,
     reorderHand,
+    respondToBuy,
     advanceRound,
   } = useGame();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -67,6 +70,16 @@ export default function GamePage() {
   if (state.roundOver) {
     return (
       <RoundSummary state={state} roundStartScores={roundStartScores} onNextRound={advanceRound} />
+    );
+  }
+
+  if (buyOffer) {
+    return (
+      <BuyOfferGate
+        playerName={buyOffer.playerName}
+        card={buyOffer.card}
+        onRespond={respondToBuy}
+      />
     );
   }
 

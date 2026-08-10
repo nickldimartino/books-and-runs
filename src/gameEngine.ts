@@ -78,6 +78,53 @@ export function drawFromDiscard(state: GameState): Card | null {
 }
 
 /**
+ * Players (other than the discarder and the current player, who has normal
+ * free priority via their own upcoming turn) who could buy the current top
+ * discard, in turn order starting right after the current player. Turn order
+ * here reflects the house rule that a player farther down the line can only
+ * buy once everyone nearer has passed — the caller is expected to offer the
+ * buy in this order and stop at the first taker.
+ */
+export function eligibleBuyers(state: GameState): Player[] {
+  if (state.players.length < 3 || state.discardPile.length === 0) return [];
+  const discarderId = state.discardHistory[state.discardHistory.length - 1]?.playerId;
+  const currentId = currentPlayer(state).id;
+  const n = state.players.length;
+  const buyers: Player[] = [];
+  for (let offset = 1; offset < n; offset++) {
+    const p = state.players[(state.currentPlayerIndex + offset) % n];
+    if (p.id !== discarderId && p.id !== currentId) buyers.push(p);
+  }
+  return buyers;
+}
+
+/**
+ * A player other than the discarder or current player buys the top discard
+ * card: it goes straight into their hand, plus one penalty card off the draw
+ * pile, without giving them a turn — normal turn order is untouched. Returns
+ * false (no state change) if the buy isn't currently valid.
+ */
+export function buyDiscard(state: GameState, buyerId: string): boolean {
+  if (!eligibleBuyers(state).some((p) => p.id === buyerId)) return false;
+  const buyer = state.players.find((p) => p.id === buyerId)!;
+
+  const boughtCard = state.discardPile.pop()!;
+  buyer.hand.push(boughtCard);
+  state.pickupHistory.push({ playerId: buyer.id, card: boughtCard });
+
+  if (state.drawPile.length === 0) {
+    if (state.discardPile.length === 0) return true; // nothing left to draw as a penalty
+    const top = state.discardPile.pop()!;
+    state.drawPile = shuffle(state.discardPile);
+    state.discardPile = [top];
+  }
+  const penaltyCard = state.drawPile.pop();
+  if (penaltyCard) buyer.hand.push(penaltyCard);
+
+  return true;
+}
+
+/**
  * Attempt to meld the player's full contract for this round, all at once.
  * Returns the melds laid if successful, or null if the contract can't
  * currently be completed from hand.

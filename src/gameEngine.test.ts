@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   attemptMeldContract,
+  buyDiscard,
   createGame,
   discardAndAdvance,
   drawFromDiscard,
   drawFromPile,
+  eligibleBuyers,
   layOffCard,
   meldChosenGroups,
   startNextRound,
@@ -293,6 +295,73 @@ describe("layOffCard", () => {
     });
     expect(layOffCard(state, badCard.id, meld.id)).toBe(false);
     expect(state.players[0].hand).toContain(badCard);
+  });
+});
+
+describe("eligibleBuyers / buyDiscard", () => {
+  function threePlayerStateAfterDiscard() {
+    // p1 discards, currentPlayerIndex advances to p2 (index 1) — p2 has
+    // normal free priority; p3 is the only one who could buy.
+    const discarded = makeCard("7", "hearts", { id: "disc" });
+    return makeGameState({
+      currentPlayerIndex: 1,
+      discardPile: [discarded],
+      discardHistory: [{ playerId: "p1", card: discarded }],
+      drawPile: [makeCard("K", "clubs", { id: "penalty" })],
+      players: [
+        makePlayer({ id: "p1", hand: [] }),
+        makePlayer({ id: "p2", hand: [] }),
+        makePlayer({ id: "p3", hand: [] }),
+      ],
+    });
+  }
+
+  it("offers the buy to everyone except the discarder and current player, in turn order", () => {
+    const state = threePlayerStateAfterDiscard();
+    expect(eligibleBuyers(state).map((p) => p.id)).toEqual(["p3"]);
+  });
+
+  it("offers nobody in a 2-player game", () => {
+    const discarded = makeCard("7", "hearts", { id: "disc" });
+    const state = makeGameState({
+      currentPlayerIndex: 1,
+      discardPile: [discarded],
+      discardHistory: [{ playerId: "p1", card: discarded }],
+      players: [makePlayer({ id: "p1", hand: [] }), makePlayer({ id: "p2", hand: [] })],
+    });
+    expect(eligibleBuyers(state)).toEqual([]);
+  });
+
+  it("gives the buyer the discarded card plus one penalty card, without changing whose turn it is", () => {
+    const state = threePlayerStateAfterDiscard();
+
+    const bought = buyDiscard(state, "p3");
+
+    expect(bought).toBe(true);
+    expect(state.players.find((p) => p.id === "p3")?.hand.map((c) => c.id).sort()).toEqual(
+      ["disc", "penalty"].sort()
+    );
+    expect(state.discardPile).toHaveLength(0);
+    expect(state.drawPile).toHaveLength(0);
+    expect(state.currentPlayerIndex).toBe(1); // still p2's turn — buying isn't a turn
+  });
+
+  it("rejects a buy from the current player (they get it free via their own turn)", () => {
+    const state = threePlayerStateAfterDiscard();
+    expect(buyDiscard(state, "p2")).toBe(false);
+    expect(state.discardPile).toHaveLength(1);
+  });
+
+  it("rejects a buy from the discarder themself", () => {
+    const state = threePlayerStateAfterDiscard();
+    expect(buyDiscard(state, "p1")).toBe(false);
+    expect(state.discardPile).toHaveLength(1);
+  });
+
+  it("rejects a buy when the discard pile is empty", () => {
+    const state = threePlayerStateAfterDiscard();
+    state.discardPile = [];
+    expect(buyDiscard(state, "p3")).toBe(false);
   });
 });
 
