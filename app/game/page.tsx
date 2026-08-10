@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
 import { PlayingCard } from "../components/PlayingCard";
+import { DraggableHand } from "../components/DraggableHand";
 import { PassGate } from "../components/PassGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
@@ -43,6 +44,7 @@ export default function GamePage() {
     layOff,
     discard,
     sortHand,
+    reorderHand,
     advanceRound,
   } = useGame();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -351,17 +353,14 @@ export default function GamePage() {
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {visibleHand.map((card) => (
-                <PlayingCard
-                  key={card.id}
-                  card={card}
-                  selected={selectedCardIds.includes(card.id)}
-                  isNew={card.id === lastDrawnCardId}
-                  onClick={() => handleCardClick(card)}
-                />
-              ))}
-            </div>
+            <DraggableHand
+              cards={visibleHand}
+              selectedCardIds={selectedCardIds}
+              lastDrawnCardId={lastDrawnCardId}
+              onCardClick={handleCardClick}
+              onReorder={reorderHand}
+            />
+            <p className="mt-1 text-xs text-emerald-100/40">Drag a card to reorder your hand.</p>
           </section>
         </>
       )}

@@ -42,6 +42,7 @@ interface GameContextValue {
   layOff: (cardId: string, meldId: string) => void;
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
+  reorderHand: (cardIdsInOrder: string[]) => void;
   advanceRound: () => void;
   quitToHome: () => void;
 }
@@ -237,6 +238,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [commit]
   );
 
+  /**
+   * Applies a player-chosen order to a subset of their hand (typically all
+   * of it, but excludes cards currently staged into a pending meld group).
+   * Cards not named in cardIdsInOrder keep their existing slot in the full
+   * hand array — only the named cards' relative order changes.
+   */
+  const reorderHand = useCallback(
+    (cardIdsInOrder: string[]) => {
+      const s = stateRef.current;
+      if (!s) return;
+      const player = s.players[s.currentPlayerIndex];
+      const orderIndex = new Map(cardIdsInOrder.map((id, i) => [id, i]));
+      const reordered = player.hand
+        .filter((c) => orderIndex.has(c.id))
+        .sort((a, b) => orderIndex.get(a.id)! - orderIndex.get(b.id)!);
+      let i = 0;
+      player.hand = player.hand.map((c) => (orderIndex.has(c.id) ? reordered[i++] : c));
+      commit();
+    },
+    [commit]
+  );
+
   const confirmMeld = useCallback(
     (groups: string[][]) => {
       const s = stateRef.current;
@@ -321,6 +344,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       layOff,
       discard,
       sortHand,
+      reorderHand,
       advanceRound,
       quitToHome,
     }),
@@ -341,6 +365,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       layOff,
       discard,
       sortHand,
+      reorderHand,
       advanceRound,
       quitToHome,
     ]
