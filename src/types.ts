@@ -48,7 +48,8 @@ export interface DiscardEvent {
 }
 
 export interface GameState {
-  round: number; // 1-7
+  round: number; // 1-based position within selectedContracts, not a fixed 1-7
+  selectedContracts: ContractRequirement[]; // the ordered set of rounds this game is playing
   players: Player[];
   currentPlayerIndex: number;
   drawPile: Card[];
@@ -79,3 +80,9 @@ export const CONTRACTS: ContractRequirement[] = [
   { round: 6, books: 3, runs: 0, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "3 Books" },
   { round: 7, books: 0, runs: 3, bookSize: 3, runSize: 4, noDiscardOnGoOut: true, label: "3 Runs (No Discard)" },
 ];
+
+// The "short game" mode: drops rounds 4 and 5 (the two hardest, mixed
+// 2-meld rounds), keeping the rest in their original order.
+export const SHORT_GAME_CONTRACTS: ContractRequirement[] = CONTRACTS.filter(
+  (c) => c.round !== 4 && c.round !== 5
+);

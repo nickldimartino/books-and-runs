@@ -1,7 +1,7 @@
 import { buildDeck, deal, shuffle } from "./deck";
 import { canLayOff, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
 import { handPenalty } from "./scorer";
-import { CONTRACTS, Card, Difficulty, GameState, Meld, Player } from "./types";
+import { CONTRACTS, Card, ContractRequirement, Difficulty, GameState, Meld, Player } from "./types";
 
 export interface PlayerConfig {
   id: string;
@@ -10,7 +10,14 @@ export interface PlayerConfig {
   difficulty?: Difficulty;
 }
 
-export function createGame(playerConfigs: PlayerConfig[]): GameState {
+/**
+ * Starts a new game. `contracts` is the ordered set of rounds this game will
+ * play — defaults to the full standard 7-round sequence. Pass a filtered or
+ * reordered subset (see SHORT_GAME_CONTRACTS, or a custom selection) to play
+ * a shorter or custom-picked game; `state.round` always just counts 1..N
+ * through whatever was selected, not the original round numbers.
+ */
+export function createGame(playerConfigs: PlayerConfig[], contracts: ContractRequirement[] = CONTRACTS): GameState {
   const numDecks = Math.ceil(playerConfigs.length / 2);
   const deck = buildDeck(numDecks);
   const { hands, drawPile, discardPile } = deal(deck, playerConfigs.length);
@@ -27,6 +34,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
 
   return {
     round: 1,
+    selectedContracts: contracts,
     players,
     currentPlayerIndex: 0,
     drawPile,
@@ -40,7 +48,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
 }
 
 function currentContract(state: GameState) {
-  return CONTRACTS[state.round - 1];
+  return state.selectedContracts[state.round - 1];
 }
 
 function currentPlayer(state: GameState): Player {
@@ -188,7 +196,7 @@ function endRound(state: GameState, winnerId: string) {
   }
   state.roundOver = true;
 
-  if (state.round >= CONTRACTS.length) {
+  if (state.round >= state.selectedContracts.length) {
     state.gameOver = true;
     const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
     state.winnerId = standings[0].id;
@@ -212,6 +220,7 @@ export function startNextRound(state: GameState): GameState {
 
   return {
     round: nextRound,
+    selectedContracts: state.selectedContracts,
     players,
     currentPlayerIndex: 0,
     drawPile,

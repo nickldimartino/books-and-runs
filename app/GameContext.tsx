@@ -11,7 +11,7 @@ import {
   startNextRound,
 } from "@/gameEngine";
 import { playAITurn } from "@/ai/index";
-import { Card, GameState } from "@/types";
+import { Card, ContractRequirement, GameState } from "@/types";
 import { RoundHistoryEntry } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
 import {
@@ -34,7 +34,7 @@ interface GameContextValue {
   roundStartScores: Record<string, number>;
   roundHistory: RoundHistoryEntry[];
   lastDrawnCardId: string | null;
-  startNewGame: (configs: PlayerConfig[]) => void;
+  startNewGame: (configs: PlayerConfig[], contracts?: ContractRequirement[]) => void;
   continueGame: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
@@ -167,8 +167,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [commit, setHasDrawnBoth]);
 
   const startNewGame = useCallback(
-    (configs: PlayerConfig[]) => {
-      const state = createGame(configs);
+    (configs: PlayerConfig[], contracts?: ContractRequirement[]) => {
+      const state = createGame(configs, contracts);
       stateRef.current = state;
       setSnapshot({ ...state });
       setHasDrawnBoth(false);

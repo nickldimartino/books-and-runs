@@ -9,7 +9,7 @@ import {
   meldChosenGroups,
   startNextRound,
 } from "./gameEngine";
-import { CONTRACTS, GameState, Meld } from "./types";
+import { CONTRACTS, GameState, Meld, SHORT_GAME_CONTRACTS } from "./types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "./testHelpers";
 
 describe("createGame", () => {
@@ -29,6 +29,19 @@ describe("createGame", () => {
     expect(state.round).toBe(1);
     expect(state.currentPlayerIndex).toBe(0);
     expect(state.melds).toHaveLength(0);
+    expect(state.selectedContracts).toBe(CONTRACTS);
+  });
+
+  it("uses a custom contract list when one is given, instead of the full 7 rounds", () => {
+    const state = createGame(
+      [
+        { id: "p1", name: "A", isAI: false },
+        { id: "p2", name: "B", isAI: false },
+      ],
+      SHORT_GAME_CONTRACTS
+    );
+    expect(state.selectedContracts).toBe(SHORT_GAME_CONTRACTS);
+    expect(state.selectedContracts).toHaveLength(5);
   });
 });
 
@@ -343,6 +356,26 @@ describe("discardAndAdvance", () => {
     expect(state.winnerId).toBe("p1");
   });
 
+  it("ends the game after the last round of a shorter, custom-selected sequence", () => {
+    const customContracts = [CONTRACTS[0], CONTRACTS[2]]; // just 2 rounds this game
+    const card = makeCard("7", "hearts", { id: "last-card" });
+    const state = makeGameState({
+      round: 2, // the last round in this custom 2-round sequence
+      selectedContracts: customContracts,
+      currentPlayerIndex: 0,
+      players: [
+        makePlayer({ id: "p1", hand: [card], hasMeldedContract: true, cumulativeScore: 0 }),
+        makePlayer({ id: "p2", hand: makeHand(["K"]), cumulativeScore: 0 }),
+      ],
+    });
+
+    discardAndAdvance(state, card.id);
+
+    expect(state.roundOver).toBe(true);
+    expect(state.gameOver).toBe(true); // round 2 of 2 — this custom game is over
+    expect(state.winnerId).toBe("p1");
+  });
+
   it("marks the game over and picks the lowest cumulative score as winner after round 7", () => {
     const card = makeCard("3", "clubs", { id: "final-card" });
     const state = makeGameState({
@@ -394,5 +427,21 @@ describe("startNextRound", () => {
     // scores carry over across rounds
     expect(next.players.find((p) => p.id === "p1")?.cumulativeScore).toBe(15);
     expect(next.players.find((p) => p.id === "p2")?.cumulativeScore).toBe(30);
+  });
+
+  it("carries the selected contract sequence forward into the next round", () => {
+    const customContracts = [CONTRACTS[0], CONTRACTS[2], CONTRACTS[5]];
+    const state = makeGameState({
+      round: 1,
+      roundOver: true,
+      gameOver: false,
+      selectedContracts: customContracts,
+      players: [makePlayer({ id: "p1" }), makePlayer({ id: "p2" })],
+    });
+
+    const next = startNextRound(state);
+
+    expect(next.selectedContracts).toBe(customContracts);
+    expect(next.round).toBe(2);
   });
 });

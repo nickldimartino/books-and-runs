@@ -1,5 +1,5 @@
 import { bookCandidates, canLayOff, runCandidates, splitWildsAndNaturals } from "../meld";
-import { CONTRACTS, Card, GameState, Player } from "../types";
+import { Card, GameState, Player } from "../types";
 
 export interface LayOffMove {
   cardId: string;
@@ -39,7 +39,7 @@ export function greedyLayOffPlan(state: GameState, player: Player): LayOffMove[]
  * wilds currently in hand. Everything else is safe-ish to discard.
  */
 export function deadCards(player: Player, state: GameState): Card[] {
-  const requirement = CONTRACTS[state.round - 1];
+  const requirement = state.selectedContracts[state.round - 1];
   const { wilds, naturals } = splitWildsAndNaturals(player.hand);
 
   const liveIds = new Set<string>();

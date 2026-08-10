@@ -1,4 +1,4 @@
-import { Card, GameState, Player, Rank, Suit } from "./types";
+import { Card, CONTRACTS, GameState, Player, Rank, Suit } from "./types";
 
 let idCounter = 0;
 
@@ -33,6 +33,7 @@ export function makePlayer(overrides: Partial<Player> = {}): Player {
 export function makeGameState(overrides: Partial<GameState> = {}): GameState {
   return {
     round: 1,
+    selectedContracts: CONTRACTS,
     players: overrides.players ?? [makePlayer({ id: "p1" }), makePlayer({ id: "p2" })],
     currentPlayerIndex: 0,
     drawPile: [],

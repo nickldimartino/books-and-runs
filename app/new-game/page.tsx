@@ -6,10 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../GameContext";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { PlayerConfig } from "@/gameEngine";
-import { Difficulty } from "@/types";
+import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
+
+type RoundMode = "all" | "short" | "custom";
 
 export default function NewGamePage() {
   const router = useRouter();
@@ -17,6 +19,10 @@ export default function NewGamePage() {
   const [humanCount, setHumanCount] = useState(1);
   const [aiDifficulties, setAiDifficulties] = useState<Difficulty[]>(["medium"]);
   const [defaultDifficulty, setDefaultDifficulty] = useState<Difficulty>("medium");
+  const [roundMode, setRoundMode] = useState<RoundMode>("all");
+  const [customRounds, setCustomRounds] = useState<Set<number>>(
+    () => new Set(CONTRACTS.map((c) => c.round))
+  );
 
   // Pick up the house-rule default from Settings once mounted (before the
   // player has had a chance to touch the AI difficulty picker themselves).
@@ -27,12 +33,28 @@ export default function NewGamePage() {
   }, []);
 
   const totalPlayers = humanCount + aiDifficulties.length;
-  const canStart = totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS;
+  const selectedContracts: ContractRequirement[] =
+    roundMode === "all"
+      ? CONTRACTS
+      : roundMode === "short"
+        ? SHORT_GAME_CONTRACTS
+        : CONTRACTS.filter((c) => customRounds.has(c.round));
+  const canStart =
+    totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS && selectedContracts.length > 0;
 
   const humanNames = useMemo(
     () => Array.from({ length: humanCount }, (_, i) => (i === 0 ? "You" : `Player ${i + 1}`)),
     [humanCount]
   );
+
+  function toggleCustomRound(round: number) {
+    setCustomRounds((prev) => {
+      const next = new Set(prev);
+      if (next.has(round)) next.delete(round);
+      else next.add(round);
+      return next;
+    });
+  }
 
   function addAI() {
     if (totalPlayers >= MAX_PLAYERS) return;
@@ -58,7 +80,7 @@ export default function NewGamePage() {
         difficulty,
       })),
     ];
-    startNewGame(configs);
+    startNewGame(configs, selectedContracts);
     router.push("/game");
   }
 
@@ -142,9 +164,64 @@ export default function NewGamePage() {
         </div>
       </section>
 
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-100/60">
+          Rounds
+        </h2>
+        <div className="flex gap-2">
+          {(
+            [
+              ["all", "All 7"],
+              ["short", "Short"],
+              ["custom", "Custom"],
+            ] as [RoundMode, string][]
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => setRoundMode(mode)}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+                roundMode === mode
+                  ? "bg-amber-400 text-emerald-950"
+                  : "bg-emerald-900/60 text-emerald-100/80 hover:bg-emerald-900"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {roundMode === "short" && (
+          <p className="text-xs text-emerald-100/40">
+            Drops the two hardest mixed rounds — 2 Books + 1 Run, and 1 Book + 2 Runs.
+          </p>
+        )}
+        {roundMode === "custom" && (
+          <div className="flex flex-col gap-1">
+            {CONTRACTS.map((c) => (
+              <label
+                key={c.round}
+                className="flex items-center gap-2 rounded-md bg-emerald-900/60 px-3 py-2 text-sm text-emerald-100/80"
+              >
+                <input
+                  type="checkbox"
+                  checked={customRounds.has(c.round)}
+                  onChange={() => toggleCustomRound(c.round)}
+                  className="h-4 w-4 accent-amber-400"
+                />
+                Round {c.round}: {c.label}
+              </label>
+            ))}
+            {selectedContracts.length === 0 && (
+              <p className="text-xs text-amber-300">Pick at least one round.</p>
+            )}
+          </div>
+        )}
+      </section>
+
       {!canStart && (
         <p className="text-sm text-amber-300">
-          Need between 2 and {MAX_PLAYERS} total players to start.
+          {selectedContracts.length === 0
+            ? "Pick at least one round to start."
+            : `Need between 2 and ${MAX_PLAYERS} total players to start.`}
         </p>
       )}
 

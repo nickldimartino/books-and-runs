@@ -11,7 +11,7 @@ interface RoundSummaryProps {
 export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSummaryProps) {
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
-  const roundLabel = state.round <= 7 ? `Round ${state.round}` : "Final round";
+  const roundLabel = `Round ${state.round}`;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">

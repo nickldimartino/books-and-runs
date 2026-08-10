@@ -10,7 +10,7 @@ import { PassGate } from "../components/PassGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { canLayOff, validateManualGroup } from "@/meld";
-import { CONTRACTS, Card, Meld } from "@/types";
+import { Card, Meld } from "@/types";
 
 interface PendingGroup {
   id: string;
@@ -76,7 +76,7 @@ export default function GamePage() {
     return <PassGate name={player.name} onReveal={revealHand} />;
   }
 
-  const contract = CONTRACTS[state.round - 1];
+  const contract = state.selectedContracts[state.round - 1];
   const discardTop = state.discardPile[state.discardPile.length - 1];
   const selectedCard = player.hand.find((c) => c.id === selectedCardIds[0]) ?? null;
 
@@ -172,7 +172,7 @@ export default function GamePage() {
       <header className="flex items-center justify-between rounded-xl bg-emerald-900/60 px-4 py-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-emerald-100/60">
-            Round {state.round} of 7
+            Round {state.round} of {state.selectedContracts.length}
           </p>
           <p className="text-lg font-bold text-amber-100">{contract.label}</p>
         </div>
