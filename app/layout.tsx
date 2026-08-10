@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
+import { SettingsSync } from "./SettingsSync";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen antialiased">
         <AuthProvider>
+          <SettingsSync />
           <GameProvider>{children}</GameProvider>
         </AuthProvider>
       </body>

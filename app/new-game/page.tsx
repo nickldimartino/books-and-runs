@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../GameContext";
@@ -63,6 +64,13 @@ export default function NewGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
+      <Link
+        href="/"
+        className="self-start rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+      >
+        ← Home
+      </Link>
+
       <h1 className="text-2xl font-bold text-amber-100">New Game</h1>
 
       <section className="flex flex-col gap-2">
