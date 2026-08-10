@@ -6,6 +6,7 @@ import {
   drawFromDiscard,
   drawFromPile,
   layOffCard,
+  meldChosenGroups,
   startNextRound,
 } from "./gameEngine";
 import { CONTRACTS, GameState, Meld } from "./types";
@@ -132,6 +133,104 @@ describe("attemptMeldContract", () => {
       players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: makeHand(["5", "5", "5"]) })],
     });
     expect(attemptMeldContract(state)).toBeNull();
+  });
+});
+
+describe("meldChosenGroups", () => {
+  it("melds exactly the player-chosen groups and leaves the rest in hand", () => {
+    const fives = makeHand([
+      ["5", "hearts"],
+      ["5", "clubs"],
+      ["5", "spades"],
+    ]);
+    const nines = makeHand([
+      ["9", "hearts"],
+      ["9", "clubs"],
+      ["9", "spades"],
+    ]);
+    const leftover = makeCard("K", "diamonds");
+    const state = makeGameState({
+      round: 1, // 2 Books
+      players: [makePlayer({ id: "p1", hand: [...fives, ...nines, leftover] })],
+    });
+
+    const melds = meldChosenGroups(state, [fives.map((c) => c.id), nines.map((c) => c.id)]);
+
+    expect(melds).toHaveLength(2);
+    expect(state.players[0].hasMeldedContract).toBe(true);
+    expect(state.players[0].hand).toEqual([leftover]);
+    expect(state.melds).toHaveLength(2);
+  });
+
+  it("rejects groups that don't match the round's required book/run counts", () => {
+    // Round 1 needs 2 books, but only one group is offered.
+    const fives = makeHand([
+      ["5", "hearts"],
+      ["5", "clubs"],
+      ["5", "spades"],
+    ]);
+    const state = makeGameState({ round: 1, players: [makePlayer({ id: "p1", hand: fives })] });
+
+    expect(meldChosenGroups(state, [fives.map((c) => c.id)])).toBeNull();
+    expect(state.players[0].hasMeldedContract).toBe(false);
+    expect(state.players[0].hand).toEqual(fives);
+  });
+
+  it("rejects a group that isn't actually a valid book or run", () => {
+    const junk = makeHand([
+      ["4", "hearts"],
+      ["7", "clubs"],
+      ["K", "spades"],
+    ]);
+    const otherBook = makeHand([
+      ["9", "hearts"],
+      ["9", "clubs"],
+      ["9", "spades"],
+    ]);
+    const state = makeGameState({
+      round: 1,
+      players: [makePlayer({ id: "p1", hand: [...junk, ...otherBook] })],
+    });
+
+    const result = meldChosenGroups(state, [junk.map((c) => c.id), otherBook.map((c) => c.id)]);
+
+    expect(result).toBeNull();
+    expect(state.players[0].hasMeldedContract).toBe(false);
+  });
+
+  it("rejects a card id that doesn't belong to the player's hand", () => {
+    const fives = makeHand([
+      ["5", "hearts"],
+      ["5", "clubs"],
+      ["5", "spades"],
+    ]);
+    const state = makeGameState({ round: 1, players: [makePlayer({ id: "p1", hand: fives })] });
+
+    expect(meldChosenGroups(state, [["not-a-real-card-id", fives[0].id, fives[1].id]])).toBeNull();
+  });
+
+  it("rejects the same card id used in two groups", () => {
+    const fives = makeHand([
+      ["5", "hearts"],
+      ["5", "clubs"],
+      ["5", "spades"],
+    ]);
+    const state = makeGameState({ round: 1, players: [makePlayer({ id: "p1", hand: fives })] });
+
+    const result = meldChosenGroups(state, [
+      [fives[0].id, fives[1].id, fives[2].id],
+      [fives[0].id, fives[1].id, fives[2].id],
+    ]);
+
+    expect(result).toBeNull();
+  });
+
+  it("refuses to meld again once the player has already melded this round", () => {
+    const state = makeGameState({
+      round: 1,
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: makeHand(["5", "5", "5"]) })],
+    });
+    expect(meldChosenGroups(state, [state.players[0].hand.map((c) => c.id)])).toBeNull();
   });
 });
 

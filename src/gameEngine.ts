@@ -1,5 +1,5 @@
 import { buildDeck, deal, shuffle } from "./deck";
-import { canLayOff, leftoverAfterMelds, solveContract } from "./meld";
+import { canLayOff, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
 import { handPenalty } from "./scorer";
 import { CONTRACTS, Card, Difficulty, GameState, Meld, Player } from "./types";
 
@@ -82,6 +82,56 @@ export function attemptMeldContract(state: GameState): Meld[] | null {
   if (!melds) return null;
 
   player.hand = leftoverAfterMelds(player.hand, melds);
+  player.hasMeldedContract = true;
+  state.melds.push(...melds);
+  return melds;
+}
+
+/**
+ * Melds the player's contract using groups of cards they've explicitly
+ * chosen (one array of card ids per book/run), instead of the automatic
+ * solver picking for them. Re-validates every group and the overall shape
+ * against the round's requirement server-side — never trusts the caller.
+ * Returns the melds laid if successful, or null (no state changes) if
+ * anything doesn't check out: an unknown/reused card id, an invalid group,
+ * or a set of groups that doesn't exactly match what the round requires.
+ */
+export function meldChosenGroups(state: GameState, groups: string[][]): Meld[] | null {
+  const player = currentPlayer(state);
+  if (player.hasMeldedContract) return null;
+  const req = currentContract(state);
+
+  const seen = new Set<string>();
+  const resolvedGroups: Card[][] = [];
+  for (const ids of groups) {
+    if (ids.length === 0) return null;
+    const cards: Card[] = [];
+    for (const id of ids) {
+      if (seen.has(id)) return null;
+      const card = player.hand.find((c) => c.id === id);
+      if (!card) return null;
+      seen.add(id);
+      cards.push(card);
+    }
+    resolvedGroups.push(cards);
+  }
+
+  const validations = resolvedGroups.map((cards) => validateManualGroup(cards, req));
+  if (validations.some((v) => !v.valid)) return null;
+
+  const bookCount = validations.filter((v) => v.type === "book").length;
+  const runCount = validations.filter((v) => v.type === "run").length;
+  if (bookCount !== req.books || runCount !== req.runs) return null;
+
+  const melds: Meld[] = resolvedGroups.map((cards, idx) => ({
+    id: `${player.id}-meld-${idx}-${validations[idx].type}`,
+    type: validations[idx].type!,
+    ownerId: player.id,
+    cards,
+    runStartIndex: validations[idx].runStartIndex,
+  }));
+
+  player.hand = player.hand.filter((c) => !seen.has(c.id));
   player.hasMeldedContract = true;
   state.melds.push(...melds);
   return melds;

@@ -40,7 +40,7 @@ export default function HomePage() {
           className="rounded-lg border border-emerald-100/20 px-6 py-3 text-base font-medium text-emerald-100/80 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:text-emerald-100/40 disabled:hover:bg-transparent"
           title={hasSavedGame ? undefined : "No game in progress"}
         >
-          Continue
+          Continue Local Game
         </button>
         <Link
           href="/how-to-play"

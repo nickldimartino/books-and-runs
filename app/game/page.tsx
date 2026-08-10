@@ -8,11 +8,24 @@ import { PlayingCard } from "../components/PlayingCard";
 import { PassGate } from "../components/PassGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
-import { canLayOff } from "@/meld";
+import { canLayOff, validateManualGroup } from "@/meld";
 import { CONTRACTS, Card, Meld } from "@/types";
+
+interface PendingGroup {
+  id: string;
+  type: "book" | "run";
+  cardIds: string[];
+}
 
 function meldLabel(meld: Meld): string {
   return meld.type === "book" ? "Book" : "Run";
+}
+
+function contractNeedLabel(books: number, runs: number): string {
+  const parts: string[] = [];
+  if (books > 0) parts.push(`${books} book${books > 1 ? "s" : ""}`);
+  if (runs > 0) parts.push(`${runs} run${runs > 1 ? "s" : ""}`);
+  return parts.join(" + ");
 }
 
 export default function GamePage() {
@@ -26,20 +39,24 @@ export default function GamePage() {
     lastDrawnCardId,
     revealHand,
     draw,
-    attemptMeld,
+    confirmMeld,
     layOff,
     discard,
     sortHand,
     advanceRound,
   } = useGame();
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+  const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
+  const [groupError, setGroupError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!state) router.replace("/");
   }, [state, router]);
 
   useEffect(() => {
-    setSelectedCardId(null);
+    setSelectedCardIds([]);
+    setPendingGroups([]);
+    setGroupError(null);
   }, [state?.currentPlayerIndex, state?.round]);
 
   if (!state) return null;
@@ -59,7 +76,13 @@ export default function GamePage() {
 
   const contract = CONTRACTS[state.round - 1];
   const discardTop = state.discardPile[state.discardPile.length - 1];
-  const selectedCard = player.hand.find((c) => c.id === selectedCardId) ?? null;
+  const selectedCard = player.hand.find((c) => c.id === selectedCardIds[0]) ?? null;
+
+  const stagedCardIds = new Set(pendingGroups.flatMap((g) => g.cardIds));
+  const visibleHand = player.hand.filter((c) => !stagedCardIds.has(c.id));
+  const stagedBooks = pendingGroups.filter((g) => g.type === "book").length;
+  const stagedRuns = pendingGroups.filter((g) => g.type === "run").length;
+  const meldReady = stagedBooks === contract.books && stagedRuns === contract.runs;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -69,20 +92,62 @@ export default function GamePage() {
   }
 
   function handleCardClick(card: Card) {
-    setSelectedCardId((prev) => (prev === card.id ? null : card.id));
+    setGroupError(null);
+    if (player.hasMeldedContract) {
+      // Post-meld: single-select, for laying off or discarding one card.
+      setSelectedCardIds((prev) => (prev[0] === card.id ? [] : [card.id]));
+    } else {
+      // Pre-meld: multi-select, for building a book/run to stage.
+      setSelectedCardIds((prev) =>
+        prev.includes(card.id) ? prev.filter((id) => id !== card.id) : [...prev, card.id]
+      );
+    }
   }
 
   function handleMeldClick(meld: Meld) {
     if (!selectedCard || !player.hasMeldedContract) return;
     if (!canLayOff(selectedCard, meld)) return;
     layOff(selectedCard.id, meld.id);
-    setSelectedCardId(null);
+    setSelectedCardIds([]);
   }
 
   function handleDiscardSelected() {
-    if (!selectedCard) return;
-    discard(selectedCard.id);
-    setSelectedCardId(null);
+    if (selectedCardIds.length !== 1) return;
+    discard(selectedCardIds[0]);
+    setSelectedCardIds([]);
+  }
+
+  function handleGroupSelected() {
+    if (selectedCardIds.length === 0) return;
+    const cards = selectedCardIds
+      .map((id) => player.hand.find((c) => c.id === id))
+      .filter((c): c is Card => !!c);
+    const result = validateManualGroup(cards, contract);
+    if (!result.valid || !result.type) {
+      setGroupError(result.reason ?? "Not a valid book or run.");
+      return;
+    }
+    setPendingGroups((prev) => [
+      ...prev,
+      { id: `group-${Date.now()}-${prev.length}`, type: result.type!, cardIds: selectedCardIds },
+    ]);
+    setSelectedCardIds([]);
+    setGroupError(null);
+  }
+
+  function removePendingGroup(id: string) {
+    setPendingGroups((prev) => prev.filter((g) => g.id !== id));
+  }
+
+  function handleConfirmMeld() {
+    const success = confirmMeld(pendingGroups.map((g) => g.cardIds));
+    if (success) {
+      setPendingGroups([]);
+      setSelectedCardIds([]);
+      setGroupError(null);
+    } else {
+      setGroupError("Couldn't meld those groups — check they still match this round's contract.");
+    }
   }
 
   return (
@@ -197,17 +262,64 @@ export default function GamePage() {
             )}
           </section>
 
+          {!player.hasMeldedContract && (
+            <section className="flex flex-col gap-3 rounded-xl bg-emerald-950/40 p-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+                Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
+              </h2>
+
+              {pendingGroups.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {pendingGroups.map((group) => (
+                    <div
+                      key={group.id}
+                      className="flex flex-wrap items-center gap-2 rounded-lg bg-emerald-900/60 p-2"
+                    >
+                      <span className="w-12 shrink-0 text-xs font-semibold capitalize text-amber-300">
+                        {group.type}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {group.cardIds.map((id) => {
+                          const card = player.hand.find((c) => c.id === id);
+                          return card ? <PlayingCard key={id} card={card} small /> : null;
+                        })}
+                      </div>
+                      <button
+                        onClick={() => removePendingGroup(group.id)}
+                        className="ml-auto text-xs text-red-300 hover:text-red-200"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {groupError && <p className="text-xs text-red-300">{groupError}</p>}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleGroupSelected}
+                  disabled={!hasDrawn || selectedCardIds.length === 0}
+                  className="rounded-lg border border-amber-300/60 px-4 py-2 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Group selected cards
+                </button>
+                <button
+                  onClick={handleConfirmMeld}
+                  disabled={!hasDrawn || !meldReady}
+                  className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 shadow disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Confirm Meld
+                </button>
+              </div>
+            </section>
+          )}
+
           <section className="flex flex-wrap items-center justify-center gap-3">
             <button
-              onClick={attemptMeld}
-              disabled={!hasDrawn || player.hasMeldedContract}
-              className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 shadow disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Meld contract
-            </button>
-            <button
               onClick={handleDiscardSelected}
-              disabled={!hasDrawn || !selectedCard}
+              disabled={!hasDrawn || selectedCardIds.length !== 1}
               className="rounded-lg border border-amber-300/60 px-4 py-2 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Discard selected card
@@ -240,11 +352,11 @@ export default function GamePage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {player.hand.map((card) => (
+              {visibleHand.map((card) => (
                 <PlayingCard
                   key={card.id}
                   card={card}
-                  selected={card.id === selectedCardId}
+                  selected={selectedCardIds.includes(card.id)}
                   isNew={card.id === lastDrawnCardId}
                   onClick={() => handleCardClick(card)}
                 />

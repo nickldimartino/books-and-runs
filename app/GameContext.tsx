@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  attemptMeldContract,
   createGame,
   discardAndAdvance,
   drawFromDiscard,
   drawFromPile,
   layOffCard,
+  meldChosenGroups,
   PlayerConfig,
   startNextRound,
 } from "@/gameEngine";
@@ -38,7 +38,7 @@ interface GameContextValue {
   continueGame: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
-  attemptMeld: () => void;
+  confirmMeld: (groups: string[][]) => boolean;
   layOff: (cardId: string, meldId: string) => void;
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
@@ -237,12 +237,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [commit]
   );
 
-  const attemptMeld = useCallback(() => {
-    const s = stateRef.current;
-    if (!s || !hasDrawn) return;
-    attemptMeldContract(s);
-    commit();
-  }, [hasDrawn, commit]);
+  const confirmMeld = useCallback(
+    (groups: string[][]) => {
+      const s = stateRef.current;
+      if (!s || !hasDrawn) return false;
+      const melds = meldChosenGroups(s, groups);
+      if (!melds) return false;
+      commit();
+      return true;
+    },
+    [hasDrawn, commit]
+  );
 
   const layOff = useCallback(
     (cardId: string, meldId: string) => {
@@ -312,7 +317,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       continueGame,
       revealHand,
       draw,
-      attemptMeld,
+      confirmMeld,
       layOff,
       discard,
       sortHand,
@@ -332,7 +337,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       continueGame,
       revealHand,
       draw,
-      attemptMeld,
+      confirmMeld,
       layOff,
       discard,
       sortHand,

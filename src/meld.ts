@@ -132,6 +132,64 @@ export function solveContract(
   return melds;
 }
 
+export interface GroupValidation {
+  valid: boolean;
+  type?: "book" | "run";
+  runStartIndex?: number;
+  reason?: string;
+}
+
+/**
+ * Validates a player-chosen set of cards as a single book or run meld,
+ * using the same wild-substitution rules as the automatic solver — this
+ * just checks a specific selection instead of searching the hand for one,
+ * so a player can build their own melds by hand instead of the engine
+ * choosing for them.
+ */
+export function validateManualGroup(cards: Card[], requirement: ContractRequirement): GroupValidation {
+  const { naturals } = splitWildsAndNaturals(cards);
+
+  if (naturals.length === 0) {
+    return { valid: false, reason: "Include at least one non-wild card." };
+  }
+
+  const ranks = new Set(naturals.map((c) => c.rank));
+  if (ranks.size === 1) {
+    if (cards.length < requirement.bookSize) {
+      return { valid: false, reason: `A book needs at least ${requirement.bookSize} cards.` };
+    }
+    return { valid: true, type: "book" };
+  }
+
+  const suits = new Set(naturals.map((c) => c.suit));
+  if (suits.size === 1 && !naturals.some((c) => c.suit === "joker")) {
+    const positions = naturals.map((c) => RUN_ORDER.indexOf(c.rank));
+    if (positions.some((p) => p === -1)) {
+      return { valid: false, reason: "Not a valid run." };
+    }
+    if (new Set(positions).size !== positions.length) {
+      return { valid: false, reason: "A run can't repeat the same rank twice." };
+    }
+    const size = cards.length;
+    if (size < requirement.runSize) {
+      return { valid: false, reason: `A run needs at least ${requirement.runSize} cards.` };
+    }
+    const minPos = Math.min(...positions);
+    const maxPos = Math.max(...positions);
+    const lowStart = Math.max(0, maxPos - size + 1);
+    const highStart = Math.min(minPos, RUN_ORDER.length - size);
+    if (lowStart > highStart) {
+      return { valid: false, reason: "These cards aren't close enough together to form a run." };
+    }
+    return { valid: true, type: "run", runStartIndex: lowStart };
+  }
+
+  return {
+    valid: false,
+    reason: "These cards don't share a rank (for a book) or a suit in sequence (for a run).",
+  };
+}
+
 /** Cards from hand not used in the given melds. */
 export function leftoverAfterMelds(hand: Card[], melds: Meld[]): Card[] {
   const used = new Set(melds.flatMap((m) => m.cards.map((c) => c.id)));

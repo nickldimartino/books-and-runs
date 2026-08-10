@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canLayOff, leftoverAfterMelds, solveContract } from "./meld";
+import { canLayOff, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
 import { CONTRACTS, Meld } from "./types";
 import { makeCard, makeHand } from "./testHelpers";
 
@@ -101,6 +101,84 @@ describe("leftoverAfterMelds", () => {
     const hand = [...used, leftoverCard];
     const meld: Meld = { id: "m1", type: "book", ownerId: "p1", cards: used };
     expect(leftoverAfterMelds(hand, [meld])).toEqual([leftoverCard]);
+  });
+});
+
+describe("validateManualGroup", () => {
+  const round1 = CONTRACTS[0]; // 2 Books, bookSize 3
+  const round3 = CONTRACTS[2]; // 2 Runs, runSize 4
+
+  it("accepts a valid book of matching ranks", () => {
+    const group = makeHand([
+      ["5", "hearts"],
+      ["5", "clubs"],
+      ["5", "spades"],
+    ]);
+    expect(validateManualGroup(group, round1)).toMatchObject({ valid: true, type: "book" });
+  });
+
+  it("accepts a book completed with a wild", () => {
+    const group = [...makeHand([["5", "hearts"], ["5", "clubs"]]), makeCard("2", "diamonds")];
+    expect(validateManualGroup(group, round1)).toMatchObject({ valid: true, type: "book" });
+  });
+
+  it("rejects a book selection below the required size", () => {
+    const group = makeHand([
+      ["5", "hearts"],
+      ["5", "clubs"],
+    ]);
+    expect(validateManualGroup(group, round1).valid).toBe(false);
+  });
+
+  it("accepts a valid run of consecutive same-suit cards", () => {
+    const group = makeHand([
+      ["4", "hearts"],
+      ["5", "hearts"],
+      ["6", "hearts"],
+      ["7", "hearts"],
+    ]);
+    expect(validateManualGroup(group, round3)).toMatchObject({ valid: true, type: "run" });
+  });
+
+  it("accepts a run with a wild filling a gap", () => {
+    const group = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]),
+      makeCard("2", "clubs"), // wild fills the "6" slot
+    ];
+    expect(validateManualGroup(group, round3)).toMatchObject({ valid: true, type: "run" });
+  });
+
+  it("rejects a run with cards too far apart to fit one window", () => {
+    const group = makeHand([
+      ["3", "hearts"],
+      ["4", "hearts"],
+      ["9", "hearts"],
+      ["10", "hearts"],
+    ]);
+    // four naturals but spanning a gap wider than the 4-card window they'd need to fit in
+    expect(validateManualGroup(group, round3).valid).toBe(false);
+  });
+
+  it("rejects a run with a repeated rank", () => {
+    const group = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"]]),
+      makeCard("4", "hearts", { id: "dup-4h" }),
+    ];
+    expect(validateManualGroup(group, round3).valid).toBe(false);
+  });
+
+  it("rejects a selection that's neither a consistent rank nor a consistent suit", () => {
+    const group = makeHand([
+      ["4", "hearts"],
+      ["7", "clubs"],
+      ["K", "spades"],
+    ]);
+    expect(validateManualGroup(group, round1).valid).toBe(false);
+  });
+
+  it("rejects an all-wild selection", () => {
+    const group = [makeCard("2", "hearts"), makeCard("JOKER", "joker")];
+    expect(validateManualGroup(group, round1).valid).toBe(false);
   });
 });
 
