@@ -43,6 +43,12 @@ export default function HomePage() {
           Continue
         </button>
         <Link
+          href="/how-to-play"
+          className="rounded-lg border border-emerald-100/20 px-6 py-3 text-base font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+        >
+          How to Play
+        </Link>
+        <Link
           href="/stats"
           className="rounded-lg border border-emerald-100/20 px-6 py-3 text-base font-medium text-emerald-100/80 hover:bg-emerald-900/40"
         >

@@ -40,11 +40,15 @@ export default function SettingsPage() {
       .maybeSingle<SettingsRow>()
       .then(({ data }) => {
         if (data) {
-          setSettings({
+          const synced: HouseSettings = {
             wildCardLimit: data.wild_card_limit_house_rule,
             preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
             soundOn: data.sound_on,
-          });
+          };
+          setSettings(synced);
+          // Keep local storage in step with the account's settings, since
+          // other pages (like New Game) read local storage only.
+          saveLocalSettings(synced);
         }
         setLoading(false);
       });

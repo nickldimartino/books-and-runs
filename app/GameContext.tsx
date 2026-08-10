@@ -11,7 +11,7 @@ import {
   startNextRound,
 } from "@/gameEngine";
 import { playAITurn } from "@/ai/index";
-import { GameState } from "@/types";
+import { Card, GameState } from "@/types";
 import { RoundHistoryEntry } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
 import {
@@ -33,6 +33,7 @@ interface GameContextValue {
   hasSavedGame: boolean;
   roundStartScores: Record<string, number>;
   roundHistory: RoundHistoryEntry[];
+  lastDrawnCardId: string | null;
   startNewGame: (configs: PlayerConfig[]) => void;
   continueGame: () => void;
   revealHand: () => void;
@@ -40,6 +41,7 @@ interface GameContextValue {
   attemptMeld: () => void;
   layOff: (cardId: string, meldId: string) => void;
   discard: (cardId: string) => void;
+  sortHand: () => void;
   advanceRound: () => void;
   quitToHome: () => void;
 }
@@ -47,6 +49,16 @@ interface GameContextValue {
 const GameContext = createContext<GameContextValue | null>(null);
 
 const AI_TURN_DELAY_MS = 550;
+
+const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "JOKER"];
+const SUIT_ORDER = ["hearts", "diamonds", "clubs", "spades", "joker"];
+
+function compareCards(a: Card, b: Card): number {
+  if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
+  const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
+  if (suitDiff !== 0) return suitDiff;
+  return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
+}
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef<GameState | null>(null);
@@ -57,6 +69,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [hasSavedGame, setHasSavedGame] = useState(false);
   const [roundStartScores, setRoundStartScores] = useState<Record<string, number>>({});
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>([]);
+  const [lastDrawnCardId, setLastDrawnCardId] = useState<string | null>(null);
   const recordedRoundsRef = useRef<Set<number>>(new Set());
 
   // Refs mirror the persistence-relevant state synchronously, so commit()
@@ -123,6 +136,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!current.isAI) {
       setAiThinking(false);
       setHasDrawnBoth(false);
+      setLastDrawnCardId(null);
       setAwaitingReveal(true);
       return;
     }
@@ -152,6 +166,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       recordedRoundsRef.current = new Set();
       roundHistoryRef.current = [];
       setRoundHistory([]);
+      setLastDrawnCardId(null);
       persist();
       if (state.players[state.currentPlayerIndex].isAI) {
         runAiLoop();
@@ -171,6 +186,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     roundHistoryRef.current = saved.roundHistory;
     setRoundHistory(saved.roundHistory);
     recordedRoundsRef.current = new Set(saved.roundHistory.map((r) => r.round));
+    setLastDrawnCardId(null);
 
     const current = saved.state.players[saved.state.currentPlayerIndex];
     if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
@@ -186,17 +202,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (fromDiscard: boolean) => {
       const s = stateRef.current;
       if (!s || hasDrawn) return;
+      let card;
       if (fromDiscard) {
-        const got = drawFromDiscard(s);
-        if (!got) drawFromPile(s);
+        card = drawFromDiscard(s) ?? drawFromPile(s);
       } else {
-        drawFromPile(s);
+        card = drawFromPile(s);
       }
+      setLastDrawnCardId(card.id);
       setHasDrawnBoth(true);
       commit();
     },
     [hasDrawn, commit, setHasDrawnBoth]
   );
+
+  const sortHand = useCallback(() => {
+    const s = stateRef.current;
+    if (!s) return;
+    const player = s.players[s.currentPlayerIndex];
+    player.hand = [...player.hand].sort(compareCards);
+    commit();
+  }, [commit]);
 
   const attemptMeld = useCallback(() => {
     const s = stateRef.current;
@@ -222,6 +247,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       discardAndAdvance(s, cardId);
       commit();
       setHasDrawnBoth(false);
+      setLastDrawnCardId(null);
       if (!s.roundOver && !s.gameOver) {
         setAwaitingReveal(false);
         runAiLoop();
@@ -238,6 +264,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setSnapshot({ ...next });
     setHasDrawnBoth(false);
     setAwaitingReveal(false);
+    setLastDrawnCardId(null);
     setRoundStartScoresBoth(Object.fromEntries(next.players.map((p) => [p.id, p.cumulativeScore])));
     persist();
     if (next.players[next.currentPlayerIndex].isAI) {
@@ -266,6 +293,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hasSavedGame,
       roundStartScores,
       roundHistory,
+      lastDrawnCardId,
       startNewGame,
       continueGame,
       revealHand,
@@ -273,6 +301,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       attemptMeld,
       layOff,
       discard,
+      sortHand,
       advanceRound,
       quitToHome,
     }),
@@ -284,6 +313,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hasSavedGame,
       roundStartScores,
       roundHistory,
+      lastDrawnCardId,
       startNewGame,
       continueGame,
       revealHand,
@@ -291,6 +321,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       attemptMeld,
       layOff,
       discard,
+      sortHand,
       advanceRound,
       quitToHome,
     ]

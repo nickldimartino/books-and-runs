@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
 import { PlayingCard } from "../components/PlayingCard";
@@ -9,18 +10,6 @@ import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { canLayOff } from "@/meld";
 import { CONTRACTS, Card, Meld } from "@/types";
-
-const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "JOKER"];
-const SUIT_ORDER = ["hearts", "diamonds", "clubs", "spades", "joker"];
-
-function sortHand(hand: Card[]): Card[] {
-  return [...hand].sort((a, b) => {
-    if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
-    const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
-    if (suitDiff !== 0) return suitDiff;
-    return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
-  });
-}
 
 function meldLabel(meld: Meld): string {
   return meld.type === "book" ? "Book" : "Run";
@@ -34,11 +23,13 @@ export default function GamePage() {
     awaitingReveal,
     aiThinking,
     roundStartScores,
+    lastDrawnCardId,
     revealHand,
     draw,
     attemptMeld,
     layOff,
     discard,
+    sortHand,
     advanceRound,
   } = useGame();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -96,6 +87,21 @@ export default function GamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => router.push("/")}
+          className="rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+        >
+          ← Home
+        </button>
+        <Link
+          href="/how-to-play"
+          className="rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+        >
+          How to play
+        </Link>
+      </div>
+
       <header className="flex items-center justify-between rounded-xl bg-emerald-900/60 px-4 py-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-emerald-100/60">
@@ -209,18 +215,27 @@ export default function GamePage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
-              {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
-              {player.hasMeldedContract && (
-                <span className="ml-2 text-amber-300">— contract melded</span>
-              )}
-            </h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+                {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+                {player.hasMeldedContract && (
+                  <span className="ml-2 text-amber-300">— contract melded</span>
+                )}
+              </h2>
+              <button
+                onClick={sortHand}
+                className="rounded-md border border-emerald-100/20 px-2 py-1 text-xs font-medium text-emerald-100/70 hover:bg-emerald-900/40"
+              >
+                Sort
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {sortHand(player.hand).map((card) => (
+              {player.hand.map((card) => (
                 <PlayingCard
                   key={card.id}
                   card={card}
                   selected={card.id === selectedCardId}
+                  isNew={card.id === lastDrawnCardId}
                   onClick={() => handleCardClick(card)}
                 />
               ))}
