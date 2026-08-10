@@ -88,6 +88,23 @@ describe("solveContract", () => {
     const melds = solveContract(hand, CONTRACTS[0], "p1");
     expect(melds).toBeNull();
   });
+
+  it("solves a round with an Ace-high run (J-Q-K-A)", () => {
+    const hand = makeHand([
+      ["J", "hearts"],
+      ["Q", "hearts"],
+      ["K", "hearts"],
+      ["A", "hearts"],
+      ["4", "clubs"],
+      ["5", "clubs"],
+      ["6", "clubs"],
+      ["7", "clubs"],
+    ]);
+    const melds = solveContract(hand, CONTRACTS[2], "p1"); // round 3: 2 Runs
+    expect(melds).not.toBeNull();
+    expect(melds).toHaveLength(2);
+    expect(melds!.every((m) => m.type === "run" && m.cards.length === 4)).toBe(true);
+  });
 });
 
 describe("leftoverAfterMelds", () => {
@@ -180,6 +197,32 @@ describe("validateManualGroup", () => {
     const group = [makeCard("2", "hearts"), makeCard("JOKER", "joker")];
     expect(validateManualGroup(group, round1).valid).toBe(false);
   });
+
+  it("accepts a run with Ace low (A-2-3-4, wild filling the 2)", () => {
+    const group = [
+      ...makeHand([["A", "hearts"], ["3", "hearts"], ["4", "hearts"]]),
+      makeCard("2", "hearts"), // wild fills the "2" slot
+    ];
+    expect(validateManualGroup(group, round3)).toMatchObject({ valid: true, type: "run" });
+  });
+
+  it("accepts a run with Ace high (J-Q-K-A)", () => {
+    const group = makeHand([
+      ["J", "hearts"],
+      ["Q", "hearts"],
+      ["K", "hearts"],
+      ["A", "hearts"],
+    ]);
+    expect(validateManualGroup(group, round3)).toMatchObject({ valid: true, type: "run" });
+  });
+
+  it("rejects a run that would wrap King-Ace-2-3", () => {
+    const group = [
+      ...makeHand([["K", "hearts"], ["A", "hearts"], ["3", "hearts"]]),
+      makeCard("2", "hearts"), // wild
+    ];
+    expect(validateManualGroup(group, round3).valid).toBe(false);
+  });
 });
 
 describe("canLayOff", () => {
@@ -225,5 +268,52 @@ describe("canLayOff", () => {
     expect(canLayOff(makeCard("8", "diamonds"), run)).toBe(true); // extends high end
     expect(canLayOff(makeCard("8", "hearts"), run)).toBe(false); // wrong suit
     expect(canLayOff(makeCard("9", "diamonds"), run)).toBe(false); // not adjacent
+  });
+
+  it("allows an Ace to extend a run past King (ace-high)", () => {
+    const nineToQueen: Meld = {
+      id: "run2",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 8, // "9"
+      cards: makeHand([
+        ["9", "diamonds"],
+        ["10", "diamonds"],
+        ["J", "diamonds"],
+        ["Q", "diamonds"],
+        ["K", "diamonds"],
+      ]),
+    };
+    expect(canLayOff(makeCard("A", "diamonds"), nineToQueen)).toBe(true);
+  });
+
+  it("allows an Ace to extend a run before 2 (ace-low)", () => {
+    const twoToFive: Meld = {
+      id: "run3",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 1, // "2" (wild-filled — natural 2s are always wild)
+      cards: [
+        makeCard("2", "clubs"),
+        ...makeHand([["3", "clubs"], ["4", "clubs"], ["5", "clubs"]]),
+      ],
+    };
+    expect(canLayOff(makeCard("A", "clubs"), twoToFive)).toBe(true);
+  });
+
+  it("rejects an Ace that doesn't reach either end of the run", () => {
+    const fiveToEight: Meld = {
+      id: "run4",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 4, // "5"
+      cards: makeHand([
+        ["5", "spades"],
+        ["6", "spades"],
+        ["7", "spades"],
+        ["8", "spades"],
+      ]),
+    };
+    expect(canLayOff(makeCard("A", "spades"), fiveToEight)).toBe(false);
   });
 });

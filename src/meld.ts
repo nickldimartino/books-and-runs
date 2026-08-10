@@ -2,7 +2,20 @@ import { Card, ContractRequirement, Meld, Rank } from "./types";
 
 // Order used for runs. "2" only appears here as a slot that must be filled by
 // a wild, since natural 2s are wild cards, not literal rank-2 cards.
-const RUN_ORDER: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+//
+// Ace gets two slots: low (index 0, before 2) and high (index 13, after K) —
+// so a run can go A-2-3-4 or J-Q-K-A. The two Ace slots are 13 apart, farther
+// than any run window, so one run can use one slot or the other but never
+// both at once — that's what stops a run from wrapping Q-K-A-2.
+const RUN_ORDER: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+
+/** Positions a card's rank can occupy in a run window. Every rank has
+ * exactly one, except Ace, which can sit at either end (see RUN_ORDER). */
+function rankPositions(rank: Rank): number[] {
+  if (rank === "A") return [0, RUN_ORDER.length - 1];
+  const idx = RUN_ORDER.indexOf(rank);
+  return idx === -1 ? [] : [idx];
+}
 
 export interface Candidate {
   type: "book" | "run";
@@ -36,12 +49,14 @@ export function runCandidates(naturals: Card[], runSize: number): Candidate[] {
   const bySuit = new Map<string, Map<number, Card>>();
   for (const c of naturals) {
     if (c.suit === "joker") continue;
-    const idx = RUN_ORDER.indexOf(c.rank);
-    if (idx === -1) continue;
     if (!bySuit.has(c.suit)) bySuit.set(c.suit, new Map());
-    // if two identical cards exist (multi-deck), keep the first; the other
-    // becomes a candidate for a different window/meld
-    if (!bySuit.get(c.suit)!.has(idx)) bySuit.get(c.suit)!.set(idx, c);
+    const rankMap = bySuit.get(c.suit)!;
+    for (const idx of rankPositions(c.rank)) {
+      // if two identical cards (or an Ace's two possible slots) already have
+      // an occupant, keep the first; the other becomes a candidate for a
+      // different window/meld
+      if (!rankMap.has(idx)) rankMap.set(idx, c);
+    }
   }
 
   const candidates: Candidate[] = [];
@@ -163,24 +178,40 @@ export function validateManualGroup(cards: Card[], requirement: ContractRequirem
 
   const suits = new Set(naturals.map((c) => c.suit));
   if (suits.size === 1 && !naturals.some((c) => c.suit === "joker")) {
-    const positions = naturals.map((c) => RUN_ORDER.indexOf(c.rank));
-    if (positions.some((p) => p === -1)) {
-      return { valid: false, reason: "Not a valid run." };
-    }
-    if (new Set(positions).size !== positions.length) {
-      return { valid: false, reason: "A run can't repeat the same rank twice." };
-    }
     const size = cards.length;
     if (size < requirement.runSize) {
       return { valid: false, reason: `A run needs at least ${requirement.runSize} cards.` };
     }
+
+    // Every natural has one possible run position, except an Ace, which has
+    // two (low or high — see RUN_ORDER). Try every combination of Ace
+    // placements for a non-repeating window; this is what allows A-2-3-4 and
+    // J-Q-K-A while still rejecting Q-K-A-2 (the two Ace slots are too far
+    // apart to ever land in the same window).
+    const options = naturals.map((c) => rankPositions(c.rank));
+    function tryAssign(i: number, chosen: number[]): number[] | null {
+      if (i === options.length) {
+        if (new Set(chosen).size !== chosen.length) return null;
+        const minPos = Math.min(...chosen);
+        const maxPos = Math.max(...chosen);
+        const lowStart = Math.max(0, maxPos - size + 1);
+        const highStart = Math.min(minPos, RUN_ORDER.length - size);
+        return lowStart <= highStart ? chosen : null;
+      }
+      for (const pos of options[i]) {
+        const result = tryAssign(i + 1, [...chosen, pos]);
+        if (result) return result;
+      }
+      return null;
+    }
+    const positions = tryAssign(0, []);
+    if (!positions) {
+      return { valid: false, reason: "These cards aren't close enough together to form a run." };
+    }
+
     const minPos = Math.min(...positions);
     const maxPos = Math.max(...positions);
     const lowStart = Math.max(0, maxPos - size + 1);
-    const highStart = Math.min(minPos, RUN_ORDER.length - size);
-    if (lowStart > highStart) {
-      return { valid: false, reason: "These cards aren't close enough together to form a run." };
-    }
     return { valid: true, type: "run", runStartIndex: lowStart };
   }
 
@@ -213,6 +244,5 @@ export function canLayOff(card: Card, meld: Meld): boolean {
   if (meld.runStartIndex === undefined) return false;
   const start = meld.runStartIndex;
   const end = start + meld.cards.length - 1;
-  const cardIdx = RUN_ORDER.indexOf(card.rank);
-  return cardIdx === start - 1 || cardIdx === end + 1;
+  return rankPositions(card.rank).some((idx) => idx === start - 1 || idx === end + 1);
 }

@@ -12,13 +12,19 @@ interface DraggableHandProps {
   onReorder: (cardIdsInOrder: string[]) => void;
 }
 
-const DRAG_THRESHOLD_PX = 6;
+const DRAG_THRESHOLD_PX = 8;
 
 interface DragTracker {
   id: string;
   pointerId: number;
   startX: number;
   startY: number;
+  // Where within the card it was grabbed, so the ghost doesn't snap to be
+  // centered under the pointer — it stays wherever the finger picked it up.
+  grabOffsetX: number;
+  grabOffsetY: number;
+  width: number;
+  height: number;
   dragging: boolean;
   order: string[];
 }
@@ -29,6 +35,13 @@ interface DragTracker {
  * Pointer Events (not HTML5 drag-and-drop) so it works the same on touch
  * (iOS) and mouse. A small movement threshold disambiguates a tap from the
  * start of a drag.
+ *
+ * The dragged card is rendered as a fixed-position ghost that tracks the raw
+ * pointer coordinates directly, decoupled from the flex list's own layout.
+ * Reordering the underlying list mid-drag relocates cards within the flex
+ * flow (so the gap follows your finger), but that must never feed back into
+ * the ghost's position — otherwise a flex reflow and a delta-from-drag-start
+ * transform compound, and the card can jump partway across the screen.
  */
 export function DraggableHand({
   cards,
@@ -40,7 +53,7 @@ export function DraggableHand({
   const cardElRefs = useRef(new Map<string, HTMLDivElement>());
   const dragRef = useRef<DragTracker | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
   const [order, setOrder] = useState<string[]>(() => cards.map((c) => c.id));
 
   // Resync local order when the hand's contents or committed order change
@@ -55,6 +68,7 @@ export function DraggableHand({
 
   const byId = new Map(cards.map((c) => [c.id, c]));
   const orderedCards = order.map((id) => byId.get(id)).filter((c): c is Card => !!c);
+  const draggedCard = dragId ? byId.get(dragId) ?? null : null;
 
   function closestIndex(x: number, y: number, excludeId: string, ord: string[]): number {
     let best = -1;
@@ -77,11 +91,16 @@ export function DraggableHand({
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
     dragRef.current = {
       id: card.id,
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
+      grabOffsetX: e.clientX - rect.left,
+      grabOffsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
       dragging: false,
       order: order.slice(),
     };
@@ -105,7 +124,7 @@ export function DraggableHand({
       }
     }
 
-    setDragOffset({ x: dx, y: dy });
+    setPointerPos({ x: e.clientX, y: e.clientY });
 
     const targetIndex = closestIndex(e.clientX, e.clientY, drag.id, drag.order);
     const currentIndex = drag.order.indexOf(drag.id);
@@ -123,7 +142,6 @@ export function DraggableHand({
     if (!drag || drag.id !== card.id) return;
     dragRef.current = null;
     setDragId(null);
-    setDragOffset({ x: 0, y: 0 });
     if (drag.dragging) {
       onReorder(drag.order);
     } else {
@@ -135,7 +153,6 @@ export function DraggableHand({
     const drag = dragRef.current;
     dragRef.current = null;
     setDragId(null);
-    setDragOffset({ x: 0, y: 0 });
     if (drag?.dragging) {
       // Interrupted mid-drag (e.g. system gesture) — revert to the last
       // committed order instead of keeping a half-applied reorder.
@@ -169,13 +186,12 @@ export function DraggableHand({
             style={{
               touchAction: "none",
               WebkitTouchCallout: "none",
-              transform: isDragging
-                ? `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(1.08)`
-                : undefined,
-              zIndex: isDragging ? 10 : undefined,
-              transition: isDragging ? "none" : "transform 150ms ease",
+              // Keep the dragged card's slot in the flow (so the gap it left
+              // doesn't collapse and neighbors don't jump) but hide it —
+              // the ghost below is what's actually visible while dragging.
+              visibility: isDragging ? "hidden" : undefined,
             }}
-            className={`select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            className="select-none cursor-grab"
           >
             <PlayingCard
               card={card}
@@ -185,6 +201,29 @@ export function DraggableHand({
           </div>
         );
       })}
+
+      {draggedCard && dragRef.current && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: pointerPos.x - dragRef.current.grabOffsetX,
+            top: pointerPos.y - dragRef.current.grabOffsetY,
+            width: dragRef.current.width,
+            height: dragRef.current.height,
+            zIndex: 50,
+            pointerEvents: "none",
+            transform: "scale(1.08)",
+            filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.4))",
+          }}
+        >
+          <PlayingCard
+            card={draggedCard}
+            selected={selectedCardIds.includes(draggedCard.id)}
+            isNew={draggedCard.id === lastDrawnCardId}
+          />
+        </div>
+      )}
     </div>
   );
 }

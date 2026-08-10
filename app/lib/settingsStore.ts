@@ -5,13 +5,11 @@ const KEY = "booksAndRuns:settings";
 export interface HouseSettings {
   wildCardLimit: number | null; // max wilds per meld; null = no limit
   preferredAiDifficulty: Difficulty;
-  soundOn: boolean;
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
   wildCardLimit: null,
   preferredAiDifficulty: "medium",
-  soundOn: true,
 };
 
 export function loadLocalSettings(): HouseSettings {

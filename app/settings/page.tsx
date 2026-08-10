@@ -18,7 +18,6 @@ const WILD_LIMIT_OPTIONS: { label: string; value: string }[] = [
 interface SettingsRow {
   wild_card_limit_house_rule: number | null;
   preferred_ai_difficulty_default: string | null;
-  sound_on: boolean;
 }
 
 export default function SettingsPage() {
@@ -35,7 +34,7 @@ export default function SettingsPage() {
     }
     supabase
       .from("settings")
-      .select("wild_card_limit_house_rule, preferred_ai_difficulty_default, sound_on")
+      .select("wild_card_limit_house_rule, preferred_ai_difficulty_default")
       .eq("user_id", user.id)
       .maybeSingle<SettingsRow>()
       .then(({ data }) => {
@@ -43,7 +42,6 @@ export default function SettingsPage() {
           const synced: HouseSettings = {
             wildCardLimit: data.wild_card_limit_house_rule,
             preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
-            soundOn: data.sound_on,
           };
           setSettings(synced);
           // Keep local storage in step with the account's settings, since
@@ -62,7 +60,6 @@ export default function SettingsPage() {
         user_id: user.id,
         wild_card_limit_house_rule: settings.wildCardLimit,
         preferred_ai_difficulty_default: settings.preferredAiDifficulty,
-        sound_on: settings.soundOn,
       });
       setSaveState(error ? "error" : "saved");
     } else {
@@ -120,29 +117,6 @@ export default function SettingsPage() {
             <p className="text-xs text-emerald-100/40">
               Used as the starting difficulty when you add an AI opponent on the New Game screen.
             </p>
-          </section>
-
-          <section className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-emerald-100/80">Sound</label>
-              <p className="text-xs text-emerald-100/40">
-                Saved, but this app doesn&apos;t have sound effects yet.
-              </p>
-            </div>
-            <button
-              role="switch"
-              aria-checked={settings.soundOn}
-              onClick={() => setSettings((s) => ({ ...s, soundOn: !s.soundOn }))}
-              className={`h-7 w-12 shrink-0 rounded-full transition ${
-                settings.soundOn ? "bg-amber-400" : "bg-emerald-900"
-              }`}
-            >
-              <span
-                className={`block h-5 w-5 translate-y-1 rounded-full bg-white transition ${
-                  settings.soundOn ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
           </section>
 
           <div className="flex flex-col gap-2">
