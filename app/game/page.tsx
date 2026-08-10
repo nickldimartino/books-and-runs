@@ -1,0 +1,233 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useGame } from "../GameContext";
+import { PlayingCard } from "../components/PlayingCard";
+import { PassGate } from "../components/PassGate";
+import { RoundSummary } from "../components/RoundSummary";
+import { GameOverScreen } from "../components/GameOverScreen";
+import { canLayOff } from "@/meld";
+import { CONTRACTS, Card, Meld } from "@/types";
+
+const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "JOKER"];
+const SUIT_ORDER = ["hearts", "diamonds", "clubs", "spades", "joker"];
+
+function sortHand(hand: Card[]): Card[] {
+  return [...hand].sort((a, b) => {
+    if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
+    const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
+    if (suitDiff !== 0) return suitDiff;
+    return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
+  });
+}
+
+function meldLabel(meld: Meld): string {
+  return meld.type === "book" ? "Book" : "Run";
+}
+
+export default function GamePage() {
+  const router = useRouter();
+  const {
+    state,
+    hasDrawn,
+    awaitingReveal,
+    aiThinking,
+    roundStartScores,
+    revealHand,
+    draw,
+    attemptMeld,
+    layOff,
+    discard,
+    advanceRound,
+  } = useGame();
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!state) router.replace("/");
+  }, [state, router]);
+
+  useEffect(() => {
+    setSelectedCardId(null);
+  }, [state?.currentPlayerIndex, state?.round]);
+
+  if (!state) return null;
+
+  if (state.gameOver) return <GameOverScreen state={state} />;
+  if (state.roundOver) {
+    return (
+      <RoundSummary state={state} roundStartScores={roundStartScores} onNextRound={advanceRound} />
+    );
+  }
+
+  const player = state.players[state.currentPlayerIndex];
+
+  if (!player.isAI && awaitingReveal) {
+    return <PassGate name={player.name} onReveal={revealHand} />;
+  }
+
+  const contract = CONTRACTS[state.round - 1];
+  const discardTop = state.discardPile[state.discardPile.length - 1];
+  const selectedCard = player.hand.find((c) => c.id === selectedCardId) ?? null;
+
+  const meldsByOwner = new Map<string, Meld[]>();
+  for (const meld of state.melds) {
+    const list = meldsByOwner.get(meld.ownerId) ?? [];
+    list.push(meld);
+    meldsByOwner.set(meld.ownerId, list);
+  }
+
+  function handleCardClick(card: Card) {
+    setSelectedCardId((prev) => (prev === card.id ? null : card.id));
+  }
+
+  function handleMeldClick(meld: Meld) {
+    if (!selectedCard || !player.hasMeldedContract) return;
+    if (!canLayOff(selectedCard, meld)) return;
+    layOff(selectedCard.id, meld.id);
+    setSelectedCardId(null);
+  }
+
+  function handleDiscardSelected() {
+    if (!selectedCard) return;
+    discard(selectedCard.id);
+    setSelectedCardId(null);
+  }
+
+  return (
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
+      <header className="flex items-center justify-between rounded-xl bg-emerald-900/60 px-4 py-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-emerald-100/60">
+            Round {state.round} of 7
+          </p>
+          <p className="text-lg font-bold text-amber-100">{contract.label}</p>
+        </div>
+        <ul className="text-right text-xs text-emerald-100/70">
+          {[...state.players]
+            .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
+            .map((p) => (
+              <li key={p.id}>
+                {p.name}: <span className="font-semibold text-amber-100">{p.cumulativeScore}</span>
+              </li>
+            ))}
+        </ul>
+      </header>
+
+      {player.isAI ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+          <p className="text-lg font-semibold text-amber-100">{player.name} is playing…</p>
+          {aiThinking && <p className="text-sm text-emerald-100/60">thinking…</p>}
+        </div>
+      ) : (
+        <>
+          <section className="flex items-center justify-center gap-6">
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => draw(false)}
+                disabled={hasDrawn}
+                className="disabled:opacity-50"
+                aria-label="Draw from pile"
+              >
+                <PlayingCard card={{ id: "back", suit: "joker", rank: "JOKER", isWild: true }} faceDown />
+              </button>
+              <span className="text-xs text-emerald-100/60">Draw ({state.drawPile.length})</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => draw(true)}
+                disabled={hasDrawn || !discardTop}
+                className="disabled:opacity-50"
+                aria-label="Draw from discard"
+              >
+                {discardTop ? (
+                  <PlayingCard card={discardTop} />
+                ) : (
+                  <div className="h-20 w-14 rounded-lg border-2 border-dashed border-emerald-100/20" />
+                )}
+              </button>
+              <span className="text-xs text-emerald-100/60">Discard pile</span>
+            </div>
+          </section>
+
+          <section className="flex-1 rounded-xl bg-emerald-950/40 p-4">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+              Table melds
+            </h2>
+            {state.melds.length === 0 ? (
+              <p className="text-sm text-emerald-100/40">No melds on the table yet.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {[...meldsByOwner.entries()].map(([ownerId, melds]) => {
+                  const owner = state.players.find((p) => p.id === ownerId);
+                  return (
+                    <div key={ownerId}>
+                      <p className="mb-1 text-xs text-emerald-100/50">{owner?.name ?? ownerId}</p>
+                      <div className="flex flex-wrap gap-3">
+                        {melds.map((meld) => {
+                          const isValidTarget = !!selectedCard && player.hasMeldedContract && canLayOff(selectedCard, meld);
+                          return (
+                            <button
+                              key={meld.id}
+                              onClick={() => handleMeldClick(meld)}
+                              disabled={!isValidTarget}
+                              className={`flex items-end gap-1 rounded-lg p-1 transition ${
+                                isValidTarget ? "bg-amber-400/20 ring-2 ring-amber-400" : ""
+                              }`}
+                              title={meldLabel(meld)}
+                            >
+                              {meld.cards.map((c) => (
+                                <PlayingCard key={c.id} card={c} small />
+                              ))}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={attemptMeld}
+              disabled={!hasDrawn || player.hasMeldedContract}
+              className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 shadow disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Meld contract
+            </button>
+            <button
+              onClick={handleDiscardSelected}
+              disabled={!hasDrawn || !selectedCard}
+              className="rounded-lg border border-amber-300/60 px-4 py-2 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Discard selected card
+            </button>
+          </section>
+
+          <section>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+              {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+              {player.hasMeldedContract && (
+                <span className="ml-2 text-amber-300">— contract melded</span>
+              )}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {sortHand(player.hand).map((card) => (
+                <PlayingCard
+                  key={card.id}
+                  card={card}
+                  selected={card.id === selectedCardId}
+                  onClick={() => handleCardClick(card)}
+                />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+    </main>
+  );
+}

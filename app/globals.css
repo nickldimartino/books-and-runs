@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --felt: #0f3d2e;
+  --felt-dark: #0a2b20;
+  --card-red: #b91c1c;
+  --card-black: #1f2937;
+}
+
+body {
+  background: var(--felt-dark);
+  color: #f5f0e6;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.card-face {
+  background: #fdfbf6;
+  color: var(--card-black);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.card-face.red {
+  color: var(--card-red);
+}
+
+.card-face.wild {
+  background: #fef3c7;
+  color: #92400e;
+}
