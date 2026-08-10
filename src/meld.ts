@@ -40,6 +40,8 @@ export function bookCandidates(naturals: Card[], bookSize: number): Candidate[] 
   for (const [rank, cards] of byRank) {
     const take = cards.slice(0, bookSize);
     const wildsNeeded = Math.max(0, bookSize - take.length);
+    // A meld can't use more wild cards than natural ones.
+    if (wildsNeeded > take.length) continue;
     candidates.push({ type: "book", key: `book:${rank}`, naturalCards: take, wildsNeeded });
   }
   return candidates;
@@ -63,16 +65,20 @@ export function runCandidates(naturals: Card[], runSize: number): Candidate[] {
   for (const [suit, rankMap] of bySuit) {
     for (let start = 0; start + runSize <= RUN_ORDER.length; start++) {
       const naturalCards: Card[] = [];
-      let wildsNeeded = 0;
+      const gaps: number[] = [];
       for (let i = start; i < start + runSize; i++) {
         const card = rankMap.get(i);
         if (card) naturalCards.push(card);
-        else wildsNeeded++;
+        else gaps.push(i);
       }
       // require at least one natural card so we're not building a meld out of thin air
-      if (naturalCards.length > 0) {
-        candidates.push({ type: "run", key: `run:${suit}:${start}`, naturalCards, wildsNeeded });
-      }
+      if (naturalCards.length === 0) continue;
+      // A meld can't use more wild cards than natural ones.
+      if (gaps.length > naturalCards.length) continue;
+      // A run can't have two wild cards in a row.
+      const hasConsecutiveGaps = gaps.some((g, i2) => i2 > 0 && g === gaps[i2 - 1] + 1);
+      if (hasConsecutiveGaps) continue;
+      candidates.push({ type: "run", key: `run:${suit}:${start}`, naturalCards, wildsNeeded: gaps.length });
     }
   }
   return candidates;
@@ -162,10 +168,13 @@ export interface GroupValidation {
  * choosing for them.
  */
 export function validateManualGroup(cards: Card[], requirement: ContractRequirement): GroupValidation {
-  const { naturals } = splitWildsAndNaturals(cards);
+  const { wilds, naturals } = splitWildsAndNaturals(cards);
 
   if (naturals.length === 0) {
     return { valid: false, reason: "Include at least one non-wild card." };
+  }
+  if (wilds.length > naturals.length) {
+    return { valid: false, reason: "A meld can't use more wild cards than natural cards." };
   }
 
   const ranks = new Set(naturals.map((c) => c.rank));
@@ -185,18 +194,31 @@ export function validateManualGroup(cards: Card[], requirement: ContractRequirem
 
     // Every natural has one possible run position, except an Ace, which has
     // two (low or high — see RUN_ORDER). Try every combination of Ace
-    // placements for a non-repeating window; this is what allows A-2-3-4 and
-    // J-Q-K-A while still rejecting Q-K-A-2 (the two Ace slots are too far
-    // apart to ever land in the same window).
+    // placements, and every valid window start for that combination, to find
+    // one with no two wild-filled slots in a row. This is what allows
+    // A-2-3-4 and J-Q-K-A while still rejecting Q-K-A-2 (the two Ace slots
+    // are too far apart to ever land in the same window) and a run like
+    // 6-7-_-_ (two wilds back to back).
     const options = naturals.map((c) => rankPositions(c.rank));
-    function tryAssign(i: number, chosen: number[]): number[] | null {
+    function tryAssign(i: number, chosen: number[]): { positions: number[]; start: number } | null {
       if (i === options.length) {
         if (new Set(chosen).size !== chosen.length) return null;
         const minPos = Math.min(...chosen);
         const maxPos = Math.max(...chosen);
         const lowStart = Math.max(0, maxPos - size + 1);
         const highStart = Math.min(minPos, RUN_ORDER.length - size);
-        return lowStart <= highStart ? chosen : null;
+        const filled = new Set(chosen);
+        for (let start = lowStart; start <= highStart; start++) {
+          let hasConsecutiveGaps = false;
+          for (let k = start; k < start + size - 1; k++) {
+            if (!filled.has(k) && !filled.has(k + 1)) {
+              hasConsecutiveGaps = true;
+              break;
+            }
+          }
+          if (!hasConsecutiveGaps) return { positions: chosen, start };
+        }
+        return null;
       }
       for (const pos of options[i]) {
         const result = tryAssign(i + 1, [...chosen, pos]);
@@ -204,15 +226,16 @@ export function validateManualGroup(cards: Card[], requirement: ContractRequirem
       }
       return null;
     }
-    const positions = tryAssign(0, []);
-    if (!positions) {
-      return { valid: false, reason: "These cards aren't close enough together to form a run." };
+    const assignment = tryAssign(0, []);
+    if (!assignment) {
+      return {
+        valid: false,
+        reason:
+          "These cards aren't close enough together to form a run, or would need two wild cards in a row.",
+      };
     }
 
-    const minPos = Math.min(...positions);
-    const maxPos = Math.max(...positions);
-    const lowStart = Math.max(0, maxPos - size + 1);
-    return { valid: true, type: "run", runStartIndex: lowStart };
+    return { valid: true, type: "run", runStartIndex: assignment.start };
   }
 
   return {

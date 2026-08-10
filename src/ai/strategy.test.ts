@@ -36,14 +36,26 @@ describe("deadCards", () => {
     expect(deadCards(player, state)).toHaveLength(0);
   });
 
-  it("keeps book-building cards alive on a book round even without duplicates yet, if wilds can complete it", () => {
+  it("keeps a book-building card alive on a book round when one wild can complete it", () => {
+    const hand = [...makeHand([["9", "hearts"], ["9", "clubs"]]), makeCard("2", "clubs")];
+    const player = makePlayer({ hand });
+    const state = makeGameState({ round: 1, players: [player] }); // needs bookSize 3, has 2 natural 9s + 1 wild
+
+    const dead = deadCards(player, state);
+
+    expect(dead).toHaveLength(0); // the 9s are one wild-fill away from a full book
+  });
+
+  it("marks a lone natural dead when completing its book would need more wilds than naturals", () => {
     const hand = [makeCard("9", "hearts"), makeCard("2", "clubs"), makeCard("2", "spades")];
     const player = makePlayer({ hand });
     const state = makeGameState({ round: 1, players: [player] }); // needs bookSize 3, has 1 natural 9 + 2 wilds
 
     const dead = deadCards(player, state);
 
-    expect(dead).toHaveLength(0); // the 9 is one wild-fill away from a full book
+    // A meld can't use more wild cards than natural ones, so a lone natural
+    // can't be completed into a book — it's genuinely dead now.
+    expect(dead.map((c) => c.rank)).toEqual(["9"]);
   });
 
   it("marks a truly unrelated card dead even on a mixed book+run round", () => {

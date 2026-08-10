@@ -7,7 +7,6 @@ import { supabase } from "./lib/supabaseClient";
 import { Difficulty } from "@/types";
 
 interface SettingsRow {
-  wild_card_limit_house_rule: number | null;
   preferred_ai_difficulty_default: string | null;
 }
 
@@ -27,13 +26,12 @@ export function SettingsSync() {
     if (!supabase || !user) return;
     supabase
       .from("settings")
-      .select("wild_card_limit_house_rule, preferred_ai_difficulty_default")
+      .select("preferred_ai_difficulty_default")
       .eq("user_id", user.id)
       .maybeSingle<SettingsRow>()
       .then(({ data }) => {
         if (!data) return;
         saveLocalSettings({
-          wildCardLimit: data.wild_card_limit_house_rule,
           preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
         });
       });

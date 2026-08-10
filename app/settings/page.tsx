@@ -8,15 +8,8 @@ import { supabase } from "../lib/supabaseClient";
 import { Difficulty } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
-const WILD_LIMIT_OPTIONS: { label: string; value: string }[] = [
-  { label: "No limit", value: "" },
-  { label: "1 wild per meld", value: "1" },
-  { label: "2 wilds per meld", value: "2" },
-  { label: "3 wilds per meld", value: "3" },
-];
 
 interface SettingsRow {
-  wild_card_limit_house_rule: number | null;
   preferred_ai_difficulty_default: string | null;
 }
 
@@ -34,13 +27,12 @@ export default function SettingsPage() {
     }
     supabase
       .from("settings")
-      .select("wild_card_limit_house_rule, preferred_ai_difficulty_default")
+      .select("preferred_ai_difficulty_default")
       .eq("user_id", user.id)
       .maybeSingle<SettingsRow>()
       .then(({ data }) => {
         if (data) {
           const synced: HouseSettings = {
-            wildCardLimit: data.wild_card_limit_house_rule,
             preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
           };
           setSettings(synced);
@@ -58,7 +50,6 @@ export default function SettingsPage() {
     if (supabase && user) {
       const { error } = await supabase.from("settings").upsert({
         user_id: user.id,
-        wild_card_limit_house_rule: settings.wildCardLimit,
         preferred_ai_difficulty_default: settings.preferredAiDifficulty,
       });
       setSaveState(error ? "error" : "saved");
@@ -75,30 +66,6 @@ export default function SettingsPage() {
         <p className="text-sm text-emerald-100/60">Loading…</p>
       ) : (
         <>
-          <section className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-emerald-100/80">Wild card limit per meld</label>
-            <select
-              value={settings.wildCardLimit === null ? "" : String(settings.wildCardLimit)}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  wildCardLimit: e.target.value === "" ? null : Number(e.target.value),
-                }))
-              }
-              className="rounded-lg bg-emerald-950 px-4 py-3 text-sm text-amber-100 outline-none ring-1 ring-emerald-100/20 focus:ring-amber-400"
-            >
-              {WILD_LIMIT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-emerald-100/40">
-              Saved for reference during house-rule discussions — not yet enforced by the game
-              engine.
-            </p>
-          </section>
-
           <section className="flex flex-col gap-2">
             <label className="text-sm font-medium text-emerald-100/80">Default AI difficulty</label>
             <select

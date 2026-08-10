@@ -89,6 +89,22 @@ describe("solveContract", () => {
     expect(melds).toBeNull();
   });
 
+  it("does not use more wild cards than natural cards to complete a book", () => {
+    // Only 1 natural "5" — the old solver would've filled the other 2 book
+    // slots with wilds; that's no longer allowed (wilds can't outnumber
+    // naturals), so this hand can't meet the round-1 (2 Books) contract.
+    const hand = makeHand([
+      ["5", "hearts"],
+      "2",
+      "2",
+      ["9", "hearts"],
+      ["9", "clubs"],
+      ["9", "spades"],
+    ]);
+    const melds = solveContract(hand, CONTRACTS[0], "p1");
+    expect(melds).toBeNull();
+  });
+
   it("solves a round with an Ace-high run (J-Q-K-A)", () => {
     const hand = makeHand([
       ["J", "hearts"],
@@ -222,6 +238,36 @@ describe("validateManualGroup", () => {
       makeCard("2", "hearts"), // wild
     ];
     expect(validateManualGroup(group, round3).valid).toBe(false);
+  });
+
+  it("rejects a book with more wilds than naturals", () => {
+    const group = [makeCard("5", "hearts"), makeCard("2", "clubs"), makeCard("2", "spades")];
+    expect(validateManualGroup(group, round1).valid).toBe(false);
+  });
+
+  it("rejects a run that would need two wild cards in a row", () => {
+    // Naturals 4 and 9 are 5 slots apart — the only 4-card window covering
+    // both would need "5" and a slot between them both wild, and no other
+    // window fits two naturals this far apart either.
+    const group = [
+      ...makeHand([["4", "hearts"], ["9", "hearts"]]),
+      makeCard("2", "clubs"),
+      makeCard("2", "diamonds"),
+    ];
+    expect(validateManualGroup(group, round3).valid).toBe(false);
+  });
+
+  it("accepts a run with two non-adjacent wilds", () => {
+    // Naturals 6,7 with two wilds can only form a valid run as 5-6-7-8 (wilds
+    // filling 5 and 8) — the other candidate windows (4-5-6-7, 6-7-8-9) would
+    // both need the two wilds back to back, so this only works because a
+    // non-adjacent placement also exists.
+    const group = [
+      ...makeHand([["6", "hearts"], ["7", "hearts"]]),
+      makeCard("2", "clubs"),
+      makeCard("2", "diamonds"),
+    ];
+    expect(validateManualGroup(group, round3)).toMatchObject({ valid: true, type: "run" });
   });
 });
 

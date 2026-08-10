@@ -3,12 +3,10 @@ import { Difficulty } from "@/types";
 const KEY = "booksAndRuns:settings";
 
 export interface HouseSettings {
-  wildCardLimit: number | null; // max wilds per meld; null = no limit
   preferredAiDifficulty: Difficulty;
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
-  wildCardLimit: null,
   preferredAiDifficulty: "medium",
 };
 
