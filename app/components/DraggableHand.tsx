@@ -12,13 +12,23 @@ interface DraggableHandProps {
   onReorder: (cardIdsInOrder: string[]) => void;
 }
 
-const DRAG_THRESHOLD_PX = 8;
+// Drag engages on whichever comes first: holding roughly still for
+// LONG_PRESS_MS, or moving past BIG_MOVE_PX right away. A pure small-distance
+// threshold doesn't work on touch — real touch input has enough jitter that a
+// deliberate slow drag can stay under a few pixels of *net* displacement for
+// a while, so a small threshold alone causes real drags to get misread as a
+// tap release instead.
+const LONG_PRESS_MS = 180;
+const BIG_MOVE_PX = 18;
 
 interface DragTracker {
   id: string;
   pointerId: number;
+  element: HTMLDivElement;
   startX: number;
   startY: number;
+  lastX: number;
+  lastY: number;
   // Where within the card it was grabbed, so the ghost doesn't snap to be
   // centered under the pointer — it stays wherever the finger picked it up.
   grabOffsetX: number;
@@ -27,14 +37,14 @@ interface DragTracker {
   height: number;
   dragging: boolean;
   order: string[];
+  holdTimer: ReturnType<typeof setTimeout>;
 }
 
 /**
  * Renders the hand as a pointer-draggable list — tap a card to select it
- * (via onCardClick), or drag it to a new spot to reorder the hand. Uses raw
- * Pointer Events (not HTML5 drag-and-drop) so it works the same on touch
- * (iOS) and mouse. A small movement threshold disambiguates a tap from the
- * start of a drag.
+ * (via onCardClick), or press-and-drag it to a new spot to reorder the hand.
+ * Uses raw Pointer Events (not HTML5 drag-and-drop) so it works the same on
+ * touch (iOS) and mouse.
  *
  * The dragged card is rendered as a fixed-position ghost that tracks the raw
  * pointer coordinates directly, decoupled from the flex list's own layout.
@@ -70,11 +80,15 @@ export function DraggableHand({
   const orderedCards = order.map((id) => byId.get(id)).filter((c): c is Card => !!c);
   const draggedCard = dragId ? byId.get(dragId) ?? null : null;
 
-  function closestIndex(x: number, y: number, excludeId: string, ord: string[]): number {
+  // Includes the dragged card's own (still-laid-out, merely hidden) slot as
+  // a candidate — otherwise the very first move after engaging a drag always
+  // "wins" against whichever neighbor happens to be marginally closer, since
+  // there'd be nothing to beat. Including it means a swap only fires once
+  // the pointer actually crosses the midpoint into a neighbor's slot.
+  function closestIndex(x: number, y: number, ord: string[]): number {
     let best = -1;
     let bestDist = Infinity;
     ord.forEach((id, i) => {
-      if (id === excludeId) return;
       const el = cardElRefs.current.get(id);
       if (!el) return;
       const r = el.getBoundingClientRect();
@@ -89,44 +103,59 @@ export function DraggableHand({
     return best;
   }
 
+  function engageDrag(card: Card) {
+    const drag = dragRef.current;
+    if (!drag || drag.id !== card.id || drag.dragging) return;
+    drag.dragging = true;
+    setDragId(card.id);
+    setPointerPos({ x: drag.lastX, y: drag.lastY });
+    try {
+      drag.element.setPointerCapture(drag.pointerId);
+    } catch {
+      // Capture is a nicety (keeps events routed here if the pointer
+      // drifts off the element mid-drag) — safe to continue without it.
+    }
+  }
+
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    const element = e.currentTarget;
+    const rect = element.getBoundingClientRect();
     dragRef.current = {
       id: card.id,
       pointerId: e.pointerId,
+      element,
       startX: e.clientX,
       startY: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
       grabOffsetX: e.clientX - rect.left,
       grabOffsetY: e.clientY - rect.top,
       width: rect.width,
       height: rect.height,
       dragging: false,
       order: order.slice(),
+      holdTimer: setTimeout(() => engageDrag(card), LONG_PRESS_MS),
     };
   }
 
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
     const drag = dragRef.current;
     if (!drag || drag.id !== card.id) return;
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
+    drag.lastX = e.clientX;
+    drag.lastY = e.clientY;
 
     if (!drag.dragging) {
-      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-      drag.dragging = true;
-      setDragId(card.id);
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        // Capture is a nicety (keeps events routed here if the pointer
-        // drifts off the element mid-drag) — safe to continue without it.
-      }
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      if (Math.hypot(dx, dy) < BIG_MOVE_PX) return;
+      clearTimeout(drag.holdTimer);
+      engageDrag(card);
     }
 
     setPointerPos({ x: e.clientX, y: e.clientY });
 
-    const targetIndex = closestIndex(e.clientX, e.clientY, drag.id, drag.order);
+    const targetIndex = closestIndex(e.clientX, e.clientY, drag.order);
     const currentIndex = drag.order.indexOf(drag.id);
     if (targetIndex !== -1 && targetIndex !== currentIndex) {
       const next = drag.order.slice();
@@ -140,6 +169,7 @@ export function DraggableHand({
   function endDrag(card: Card) {
     const drag = dragRef.current;
     if (!drag || drag.id !== card.id) return;
+    clearTimeout(drag.holdTimer);
     dragRef.current = null;
     setDragId(null);
     if (drag.dragging) {
@@ -151,9 +181,11 @@ export function DraggableHand({
 
   function handlePointerCancel(card: Card) {
     const drag = dragRef.current;
+    if (!drag || drag.id !== card.id) return;
+    clearTimeout(drag.holdTimer);
     dragRef.current = null;
     setDragId(null);
-    if (drag?.dragging) {
+    if (drag.dragging) {
       // Interrupted mid-drag (e.g. system gesture) — revert to the last
       // committed order instead of keeping a half-applied reorder.
       setOrder(cards.map((c) => c.id));
