@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CONTRACTS } from "@/types";
+import { BackNav } from "./BackNav";
 
 export const metadata = {
   title: "How to Play — Books & Runs",
@@ -16,6 +17,7 @@ const PENALTY_ROWS = [
 export default function HowToPlayPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
+      <BackNav />
       <h1 className="text-2xl font-bold text-amber-100">How to Play</h1>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">

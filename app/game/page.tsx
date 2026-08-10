@@ -222,12 +222,22 @@ export default function GamePage() {
                   <span className="ml-2 text-amber-300">— contract melded</span>
                 )}
               </h2>
-              <button
-                onClick={sortHand}
-                className="rounded-md border border-emerald-100/20 px-2 py-1 text-xs font-medium text-emerald-100/70 hover:bg-emerald-900/40"
-              >
-                Sort
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => sortHand("suit")}
+                  title="Group same-suit cards together — good for spotting runs"
+                  className="rounded-md border border-emerald-100/20 px-2 py-1 text-xs font-medium text-emerald-100/70 hover:bg-emerald-900/40"
+                >
+                  Sort by suit
+                </button>
+                <button
+                  onClick={() => sortHand("rank")}
+                  title="Group same-rank cards together — good for spotting books"
+                  className="rounded-md border border-emerald-100/20 px-2 py-1 text-xs font-medium text-emerald-100/70 hover:bg-emerald-900/40"
+                >
+                  Sort by rank
+                </button>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {player.hand.map((card) => (

@@ -41,7 +41,7 @@ interface GameContextValue {
   attemptMeld: () => void;
   layOff: (cardId: string, meldId: string) => void;
   discard: (cardId: string) => void;
-  sortHand: () => void;
+  sortHand: (mode: SortMode) => void;
   advanceRound: () => void;
   quitToHome: () => void;
 }
@@ -53,11 +53,22 @@ const AI_TURN_DELAY_MS = 550;
 const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "JOKER"];
 const SUIT_ORDER = ["hearts", "diamonds", "clubs", "spades", "joker"];
 
-function compareCards(a: Card, b: Card): number {
+export type SortMode = "suit" | "rank";
+
+/** Groups same-suit cards together, in sequence — good for spotting runs. */
+function compareBySuit(a: Card, b: Card): number {
   if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
   const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
   if (suitDiff !== 0) return suitDiff;
   return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
+}
+
+/** Groups same-rank cards together — good for spotting books. */
+function compareByRank(a: Card, b: Card): number {
+  if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
+  const rankDiff = RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
+  if (rankDiff !== 0) return rankDiff;
+  return SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
@@ -215,13 +226,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [hasDrawn, commit, setHasDrawnBoth]
   );
 
-  const sortHand = useCallback(() => {
-    const s = stateRef.current;
-    if (!s) return;
-    const player = s.players[s.currentPlayerIndex];
-    player.hand = [...player.hand].sort(compareCards);
-    commit();
-  }, [commit]);
+  const sortHand = useCallback(
+    (mode: SortMode) => {
+      const s = stateRef.current;
+      if (!s) return;
+      const player = s.players[s.currentPlayerIndex];
+      player.hand = [...player.hand].sort(mode === "rank" ? compareByRank : compareBySuit);
+      commit();
+    },
+    [commit]
+  );
 
   const attemptMeld = useCallback(() => {
     const s = stateRef.current;
