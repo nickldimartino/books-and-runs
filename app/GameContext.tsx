@@ -82,6 +82,20 @@ function compareByRank(a: Card, b: Card): number {
   return SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
 }
 
+/**
+ * If the current player has melded their contract and melding/laying off
+ * just emptied their hand, they've gone out — end the round immediately
+ * rather than leaving the UI waiting on a discard that's now impossible
+ * with zero cards in hand. Mirrors what playAITurn already does for AI
+ * turns; confirmMeld and layOff need the same check for human turns.
+ */
+function finishIfWentOut(s: GameState) {
+  const player = s.players[s.currentPlayerIndex];
+  if (player.hasMeldedContract && player.hand.length === 0) {
+    discardAndAdvance(s, "");
+  }
+}
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef<GameState | null>(null);
   const [snapshot, setSnapshot] = useState<GameState | null>(null);
@@ -282,6 +296,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!s || !hasDrawn) return false;
       const melds = meldChosenGroups(s, groups);
       if (!melds) return false;
+      finishIfWentOut(s);
       commit();
       return true;
     },
@@ -293,7 +308,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const s = stateRef.current;
       if (!s || !hasDrawn) return false;
       const ok = layOffCard(s, cardId, meldId, position);
-      if (ok) commit();
+      if (ok) {
+        finishIfWentOut(s);
+        commit();
+      }
       return ok;
     },
     [hasDrawn, commit]

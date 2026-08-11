@@ -26,7 +26,6 @@ export interface ContractRequirement {
   runs: number;
   bookSize: number; // min cards per book
   runSize: number; // min cards per run
-  noDiscardOnGoOut: boolean; // Round 7 special rule
   label: string;
 }
 
@@ -72,13 +71,13 @@ export const PENALTY_VALUES: Record<string, number> = {
 };
 
 export const CONTRACTS: ContractRequirement[] = [
-  { round: 1, books: 2, runs: 0, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "2 Books" },
-  { round: 2, books: 1, runs: 1, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "1 Book + 1 Run" },
-  { round: 3, books: 0, runs: 2, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "2 Runs" },
-  { round: 4, books: 2, runs: 1, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "2 Books + 1 Run" },
-  { round: 5, books: 1, runs: 2, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "1 Book + 2 Runs" },
-  { round: 6, books: 3, runs: 0, bookSize: 3, runSize: 4, noDiscardOnGoOut: false, label: "3 Books" },
-  { round: 7, books: 0, runs: 3, bookSize: 3, runSize: 4, noDiscardOnGoOut: true, label: "3 Runs (No Discard)" },
+  { round: 1, books: 2, runs: 0, bookSize: 3, runSize: 4, label: "2 Books" },
+  { round: 2, books: 1, runs: 1, bookSize: 3, runSize: 4, label: "1 Book + 1 Run" },
+  { round: 3, books: 0, runs: 2, bookSize: 3, runSize: 4, label: "2 Runs" },
+  { round: 4, books: 2, runs: 1, bookSize: 3, runSize: 4, label: "2 Books + 1 Run" },
+  { round: 5, books: 1, runs: 2, bookSize: 3, runSize: 4, label: "1 Book + 2 Runs" },
+  { round: 6, books: 3, runs: 0, bookSize: 3, runSize: 4, label: "3 Books" },
+  { round: 7, books: 0, runs: 3, bookSize: 3, runSize: 4, label: "3 Runs" },
 ];
 
 // The "short game" mode: drops rounds 4 and 5 (the two hardest, mixed

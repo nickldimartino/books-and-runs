@@ -67,7 +67,6 @@ export default function HowToPlayPage() {
                     {c.books > 0 && `${c.books} book${c.books > 1 ? "s" : ""}`}
                     {c.books > 0 && c.runs > 0 && " + "}
                     {c.runs > 0 && `${c.runs} run${c.runs > 1 ? "s" : ""}`}
-                    {c.noDiscardOnGoOut && " (no discard on going out)"}
                   </td>
                 </tr>
               ))}
@@ -108,12 +107,15 @@ export default function HowToPlayPage() {
           </li>
           <li>
             <strong className="text-[var(--heading)]">Discard</strong> — end your turn by discarding one
-            card, except in your game&apos;s last round (see the no-discard rule below).
+            card. If melding and/or laying off used every card in your hand, there&apos;s nothing left
+            to discard — see &quot;Going out&quot; below.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Going out</strong> — the round ends the moment a
-            player melds their full contract and has no cards left. Everyone else scores penalty
-            points for the cards remaining in hand.
+            player who has melded their full contract has no cards left in hand, whether that happens
+            right at melding, after laying more cards off, or after a later discard. No discard is
+            needed once your hand is already empty. Everyone else scores penalty points for the cards
+            remaining in hand.
           </li>
         </ul>
       </section>
@@ -196,18 +198,21 @@ export default function HowToPlayPage() {
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">
-          Round 7 special rule — no discard
+          Going out without a discard
         </h2>
         <p>
-          In a round that needs 3 runs, a player who can lay down all three runs at once{" "}
-          <strong className="text-[var(--heading)]">and has nothing left in hand</strong> goes out
-          immediately — there&apos;s no final discard required.
+          If melding your contract and/or laying cards off already used your entire hand, you go
+          out immediately — there&apos;s nothing left to discard, so none is required. This can
+          happen in{" "}
+          <strong className="text-[var(--heading)]">any round</strong>, not just the last one — it
+          just comes up most often in a round with a big contract (like 3 runs), where melding and
+          laying off are more likely to use your whole hand.
         </p>
         <p>
           Melding the contract by itself doesn&apos;t end the round if cards remain in hand
-          afterward (including this round) — the player still discards normally, same as any other
-          round. The round only ends once someone&apos;s hand actually reaches zero, whether that
-          happens right at melding or a discard later empties it.
+          afterward — you still discard normally, same as any other turn. The round only ends once
+          your hand actually reaches zero, whether that happens right at melding, after laying more
+          cards off, or from a discard.
         </p>
       </section>
 

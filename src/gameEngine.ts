@@ -231,15 +231,17 @@ export function layOffCard(
 }
 
 /**
- * Discard a card, ending the turn. Handles Round 7's no-discard-on-go-out rule.
+ * Discard a card, ending the turn. If the player has already melded their
+ * contract and their hand is already empty (melding and/or laying off used
+ * every card), they've gone out — the round ends immediately with no
+ * discard needed, since there's nothing left to discard. This applies in
+ * every round, not just one with a big enough contract to make it likely.
  * Returns true if the round ended as a result of this action.
  */
 export function discardAndAdvance(state: GameState, cardId: string): boolean {
   const player = currentPlayer(state);
-  const req = currentContract(state);
 
-  // Round 7: going out (empty hand right after melding) skips the discard entirely
-  if (req.noDiscardOnGoOut && player.hasMeldedContract && player.hand.length === 0) {
+  if (player.hasMeldedContract && player.hand.length === 0) {
     endRound(state, player.id);
     return true;
   }

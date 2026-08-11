@@ -469,9 +469,6 @@ describe("discardAndAdvance", () => {
   });
 
   it("Round 7: skips the discard entirely when melding empties the hand", () => {
-    const req = CONTRACTS[6];
-    expect(req.noDiscardOnGoOut).toBe(true);
-
     const state = makeGameState({
       round: 7,
       currentPlayerIndex: 0,
@@ -488,6 +485,29 @@ describe("discardAndAdvance", () => {
     expect(state.discardHistory).toHaveLength(0); // no discard was ever recorded
     expect(state.gameOver).toBe(true); // round 7 is the last round
     expect(state.winnerId).toBe("p1");
+  });
+
+  it("skips the discard on an empty hand in ANY round, not just the last one", () => {
+    // Regression test: this used to only work in round 7 (via a
+    // noDiscardOnGoOut flag on the contract) — a player who melded and then
+    // laid off their remaining cards in an earlier round had no way to end
+    // their turn, since there was nothing left to discard.
+    const state = makeGameState({
+      round: 1, // 2 Books — an ordinary, non-final round
+      currentPlayerIndex: 0,
+      players: [
+        makePlayer({ id: "p1", hand: [], hasMeldedContract: true, cumulativeScore: 0 }),
+        makePlayer({ id: "p2", hand: makeHand(["K", "Q", "J"]), cumulativeScore: 0 }),
+      ],
+    });
+
+    const roundEnded = discardAndAdvance(state, "unused-card-id");
+
+    expect(roundEnded).toBe(true);
+    expect(state.roundOver).toBe(true);
+    expect(state.discardHistory).toHaveLength(0);
+    expect(state.gameOver).toBe(false); // round 1 of 7 — the game continues
+    expect(state.winnerId).toBeUndefined();
   });
 
   it("ends the game after the last round of a shorter, custom-selected sequence", () => {
