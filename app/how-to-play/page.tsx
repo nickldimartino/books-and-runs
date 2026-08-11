@@ -197,9 +197,15 @@ export default function HowToPlayPage() {
           Round 7 special rule — no discard
         </h2>
         <p>
-          In a round that needs 3 runs, a player who can lay down all three runs at once goes out
-          immediately upon melding — there&apos;s no final discard required. The round ends the
-          instant the last card is melded.
+          In a round that needs 3 runs, a player who can lay down all three runs at once{" "}
+          <strong className="text-[var(--heading)]">and has nothing left in hand</strong> goes out
+          immediately — there&apos;s no final discard required.
+        </p>
+        <p>
+          Melding the contract by itself doesn&apos;t end the round if cards remain in hand
+          afterward (including this round) — the player still discards normally, same as any other
+          round. The round only ends once someone&apos;s hand actually reaches zero, whether that
+          happens right at melding or a discard later empties it.
         </p>
       </section>
 

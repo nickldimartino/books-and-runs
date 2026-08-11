@@ -196,29 +196,42 @@ export default function NewGamePage() {
         )}
         {roundMode === "custom" && (
           <div className="flex flex-col gap-1">
-            {CONTRACTS.map((c) => (
-              <label
-                key={c.round}
-                onClick={(e) => {
-                  // Fully React-controlled toggle: suppress the browser's own
-                  // label→checkbox click forwarding (which otherwise races
-                  // against this handler and could flip a different, stale
-                  // checkbox after a fast re-render) and let this be the one
-                  // and only place a toggle happens.
-                  e.preventDefault();
-                  toggleCustomRound(c.round);
-                }}
-                className="flex items-center gap-2 rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--muted)]"
-              >
-                <input
-                  type="checkbox"
-                  checked={customRounds.has(c.round)}
-                  readOnly
-                  className="h-4 w-4 accent-[var(--accent)]"
-                />
-                Round {c.round}: {c.label}
-              </label>
-            ))}
+            {CONTRACTS.map((c) => {
+              const checked = customRounds.has(c.round);
+              return (
+                <button
+                  key={c.round}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={checked}
+                  onClick={() => toggleCustomRound(c.round)}
+                  className="flex w-full items-center gap-2 rounded-md bg-[var(--panel)] px-3 py-2 text-left text-sm text-[var(--muted)]"
+                >
+                  <span
+                    aria-hidden
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                      checked
+                        ? "border-[var(--accent)] bg-[var(--accent)]"
+                        : "border-[var(--border)] bg-transparent"
+                    }`}
+                  >
+                    {checked && (
+                      <svg viewBox="0 0 16 16" className="h-3 w-3">
+                        <path
+                          d="M3 8.5l3 3 7-7"
+                          fill="none"
+                          stroke="var(--on-accent)"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                  Round {c.round}: {c.label}
+                </button>
+              );
+            })}
             {selectedContracts.length === 0 && (
               <p className="text-xs text-[var(--accent)]">Pick at least one round.</p>
             )}
