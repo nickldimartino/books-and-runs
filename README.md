@@ -71,8 +71,15 @@ npm install
 npm run dev     # Next.js UI at http://localhost:3000
 npm run demo     # headless CLI demo: 5 AIs play a full game, prints results
 npm run test     # Vitest unit test suite (engine + AI)
+npm run lint     # ESLint (React hooks rules + Next.js checks)
 npm run build     # production build (static export, see next.config.ts)
 ```
+
+`npm run lint` parses `.ts`/`.tsx` with Babel rather than `typescript-eslint`, since
+`typescript-eslint` doesn't yet support this project's TypeScript 7 (preview) —
+see the comment in `eslint.config.mjs`. That means lint is syntax-only, no
+type-aware rules; `npm run test`/`tsc --noEmit` remain the source of truth for
+type correctness.
 
 Local pass-and-play and AI opponents work with zero setup — no Supabase
 project or iOS toolchain required. Auth/stats and the iOS build are optional

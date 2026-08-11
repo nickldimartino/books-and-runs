@@ -9,6 +9,7 @@
     "demo": "tsc -p tsconfig.engine.json && node dist/demo.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "lint": "eslint .",
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios"
   },
@@ -16,11 +17,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/eslint-parser": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
     "@capacitor/cli": "^8.5.0",
+    "@next/eslint-plugin-next": "^16.3.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitest": "^3.2.7"

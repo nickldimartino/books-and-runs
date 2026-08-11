@@ -87,9 +87,10 @@ export function GameOverScreen({ state }: { state: GameState }) {
         }
       })
       .catch(() => setSaved("error"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `level` is only
-    // read once, at mount, for the before/after diff — it must not retrigger
-    // this effect as PlayerLevelProvider's own state updates after refresh().
+    // `level` is only read once, at mount, for the before/after diff — it
+    // must not retrigger this effect as PlayerLevelProvider's own state
+    // updates after refresh().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, roundHistory, user, getSessionCounters, refreshLevel]);
 
   function playAgain() {
