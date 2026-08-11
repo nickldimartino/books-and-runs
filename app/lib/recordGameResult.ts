@@ -1,6 +1,17 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Difficulty, GameState } from "@/types";
 
+/**
+ * The seat id that represents "the signed-in account" in pass-and-play,
+ * where several human players can share one device/session but at most one
+ * of them is actually the account owner. New Game always assigns this id to
+ * the first human slot ("You"). Not cryptographically enforced — anyone
+ * could rename that seat or seat a different person in slot 0 — but it's
+ * the same convention every account-linked feature in this app relies on
+ * (stats here, and achievement counters in GameContext.tsx).
+ */
+export const YOU_PLAYER_ID = "human-0";
+
 export interface RoundHistoryEntry {
   round: number;
   totals: Record<string, number>;
@@ -34,7 +45,7 @@ export async function recordGameResult(
   state: GameState,
   roundHistory: RoundHistoryEntry[]
 ): Promise<void> {
-  const you = state.players.find((p) => p.id === "human-0");
+  const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
   if (!you) return;
 
   const won = state.winnerId === you.id;

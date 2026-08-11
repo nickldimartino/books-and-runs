@@ -13,8 +13,9 @@ import {
   startNextRound,
 } from "@/gameEngine";
 import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
+import { layOffOptions } from "@/meld";
 import { Card, ContractRequirement, GameState } from "@/types";
-import { RoundHistoryEntry } from "./lib/recordGameResult";
+import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
 import {
   createContext,
@@ -55,6 +56,10 @@ interface GameContextValue {
   respondToBuy: (accept: boolean) => void;
   advanceRound: () => void;
   quitToHome: () => void;
+  /** Achievement counter deltas accumulated so far this game, for the
+   * signed-in seat only — see recordAchievementProgress.ts, called from
+   * GameOverScreen once the game actually ends. */
+  getSessionCounters: () => Record<string, number>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -113,12 +118,14 @@ function compareByRank(a: Card, b: Card): number {
  * rather than leaving the UI waiting on a discard that's now impossible
  * with zero cards in hand. Mirrors what playAITurn already does for AI
  * turns; confirmMeld and layOff need the same check for human turns.
+ * Returns whether this ended the round, so callers can attribute the win.
  */
-function finishIfWentOut(s: GameState) {
+function finishIfWentOut(s: GameState): boolean {
   const player = s.players[s.currentPlayerIndex];
   if (player.hasMeldedContract && player.hand.length === 0) {
-    discardAndAdvance(s, "");
+    return discardAndAdvance(s, "");
   }
+  return false;
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
@@ -141,6 +148,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const hasDrawnRef = useRef(false);
   const roundStartScoresRef = useRef<Record<string, number>>({});
   const roundHistoryRef = useRef<RoundHistoryEntry[]>([]);
+
+  // Achievement progress accumulated this game, for YOU_PLAYER_ID only.
+  // Flushed to Supabase once, at game-over (see GameOverScreen.tsx) — same
+  // "a finished game is what counts" rule recordGameResult already follows,
+  // so quitting mid-game drops this session's counters, consistent with how
+  // it already drops that game from games_played/games_won too.
+  const sessionCountersRef = useRef<Record<string, number>>({});
+  const bump = useCallback((key: string, amount = 1) => {
+    sessionCountersRef.current[key] = (sessionCountersRef.current[key] ?? 0) + amount;
+  }, []);
+  const getSessionCounters = useCallback(() => sessionCountersRef.current, []);
 
   useEffect(() => {
     setHasSavedGame(loadSavedGame() !== null);
@@ -168,6 +186,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hasDrawn: hasDrawnRef.current,
       roundStartScores: roundStartScoresRef.current,
       roundHistory: roundHistoryRef.current,
+      sessionCounters: sessionCountersRef.current,
     });
     setHasSavedGame(true);
   }, []);
@@ -232,12 +251,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastDrawnCardId(null);
       setBuyOffer(null);
       buyQueueRef.current = [];
+
+      // Fresh game — reset achievement progress and record table composition
+      // up front, since it's known now and won't change for the rest of the
+      // game (only relevant if YOU are actually seated, per YOU_PLAYER_ID).
+      sessionCountersRef.current = {};
+      if (state.players.some((p) => p.id === YOU_PLAYER_ID)) {
+        const humanCount = configs.filter((c) => !c.isAI).length;
+        if (humanCount >= 2) bump("pass_and_play_games");
+        if (humanCount === 1) bump("solo_vs_ai_games");
+        if (configs.length >= 6) bump("large_table_games");
+      }
+
       persist();
       if (state.players[state.currentPlayerIndex].isAI) {
         runAiLoop();
       }
     },
-    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth]
+    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump]
   );
 
   const continueGame = useCallback(() => {
@@ -254,6 +285,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setLastDrawnCardId(null);
     setBuyOffer(null);
     buyQueueRef.current = [];
+    sessionCountersRef.current = saved.sessionCounters ?? {};
 
     const current = saved.state.players[saved.state.currentPlayerIndex];
     if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
@@ -269,17 +301,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (fromDiscard: boolean) => {
       const s = stateRef.current;
       if (!s || hasDrawn) return;
-      let card;
+      const player = s.players[s.currentPlayerIndex];
+      const isYou = player.id === YOU_PLAYER_ID;
+
+      let card: Card;
+      let actuallyFromDiscard = false;
       if (fromDiscard) {
-        card = drawFromDiscard(s) ?? drawFromPile(s);
+        const got = drawFromDiscard(s);
+        if (got) {
+          card = got;
+          actuallyFromDiscard = true;
+        } else {
+          card = drawFromPile(s);
+        }
       } else {
         card = drawFromPile(s);
       }
+
+      if (isYou) {
+        bump("turns_taken");
+        bump(actuallyFromDiscard ? "cards_drawn_from_discard" : "cards_drawn_blind");
+        if (card.isWild) bump("wilds_drawn");
+        if (card.rank === "JOKER") bump("jokers_drawn");
+      }
+
       setLastDrawnCardId(card.id);
       setHasDrawnBoth(true);
       commit();
     },
-    [hasDrawn, commit, setHasDrawnBoth]
+    [hasDrawn, commit, setHasDrawnBoth, bump]
   );
 
   const sortHand = useCallback(
@@ -319,27 +369,68 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (groups: string[][]) => {
       const s = stateRef.current;
       if (!s || !hasDrawn) return false;
+      const player = s.players[s.currentPlayerIndex];
+      const isYou = player.id === YOU_PLAYER_ID;
+      const contract = s.selectedContracts[s.round - 1];
       const melds = meldChosenGroups(s, groups);
       if (!melds) return false;
-      finishIfWentOut(s);
+
+      if (isYou) {
+        bump(`completed_round_${contract.round}`);
+        for (const m of melds) {
+          const wildCount = m.cards.filter((c) => c.isWild).length;
+          if (m.type === "book") {
+            bump("books_melded");
+            if (m.cards.length > contract.bookSize) bump("oversized_books_melded");
+          } else {
+            bump("runs_melded");
+            if (m.cards.length > contract.runSize) bump("oversized_runs_melded");
+          }
+          if (wildCount > 0) bump("wilds_used_in_melds", wildCount);
+          else bump("melds_with_zero_wilds");
+        }
+      }
+
+      const wentOut = finishIfWentOut(s);
+      if (isYou && wentOut && s.winnerId === player.id) {
+        bump("rounds_won");
+        bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
+      }
       commit();
       return true;
     },
-    [hasDrawn, commit]
+    [hasDrawn, commit, bump]
   );
 
   const layOff = useCallback(
     (cardId: string, meldId: string, position?: "low" | "high") => {
       const s = stateRef.current;
       if (!s || !hasDrawn) return false;
+      const player = s.players[s.currentPlayerIndex];
+      const isYou = player.id === YOU_PLAYER_ID;
+      const card = player.hand.find((c) => c.id === cardId);
+      const meld = s.melds.find((m) => m.id === meldId);
+      const wasAmbiguous = !!(card && meld && layOffOptions(card, meld).length === 2);
+
       const ok = layOffCard(s, cardId, meldId, position);
       if (ok) {
-        finishIfWentOut(s);
+        if (isYou && card && meld) {
+          bump("cards_laid_off");
+          if (card.isWild) bump("wilds_laid_off");
+          if (meld.ownerId !== player.id) bump("laid_off_onto_opponent");
+          if (wasAmbiguous) bump("ambiguous_wild_choices_made");
+        }
+        const wentOut = finishIfWentOut(s);
+        if (isYou && wentOut && s.winnerId === player.id) {
+          const contract = s.selectedContracts[s.round - 1];
+          bump("rounds_won");
+          bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
+        }
         commit();
       }
       return ok;
     },
-    [hasDrawn, commit]
+    [hasDrawn, commit, bump]
   );
 
   /**
@@ -395,7 +486,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (cardId: string) => {
       const s = stateRef.current;
       if (!s || !hasDrawn) return;
-      discardAndAdvance(s, cardId);
+      const player = s.players[s.currentPlayerIndex];
+      const isYou = player.id === YOU_PLAYER_ID;
+
+      const roundEnded = discardAndAdvance(s, cardId);
+      if (isYou) {
+        bump("cards_discarded");
+        if (roundEnded && s.winnerId === player.id) {
+          bump("rounds_won");
+          bump("rounds_won_via_discard");
+        }
+      }
       commit();
       setHasDrawnBoth(false);
       setLastDrawnCardId(null);
@@ -410,7 +511,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue]
+    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump]
   );
 
   const advanceRound = useCallback(() => {
@@ -468,6 +569,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       respondToBuy,
       advanceRound,
       quitToHome,
+      getSessionCounters,
     }),
     [
       snapshot,
@@ -491,6 +593,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       respondToBuy,
       advanceRound,
       quitToHome,
+      getSessionCounters,
     ]
   );
 

@@ -8,6 +8,11 @@ export interface SavedGame {
   hasDrawn: boolean;
   roundStartScores: Record<string, number>;
   roundHistory: RoundHistoryEntry[];
+  // Achievement counter deltas accumulated so far this game (see
+  // GameContext.tsx's sessionCountersRef) — persisted so resuming a saved
+  // game after closing the app doesn't silently drop this game's progress.
+  // Optional since saves made before this field existed won't have it.
+  sessionCounters?: Record<string, number>;
   savedAt: number;
 }
 

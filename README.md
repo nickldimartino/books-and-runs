@@ -41,6 +41,11 @@ All six phases of that roadmap are now built.
 - `supabase/migrations/0001_init.sql` — the `player_stats`, `game_history`,
   and `settings` tables, with row-level security so each user can only ever
   read/write their own rows
+- `supabase/migrations/0002_achievements.sql` — the `achievement_counters`
+  table backing the Achievements page (`src/achievements.ts` defines the 200
+  achievements — 40 families × 5 tiers — as a pure function of these counters
+  plus `player_stats`; `app/GameContext.tsx` increments counters only for the
+  signed-in seat, `human-0`, and flushes them to Supabase once at game-over)
 - `ios/` — the native Xcode project Capacitor generates to wrap the static
   export; `capacitor.config.json` points it at `out/`. Ships with a custom
   app icon and launch screen (green felt + a two-card mark) instead of
@@ -109,7 +114,8 @@ layers on top; see the checklists below to turn them on.
 The app runs fine without this — it only unlocks Sign in and Stats.
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the Supabase SQL editor, run `supabase/migrations/0001_init.sql`.
+2. In the Supabase SQL editor, run `supabase/migrations/0001_init.sql`, then
+   `0002_achievements.sql` (the latter also unlocks the Achievements page).
 3. In **Authentication → Providers**, enable Email, and optionally Google
    and Apple (each needs its own OAuth credentials from Google
    Cloud Console / the Apple Developer portal — entered into Supabase's

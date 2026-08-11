@@ -5,12 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { GameState } from "@/types";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
-import { recordGameResult } from "../lib/recordGameResult";
+import { recordAchievementProgress } from "../lib/recordAchievementProgress";
+import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory } = useGame();
+  const { quitToHome, roundHistory, getSessionCounters } = useGame();
   const { user } = useAuth();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const winner = standings[0];
@@ -21,10 +22,20 @@ export function GameOverScreen({ state }: { state: GameState }) {
     if (recordedRef.current || !supabase || !user) return;
     recordedRef.current = true;
     setSaved("saving");
-    recordGameResult(supabase, user.id, state, roundHistory)
+
+    const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
+    const counters = { ...getSessionCounters() };
+    if (you && you.cumulativeScore === 0) {
+      counters.zero_penalty_games = (counters.zero_penalty_games ?? 0) + 1;
+    }
+
+    Promise.all([
+      recordGameResult(supabase, user.id, state, roundHistory),
+      recordAchievementProgress(supabase, user.id, counters),
+    ])
       .then(() => setSaved("saved"))
       .catch(() => setSaved("error"));
-  }, [state, roundHistory, user]);
+  }, [state, roundHistory, user, getSessionCounters]);
 
   function playAgain() {
     quitToHome();
