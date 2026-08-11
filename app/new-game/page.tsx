@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useGame } from "../GameContext";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { PlayerConfig } from "@/gameEngine";
@@ -17,6 +17,7 @@ export default function NewGamePage() {
   const router = useRouter();
   const { startNewGame } = useGame();
   const [humanCount, setHumanCount] = useState(1);
+  const [humanNames, setHumanNames] = useState<string[]>(["You"]);
   const [aiDifficulties, setAiDifficulties] = useState<Difficulty[]>(["medium"]);
   const [defaultDifficulty, setDefaultDifficulty] = useState<Difficulty>("medium");
   const [roundMode, setRoundMode] = useState<RoundMode>("all");
@@ -42,10 +43,30 @@ export default function NewGamePage() {
   const canStart =
     totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS && selectedContracts.length > 0;
 
-  const humanNames = useMemo(
-    () => Array.from({ length: humanCount }, (_, i) => (i === 0 ? "You" : `Player ${i + 1}`)),
-    [humanCount]
-  );
+  // Grows/shrinks the editable name list to match humanCount without
+  // clobbering names already typed into the slots that stick around.
+  function resizeHumanNames(count: number) {
+    setHumanNames((prev) => {
+      if (prev.length === count) return prev;
+      if (prev.length < count) {
+        const additions = Array.from(
+          { length: count - prev.length },
+          (_, i) => `Player ${prev.length + i + 1}`
+        );
+        return [...prev, ...additions];
+      }
+      return prev.slice(0, count);
+    });
+  }
+
+  function setHumanCountAndResize(next: number) {
+    setHumanCount(next);
+    resizeHumanNames(next);
+  }
+
+  function setHumanName(index: number, name: string) {
+    setHumanNames((prev) => prev.map((n, i) => (i === index ? name : n)));
+  }
 
   function toggleCustomRound(round: number) {
     setCustomRounds((prev) => {
@@ -72,7 +93,11 @@ export default function NewGamePage() {
   function handleStart() {
     if (!canStart) return;
     const configs: PlayerConfig[] = [
-      ...humanNames.map((name, i) => ({ id: `human-${i}`, name, isAI: false })),
+      ...humanNames.map((name, i) => ({
+        id: `human-${i}`,
+        name: name.trim() || (i === 0 ? "You" : `Player ${i + 1}`),
+        isAI: false,
+      })),
       ...aiDifficulties.map((difficulty, i) => ({
         id: `ai-${i}`,
         name: `${difficulty[0].toUpperCase()}${difficulty.slice(1)} AI`,
@@ -101,7 +126,7 @@ export default function NewGamePage() {
         </h2>
         <div className="flex items-center gap-4">
           <button
-            onClick={() => setHumanCount((n) => Math.max(1, n - 1))}
+            onClick={() => setHumanCountAndResize(Math.max(1, humanCount - 1))}
             className="h-10 w-10 rounded-full bg-[var(--elevated)] text-lg font-bold text-[var(--heading)] hover:bg-[var(--elevated-hover)]"
             aria-label="Fewer human players"
           >
@@ -109,13 +134,32 @@ export default function NewGamePage() {
           </button>
           <span className="w-6 text-center text-xl font-semibold">{humanCount}</span>
           <button
-            onClick={() => setHumanCount((n) => Math.min(MAX_PLAYERS - aiDifficulties.length, n + 1))}
+            onClick={() =>
+              setHumanCountAndResize(Math.min(MAX_PLAYERS - aiDifficulties.length, humanCount + 1))
+            }
             className="h-10 w-10 rounded-full bg-[var(--elevated)] text-lg font-bold text-[var(--heading)] hover:bg-[var(--elevated-hover)]"
             aria-label="More human players"
           >
             +
           </button>
         </div>
+        <div className="flex flex-col gap-2">
+          {humanNames.map((name, i) => (
+            <input
+              key={i}
+              type="text"
+              value={name}
+              onChange={(e) => setHumanName(i, e.target.value)}
+              placeholder={i === 0 ? "You" : `Player ${i + 1}`}
+              maxLength={20}
+              className="rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text)] outline-none ring-1 ring-transparent focus:ring-[var(--accent)]"
+            />
+          ))}
+        </div>
+        <p className="text-xs text-[var(--faint)]">
+          Names are just for this game and this device — they don&apos;t affect your signed-in
+          account.
+        </p>
       </section>
 
       <section className="flex flex-col gap-3">

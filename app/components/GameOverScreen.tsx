@@ -40,7 +40,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">
       <div className="text-center">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">Game over</p>
-        <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">{winner.name} wins!</h1>
+        <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">{winner.name} won!</h1>
       </div>
 
       <ol className="flex flex-col gap-2">
