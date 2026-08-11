@@ -1,5 +1,11 @@
 import { buildDeck, deal, shuffle } from "./deck";
-import { layOffOptions, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
+import {
+  layOffOptions,
+  leftoverAfterMelds,
+  solveContract,
+  solveWholeHandContract,
+  validateManualGroup,
+} from "./meld";
 import { handPenalty } from "./scorer";
 import { CONTRACTS, Card, ContractRequirement, Difficulty, GameState, Meld, Player } from "./types";
 
@@ -84,6 +90,11 @@ export function drawFromDiscard(state: GameState): Card | null {
  * here reflects the house rule that a player farther down the line can only
  * buy once everyone nearer has passed — the caller is expected to offer the
  * buy in this order and stop at the first taker.
+ *
+ * This engine logic is intact but currently unused in the app: see
+ * BUY_DISCARD_ENABLED in app/GameContext.tsx for why it's switched off (it
+ * needs a player to be watching for a discard worth buying, which doesn't
+ * work on a single shared pass-and-play screen) and how to re-enable it.
  */
 export function eligibleBuyers(state: GameState): Player[] {
   if (state.players.length < 3 || state.discardPile.length === 0) return [];
@@ -127,13 +138,19 @@ export function buyDiscard(state: GameState, buyerId: string): boolean {
 /**
  * Attempt to meld the player's full contract for this round, all at once.
  * Returns the melds laid if successful, or null if the contract can't
- * currently be completed from hand.
+ * currently be completed from hand. In a wholeHandMeld round (the final,
+ * "no discard" round), this only succeeds when every card in hand — natural
+ * and wild — fits into the melds; a partial meld with cards left over isn't
+ * allowed, since there'd be nothing to end the round with (see
+ * solveWholeHandContract).
  */
 export function attemptMeldContract(state: GameState): Meld[] | null {
   const player = currentPlayer(state);
   if (player.hasMeldedContract) return null; // already melded this round
   const req = currentContract(state);
-  const melds = solveContract(player.hand, req, player.id);
+  const melds = req.wholeHandMeld
+    ? solveWholeHandContract(player.hand, req, player.id)
+    : solveContract(player.hand, req, player.id);
   if (!melds) return null;
 
   player.hand = leftoverAfterMelds(player.hand, melds);
@@ -177,6 +194,9 @@ export function meldChosenGroups(state: GameState, groups: string[][]): Meld[] |
   const bookCount = validations.filter((v) => v.type === "book").length;
   const runCount = validations.filter((v) => v.type === "run").length;
   if (bookCount !== req.books || runCount !== req.runs) return null;
+  // Whole-hand-meld round: no discard follows, so every card in hand must be
+  // part of some group — a partial meld with leftovers isn't allowed.
+  if (req.wholeHandMeld && seen.size !== player.hand.length) return null;
 
   const melds: Meld[] = resolvedGroups.map((cards, idx) => ({
     id: `${player.id}-meld-${idx}-${validations[idx].type}`,

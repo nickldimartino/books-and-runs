@@ -37,9 +37,6 @@ export default function HowToPlayPage() {
           <li>Each player is dealt 13 cards.</li>
           <li>The rest of the deck forms the draw pile; the top card starts the discard pile.</li>
         </ul>
-        <Note>
-          Games with 3 or more players get an extra option — buying the discard. See below.
-        </Note>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -182,37 +179,39 @@ export default function HowToPlayPage() {
       </section>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
-        <h2 className="text-base font-semibold text-[var(--heading)]">Buying the discard (3+ players)</h2>
-        <p>
-          Normally, only the next player can take the top of the discard pile, as part of their own
-          draw. In games of 3 or more players, if that next player doesn&apos;t want it, another
-          player further down the turn order can <strong className="text-[var(--heading)]">buy</strong> it
-          instead — but only once everyone nearer in turn order has passed on it first.
-        </p>
-        <p>
-          Buying costs a penalty: the buyer takes the discarded card{" "}
-          <strong className="text-[var(--heading)]">plus one extra card</strong> off the top of the draw
-          pile. Buying doesn&apos;t use up their turn — normal turn order continues unaffected.
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">
           Going out without a discard
         </h2>
         <p>
           If melding your contract and/or laying cards off already used your entire hand, you go
           out immediately — there&apos;s nothing left to discard, so none is required. This can
-          happen in{" "}
-          <strong className="text-[var(--heading)]">any round</strong>, not just the last one — it
-          just comes up most often in a round with a big contract (like 3 runs), where melding and
-          laying off are more likely to use your whole hand.
+          happen in <strong className="text-[var(--heading)]">any round</strong>, not just the last
+          one.
         </p>
         <p>
-          Melding the contract by itself doesn&apos;t end the round if cards remain in hand
-          afterward — you still discard normally, same as any other turn. The round only ends once
-          your hand actually reaches zero, whether that happens right at melding, after laying more
-          cards off, or from a discard.
+          Outside of the last round, melding the contract by itself doesn&apos;t end the round if
+          cards remain in hand afterward — you still discard normally, same as any other turn. The
+          round only ends once your hand actually reaches zero, whether that happens right at
+          melding, after laying more cards off, or from a discard.
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">
+          The last round: no discard at all
+        </h2>
+        <p>
+          The game&apos;s final round (3 Runs, in the standard 7-round game) works differently: your
+          entire hand has to go into the meld, all at once — there&apos;s no discard step for it at
+          all, and no laying off extra cards afterward either. If a run needs to be longer than the
+          usual minimum of 4 to fit everything, that&apos;s fine — build it as long as it needs to
+          be.
+        </p>
+        <p>
+          Practically, this means you can only meld this round once your whole hand happens to
+          split evenly into exactly the runs the round needs. Until then, keep drawing and
+          discarding as normal — it&apos;s meant to be the hardest round to complete, and usually
+          only one player manages it before the game ends.
         </p>
       </section>
 

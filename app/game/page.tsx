@@ -114,7 +114,11 @@ export default function GamePage() {
   const visibleHand = player.hand.filter((c) => !stagedCardIds.has(c.id));
   const stagedBooks = pendingGroups.filter((g) => g.type === "book").length;
   const stagedRuns = pendingGroups.filter((g) => g.type === "run").length;
-  const meldReady = stagedBooks === contract.books && stagedRuns === contract.runs;
+  const cardsNotYetGrouped = player.hand.length - stagedCardIds.size;
+  const meldReady =
+    stagedBooks === contract.books &&
+    stagedRuns === contract.runs &&
+    (!contract.wholeHandMeld || cardsNotYetGrouped === 0);
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -270,6 +274,12 @@ export default function GamePage() {
             </div>
           </section>
 
+          {!hasDrawn && (
+            <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-center text-xs font-medium text-[var(--accent)]">
+              Draw a card from the pile or discard pile to start your turn.
+            </p>
+          )}
+
           {pendingLayOff && (
             <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent)]/60 bg-[var(--panel)] p-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
@@ -352,6 +362,15 @@ export default function GamePage() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
               </h2>
+
+              {contract.wholeHandMeld && (
+                <p className="text-xs text-[var(--muted)]">
+                  This is the final round — there&apos;s no discard once you meld, so every card in
+                  your hand has to go into these runs.
+                  {cardsNotYetGrouped > 0 &&
+                    ` ${cardsNotYetGrouped} card${cardsNotYetGrouped > 1 ? "s" : ""} not yet grouped.`}
+                </p>
+              )}
 
               {pendingGroups.length > 0 && (
                 <div className="flex flex-col gap-2">

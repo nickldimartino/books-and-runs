@@ -27,6 +27,10 @@ export interface ContractRequirement {
   bookSize: number; // min cards per book
   runSize: number; // min cards per run
   label: string;
+  // True only for the game's final round (the traditional "no rummy" round):
+  // the meld must use every card in hand, natural and wild, since there's no
+  // discard afterward. See solveWholeHandContract in meld.ts.
+  wholeHandMeld: boolean;
 }
 
 export type Difficulty = "beginner" | "easy" | "medium" | "hard" | "expert";
@@ -71,13 +75,13 @@ export const PENALTY_VALUES: Record<string, number> = {
 };
 
 export const CONTRACTS: ContractRequirement[] = [
-  { round: 1, books: 2, runs: 0, bookSize: 3, runSize: 4, label: "2 Books" },
-  { round: 2, books: 1, runs: 1, bookSize: 3, runSize: 4, label: "1 Book + 1 Run" },
-  { round: 3, books: 0, runs: 2, bookSize: 3, runSize: 4, label: "2 Runs" },
-  { round: 4, books: 2, runs: 1, bookSize: 3, runSize: 4, label: "2 Books + 1 Run" },
-  { round: 5, books: 1, runs: 2, bookSize: 3, runSize: 4, label: "1 Book + 2 Runs" },
-  { round: 6, books: 3, runs: 0, bookSize: 3, runSize: 4, label: "3 Books" },
-  { round: 7, books: 0, runs: 3, bookSize: 3, runSize: 4, label: "3 Runs" },
+  { round: 1, books: 2, runs: 0, bookSize: 3, runSize: 4, label: "2 Books", wholeHandMeld: false },
+  { round: 2, books: 1, runs: 1, bookSize: 3, runSize: 4, label: "1 Book + 1 Run", wholeHandMeld: false },
+  { round: 3, books: 0, runs: 2, bookSize: 3, runSize: 4, label: "2 Runs", wholeHandMeld: false },
+  { round: 4, books: 2, runs: 1, bookSize: 3, runSize: 4, label: "2 Books + 1 Run", wholeHandMeld: false },
+  { round: 5, books: 1, runs: 2, bookSize: 3, runSize: 4, label: "1 Book + 2 Runs", wholeHandMeld: false },
+  { round: 6, books: 3, runs: 0, bookSize: 3, runSize: 4, label: "3 Books", wholeHandMeld: false },
+  { round: 7, books: 0, runs: 3, bookSize: 3, runSize: 4, label: "3 Runs", wholeHandMeld: true },
 ];
 
 // The "short game" mode: drops rounds 4 and 5 (the two hardest, mixed

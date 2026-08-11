@@ -59,6 +59,27 @@ interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
+/**
+ * "Buy the discard" (see eligibleBuyers/buyDiscard in gameEngine.ts,
+ * BuyOfferGate.tsx) needs a player other than the discarder or current
+ * player to notice the discard and react before play moves on. That works
+ * fine on separate devices, but not on one shared, pass-and-play screen or
+ * with AI opponents rotating through automatically — nobody's actually
+ * watching for it, so it either gets missed constantly or fires against
+ * cards no human present chose to see. Disabled here rather than removed:
+ * all the engine and UI plumbing stays intact for a possible future
+ * multi-device mode, where each player has their own screen and buying back
+ * in is actually watchable. Flip this back to true to re-enable it.
+ *
+ * A second feature, "Player!" (a player who spots a discard that fits
+ * someone else's meld can call it, move that card onto the meld themselves,
+ * and discard a card of their own as a reward) has the exact same
+ * single-shared-screen problem and was never implemented for that reason —
+ * no code for it exists yet. Worth reconsidering alongside Buy if this ever
+ * becomes multi-device.
+ */
+const BUY_DISCARD_ENABLED = false;
+
 const AI_TURN_DELAY_MS = 550;
 
 const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "JOKER"];
@@ -376,7 +397,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastDrawnCardId(null);
       if (!s.roundOver && !s.gameOver) {
         setAwaitingReveal(false);
-        const buyers = eligibleBuyers(s);
+        const buyers = BUY_DISCARD_ENABLED ? eligibleBuyers(s) : [];
         if (buyers.length > 0) {
           buyQueueRef.current = buyers.map((p) => p.id);
           advanceBuyQueue();

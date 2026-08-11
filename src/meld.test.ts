@@ -5,6 +5,7 @@ import {
   leftoverAfterMelds,
   runCardRank,
   solveContract,
+  solveWholeHandContract,
   validateManualGroup,
 } from "./meld";
 import { CONTRACTS, Meld } from "./types";
@@ -444,5 +445,128 @@ describe("layOffOptions", () => {
       ]),
     };
     expect(layOffOptions(makeCard("2", "clubs"), atLowBoundary)).toEqual(["high"]);
+  });
+});
+
+describe("solveWholeHandContract", () => {
+  const ROUND_7 = CONTRACTS[6]; // 3 runs, wholeHandMeld: true
+
+  it("solves when the hand splits exactly into 3 minimum-length runs", () => {
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    const melds = solveWholeHandContract(hand, ROUND_7, "p1");
+    expect(melds).not.toBeNull();
+    expect(melds).toHaveLength(3);
+    expect(melds!.every((m) => m.type === "run" && m.cards.length === 4)).toBe(true);
+    expect(new Set(melds!.flatMap((m) => m.cards.map((c) => c.id))).size).toBe(hand.length);
+  });
+
+  it("returns null when a leftover card can't join any of the 3 runs", () => {
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+      makeCard("K", "diamonds"),
+    ];
+    expect(solveWholeHandContract(hand, ROUND_7, "p1")).toBeNull();
+  });
+
+  it("pads a run beyond the minimum length to absorb an otherwise-unplaceable wild", () => {
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"]]), // one short of runSize
+      makeCard("JOKER", "joker"),
+    ];
+    const melds = solveWholeHandContract(hand, ROUND_7, "p1");
+    expect(melds).not.toBeNull();
+    const spadesRun = melds!.find((m) => m.cards.some((c) => c.suit === "spades"));
+    expect(spadesRun!.cards).toHaveLength(4);
+    expect(new Set(melds!.flatMap((m) => m.cards.map((c) => c.id))).size).toBe(hand.length);
+  });
+
+  it("uses a wild to bridge a genuine gap inside a run", () => {
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]), // missing 6♥
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+      makeCard("2", "diamonds"), // wild
+    ];
+    const melds = solveWholeHandContract(hand, ROUND_7, "p1");
+    expect(melds).not.toBeNull();
+    const heartsRun = melds!.find((m) => m.cards.some((c) => c.suit === "hearts"))!;
+    expect(heartsRun.cards).toHaveLength(4);
+    expect(heartsRun.cards.map((c, i) => (c.isWild ? runCardRank(heartsRun, i) : c.rank))).toEqual([
+      "4",
+      "5",
+      "6",
+      "7",
+    ]);
+    expect(heartsRun.cards.some((c) => c.isWild)).toBe(true);
+  });
+
+  it("branches over ace-low and ace-high independently per suit", () => {
+    const hand = [
+      ...makeHand([["A", "hearts"], ["3", "hearts"], ["4", "hearts"], ["5", "hearts"]]), // A low, wild fills "2"
+      ...makeHand([["10", "clubs"], ["J", "clubs"], ["Q", "clubs"], ["K", "clubs"], ["A", "clubs"]]), // A high
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+      makeCard("JOKER", "joker"),
+    ];
+    const melds = solveWholeHandContract(hand, ROUND_7, "p1");
+    expect(melds).not.toBeNull();
+    expect(melds).toHaveLength(3);
+    const heartsRun = melds!.find((m) => m.cards.some((c) => c.suit === "hearts"))!;
+    expect(heartsRun.cards.map((c) => c.rank)).toEqual(["A", "JOKER", "3", "4", "5"]);
+    expect(heartsRun.cards[1].isWild).toBe(true);
+    const clubsRun = melds!.find((m) => m.cards.some((c) => c.suit === "clubs"))!;
+    expect(clubsRun.cards.map((c) => c.rank)).toEqual(["10", "J", "Q", "K", "A"]);
+  });
+
+  it("returns null when a duplicate same-suit, same-rank card can't share one run", () => {
+    const hand = [
+      ...makeHand([
+        ["4", "hearts"],
+        ["5", "hearts"],
+        ["6", "hearts"],
+        ["7", "hearts"],
+        ["7", "hearts"], // duplicate — from a second deck
+      ]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    expect(solveWholeHandContract(hand, ROUND_7, "p1")).toBeNull();
+  });
+
+  it("returns null when there aren't enough wilds to bridge a genuine gap", () => {
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]), // missing 6♥, no wild available
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    expect(solveWholeHandContract(hand, ROUND_7, "p1")).toBeNull();
+  });
+
+  it("returns null when there are more wilds than any arrangement of 3 runs can absorb", () => {
+    const hand = [
+      ...makeHand([["5", "hearts"], ["6", "hearts"], ["7", "hearts"], ["8", "hearts"]]),
+      ...makeHand([["5", "clubs"], ["6", "clubs"], ["7", "clubs"], ["8", "clubs"]]),
+      ...makeHand([["5", "spades"], ["6", "spades"], ["7", "spades"], ["8", "spades"]]),
+      ...Array.from({ length: 7 }, () => makeCard("JOKER", "joker")),
+    ];
+    expect(solveWholeHandContract(hand, ROUND_7, "p1")).toBeNull();
+  });
+
+  it("returns null for a contract that also needs books (not implemented)", () => {
+    const mixedRequirement = { ...ROUND_7, books: 1, runs: 3 };
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "spades"]]),
+    ];
+    expect(solveWholeHandContract(hand, mixedRequirement, "p1")).toBeNull();
   });
 });

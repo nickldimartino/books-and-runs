@@ -3,10 +3,42 @@ import { playAITurn } from "./index";
 import { CONTRACTS } from "../types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "../testHelpers";
 
-describe("playAITurn — round 7 (3 Runs, no discard)", () => {
-  it("ends the round when melding 3 runs leaves a card that gets discarded down to empty", () => {
-    // 3 runs of 4 (12 cards) + 1 unrelated leftover card that can't lay off
-    // anywhere and isn't picked up by the draw (drawPile has a dead card).
+describe("playAITurn — round 7 (3 Runs, whole-hand meld)", () => {
+  it("melds and ends the round immediately when the drawn card extends a run to use the whole hand", () => {
+    const runs = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand: runs });
+    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
+
+    const state = makeGameState({
+      round: 7,
+      selectedContracts: CONTRACTS,
+      currentPlayerIndex: 0,
+      players: [ai, human],
+      // The forced draw must itself end up melded for the hand to reach
+      // exactly 0 — an 8♥ extends the hearts run already in hand.
+      drawPile: [makeCard("8", "hearts", { id: "drawn" })],
+      discardPile: [],
+    });
+
+    playAITurn(state);
+
+    expect(ai.hasMeldedContract).toBe(true);
+    expect(ai.hand).toHaveLength(0);
+    expect(state.discardHistory).toHaveLength(0); // no-discard path, not a discard-to-empty
+    expect(state.roundOver).toBe(true);
+    expect(state.gameOver).toBe(true);
+  });
+
+  it("does not meld a partial contract that would leave cards stranded in hand", () => {
+    // 3 valid runs (12 cards) plus a 4th-suit leftover that can't join any of
+    // them and isn't a 4th run either — the round needs exactly 3. Melding
+    // just these 3 runs and discarding the leftover is exactly the bug this
+    // round's whole-hand rule exists to prevent: nothing may be melded until
+    // the entire hand fits.
     const runs = [
       ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
       ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
@@ -26,74 +58,46 @@ describe("playAITurn — round 7 (3 Runs, no discard)", () => {
       selectedContracts: CONTRACTS,
       currentPlayerIndex: 0,
       players: [ai, human],
-      drawPile: [makeCard("2", "spades", { id: "drawn" })], // wild, won't affect the leftover logic
+      drawPile: [makeCard("2", "spades", { id: "drawn" })], // wild, still can't rescue the diamond leftover
       discardPile: [],
     });
 
     playAITurn(state);
 
-    expect(ai.hasMeldedContract).toBe(true);
-    expect(ai.hand).toHaveLength(0);
-    expect(state.roundOver).toBe(true);
-    expect(state.gameOver).toBe(true);
-  });
-
-  it("ends the round immediately (no discard) when melding empties the hand exactly", () => {
-    const runs = [
-      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
-      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
-      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
-    ];
-    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand: runs });
-    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
-
-    const state = makeGameState({
-      round: 7,
-      selectedContracts: CONTRACTS,
-      currentPlayerIndex: 0,
-      players: [ai, human],
-      // The forced draw must itself end up melded/laid off for the hand to
-      // reach exactly 0 — an 8♥ extends the hearts run already in hand.
-      drawPile: [makeCard("8", "hearts", { id: "drawn" })],
-      discardPile: [],
-    });
-
-    playAITurn(state);
-
-    expect(ai.hasMeldedContract).toBe(true);
-    expect(ai.hand).toHaveLength(0);
-    expect(state.discardHistory).toHaveLength(0); // no-discard path, not a discard-to-empty
-    expect(state.roundOver).toBe(true);
-    expect(state.gameOver).toBe(true);
-  });
-
-  it("keeps playing normally when the hand has genuine cards left after melding", () => {
-    const runs = [
-      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
-      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
-      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
-    ];
-    const leftovers = [makeCard("K", "diamonds", { id: "leftover1" }), makeCard("Q", "diamonds", { id: "leftover2" })];
-    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand: [...runs, ...leftovers] });
-    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
-
-    const state = makeGameState({
-      round: 7,
-      selectedContracts: CONTRACTS,
-      currentPlayerIndex: 0,
-      players: [ai, human],
-      drawPile: [makeCard("2", "clubs", { id: "drawn" })], // wild — lays off onto a run, not a dead-end
-      discardPile: [],
-    });
-
-    playAITurn(state);
-
-    // Melded, laid the wild off, discarded one leftover — one card should
-    // still remain (this is correct: the round should NOT end just because
-    // the contract was melded, only once the hand is actually empty).
-    expect(ai.hasMeldedContract).toBe(true);
-    expect(ai.hand).toHaveLength(1);
+    // Can't meld this turn — the whole hand doesn't fit into exactly 3 runs.
+    // Play continues normally: draw, no meld, discard, turn advances.
+    expect(ai.hasMeldedContract).toBe(false);
+    expect(state.melds).toHaveLength(0);
     expect(state.roundOver).toBe(false);
-    expect(state.currentPlayerIndex).toBe(1); // turn correctly advanced to the human
+    expect(state.currentPlayerIndex).toBe(1);
+  });
+
+  it("absorbs a genuinely extra wild by padding a run beyond the minimum length", () => {
+    // Hearts run of exactly 4, clubs run of exactly 4, and a short 3-card
+    // spades cluster (4-5-6, no internal gap) one short of the minimum run
+    // size of 4 — the drawn wild pads it out to 4-5-6-7, using every card in
+    // hand, including the drawn wild, across exactly 3 runs.
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"]]),
+    ];
+    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand });
+    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
+
+    const state = makeGameState({
+      round: 7,
+      selectedContracts: CONTRACTS,
+      currentPlayerIndex: 0,
+      players: [ai, human],
+      drawPile: [makeCard("JOKER", "joker", { id: "drawn" })],
+      discardPile: [],
+    });
+
+    playAITurn(state);
+
+    expect(ai.hasMeldedContract).toBe(true);
+    expect(ai.hand).toHaveLength(0);
+    expect(state.roundOver).toBe(true);
   });
 });

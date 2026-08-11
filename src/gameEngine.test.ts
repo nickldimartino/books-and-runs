@@ -149,6 +149,38 @@ describe("attemptMeldContract", () => {
     });
     expect(attemptMeldContract(state)).toBeNull();
   });
+
+  it("round 7 (wholeHandMeld): melds only once the entire hand fits into exactly 3 runs", () => {
+    const runs = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    const state = makeGameState({ round: 7, players: [makePlayer({ id: "p1", hand: runs })] });
+
+    const melds = attemptMeldContract(state);
+
+    expect(melds).toHaveLength(3);
+    expect(state.players[0].hasMeldedContract).toBe(true);
+    expect(state.players[0].hand).toEqual([]);
+  });
+
+  it("round 7 (wholeHandMeld): refuses a meld that would strand cards in hand", () => {
+    const runs = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    const leftover = makeCard("K", "diamonds");
+    const state = makeGameState({
+      round: 7,
+      players: [makePlayer({ id: "p1", hand: [...runs, leftover] })],
+    });
+
+    expect(attemptMeldContract(state)).toBeNull();
+    expect(state.players[0].hasMeldedContract).toBe(false);
+    expect(state.players[0].hand).toHaveLength(13);
+  });
 });
 
 describe("meldChosenGroups", () => {
@@ -246,6 +278,46 @@ describe("meldChosenGroups", () => {
       players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: makeHand(["5", "5", "5"]) })],
     });
     expect(meldChosenGroups(state, [state.players[0].hand.map((c) => c.id)])).toBeNull();
+  });
+
+  it("round 7 (wholeHandMeld): rejects 3 valid runs that leave a card ungrouped", () => {
+    const run1 = makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]);
+    const run2 = makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]);
+    const run3 = makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]);
+    const leftover = makeCard("K", "diamonds");
+    const state = makeGameState({
+      round: 7,
+      players: [makePlayer({ id: "p1", hand: [...run1, ...run2, ...run3, leftover] })],
+    });
+
+    const result = meldChosenGroups(state, [
+      run1.map((c) => c.id),
+      run2.map((c) => c.id),
+      run3.map((c) => c.id),
+    ]);
+
+    expect(result).toBeNull();
+    expect(state.players[0].hasMeldedContract).toBe(false);
+  });
+
+  it("round 7 (wholeHandMeld): accepts 3 runs that use every card in hand", () => {
+    const run1 = makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]);
+    const run2 = makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]);
+    const run3 = makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]);
+    const state = makeGameState({
+      round: 7,
+      players: [makePlayer({ id: "p1", hand: [...run1, ...run2, ...run3] })],
+    });
+
+    const result = meldChosenGroups(state, [
+      run1.map((c) => c.id),
+      run2.map((c) => c.id),
+      run3.map((c) => c.id),
+    ]);
+
+    expect(result).toHaveLength(3);
+    expect(state.players[0].hasMeldedContract).toBe(true);
+    expect(state.players[0].hand).toEqual([]);
   });
 });
 

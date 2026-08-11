@@ -185,6 +185,182 @@ export function solveContract(
   return melds;
 }
 
+interface Chain {
+  suit: string;
+  positions: number[]; // sorted ascending RUN_ORDER indices
+  cardsByPosition: Map<number, Card>;
+}
+
+/** Every way to assign each ace present to its low (0) or high (13) slot. */
+function* aceAssignments(aces: Card[]): Generator<Map<string, number>> {
+  const n = aces.length;
+  for (let mask = 0; mask < 1 << n; mask++) {
+    const assignment = new Map<string, number>();
+    aces.forEach((card, i) => {
+      assignment.set(card.id, mask & (1 << i) ? RUN_ORDER.length - 1 : 0);
+    });
+    yield assignment;
+  }
+}
+
+/**
+ * Groups each suit's naturals into maximal chains — runs of cards where
+ * every consecutive pair is at most one slot apart (bridgeable by a single
+ * wild; two consecutive wild-filled slots are never allowed, so a gap of two
+ * or more forces a split into separate chains). Returns null if two
+ * different cards resolve to the same slot (e.g. a duplicate same-suit,
+ * same-rank card from a second deck) — such cards can never share one run.
+ */
+function buildChains(bySuit: Map<string, Card[]>, aceAssignment: Map<string, number>): Chain[] | null {
+  const chains: Chain[] = [];
+  for (const [suit, cards] of bySuit) {
+    const positioned: { pos: number; card: Card }[] = [];
+    const seenPos = new Set<number>();
+    for (const card of cards) {
+      const pos = card.rank === "A" ? aceAssignment.get(card.id)! : rankPositions(card.rank)[0];
+      if (seenPos.has(pos)) return null;
+      seenPos.add(pos);
+      positioned.push({ pos, card });
+    }
+    positioned.sort((a, b) => a.pos - b.pos);
+
+    let current: { pos: number; card: Card }[] = [positioned[0]];
+    const flush = () => {
+      chains.push({
+        suit,
+        positions: current.map((p) => p.pos),
+        cardsByPosition: new Map(current.map((p) => [p.pos, p.card])),
+      });
+    };
+    for (let i = 1; i < positioned.length; i++) {
+      if (positioned[i].pos - positioned[i - 1].pos > 2) {
+        flush();
+        current = [positioned[i]];
+      } else {
+        current.push(positioned[i]);
+      }
+    }
+    flush();
+  }
+  return chains;
+}
+
+/**
+ * Every valid way to lay out a single chain as one run window meeting
+ * `runSize`: extending at most one wild-filled slot on the low end and/or
+ * the high end beyond the chain's own natural span (extending further would
+ * mean two consecutive wild slots, which is never allowed). Extension is
+ * tried even when the natural span already meets `runSize`, since absorbing
+ * an otherwise-unplaceable wild can require padding past the minimum.
+ */
+function chainWindowOptions(
+  positions: number[],
+  runSize: number
+): { start: number; end: number; wildsNeeded: number }[] {
+  const minPos = positions[0];
+  const maxPos = positions[positions.length - 1];
+  let internalWilds = 0;
+  for (let i = 1; i < positions.length; i++) internalWilds += positions[i] - positions[i - 1] - 1;
+
+  const options: { start: number; end: number; wildsNeeded: number }[] = [];
+  for (const lowExt of [0, 1]) {
+    for (const highExt of [0, 1]) {
+      const start = minPos - lowExt;
+      const end = maxPos + highExt;
+      if (start < 0 || end > RUN_ORDER.length - 1) continue;
+      if (end - start + 1 < runSize) continue;
+      options.push({ start, end, wildsNeeded: internalWilds + lowExt + highExt });
+    }
+  }
+  return options;
+}
+
+/** Picks one option per chain whose wildsNeeded sum exactly matches the
+ * wild count available — every wild must be used, not merely enough. */
+function findWildExactCombo(
+  perChainOptions: { start: number; end: number; wildsNeeded: number }[][],
+  totalWilds: number
+): { start: number; end: number; wildsNeeded: number }[] | null {
+  const chosen: { start: number; end: number; wildsNeeded: number }[] = [];
+  function backtrack(i: number, wildsUsed: number): boolean {
+    if (i === perChainOptions.length) return wildsUsed === totalWilds;
+    for (const opt of perChainOptions[i]) {
+      if (wildsUsed + opt.wildsNeeded > totalWilds) continue;
+      chosen.push(opt);
+      if (backtrack(i + 1, wildsUsed + opt.wildsNeeded)) return true;
+      chosen.pop();
+    }
+    return false;
+  }
+  return backtrack(0, 0) ? chosen : null;
+}
+
+/**
+ * Solves a contract for the game's final "no discard" round: the entire
+ * hand — every natural and every wild — must be consumed by the meld, since
+ * there's no discard afterward once you've melded. Unlike solveContract,
+ * runs here can be longer than runSize, however long it takes to absorb
+ * every card in a suit's natural cluster. Only supports runs-only contracts
+ * (books: 0) — the only round that currently sets wholeHandMeld.
+ *
+ * A maximal chain of naturals (see buildChains) always becomes exactly one
+ * run — this doesn't search splitting one long natural cluster into two
+ * shorter runs, so it can occasionally miss a technically-valid arrangement,
+ * but it never proposes an invalid one. The player just keeps playing normal
+ * turns until a hand that fits comes up, which is the point of this round
+ * being the hardest one.
+ *
+ * Returns null if no arrangement uses every single card.
+ */
+export function solveWholeHandContract(
+  hand: Card[],
+  requirement: ContractRequirement,
+  ownerId: string
+): Meld[] | null {
+  if (requirement.books > 0) return null; // not needed by any current round; not implemented
+
+  const { wilds, naturals } = splitWildsAndNaturals(hand);
+  if (naturals.length === 0) return null; // a run always needs at least one natural anchor
+
+  const bySuit = new Map<string, Card[]>();
+  for (const c of naturals) {
+    if (c.suit === "joker") continue; // jokers are always wild, never a natural
+    if (!bySuit.has(c.suit)) bySuit.set(c.suit, []);
+    bySuit.get(c.suit)!.push(c);
+  }
+
+  const aces = naturals.filter((c) => c.rank === "A");
+
+  for (const aceAssignment of aceAssignments(aces)) {
+    const chains = buildChains(bySuit, aceAssignment);
+    if (!chains || chains.length !== requirement.runs) continue;
+
+    const perChainOptions = chains.map((chain) => chainWindowOptions(chain.positions, requirement.runSize));
+    if (perChainOptions.some((opts) => opts.length === 0)) continue;
+
+    const combo = findWildExactCombo(perChainOptions, wilds.length);
+    if (!combo) continue;
+
+    const wildPool = [...wilds];
+    return chains.map((chain, idx) => {
+      const { start, end } = combo[idx];
+      const cards: Card[] = [];
+      for (let pos = start; pos <= end; pos++) {
+        cards.push(chain.cardsByPosition.get(pos) ?? wildPool.shift()!);
+      }
+      return {
+        id: `${ownerId}-meld-${idx}-run:${chain.suit}:${start}`,
+        type: "run" as const,
+        ownerId,
+        cards,
+        runStartIndex: start,
+      };
+    });
+  }
+
+  return null;
+}
+
 export interface GroupValidation {
   valid: boolean;
   type?: "book" | "run";
