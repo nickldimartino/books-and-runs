@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthContext";
 import { useGame } from "./GameContext";
+import { usePlayerLevel } from "./PlayerLevelContext";
 
 export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
   const { hasSavedGame, continueGame } = useGame();
+  const { level } = usePlayerLevel();
 
   function handleContinue() {
     continueGame();
@@ -18,6 +20,15 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-10 px-6 text-center">
       <div>
+        {configured && user && level && (
+          <Link
+            href="/achievements"
+            className="mb-3 inline-block rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
+            title={`${level.xpIntoLevel} / ${level.xpSpanForLevel} XP to level ${level.level + 1}`}
+          >
+            Level {level.level}
+          </Link>
+        )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Local pass-and-play rummy with wild twos and jokers.

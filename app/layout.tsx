@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
+import { PlayerLevelProvider } from "./PlayerLevelContext";
 import { SettingsSync } from "./SettingsSync";
 import "./globals.css";
 
@@ -32,7 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased">
         <AuthProvider>
           <SettingsSync />
-          <GameProvider>{children}</GameProvider>
+          <PlayerLevelProvider>
+            <GameProvider>{children}</GameProvider>
+          </PlayerLevelProvider>
         </AuthProvider>
       </body>
     </html>

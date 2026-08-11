@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
+import { usePlayerLevel } from "../PlayerLevelContext";
 import { PlayingCard } from "../components/PlayingCard";
 import { DraggableHand } from "../components/DraggableHand";
 import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
+import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { Card, Meld } from "@/types";
 
@@ -65,6 +67,7 @@ export default function GamePage() {
     respondToBuy,
     advanceRound,
   } = useGame();
+  const { level } = usePlayerLevel();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
@@ -231,6 +234,11 @@ export default function GamePage() {
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
               <li key={p.id}>
+                {p.id === YOU_PLAYER_ID && level && (
+                  <span className="mr-1 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                    Lv{level.level}
+                  </span>
+                )}
                 {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
               </li>
             ))}

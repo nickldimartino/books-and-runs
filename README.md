@@ -46,6 +46,13 @@ All six phases of that roadmap are now built.
   achievements — 40 families × 5 tiers — as a pure function of these counters
   plus `player_stats`; `app/GameContext.tsx` increments counters only for the
   signed-in seat, `human-0`, and flushes them to Supabase once at game-over)
+- `src/leveling.ts` — account level/XP, needing no schema of its own: it's a
+  pure function of the same `player_stats`/`achievement_counters` data
+  achievements already use (finishing/winning games, wins by AI difficulty,
+  achievement tiers unlocked). `app/PlayerLevelContext.tsx` fetches it once
+  in the root layout so Home and the game screen both show the current level
+  without independent fetches; `GameOverScreen` diffs before/after XP to
+  show what a finished game earned.
 - `ios/` — the native Xcode project Capacitor generates to wrap the static
   export; `capacitor.config.json` points it at `out/`. Ships with a custom
   app icon and launch screen (green felt + a two-card mark) instead of
