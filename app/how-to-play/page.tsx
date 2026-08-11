@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 const PENALTY_ROWS = [
-  { label: "Number cards (3–10)", value: "5 points each" },
+  { label: "Number cards (3 through 10)", value: "5 points each" },
   { label: "Face cards (J, Q, K)", value: "10 points each" },
   { label: "Aces", value: "15 points each" },
   { label: "Twos (wild)", value: "20 points each" },
@@ -175,10 +175,6 @@ export default function HowToPlayPage() {
             allowed, but 6-7-8-<em>wild</em> or <em>wild</em>-6-7-<em>wild</em> is fine.
           </li>
         </ul>
-        <Note>
-          The wild-card limit and no-two-in-a-row rules are always on — there&apos;s no setting to
-          turn them off.
-        </Note>
       </section>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">

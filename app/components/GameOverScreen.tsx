@@ -2,13 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { GameState } from "@/types";
+import { Difficulty, GameState } from "@/types";
+import { DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
+
+interface XpLineItem {
+  label: string;
+  amount: number;
+}
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
@@ -20,6 +26,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const recordedRef = useRef(false);
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [xpGained, setXpGained] = useState<number | null>(null);
+  const [xpBreakdown, setXpBreakdown] = useState<XpLineItem[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
 
   useEffect(() => {
@@ -40,6 +47,23 @@ export function GameOverScreen({ state }: { state: GameState }) {
       counters.zero_penalty_games = (counters.zero_penalty_games ?? 0) + 1;
     }
 
+    // The per-game XP sources (finishing, winning, difficulty bonus) are
+    // fully known from this game alone — matches the exact rule
+    // recordGameResult uses for which AI difficulties count toward a win.
+    const won = !!you && state.winnerId === you.id;
+    const breakdown: XpLineItem[] = [{ label: "Finished the game", amount: FINISH_GAME_XP }];
+    if (won) {
+      breakdown.push({ label: "Won", amount: WIN_GAME_XP });
+      const difficultiesFaced = new Set(
+        state.players
+          .filter((p) => p.id !== you!.id && p.isAI && p.difficulty)
+          .map((p) => p.difficulty as Difficulty)
+      );
+      for (const d of difficultiesFaced) {
+        breakdown.push({ label: `Beat a ${d} AI`, amount: DIFFICULTY_WIN_XP[d] ?? 0 });
+      }
+    }
+
     Promise.all([
       recordGameResult(supabase, user.id, state, roundHistory),
       recordAchievementProgress(supabase, user.id, counters),
@@ -48,7 +72,17 @@ export function GameOverScreen({ state }: { state: GameState }) {
         setSaved("saved");
         const after = await refreshLevel();
         if (after) {
-          setXpGained(Math.max(0, after.totalXp - beforeXp));
+          const gained = Math.max(0, after.totalXp - beforeXp);
+          setXpGained(gained);
+          // Whatever's left once the known per-game sources are accounted
+          // for must be from achievement tiers newly unlocked this game.
+          const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
+          const achievementBonus = Math.max(0, gained - knownTotal);
+          setXpBreakdown(
+            achievementBonus > 0
+              ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
+              : breakdown
+          );
           if (after.level > beforeLevel) setLeveledUpTo(after.level);
         }
       })
@@ -97,9 +131,20 @@ export function GameOverScreen({ state }: { state: GameState }) {
             {saved === "error" && "Couldn't save to your stats — check your connection."}
           </p>
           {saved === "saved" && xpGained !== null && (
-            <p className="mt-1 text-sm font-semibold text-[var(--accent)]">
-              +{xpGained} XP{leveledUpTo !== null && ` — Level up! Now level ${leveledUpTo}`}
-            </p>
+            <div className="mt-1">
+              <p className="text-sm font-semibold text-[var(--accent)]">
+                +{xpGained} XP{leveledUpTo !== null && ` — Level up! Now level ${leveledUpTo}`}
+              </p>
+              {xpBreakdown.length > 0 && (
+                <ul className="mt-1 flex flex-col gap-0.5">
+                  {xpBreakdown.map((item, i) => (
+                    <li key={i}>
+                      +{item.amount} XP — {item.label}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       )}

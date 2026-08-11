@@ -92,7 +92,9 @@ const AI_TURN_DELAY_MS = 550;
 // only governs where a natural Ace lands, and low would put it awkwardly
 // next to the wild bucket (since natural "2"s don't exist to sit between).
 const RANK_ORDER = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2", "JOKER"];
-const SUIT_ORDER = ["hearts", "diamonds", "clubs", "spades", "joker"];
+// Alternates red/black so adjacent suits never share a color — easier to
+// scan than grouping both reds together, then both blacks.
+const SUIT_ORDER = ["hearts", "spades", "diamonds", "clubs", "joker"];
 
 export type SortMode = "suit" | "rank";
 

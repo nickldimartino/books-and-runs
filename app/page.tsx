@@ -22,7 +22,7 @@ export default function HomePage() {
       <div>
         {configured && user && level && (
           <Link
-            href="/achievements"
+            href="/stats"
             className="mb-3 inline-block rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
             title={`${level.xpIntoLevel} / ${level.xpSpanForLevel} XP to level ${level.level + 1}`}
           >
@@ -31,7 +31,7 @@ export default function HomePage() {
         )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Local pass-and-play rummy with wild twos and jokers.
+          Seven rounds. Wild cards. Lowest score wins.
         </p>
         {configured && user && (
           <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>

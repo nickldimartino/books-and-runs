@@ -316,7 +316,7 @@ export default function GamePage() {
             </section>
           )}
 
-          <section className="flex-1 rounded-xl bg-[var(--panel-soft)] p-4">
+          <section className="rounded-xl bg-[var(--panel-soft)] p-4">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
             </h2>

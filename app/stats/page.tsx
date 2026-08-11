@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { usePlayerLevel } from "../PlayerLevelContext";
 import { supabase } from "../lib/supabaseClient";
 
 interface PlayerStats {
   games_played: number;
   games_won: number;
   best_score: number | null;
+  worst_score: number | null;
   average_score: number | null;
   wins_by_difficulty: Record<string, number>;
 }
@@ -22,8 +24,11 @@ interface GameHistoryRow {
 
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
 
+const PAST_GAMES_LIMIT = 10;
+
 export default function StatsPage() {
   const { configured, loading: authLoading, user } = useAuth();
+  const { level } = usePlayerLevel();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [history, setHistory] = useState<GameHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +42,7 @@ export default function StatsPage() {
     Promise.all([
       supabase
         .from("player_stats")
-        .select("games_played, games_won, best_score, average_score, wins_by_difficulty")
+        .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
         .eq("user_id", user.id)
         .maybeSingle<PlayerStats>(),
       supabase
@@ -45,7 +50,7 @@ export default function StatsPage() {
         .select("id, opponents, winner, played_at")
         .eq("user_id", user.id)
         .order("played_at", { ascending: false })
-        .limit(20),
+        .limit(PAST_GAMES_LIMIT),
     ]).then(([statsRes, historyRes]) => {
       setStats(statsRes.data);
       setHistory((historyRes.data as GameHistoryRow[]) ?? []);
@@ -91,6 +96,23 @@ export default function StatsPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
       <h1 className="text-2xl font-bold text-[var(--heading)]">Your stats</h1>
 
+      {level && (
+        <section className="rounded-lg bg-[var(--panel)] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-[var(--heading)]">Level {level.level}</span>
+            <span className="text-xs text-[var(--faint)]">
+              {level.xpIntoLevel} / {level.xpSpanForLevel} XP to level {level.level + 1}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
+            <div
+              className="h-full rounded-full bg-[var(--accent)]"
+              style={{ width: `${Math.round(level.progressFraction * 100)}%` }}
+            />
+          </div>
+        </section>
+      )}
+
       {authLoading || loading ? (
         <p className="text-sm text-[var(--faint)]">Loading…</p>
       ) : !stats ? (
@@ -102,6 +124,7 @@ export default function StatsPage() {
             <StatTile label="Games won" value={stats.games_won} />
             <StatTile label="Win rate" value={winRate !== null ? `${winRate}%` : "—"} />
             <StatTile label="Best score" value={stats.best_score ?? "—"} sub="lower is better" />
+            <StatTile label="Worst score" value={stats.worst_score ?? "—"} sub="higher is worse" />
             <StatTile
               label="Average score"
               value={stats.average_score != null ? Math.round(stats.average_score) : "—"}
@@ -127,7 +150,7 @@ export default function StatsPage() {
 
           <section>
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Past games
+              Past games (last {PAST_GAMES_LIMIT})
             </h2>
             {history.length === 0 ? (
               <p className="text-sm text-[var(--faint)]">No games recorded yet.</p>

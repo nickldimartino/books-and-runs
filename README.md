@@ -46,6 +46,9 @@ All six phases of that roadmap are now built.
   achievements — 40 families × 5 tiers — as a pure function of these counters
   plus `player_stats`; `app/GameContext.tsx` increments counters only for the
   signed-in seat, `human-0`, and flushes them to Supabase once at game-over)
+- `supabase/migrations/0003_worst_score.sql` — adds `worst_score` to
+  `player_stats` (highest single-game score, alongside the existing
+  `best_score`)
 - `src/leveling.ts` — account level/XP, needing no schema of its own: it's a
   pure function of the same `player_stats`/`achievement_counters` data
   achievements already use (finishing/winning games, wins by AI difficulty,
@@ -122,7 +125,8 @@ The app runs fine without this — it only unlocks Sign in and Stats.
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the Supabase SQL editor, run `supabase/migrations/0001_init.sql`, then
-   `0002_achievements.sql` (the latter also unlocks the Achievements page).
+   `0002_achievements.sql` (unlocks the Achievements page), then
+   `0003_worst_score.sql`.
 3. In **Authentication → Providers**, enable Email, and optionally Google
    and Apple (each needs its own OAuth credentials from Google
    Cloud Console / the Apple Developer portal — entered into Supabase's

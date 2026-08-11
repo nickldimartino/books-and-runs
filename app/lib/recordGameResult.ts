@@ -21,6 +21,7 @@ interface PlayerStatsRow {
   games_played: number;
   games_won: number;
   best_score: number | null;
+  worst_score: number | null;
   average_score: number | null;
   wins_by_difficulty: Record<string, number>;
 }
@@ -55,7 +56,7 @@ export async function recordGameResult(
 
   const { data: existing } = await supabase
     .from("player_stats")
-    .select("games_played, games_won, best_score, average_score, wins_by_difficulty")
+    .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
     .eq("user_id", userId)
     .maybeSingle<PlayerStatsRow>();
 
@@ -64,6 +65,8 @@ export async function recordGameResult(
   const gamesWon = (existing?.games_won ?? 0) + (won ? 1 : 0);
   const bestScore =
     existing?.best_score != null ? Math.min(existing.best_score, you.cumulativeScore) : you.cumulativeScore;
+  const worstScore =
+    existing?.worst_score != null ? Math.max(existing.worst_score, you.cumulativeScore) : you.cumulativeScore;
   const priorAverage = existing?.average_score ?? you.cumulativeScore;
   const averageScore = (priorAverage * priorGames + you.cumulativeScore) / gamesPlayed;
 
@@ -82,6 +85,7 @@ export async function recordGameResult(
     games_played: gamesPlayed,
     games_won: gamesWon,
     best_score: bestScore,
+    worst_score: worstScore,
     average_score: averageScore,
     wins_by_difficulty: winsByDifficulty,
     updated_at: new Date().toISOString(),
