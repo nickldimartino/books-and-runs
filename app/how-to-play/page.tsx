@@ -102,7 +102,9 @@ export default function HowToPlayPage() {
           <li>
             <strong className="text-[var(--heading)]">Lay off</strong> — once you&apos;ve melded your
             contract, you may add extra cards to your own or any other player&apos;s already-laid
-            melds.
+            melds. A run stays in sorted order as cards are added, and a wild always shows a small
+            &quot;as X&quot; badge for the rank it&apos;s standing in for. If a wild could extend
+            either end of a run, you&apos;ll be asked which rank you mean it to be.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Discard</strong> — end your turn by discarding one

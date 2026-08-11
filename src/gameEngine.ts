@@ -1,5 +1,5 @@
 import { buildDeck, deal, shuffle } from "./deck";
-import { canLayOff, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
+import { layOffOptions, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
 import { handPenalty } from "./scorer";
 import { CONTRACTS, Card, ContractRequirement, Difficulty, GameState, Meld, Player } from "./types";
 
@@ -182,7 +182,9 @@ export function meldChosenGroups(state: GameState, groups: string[][]): Meld[] |
     id: `${player.id}-meld-${idx}-${validations[idx].type}`,
     type: validations[idx].type!,
     ownerId: player.id,
-    cards,
+    // For runs, use the sorted arrangement (wilds in their correct gap
+    // slot) rather than whatever order the player happened to tap cards in.
+    cards: validations[idx].orderedCards ?? cards,
     runStartIndex: validations[idx].runStartIndex,
   }));
 
@@ -192,16 +194,38 @@ export function meldChosenGroups(state: GameState, groups: string[][]): Meld[] |
   return melds;
 }
 
-/** Lay a single card off onto any existing meld on the table (own or another player's). */
-export function layOffCard(state: GameState, cardId: string, meldId: string): boolean {
+/**
+ * Lay a single card off onto any existing meld on the table (own or another
+ * player's). For a run, `position` picks which end to extend when the card
+ * could legally go on either (always true for a wild with room on both
+ * sides — the engine can't guess which rank the player means it to stand in
+ * for, so it's required in that case; a natural card only ever fits one end,
+ * so `position` is ignored for those). Returns false, with no state change,
+ * if the lay-off isn't valid or (for an ambiguous wild) no position was given.
+ */
+export function layOffCard(
+  state: GameState,
+  cardId: string,
+  meldId: string,
+  position?: "low" | "high"
+): boolean {
   const player = currentPlayer(state);
   if (!player.hasMeldedContract) return false; // must meld own contract first
   const card = player.hand.find((c) => c.id === cardId);
   const meld = state.melds.find((m) => m.id === meldId);
   if (!card || !meld) return false;
-  if (!canLayOff(card, meld)) return false;
 
-  meld.cards.push(card);
+  const options = layOffOptions(card, meld);
+  if (options.length === 0) return false;
+  const direction = options.length === 1 ? options[0] : position;
+  if (!direction || !options.includes(direction)) return false;
+
+  if (meld.type === "run" && direction === "low") {
+    meld.cards.unshift(card);
+    meld.runStartIndex = (meld.runStartIndex ?? 0) - 1;
+  } else {
+    meld.cards.push(card);
+  }
   player.hand = player.hand.filter((c) => c.id !== cardId);
   return true;
 }

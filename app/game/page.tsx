@@ -10,8 +10,23 @@ import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
-import { canLayOff, validateManualGroup } from "@/meld";
+import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { Card, Meld } from "@/types";
+
+interface PendingLayOff {
+  card: Card;
+  meld: Meld;
+  options: ("low" | "high")[];
+}
+
+/** The rank a lay-off in this direction would represent, for labeling the choice. */
+function directionRank(meld: Meld, direction: "low" | "high"): string {
+  const start = meld.runStartIndex ?? 0;
+  const end = start + meld.cards.length - 1;
+  const idx = direction === "low" ? start - 1 : end + 1;
+  const rank = RUN_ORDER[idx];
+  return rank === "JOKER" ? "JKR" : rank;
+}
 
 interface PendingGroup {
   id: string;
@@ -53,6 +68,7 @@ export default function GamePage() {
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
+  const [pendingLayOff, setPendingLayOff] = useState<PendingLayOff | null>(null);
 
   useEffect(() => {
     if (!state) router.replace("/");
@@ -62,6 +78,7 @@ export default function GamePage() {
     setSelectedCardIds([]);
     setPendingGroups([]);
     setGroupError(null);
+    setPendingLayOff(null);
   }, [state?.currentPlayerIndex, state?.round]);
 
   if (!state) return null;
@@ -108,6 +125,7 @@ export default function GamePage() {
 
   function handleCardClick(card: Card) {
     setGroupError(null);
+    setPendingLayOff(null);
     if (player.hasMeldedContract) {
       // Post-meld: single-select, for laying off or discarding one card.
       setSelectedCardIds((prev) => (prev[0] === card.id ? [] : [card.id]));
@@ -121,8 +139,22 @@ export default function GamePage() {
 
   function handleMeldClick(meld: Meld) {
     if (!selectedCard || !player.hasMeldedContract) return;
-    if (!canLayOff(selectedCard, meld)) return;
-    layOff(selectedCard.id, meld.id);
+    const options = layOffOptions(selectedCard, meld);
+    if (options.length === 0) return;
+    if (options.length === 1) {
+      layOff(selectedCard.id, meld.id, options[0]);
+      setSelectedCardIds([]);
+      return;
+    }
+    // A wild with room on both ends of a run — genuinely ambiguous which
+    // rank it's meant to stand in for, so ask rather than guess.
+    setPendingLayOff({ card: selectedCard, meld, options });
+  }
+
+  function chooseLayOffDirection(direction: "low" | "high") {
+    if (!pendingLayOff) return;
+    layOff(pendingLayOff.card.id, pendingLayOff.meld.id, direction);
+    setPendingLayOff(null);
     setSelectedCardIds([]);
   }
 
@@ -130,6 +162,7 @@ export default function GamePage() {
     if (selectedCardIds.length !== 1) return;
     discard(selectedCardIds[0]);
     setSelectedCardIds([]);
+    setPendingLayOff(null);
   }
 
   function handleGroupSelected() {
@@ -237,6 +270,34 @@ export default function GamePage() {
             </div>
           </section>
 
+          {pendingLayOff && (
+            <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent)]/60 bg-[var(--panel)] p-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                Which card is this wild standing in for?
+              </h2>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => chooseLayOffDirection("low")}
+                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                >
+                  {directionRank(pendingLayOff.meld, "low")}
+                </button>
+                <button
+                  onClick={() => chooseLayOffDirection("high")}
+                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                >
+                  {directionRank(pendingLayOff.meld, "high")}
+                </button>
+                <button
+                  onClick={() => setPendingLayOff(null)}
+                  className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </section>
+          )}
+
           <section className="flex-1 rounded-xl bg-[var(--panel-soft)] p-4">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
@@ -252,7 +313,11 @@ export default function GamePage() {
                       <p className="mb-1 text-xs text-[var(--faint)]">{owner?.name ?? ownerId}</p>
                       <div className="flex flex-wrap gap-3">
                         {melds.map((meld) => {
-                          const isValidTarget = !!selectedCard && player.hasMeldedContract && canLayOff(selectedCard, meld);
+                          const isValidTarget =
+                            !pendingLayOff &&
+                            !!selectedCard &&
+                            player.hasMeldedContract &&
+                            layOffOptions(selectedCard, meld).length > 0;
                           return (
                             <button
                               key={meld.id}
@@ -263,8 +328,13 @@ export default function GamePage() {
                               }`}
                               title={meldLabel(meld)}
                             >
-                              {meld.cards.map((c) => (
-                                <PlayingCard key={c.id} card={c} small />
+                              {meld.cards.map((c, i) => (
+                                <PlayingCard
+                                  key={c.id}
+                                  card={c}
+                                  small
+                                  standInRank={c.isWild ? runCardRank(meld, i) : undefined}
+                                />
                               ))}
                             </button>
                           );
@@ -334,7 +404,7 @@ export default function GamePage() {
           <section className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={handleDiscardSelected}
-              disabled={!hasDrawn || selectedCardIds.length !== 1}
+              disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
               className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Discard selected card

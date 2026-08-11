@@ -48,7 +48,7 @@ interface GameContextValue {
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
   confirmMeld: (groups: string[][]) => boolean;
-  layOff: (cardId: string, meldId: string) => void;
+  layOff: (cardId: string, meldId: string, position?: "low" | "high") => boolean;
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
   reorderHand: (cardIdsInOrder: string[]) => void;
@@ -289,11 +289,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const layOff = useCallback(
-    (cardId: string, meldId: string) => {
+    (cardId: string, meldId: string, position?: "low" | "high") => {
       const s = stateRef.current;
-      if (!s || !hasDrawn) return;
-      layOffCard(s, cardId, meldId);
-      commit();
+      if (!s || !hasDrawn) return false;
+      const ok = layOffCard(s, cardId, meldId, position);
+      if (ok) commit();
+      return ok;
     },
     [hasDrawn, commit]
   );

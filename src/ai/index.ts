@@ -46,7 +46,7 @@ export function playAITurn(state: GameState): void {
   if (player.hasMeldedContract) {
     const layOffs = strategy.planLayOffs(state, player);
     for (const move of layOffs) {
-      layOffCard(state, move.cardId, move.meldId);
+      layOffCard(state, move.cardId, move.meldId, move.position);
     }
   }
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canLayOff, leftoverAfterMelds, solveContract, validateManualGroup } from "./meld";
+import {
+  canLayOff,
+  layOffOptions,
+  leftoverAfterMelds,
+  runCardRank,
+  solveContract,
+  validateManualGroup,
+} from "./meld";
 import { CONTRACTS, Meld } from "./types";
 import { makeCard, makeHand } from "./testHelpers";
 
@@ -120,6 +127,19 @@ describe("solveContract", () => {
     expect(melds).not.toBeNull();
     expect(melds).toHaveLength(2);
     expect(melds!.every((m) => m.type === "run" && m.cards.length === 4)).toBe(true);
+  });
+
+  it("keeps a run's cards in sorted rank order with a wild filling the correct gap", () => {
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]),
+      makeCard("2", "clubs"), // wild — must fill the "6" slot, not just tack onto the end
+    ];
+    const oneRun = { ...CONTRACTS[2], runs: 1 }; // round 3's shape, but needing only 1 run
+    const melds = solveContract(hand, oneRun, "p1");
+    expect(melds).not.toBeNull();
+    const run = melds![0];
+    expect(run.cards.map((c) => c.isWild)).toEqual([false, false, true, false]);
+    expect(run.cards.map((_, i) => runCardRank(run, i))).toEqual(["4", "5", "6", "7"]);
   });
 });
 
@@ -257,6 +277,18 @@ describe("validateManualGroup", () => {
     expect(validateManualGroup(group, round3).valid).toBe(false);
   });
 
+  it("returns the run's cards in sorted order, wild in its correct gap, regardless of selection order", () => {
+    // Tapped in a scrambled order: 7, wild, 4, 5 — the "6" slot must still
+    // end up sorted between 5 and 7 in the returned arrangement.
+    const seven = makeCard("7", "hearts");
+    const wild = makeCard("2", "clubs");
+    const four = makeCard("4", "hearts");
+    const five = makeCard("5", "hearts");
+    const result = validateManualGroup([seven, wild, four, five], round3);
+    expect(result).toMatchObject({ valid: true, type: "run" });
+    expect(result.orderedCards).toEqual([four, five, wild, seven]);
+  });
+
   it("accepts a run with two non-adjacent wilds", () => {
     // Naturals 6,7 with two wilds can only form a valid run as 5-6-7-8 (wilds
     // filling 5 and 8) — the other candidate windows (4-5-6-7, 6-7-8-9) would
@@ -361,5 +393,56 @@ describe("canLayOff", () => {
       ]),
     };
     expect(canLayOff(makeCard("A", "spades"), fiveToEight)).toBe(false);
+  });
+});
+
+describe("layOffOptions", () => {
+  it("gives a wild both ends when a run has room on both sides — genuinely ambiguous", () => {
+    const midRun: Meld = {
+      id: "run5",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 4, // "5"
+      cards: makeHand([
+        ["5", "diamonds"],
+        ["6", "diamonds"],
+        ["7", "diamonds"],
+        ["8", "diamonds"],
+      ]),
+    };
+    expect(layOffOptions(makeCard("2", "diamonds"), midRun)).toEqual(["low", "high"]);
+  });
+
+  it("gives a natural card exactly one option — never ambiguous", () => {
+    const midRun: Meld = {
+      id: "run6",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 4, // "5"
+      cards: makeHand([
+        ["5", "diamonds"],
+        ["6", "diamonds"],
+        ["7", "diamonds"],
+        ["8", "diamonds"],
+      ]),
+    };
+    expect(layOffOptions(makeCard("4", "diamonds"), midRun)).toEqual(["low"]);
+    expect(layOffOptions(makeCard("9", "diamonds"), midRun)).toEqual(["high"]);
+  });
+
+  it("only offers the open end when a run already touches a boundary", () => {
+    const atLowBoundary: Meld = {
+      id: "run7",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 0, // "A" (low)
+      cards: makeHand([
+        ["A", "diamonds"],
+        ["2", "diamonds"], // wild filling the "2" slot
+        ["3", "diamonds"],
+        ["4", "diamonds"],
+      ]),
+    };
+    expect(layOffOptions(makeCard("2", "clubs"), atLowBoundary)).toEqual(["high"]);
   });
 });

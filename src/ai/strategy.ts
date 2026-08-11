@@ -1,9 +1,13 @@
-import { bookCandidates, canLayOff, runCandidates, splitWildsAndNaturals } from "../meld";
+import { bookCandidates, layOffOptions, runCandidates, splitWildsAndNaturals } from "../meld";
 import { Card, GameState, Player } from "../types";
 
 export interface LayOffMove {
   cardId: string;
   meldId: string;
+  // Which end of a run to extend — only meaningful for a wild laid onto a
+  // run with room on both ends, where the choice is genuinely ambiguous and
+  // a human player would be asked; the AI just needs to pick one.
+  position?: "low" | "high";
 }
 
 export interface AIStrategy {
@@ -20,12 +24,14 @@ export function greedyLayOffPlan(state: GameState, player: Player): LayOffMove[]
   const moves: LayOffMove[] = [];
   const claimedThisTurn = new Set<string>();
   for (const card of player.hand) {
-    const meld = state.melds.find(
-      (m) => !claimedThisTurn.has(card.id) && canLayOff(card, m)
-    );
-    if (meld) {
-      moves.push({ cardId: card.id, meldId: meld.id });
-      claimedThisTurn.add(card.id);
+    if (claimedThisTurn.has(card.id)) continue;
+    for (const meld of state.melds) {
+      const options = layOffOptions(card, meld);
+      if (options.length > 0) {
+        moves.push({ cardId: card.id, meldId: meld.id, position: options[0] });
+        claimedThisTurn.add(card.id);
+        break;
+      }
     }
   }
   return moves;

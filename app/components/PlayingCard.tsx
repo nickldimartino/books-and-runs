@@ -19,12 +19,24 @@ interface PlayingCardProps {
   small?: boolean;
   isNew?: boolean;
   onClick?: () => void;
+  // For a wild card laid down within a run, the rank it's standing in for
+  // (e.g. "7") — shown as a small badge since an unlabeled wild in a run is
+  // otherwise genuinely ambiguous (could be either neighboring gap).
+  standInRank?: string;
 }
 
 // Renders as a <div>, never a <button> — callers (draw pile, discard pile,
 // table melds) already wrap cards in their own <button>, and buttons can't
 // legally nest.
-export function PlayingCard({ card, selected, faceDown, small, isNew, onClick }: PlayingCardProps) {
+export function PlayingCard({
+  card,
+  selected,
+  faceDown,
+  small,
+  isNew,
+  onClick,
+  standInRank,
+}: PlayingCardProps) {
   const size = small ? "h-14 w-10 text-xs" : "h-20 w-14 text-sm";
 
   if (faceDown) {
@@ -44,6 +56,11 @@ export function PlayingCard({ card, selected, faceDown, small, isNew, onClick }:
       {isNew && (
         <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
           NEW
+        </span>
+      )}
+      {standInRank && (
+        <span className="absolute -bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--highlight)] px-1.5 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
+          as {standInRank}
         </span>
       )}
       <div

@@ -296,6 +296,71 @@ describe("layOffCard", () => {
     expect(layOffCard(state, badCard.id, meld.id)).toBe(false);
     expect(state.players[0].hand).toContain(badCard);
   });
+
+  function stateWithRun() {
+    const run: Meld = {
+      id: "run1",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 4, // "5"
+      cards: makeHand([
+        ["5", "diamonds"],
+        ["6", "diamonds"],
+        ["7", "diamonds"],
+        ["8", "diamonds"],
+      ]),
+    };
+    return run;
+  }
+
+  it("inserts a natural card at the low end and shifts runStartIndex down", () => {
+    const run = stateWithRun();
+    const originalIds = run.cards.map((c) => c.id);
+    const four = makeCard("4", "diamonds", { id: "four" });
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [four] })],
+    });
+    expect(layOffCard(state, four.id, run.id)).toBe(true);
+    expect(run.cards.map((c) => c.id)).toEqual(["four", ...originalIds]);
+    expect(run.runStartIndex).toBe(3); // "4"
+  });
+
+  it("appends a natural card at the high end without touching runStartIndex", () => {
+    const run = stateWithRun();
+    const nine = makeCard("9", "diamonds", { id: "nine" });
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [nine] })],
+    });
+    const originalIds = run.cards.map((c) => c.id);
+    expect(layOffCard(state, nine.id, run.id)).toBe(true);
+    expect(run.cards.map((c) => c.id)).toEqual([...originalIds, "nine"]);
+    expect(run.runStartIndex).toBe(4); // unchanged
+  });
+
+  it("rejects an ambiguous wild lay-off onto a run when no position is given", () => {
+    const run = stateWithRun();
+    const wild = makeCard("2", "clubs", { id: "wild" });
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [wild] })],
+    });
+    expect(layOffCard(state, wild.id, run.id)).toBe(false);
+    expect(state.players[0].hand).toContain(wild);
+  });
+
+  it("lays a wild off at the requested end and keeps the run sorted", () => {
+    const run = stateWithRun();
+    const wild = makeCard("2", "clubs", { id: "wild" });
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [wild] })],
+    });
+    expect(layOffCard(state, wild.id, run.id, "low")).toBe(true);
+    expect(run.cards[0].id).toBe("wild");
+    expect(run.runStartIndex).toBe(3); // "4" slot, now wild-filled
+  });
 });
 
 describe("eligibleBuyers / buyDiscard", () => {

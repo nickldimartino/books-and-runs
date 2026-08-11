@@ -7,14 +7,25 @@ import { Card, ContractRequirement, Meld, Rank } from "./types";
 // so a run can go A-2-3-4 or J-Q-K-A. The two Ace slots are 13 apart, farther
 // than any run window, so one run can use one slot or the other but never
 // both at once — that's what stops a run from wrapping Q-K-A-2.
-const RUN_ORDER: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+export const RUN_ORDER: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 
 /** Positions a card's rank can occupy in a run window. Every rank has
  * exactly one, except Ace, which can sit at either end (see RUN_ORDER). */
-function rankPositions(rank: Rank): number[] {
+export function rankPositions(rank: Rank): number[] {
   if (rank === "A") return [0, RUN_ORDER.length - 1];
   const idx = RUN_ORDER.indexOf(rank);
   return idx === -1 ? [] : [idx];
+}
+
+/**
+ * The rank a run meld's card at `index` logically represents — useful for
+ * labeling a wild card standing in for a specific slot, since a run's cards
+ * are always kept in sorted positional order (see meldChosenGroups/
+ * solveContract/layOffCard), so position alone determines the rank.
+ */
+export function runCardRank(meld: Meld, index: number): Rank | undefined {
+  if (meld.type !== "run" || meld.runStartIndex === undefined) return undefined;
+  return RUN_ORDER[meld.runStartIndex + index];
 }
 
 export interface Candidate {
@@ -22,6 +33,10 @@ export interface Candidate {
   key: string; // rank for books, "suit:startIndex" for runs
   naturalCards: Card[];
   wildsNeeded: number;
+  // For runs only: the full window in position order, null = gap to fill
+  // with a wild — lets callers place wilds into their correct slot instead
+  // of just appending them, so runs stay in sorted rank order end to end.
+  runSlots?: (Card | null)[];
 }
 
 export function splitWildsAndNaturals(hand: Card[]) {
@@ -66,10 +81,16 @@ export function runCandidates(naturals: Card[], runSize: number): Candidate[] {
     for (let start = 0; start + runSize <= RUN_ORDER.length; start++) {
       const naturalCards: Card[] = [];
       const gaps: number[] = [];
+      const runSlots: (Card | null)[] = [];
       for (let i = start; i < start + runSize; i++) {
         const card = rankMap.get(i);
-        if (card) naturalCards.push(card);
-        else gaps.push(i);
+        if (card) {
+          naturalCards.push(card);
+          runSlots.push(card);
+        } else {
+          gaps.push(i);
+          runSlots.push(null);
+        }
       }
       // require at least one natural card so we're not building a meld out of thin air
       if (naturalCards.length === 0) continue;
@@ -78,7 +99,13 @@ export function runCandidates(naturals: Card[], runSize: number): Candidate[] {
       // A run can't have two wild cards in a row.
       const hasConsecutiveGaps = gaps.some((g, i2) => i2 > 0 && g === gaps[i2 - 1] + 1);
       if (hasConsecutiveGaps) continue;
-      candidates.push({ type: "run", key: `run:${suit}:${start}`, naturalCards, wildsNeeded: gaps.length });
+      candidates.push({
+        type: "run",
+        key: `run:${suit}:${start}`,
+        naturalCards,
+        wildsNeeded: gaps.length,
+        runSlots,
+      });
     }
   }
   return candidates;
@@ -135,18 +162,23 @@ export function solveContract(
   const runsOk = tryPick(sortedRuns, requirement.runs, 0);
   if (!runsOk) return null;
 
-  // build final Meld objects, assigning wild cards to fill shortfalls
+  // build final Meld objects, assigning wild cards to fill shortfalls — for
+  // runs, wilds go into their exact gap slot (via runSlots) so the meld
+  // stays in sorted rank order instead of wilds just being tacked on the end
   const wildPool = [...wilds];
   const melds: Meld[] = chosen.map((cand, idx) => {
     const wildsForThis = wildPool.splice(0, cand.wildsNeeded);
-    const runStartIndex =
-      cand.type === "run" ? Number(cand.key.split(":")[2]) : undefined;
+    if (cand.type === "run" && cand.runSlots) {
+      let wi = 0;
+      const cards = cand.runSlots.map((slot) => slot ?? wildsForThis[wi++]);
+      const runStartIndex = Number(cand.key.split(":")[2]);
+      return { id: `${ownerId}-meld-${idx}-${cand.key}`, type: "run", ownerId, cards, runStartIndex };
+    }
     return {
       id: `${ownerId}-meld-${idx}-${cand.key}`,
       type: cand.type,
       ownerId,
       cards: [...cand.naturalCards, ...wildsForThis],
-      runStartIndex,
     };
   });
 
@@ -157,6 +189,9 @@ export interface GroupValidation {
   valid: boolean;
   type?: "book" | "run";
   runStartIndex?: number;
+  // For runs: the cards in sorted positional order (wilds placed in their
+  // correct gap slot), ready to store directly as a Meld's cards array.
+  orderedCards?: Card[];
   reason?: string;
 }
 
@@ -235,7 +270,17 @@ export function validateManualGroup(cards: Card[], requirement: ContractRequirem
       };
     }
 
-    return { valid: true, type: "run", runStartIndex: assignment.start };
+    // Arrange the full window in sorted position order: naturals at their
+    // resolved position, wilds filling whatever gaps remain (assignment
+    // order among wilds doesn't matter — they're interchangeable).
+    const naturalByPos = new Map(assignment.positions.map((pos, i) => [pos, naturals[i]]));
+    const wildQueue = [...wilds];
+    const orderedCards: Card[] = [];
+    for (let i = assignment.start; i < assignment.start + size; i++) {
+      orderedCards.push(naturalByPos.get(i) ?? wildQueue.shift()!);
+    }
+
+    return { valid: true, type: "run", runStartIndex: assignment.start, orderedCards };
   }
 
   return {
@@ -251,21 +296,47 @@ export function leftoverAfterMelds(hand: Card[], melds: Meld[]): Card[] {
 }
 
 /**
- * Lay-off check: can this single card extend an existing meld?
- * Books: any card matching the book's rank, or a wild.
- * Runs: a card extending either end of the sequence (or a wild used as the next slot).
+ * Which end(s) of a meld a card could legally lay off onto. Books have no
+ * direction — a single-element array means "yes", empty means "no". Runs
+ * return "low"/"high" for whichever end(s) the card's rank fits (a natural
+ * card fits at most one end; a wild fits either end that still has room to
+ * extend, which is genuinely ambiguous and the caller must ask the player).
  */
-export function canLayOff(card: Card, meld: Meld): boolean {
-  if (card.isWild) return true; // simplification: wilds can extend any meld
+export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
   if (meld.type === "book") {
+    if (card.isWild) return ["low"];
     const bookRank = meld.cards.find((c) => !c.isWild)?.rank;
-    return bookRank === card.rank;
+    return bookRank === card.rank ? ["low"] : [];
   }
-  // run: check suit matches and rank is immediately before or after the occupied range
-  const suit = meld.cards.find((c) => !c.isWild)?.suit;
-  if (card.suit !== suit) return false;
-  if (meld.runStartIndex === undefined) return false;
+
+  if (meld.runStartIndex === undefined) return [];
   const start = meld.runStartIndex;
   const end = start + meld.cards.length - 1;
-  return rankPositions(card.rank).some((idx) => idx === start - 1 || idx === end + 1);
+  const lowOpen = start > 0;
+  const highOpen = end < RUN_ORDER.length - 1;
+
+  if (card.isWild) {
+    const opts: ("low" | "high")[] = [];
+    if (lowOpen) opts.push("low");
+    if (highOpen) opts.push("high");
+    return opts;
+  }
+
+  const suit = meld.cards.find((c) => !c.isWild)?.suit;
+  if (card.suit !== suit) return [];
+  const positions = rankPositions(card.rank);
+  const opts: ("low" | "high")[] = [];
+  if (lowOpen && positions.includes(start - 1)) opts.push("low");
+  if (highOpen && positions.includes(end + 1)) opts.push("high");
+  return opts;
+}
+
+/**
+ * Lay-off check: can this single card extend an existing meld at all (either
+ * end, for a run)? For the actual direction — needed to keep a run's cards
+ * in sorted order and to know what a wild is standing in for — see
+ * layOffOptions.
+ */
+export function canLayOff(card: Card, meld: Meld): boolean {
+  return layOffOptions(card, meld).length > 0;
 }
