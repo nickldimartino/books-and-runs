@@ -41,6 +41,16 @@ function formatValue(value: number | null): string {
   return Number.isInteger(value) ? value.toString() : value.toFixed(1);
 }
 
+/** "42 / 75 books melded" for a normal climbing counter, but "Best: 12
+ * (goal: 15 or lower)" for a lower-is-better one — "12 / 15" would read
+ * backwards there, like barely-started progress instead of already cleared. */
+function formatProgress(a: AchievementInstance): string {
+  if (a.lowerIsBetter) {
+    return `Best: ${formatValue(a.value)} (goal: ${a.threshold} or lower ${a.unit})`;
+  }
+  return `${formatValue(a.value)} / ${a.threshold} ${a.unit}`;
+}
+
 export default function AchievementsPage() {
   const { configured, loading: authLoading, user } = useAuth();
   const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
@@ -246,9 +256,7 @@ function AchievementCard({ achievement }: { achievement: AchievementInstance }) 
           {TIER_LABEL[achievement.tier]}
         </span>
       </div>
-      <p className="mt-1 text-xs text-[var(--faint)]">
-        {formatValue(achievement.value)} / {achievement.threshold} {achievement.unit}
-      </p>
+      <p className="mt-1 text-xs text-[var(--faint)]">{formatProgress(achievement)}</p>
       {!achievement.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
           <div

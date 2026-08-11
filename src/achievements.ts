@@ -60,6 +60,14 @@ export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
 // off a single lucky game) — require a minimum sample before it counts.
 const WIN_RATE_MIN_GAMES = 10;
 
+// Unlike a counter that climbs gradually, "best score" is a personal record
+// that can hit its theoretical floor (0) in a single short or lucky game —
+// without a floor on games played, a brand-new account could unlock every
+// Sharpshooter tier, including Expert, off game #1. This doesn't make the
+// tiers unlock gradually (a personal best is still an all-at-once thing),
+// but it at least means it takes a few real games before it can happen.
+const BEST_SCORE_MIN_GAMES = 5;
+
 function tierThresholds(values: [number, number, number, number, number]): Record<AchievementTier, number> {
   const [beginner, easy, medium, hard, expert] = values;
   return { beginner, easy, medium, hard, expert };
@@ -84,7 +92,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   {
     id: "best_score",
     title: "Sharpshooter",
-    unit: "final score or lower in a single game",
+    unit: `final score in a single game (min. ${BEST_SCORE_MIN_GAMES} games played)`,
     source: { kind: "bestScore" },
     lowerIsBetter: true,
     thresholds: tierThresholds([70, 50, 30, 15, 0]),
@@ -381,7 +389,7 @@ export function achievementValue(family: AchievementFamily, state: AchievementPr
     case "gamesWon":
       return state.gamesWon;
     case "bestScore":
-      return state.bestScore;
+      return state.gamesPlayed >= BEST_SCORE_MIN_GAMES ? state.bestScore : null;
     case "winRate":
       return state.gamesPlayed >= WIN_RATE_MIN_GAMES ? (100 * state.gamesWon) / state.gamesPlayed : 0;
     case "winsByDifficulty":
@@ -400,6 +408,9 @@ export interface AchievementInstance {
   unlocked: boolean;
   /** 0-1, clamped — how close this specific tier is to unlocking. */
   progressFraction: number;
+  /** True for families like best score, where smaller beats the threshold
+   * — callers need this to phrase "value / threshold" sensibly. */
+  lowerIsBetter: boolean;
 }
 
 function isUnlocked(family: AchievementFamily, value: number | null, threshold: number): boolean {
@@ -437,6 +448,7 @@ export function allAchievements(state: AchievementProgressState): AchievementIns
         value,
         unlocked: isUnlocked(family, value, threshold),
         progressFraction: progressFraction(family, value, threshold),
+        lowerIsBetter: !!family.lowerIsBetter,
       });
     }
   }

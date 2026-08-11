@@ -59,10 +59,22 @@ describe("allAchievements — locked/unlocked state", () => {
     const noGames = allAchievements(EMPTY_PROGRESS_STATE).filter((a) => a.familyId === "best_score");
     expect(noGames.every((t) => !t.unlocked)).toBe(true);
 
-    const goodScore: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, bestScore: 12 };
+    const goodScore: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, gamesPlayed: 5, bestScore: 12 };
     const tiers = allAchievements(goodScore).filter((a) => a.familyId === "best_score");
     expect(tiers.find((t) => t.tier === "hard")!.unlocked).toBe(true); // threshold 15, 12 <= 15
     expect(tiers.find((t) => t.tier === "expert")!.unlocked).toBe(false); // threshold 0, 12 > 0
+  });
+
+  it("best_score can't unlock off a lucky early game — needs a minimum games-played sample", () => {
+    // A single perfect (0-penalty) game shouldn't be enough on its own to
+    // instantly unlock every Sharpshooter tier, including Expert.
+    const luckyFirstGame: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, gamesPlayed: 1, bestScore: 0 };
+    const tooFew = allAchievements(luckyFirstGame).filter((a) => a.familyId === "best_score");
+    expect(tooFew.every((t) => !t.unlocked)).toBe(true);
+
+    const enoughGames: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, gamesPlayed: 5, bestScore: 0 };
+    const unlocked = allAchievements(enoughGames).filter((a) => a.familyId === "best_score");
+    expect(unlocked.every((t) => t.unlocked)).toBe(true);
   });
 
   it("win_rate stays at 0 below the minimum sample size even with a perfect record", () => {
