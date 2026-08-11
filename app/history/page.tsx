@@ -73,9 +73,8 @@ export default function HistoryPage() {
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">This version</h2>
           <p>
             The specific rules this app plays by — 7 rounds building from 2 books up through 3
-            runs, wild 2s and jokers, the penalty scoring table, &quot;buy the discard&quot; for 3+
-            players — follow a house-rules version of the game rather than any single official
-            rulebook. Contract Rummy has never had one governing rule set; nearly every family
+            runs, wild 2s and jokers, and the penalty scoring table — follow a house-rules version
+            of the game rather than any single official rulebook. Contract Rummy has never had one governing rule set; nearly every family
             that plays it has its own variant, and this is ours, built into a pass-and-play app
             with AI opponents standing in when you don&apos;t have enough players at the table.
           </p>

@@ -266,6 +266,33 @@ export default function HowToPlayPage() {
         </p>
       </section>
 
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">
+          In-person rules not implemented
+        </h2>
+        <p>
+          Two house rules from in-person play didn&apos;t make it into this app, both for the same
+          reason: they need a player watching their own private hand to react out of turn, which
+          doesn&apos;t work on one shared pass-and-play screen with AI opponents auto-playing their
+          turns.
+        </p>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong className="text-[var(--heading)]">Buy the discard</strong> — any player other
+            than the one who just discarded, or whoever&apos;s up next, could &quot;buy&quot; the
+            top of the discard pile out of turn: taking it, plus one penalty card from the draw
+            pile, without it becoming their turn. Nobody&apos;s watching for that opportunity on a
+            single shared screen, so it&apos;s off.
+          </li>
+          <li>
+            <strong className="text-[var(--heading)]">Player!</strong> — a player who spots a
+            discard that fits someone else&apos;s already-laid meld could call it, move that card
+            onto the meld themselves, and discard one of their own cards as a reward. Same problem,
+            so this one was never built at all.
+          </li>
+        </ul>
+      </section>
+
       <Link href="/" className="text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home
       </Link>
