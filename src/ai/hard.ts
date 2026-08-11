@@ -1,7 +1,5 @@
 import { Card, GameState, Player } from "../types";
-import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard } from "./strategy";
-
-const RUN_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance } from "./strategy";
 
 /** Rough danger score for a rank/suit: how often opponents have picked up near it. */
 function dangerScore(state: GameState, player: Player, card: Card): number {
@@ -9,10 +7,7 @@ function dangerScore(state: GameState, player: Player, card: Card): number {
   for (const pickup of state.pickupHistory) {
     if (pickup.playerId === player.id) continue;
     if (pickup.card.rank === card.rank) score += 2;
-    if (pickup.card.suit === card.suit) {
-      const dist = Math.abs(RUN_ORDER.indexOf(pickup.card.rank) - RUN_ORDER.indexOf(card.rank));
-      if (dist <= 2) score += 1;
-    }
+    if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) score += 1;
   }
   return score;
 }
@@ -24,7 +19,7 @@ export const hardStrategy: AIStrategy = {
     if (top.isWild) return false; // hold discard-pile wilds back for itself only if drawn blind; don't reveal need
     const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
     const runAdjacent = player.hand.some(
-      (c) => !c.isWild && c.suit === top.suit && Math.abs(RUN_ORDER.indexOf(c.rank) - RUN_ORDER.indexOf(top.rank)) === 1
+      (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
     );
     return rankMatch || runAdjacent;
   },

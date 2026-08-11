@@ -21,7 +21,7 @@ interface SettingsRow {
 const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: string; heading: string }> = {
   midnight: { bg: "#0a2b20", panel: "#123c2c", accent: "#fbbf24", heading: "#fef3c7" },
   daylight: { bg: "#f4f1ea", panel: "#ffffff", accent: "#d97706", heading: "#1f3d2e" },
-  pastel: { bg: "#f6eef5", panel: "#ffffff", accent: "#ef86ab", heading: "#7c3f88" },
+  pastel: { bg: "#f4f7f0", panel: "#ffffff", accent: "#eaa649", heading: "#2f6a63" },
   casino: { bg: "#170a0a", panel: "#2b1010", accent: "#d4af37", heading: "#e9c46a" },
   arcade: { bg: "#14092b", panel: "#1f1147", accent: "#33e6c9", heading: "#ff5fb0" },
 };

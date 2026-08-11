@@ -1,7 +1,5 @@
 import { Card, GameState, Player } from "../types";
-import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard } from "./strategy";
-
-const RUN_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance } from "./strategy";
 
 /**
  * Estimates how much each opponent likely wants this card, using both their
@@ -19,10 +17,7 @@ function opponentDemand(state: GameState, selfId: string, card: Card): number {
 
     for (const pickup of pickups) {
       if (pickup.card.rank === card.rank) demand += 3;
-      if (pickup.card.suit === card.suit) {
-        const dist = Math.abs(RUN_ORDER.indexOf(pickup.card.rank) - RUN_ORDER.indexOf(card.rank));
-        if (dist <= 2) demand += 1.5;
-      }
+      if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) demand += 1.5;
     }
     // if this opponent has discarded this exact rank before, they likely don't need more of it
     if (discards.some((d) => d.card.rank === card.rank)) demand -= 2;
@@ -31,30 +26,26 @@ function opponentDemand(state: GameState, selfId: string, card: Card): number {
 }
 
 /**
- * Lightweight Monte Carlo: sample a few plausible discard choices and score
- * each by (own hand improvement potential) - (opponent demand), picking the
- * best expected outcome rather than just the single lowest-danger card.
+ * Scores each discard candidate by (opponent demand) vs (how loosely useful
+ * it still is to the expert's own hand), picking the cheapest overall cost.
+ * There's no hidden information worth actually sampling here, so this used
+ * to loop 5 times and average an identical number under a "Monte Carlo"
+ * label — simplified to the single deterministic pass it always really was.
  */
-function simulateBestDiscard(state: GameState, player: Player, candidates: Card[]): Card {
-  const SAMPLES = 5;
+function scoreBestDiscard(state: GameState, player: Player, candidates: Card[]): Card {
   let best = candidates[0];
   let bestScore = -Infinity;
 
   for (const card of candidates) {
-    let score = 0;
-    for (let s = 0; s < SAMPLES; s++) {
-      const demand = opponentDemand(state, player.id, card);
-      const selfValue = player.hand.some(
-        (c) => !c.isWild && c.id !== card.id && c.suit === card.suit &&
-          Math.abs(RUN_ORDER.indexOf(c.rank) - RUN_ORDER.indexOf(card.rank)) <= 1
-      )
-        ? 2
-        : 0; // penalize discarding cards still loosely useful to itself
-      score += -(demand * 2) - selfValue;
-    }
-    const avg = score / SAMPLES;
-    if (avg > bestScore) {
-      bestScore = avg;
+    const demand = opponentDemand(state, player.id, card);
+    const selfValue = player.hand.some(
+      (c) => !c.isWild && c.id !== card.id && c.suit === card.suit && minRunDistance(c.rank, card.rank) <= 1
+    )
+      ? 2
+      : 0; // penalize discarding cards still loosely useful to itself
+    const score = -(demand * 2) - selfValue;
+    if (score > bestScore) {
+      bestScore = score;
       best = card;
     }
   }
@@ -67,7 +58,7 @@ export const expertStrategy: AIStrategy = {
     if (!top) return false;
     const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
     const runAdjacent = player.hand.some(
-      (c) => !c.isWild && c.suit === top.suit && Math.abs(RUN_ORDER.indexOf(c.rank) - RUN_ORDER.indexOf(top.rank)) === 1
+      (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
     );
     // expert also considers denying a high-demand card to opponents even if it doesn't directly help
     const wouldDenyOpponent = opponentDemand(state, player.id, top) >= 3;
@@ -76,7 +67,7 @@ export const expertStrategy: AIStrategy = {
   chooseDiscard(state: GameState, player: Player): Card {
     const dead = deadCards(player, state);
     const pool = dead.length > 0 ? dead : player.hand;
-    return simulateBestDiscard(state, player, pool.length > 0 ? pool : [highestPenaltyCard(player.hand)]);
+    return scoreBestDiscard(state, player, pool.length > 0 ? pool : [highestPenaltyCard(player.hand)]);
   },
   planLayOffs(state: GameState, player: Player) {
     // optimize wild allocation: only lay off wilds if doing so completes a

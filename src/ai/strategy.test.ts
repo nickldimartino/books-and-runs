@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { deadCards } from "./strategy";
+import { describe, expect, it, vi } from "vitest";
+import { deadCards, minRunDistance, selfWildLayOffPlan } from "./strategy";
 import { easyStrategy } from "./easy";
-import { CONTRACTS } from "../types";
+import { beginnerStrategy } from "./beginner";
+import { mediumStrategy } from "./medium";
+import { hardStrategy } from "./hard";
+import { CONTRACTS, Meld } from "../types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "../testHelpers";
 
 // Regression coverage for the contract-aware discard fix: deadCards() used to
@@ -82,5 +85,120 @@ describe("easyStrategy.chooseDiscard (integration with contract-aware deadCards)
     const discard = easyStrategy.chooseDiscard(state, player);
 
     expect(discard.id).toBe("isolated");
+  });
+});
+
+describe("minRunDistance", () => {
+  it("treats King and Ace as adjacent (ace-high), not 12 apart", () => {
+    expect(minRunDistance("K", "A")).toBe(1);
+  });
+
+  it("treats 2 and Ace as adjacent (ace-low)", () => {
+    expect(minRunDistance("A", "3")).toBe(2); // A(low)->2->3, 2 slots apart via the wild-only "2" slot
+    expect(minRunDistance("2", "A")).toBe(1); // "2" itself is always wild, but the slot still counts for distance
+  });
+
+  it("returns 0 for the same rank and grows with real distance", () => {
+    expect(minRunDistance("7", "7")).toBe(0);
+    expect(minRunDistance("4", "7")).toBe(3);
+  });
+});
+
+describe("beginnerStrategy.chooseDiscard", () => {
+  it("can discard a wild — picks randomly across the whole hand, not just naturals", () => {
+    const wild = makeCard("JOKER", "joker", { id: "the-wild" });
+    const hand = [makeCard("5", "hearts"), wild, makeCard("9", "clubs")];
+    const player = makePlayer({ hand });
+    const state = makeGameState({ round: 1, players: [player] });
+
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.4); // index 1 of 3 -> the wild
+    try {
+      const discard = beginnerStrategy.chooseDiscard(state, player);
+      expect(discard.id).toBe("the-wild");
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+});
+
+describe("selfWildLayOffPlan (medium)", () => {
+  it("lays a natural off onto anyone's meld but keeps a wild off an opponent's meld", () => {
+    const ownMeld: Meld = {
+      id: "own-book",
+      type: "book",
+      ownerId: "self",
+      cards: makeHand([["9", "hearts"], ["9", "clubs"], ["9", "spades"]]),
+    };
+    const opponentMeld: Meld = {
+      id: "opp-book",
+      type: "book",
+      ownerId: "opponent",
+      cards: makeHand([["5", "hearts"], ["5", "clubs"], ["5", "spades"]]),
+    };
+    const naturalFive = makeCard("5", "diamonds", { id: "natural-5" }); // only fits the opponent's book
+    const wildJoker = makeCard("JOKER", "joker", { id: "wild-joker" }); // a wild can join any book
+
+    const player = makePlayer({
+      id: "self",
+      hand: [naturalFive, wildJoker],
+      hasMeldedContract: true,
+    });
+    const state = makeGameState({
+      round: 1,
+      currentPlayerIndex: 0,
+      players: [player, makePlayer({ id: "opponent" })],
+      melds: [ownMeld, opponentMeld],
+    });
+
+    const moves = selfWildLayOffPlan(state, player);
+
+    const naturalMove = moves.find((m) => m.cardId === "natural-5");
+    const wildMove = moves.find((m) => m.cardId === "wild-joker");
+
+    expect(naturalMove?.meldId).toBe("opp-book"); // naturals go wherever they fit
+    expect(wildMove?.meldId).toBe("own-book"); // wild only ever targets its own meld
+  });
+
+  it("skips laying a wild off entirely when only an opponent's meld fits it", () => {
+    const opponentMeld: Meld = {
+      id: "opp-book",
+      type: "book",
+      ownerId: "opponent",
+      cards: makeHand([["6", "hearts"], ["6", "clubs"], ["6", "spades"]]),
+    };
+    const wildJoker = makeCard("JOKER", "joker", { id: "wild-joker" });
+    const player = makePlayer({ id: "self", hand: [wildJoker], hasMeldedContract: true });
+    const state = makeGameState({
+      round: 1,
+      currentPlayerIndex: 0,
+      players: [player, makePlayer({ id: "opponent" })],
+      melds: [opponentMeld],
+    });
+
+    const moves = selfWildLayOffPlan(state, player);
+
+    expect(moves).toHaveLength(0);
+  });
+});
+
+describe("hardStrategy — ace-high run adjacency", () => {
+  it("recognizes an Ace as run-adjacent to a King when deciding to take the discard", () => {
+    const aceOfSpades = makeCard("A", "spades");
+    const player = makePlayer({ hand: [makeCard("K", "spades"), makeCard("Q", "spades"), makeCard("J", "spades")] });
+    const state = makeGameState({
+      round: 1,
+      players: [player],
+      discardPile: [aceOfSpades],
+    });
+
+    expect(hardStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+  });
+});
+
+describe("mediumStrategy.wantsDiscardPileDraw", () => {
+  it("always wants a wild off the discard pile", () => {
+    const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
+    const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "clubs")] });
+    expect(mediumStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
   });
 });

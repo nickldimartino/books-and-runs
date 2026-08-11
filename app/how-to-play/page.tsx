@@ -32,7 +32,10 @@ export default function HowToPlayPage() {
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">Basic setup</h2>
         <ul className="ml-5 list-disc space-y-1">
-          <li>2–8 players (pass-and-play on one device, plus any number of AI opponents).</li>
+          <li>
+            2–8 players (pass-and-play on one device, plus any number of AI opponents) — set them
+            up, name the human players, and pick each AI&apos;s difficulty on the New Game screen.
+          </li>
           <li>One standard 52-card deck per 2 players, plus jokers, all shuffled together.</li>
           <li>Each player is dealt 13 cards.</li>
           <li>The rest of the deck forms the draw pile; the top card starts the discard pile.</li>
@@ -198,21 +201,28 @@ export default function HowToPlayPage() {
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">
-          The last round: no discard at all
+          3 Runs: no discard at all
         </h2>
         <p>
-          The game&apos;s final round (3 Runs, in the standard 7-round game) works differently: your
-          entire hand has to go into the meld, all at once — there&apos;s no discard step for it at
-          all, and no laying off extra cards afterward either. If a run needs to be longer than the
-          usual minimum of 4 to fit everything, that&apos;s fine — build it as long as it needs to
-          be.
+          The <strong className="text-[var(--heading)]">3 Runs</strong> contract — round 7 in the
+          standard sequence, and always the last round whenever it&apos;s included — works
+          differently from every other round: your entire hand has to go into the meld, all at
+          once. There&apos;s no discard step for it, and no laying off extra cards afterward either.
+          If a run needs to be longer than the usual minimum of 4 to fit everything, that&apos;s
+          fine — build it as long as it needs to be.
         </p>
         <p>
           Practically, this means you can only meld this round once your whole hand happens to
-          split evenly into exactly the runs the round needs. Until then, keep drawing and
-          discarding as normal — it&apos;s meant to be the hardest round to complete, and usually
-          only one player manages it before the game ends.
+          split evenly into exactly 3 runs. Until then, keep drawing and discarding as normal —
+          it&apos;s meant to be the hardest round to complete, and usually only one player manages
+          it before the game ends.
         </p>
+        <Note>
+          This rule belongs to the 3 Runs contract specifically, not just &quot;whichever round
+          comes last.&quot; If you&apos;re playing Custom and didn&apos;t select round 7, your
+          game&apos;s last round follows the normal rule above instead — melding it doesn&apos;t
+          require your whole hand.
+        </Note>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -254,8 +264,9 @@ export default function HowToPlayPage() {
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">Settings</h2>
         <p>
-          Settings lets you set a default AI difficulty for new AI opponents you add on the New
-          Game screen. It doesn&apos;t change any of the rules above.
+          Settings lets you pick a color theme for the app and table, and set a default AI
+          difficulty for new AI opponents you add on the New Game screen. Neither one changes any
+          of the rules above — they&apos;re just look-and-feel.
         </p>
       </section>
 
