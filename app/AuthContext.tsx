@@ -15,11 +15,10 @@ import {
 } from "react";
 import { isSupabaseConfigured, supabase } from "./lib/supabaseClient";
 
-// Matches the CFBundleURLSchemes entry in ios/App/App/Info.plist. Google and
-// Apple both refuse to complete OAuth inside an embedded webview, so on
-// native the flow opens in the system browser (@capacitor/browser) and
-// bounces back to the app via this custom scheme instead of a plain
-// window.location redirect.
+// Matches the CFBundleURLSchemes entry in ios/App/App/Info.plist. Google
+// refuses to complete OAuth inside an embedded webview, so on native the
+// flow opens in the system browser (@capacitor/browser) and bounces back to
+// the app via this custom scheme instead of a plain window.location redirect.
 const NATIVE_REDIRECT_URL = "com.booksandruns.app://auth-callback";
 
 interface AuthResult {
@@ -33,7 +32,6 @@ interface AuthContextValue {
   signInWithPassword: (email: string, password: string) => Promise<AuthResult>;
   signUpWithPassword: (email: string, password: string) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
-  signInWithApple: () => Promise<AuthResult>;
   signOut: () => Promise<void>;
 }
 
@@ -88,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }, []);
 
-  const oauthSignIn = useCallback(async (provider: "google" | "apple") => {
+  const oauthSignIn = useCallback(async (provider: "google") => {
     if (!supabase) return { error: "Sign-in isn't configured yet." };
 
     if (Capacitor.isNativePlatform()) {
@@ -109,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(() => oauthSignIn("google"), [oauthSignIn]);
-  const signInWithApple = useCallback(() => oauthSignIn("apple"), [oauthSignIn]);
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
@@ -124,10 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signUpWithPassword,
       signInWithGoogle,
-      signInWithApple,
       signOut,
     }),
-    [loading, user, signInWithPassword, signUpWithPassword, signInWithGoogle, signInWithApple, signOut]
+    [loading, user, signInWithPassword, signUpWithPassword, signInWithGoogle, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

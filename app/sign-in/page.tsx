@@ -7,8 +7,7 @@ import { useAuth } from "../AuthContext";
 
 export default function SignInPage() {
   const router = useRouter();
-  const { configured, user, signInWithPassword, signUpWithPassword, signInWithGoogle, signInWithApple } =
-    useAuth();
+  const { configured, user, signInWithPassword, signUpWithPassword, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,12 +67,6 @@ export default function SignInPage() {
               className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow hover:bg-emerald-50"
             >
               Continue with Google
-            </button>
-            <button
-              onClick={() => signInWithApple().then((r) => r.error && setError(r.error))}
-              className="rounded-lg bg-black px-6 py-3 text-sm font-semibold text-white shadow hover:bg-neutral-900"
-            >
-              Continue with Apple
             </button>
           </div>
 

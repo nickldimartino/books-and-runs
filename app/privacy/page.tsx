@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">If you create an account</h2>
           <p className="mb-2">
             Signing in is optional and only unlocks Stats (win/loss history across devices). If
-            you sign in with email, Google, or Apple, we store:
+            you sign in with email or Google, we store:
           </p>
           <ul className="ml-5 list-disc space-y-1">
             <li>Your email address, via our authentication provider (Supabase Auth).</li>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
               Supabase
             </a>
             , protected by row-level security so only you can ever read or write your own rows. If
-            you sign in with Google or Apple, that authentication is handled directly by{" "}
+            you sign in with Google, that authentication is handled directly by{" "}
             <a
               href="https://policies.google.com/privacy"
               target="_blank"
@@ -79,17 +79,8 @@ export default function PrivacyPage() {
               className="underline hover:text-[var(--heading)]"
             >
               Google
-            </a>{" "}
-            or{" "}
-            <a
-              href="https://www.apple.com/legal/privacy/"
-              target="_blank"
-              rel="noreferrer"
-              className="underline hover:text-[var(--heading)]"
-            >
-              Apple
             </a>
-            , per their own privacy policies — we only ever receive your email address and account
+            , per their own privacy policy — we only ever receive your email address and account
             identifier from them, never your password.
           </p>
         </section>

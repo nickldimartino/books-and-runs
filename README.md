@@ -29,8 +29,8 @@ All six phases of that roadmap are now built.
   - `GameContext.tsx` wires the screens above to the engine, and persists
     the in-progress game to `localStorage` so Home's "Continue" button can
     resume it (survives a full reload — see `lib/localSave.ts`)
-  - `AuthContext.tsx` wraps Supabase Auth (email/password, Google, Apple),
-    including the native-vs-web OAuth branching Capacitor needs
+  - `AuthContext.tsx` wraps Supabase Auth (email/password, Google), including
+    the native-vs-web OAuth branching Capacitor needs
   - `lib/supabaseClient.ts` — degrades gracefully to a "not configured"
     state when no Supabase project is connected, so local play always works
   - `lib/recordGameResult.ts` — writes stats/history to Supabase when a
@@ -135,9 +135,8 @@ The app runs fine without this — it only unlocks Sign in and Stats.
    `0002_achievements.sql` (unlocks the Achievements page), then
    `0003_worst_score.sql`.
 3. In **Authentication → Providers**, enable Email, and optionally Google
-   and Apple (each needs its own OAuth credentials from Google
-   Cloud Console / the Apple Developer portal — entered into Supabase's
-   provider settings, not into this codebase).
+   (needs its own OAuth credentials from Google Cloud Console — entered into
+   Supabase's provider settings, not into this codebase).
 4. Copy `.env.local.example` to `.env.local` and fill in your project's URL
    and anon key from **Project Settings → API**.
 5. `npm run dev` — Sign in and Stats now work.
@@ -165,16 +164,14 @@ and can't be done for you:
    Xcode, and to change `com.booksandruns.app` in `capacitor.config.json`
    (and `ios/App/App/Info.plist`'s `CFBundleURLTypes`) to a bundle ID
    registered under your account.
-2. If you enable Google/Apple sign-in for the iOS build specifically: Google
-   OAuth apps require you to register `com.booksandruns.app` as an iOS
-   client, and Apple's "Sign in with Apple" requires enabling the capability
-   in Xcode's Signing & Capabilities tab.
+2. If you enable Google sign-in for the iOS build specifically: Google OAuth
+   apps require you to register `com.booksandruns.app` as an iOS client.
 
-One nuance worth knowing: Google and Apple both block OAuth from completing
-inside an embedded webview, so on native the sign-in buttons open the
-system browser (`@capacitor/browser`) instead of redirecting in place, then
-bounce back into the app via the `com.booksandruns.app://auth-callback`
-custom URL scheme registered in `Info.plist`. That handoff is implemented in
+One nuance worth knowing: Google blocks OAuth from completing inside an
+embedded webview, so on native the sign-in button opens the system browser
+(`@capacitor/browser`) instead of redirecting in place, then bounces back
+into the app via the `com.booksandruns.app://auth-callback` custom URL
+scheme registered in `Info.plist`. That handoff is implemented in
 `AuthContext.tsx`; the game-board flow was verified live in Simulator, but
 the OAuth deep-link round trip specifically hasn't been (it needs a real
 Supabase project with providers configured — see Phase 5 above).
@@ -206,9 +203,9 @@ add anything new later.
 - Stats are tracked for the device owner only (the first human player seat,
   "You") — other pass-and-play participants at the table aren't assumed to
   have their own accounts.
-- The OAuth deep-link round trip (native Google/Apple sign-in bouncing back
-  into the app) is implemented but unverified — it needs a real Supabase
-  project with providers configured, which needs your accounts.
+- The OAuth deep-link round trip (native Google sign-in bouncing back into
+  the app) is implemented but unverified — it needs a real Supabase project
+  with providers configured, which needs your accounts.
 - Settings' wild-card limit and sound toggle are saved (and synced to your
   account when signed in) but not yet enforced/used anywhere in gameplay —
   the game engine doesn't check the limit when melding, and there are no
