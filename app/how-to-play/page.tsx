@@ -17,7 +17,7 @@ const PENALTY_ROWS = [
 
 function Note({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100/90">
+    <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--heading)]">
       <strong className="font-semibold">Note:</strong> {children}
     </p>
   );
@@ -27,10 +27,10 @@ export default function HowToPlayPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
       <BackNav />
-      <h1 className="text-2xl font-bold text-amber-100">How to Play</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">How to Play</h1>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Basic setup</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Basic setup</h2>
         <ul className="ml-5 list-disc space-y-1">
           <li>2–8 players (pass-and-play on one device, plus any number of AI opponents).</li>
           <li>One standard 52-card deck per 2 players, plus jokers, all shuffled together.</li>
@@ -43,15 +43,15 @@ export default function HowToPlayPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold text-amber-100">Rounds you&apos;ll play</h2>
-        <p className="text-sm text-emerald-100/70">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Rounds you&apos;ll play</h2>
+        <p className="text-sm text-[var(--muted)]">
           Each round has its own required contract. You must complete the full contract for that
           round — all at once — before you can lay off cards on any meld. The standard game is all
           7 rounds below, played in order.
         </p>
-        <div className="overflow-hidden rounded-xl border border-emerald-100/10">
+        <div className="overflow-hidden rounded-xl border border-[var(--border)]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-emerald-900/60 text-emerald-100/60">
+            <thead className="bg-[var(--panel)] text-[var(--faint)]">
               <tr>
                 <th className="px-3 py-2 font-medium">Round</th>
                 <th className="px-3 py-2 font-medium">Contract</th>
@@ -60,10 +60,10 @@ export default function HowToPlayPage() {
             </thead>
             <tbody>
               {CONTRACTS.map((c) => (
-                <tr key={c.round} className="border-t border-emerald-100/10">
+                <tr key={c.round} className="border-t border-[var(--border)]">
                   <td className="px-3 py-2">{c.round}</td>
-                  <td className="px-3 py-2 font-semibold text-amber-100">{c.label}</td>
-                  <td className="px-3 py-2 text-emerald-100/70">
+                  <td className="px-3 py-2 font-semibold text-[var(--heading)]">{c.label}</td>
+                  <td className="px-3 py-2 text-[var(--muted)]">
                     {c.books > 0 && `${c.books} book${c.books > 1 ? "s" : ""}`}
                     {c.books > 0 && c.runs > 0 && " + "}
                     {c.runs > 0 && `${c.runs} run${c.runs > 1 ? "s" : ""}`}
@@ -74,7 +74,7 @@ export default function HowToPlayPage() {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-emerald-100/50">
+        <p className="text-xs text-[var(--faint)]">
           A book is 3+ matching-rank cards; a run is 4+ same-suit cards in sequence.
         </p>
         <Note>
@@ -87,37 +87,37 @@ export default function HowToPlayPage() {
         </Note>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">How a turn works</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">How a turn works</h2>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong className="text-amber-100">Draw</strong> — take one card from the draw pile or
+            <strong className="text-[var(--heading)]">Draw</strong> — take one card from the draw pile or
             the top of the discard pile.
           </li>
           <li>
-            <strong className="text-amber-100">Meld</strong> — you may only lay down cards once you
+            <strong className="text-[var(--heading)]">Meld</strong> — you may only lay down cards once you
             can place your entire round&apos;s contract at once. No partial melds. You choose which
             of your own cards go into each book or run — see below.
           </li>
           <li>
-            <strong className="text-amber-100">Lay off</strong> — once you&apos;ve melded your
+            <strong className="text-[var(--heading)]">Lay off</strong> — once you&apos;ve melded your
             contract, you may add extra cards to your own or any other player&apos;s already-laid
             melds.
           </li>
           <li>
-            <strong className="text-amber-100">Discard</strong> — end your turn by discarding one
+            <strong className="text-[var(--heading)]">Discard</strong> — end your turn by discarding one
             card, except in your game&apos;s last round (see the no-discard rule below).
           </li>
           <li>
-            <strong className="text-amber-100">Going out</strong> — the round ends the moment a
+            <strong className="text-[var(--heading)]">Going out</strong> — the round ends the moment a
             player melds their full contract and has no cards left. Everyone else scores penalty
             points for the cards remaining in hand.
           </li>
         </ul>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Choosing your meld cards</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Choosing your meld cards</h2>
         <p>
           When you&apos;re ready to meld, you build it yourself instead of the game picking for
           you:
@@ -125,13 +125,13 @@ export default function HowToPlayPage() {
         <ol className="ml-5 list-decimal space-y-1">
           <li>Tap cards in your hand to select the ones for one book or run.</li>
           <li>
-            Tap <strong className="text-amber-100">Group selected cards</strong> — if they form a
+            Tap <strong className="text-[var(--heading)]">Group selected cards</strong> — if they form a
             valid book or run, they&apos;re staged and removed from your visible hand.
           </li>
           <li>Repeat for each book/run the round&apos;s contract needs.</li>
           <li>
             Once your staged groups exactly match the contract, tap{" "}
-            <strong className="text-amber-100">Confirm Meld</strong> to lay them all down at once.
+            <strong className="text-[var(--heading)]">Confirm Meld</strong> to lay them all down at once.
           </li>
         </ol>
         <p>
@@ -140,33 +140,33 @@ export default function HowToPlayPage() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Books and runs — the rules</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Books and runs — the rules</h2>
         <ul className="ml-5 list-disc space-y-1">
           <li>
-            <strong className="text-amber-100">Book:</strong> 3 or more cards of the same rank,
+            <strong className="text-[var(--heading)]">Book:</strong> 3 or more cards of the same rank,
             different suits.
           </li>
           <li>
-            <strong className="text-amber-100">Run:</strong> 4 or more cards of the same suit in
+            <strong className="text-[var(--heading)]">Run:</strong> 4 or more cards of the same suit in
             consecutive rank order.
           </li>
           <li>
-            <strong className="text-amber-100">Ace can be low or high</strong> — a run can go A-2-3-4
+            <strong className="text-[var(--heading)]">Ace can be low or high</strong> — a run can go A-2-3-4
             or J-Q-K-A, but never both at once. A run can&apos;t wrap around, like Q-K-A-2 — Ace can
             anchor one end of a run, not bridge King and 2 in the same one.
           </li>
           <li>
-            <strong className="text-amber-100">Wild cards:</strong> Jokers and 2s are wild and can
+            <strong className="text-[var(--heading)]">Wild cards:</strong> Jokers and 2s are wild and can
             fill in for any missing card in a book or run.
           </li>
           <li>
-            <strong className="text-amber-100">Wild-card limit:</strong> a meld can never use more
+            <strong className="text-[var(--heading)]">Wild-card limit:</strong> a meld can never use more
             wild cards than natural (non-wild) cards. A 3-card book can have at most 1 wild; a
             4-card run can have at most 2.
           </li>
           <li>
-            <strong className="text-amber-100">No two wilds in a row:</strong> in a run, wild cards
+            <strong className="text-[var(--heading)]">No two wilds in a row:</strong> in a run, wild cards
             can&apos;t fill two consecutive slots — e.g. 6-7-<em>wild</em>-<em>wild</em> isn&apos;t
             allowed, but 6-7-8-<em>wild</em> or <em>wild</em>-6-7-<em>wild</em> is fine.
           </li>
@@ -177,23 +177,23 @@ export default function HowToPlayPage() {
         </Note>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Buying the discard (3+ players)</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Buying the discard (3+ players)</h2>
         <p>
           Normally, only the next player can take the top of the discard pile, as part of their own
           draw. In games of 3 or more players, if that next player doesn&apos;t want it, another
-          player further down the turn order can <strong className="text-amber-100">buy</strong> it
+          player further down the turn order can <strong className="text-[var(--heading)]">buy</strong> it
           instead — but only once everyone nearer in turn order has passed on it first.
         </p>
         <p>
           Buying costs a penalty: the buyer takes the discarded card{" "}
-          <strong className="text-amber-100">plus one extra card</strong> off the top of the draw
+          <strong className="text-[var(--heading)]">plus one extra card</strong> off the top of the draw
           pile. Buying doesn&apos;t use up their turn — normal turn order continues unaffected.
         </p>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">
           Round 7 special rule — no discard
         </h2>
         <p>
@@ -204,14 +204,14 @@ export default function HowToPlayPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold text-amber-100">Scoring</h2>
-        <p className="text-sm text-emerald-100/70">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Scoring</h2>
+        <p className="text-sm text-[var(--muted)]">
           When a round ends, every player who did not go out scores penalty points for the cards
           left in their hand. Lowest total score after the game&apos;s last round wins.
         </p>
-        <div className="overflow-hidden rounded-xl border border-emerald-100/10">
+        <div className="overflow-hidden rounded-xl border border-[var(--border)]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-emerald-900/60 text-emerald-100/60">
+            <thead className="bg-[var(--panel)] text-[var(--faint)]">
               <tr>
                 <th className="px-3 py-2 font-medium">Card</th>
                 <th className="px-3 py-2 font-medium">Penalty points</th>
@@ -219,9 +219,9 @@ export default function HowToPlayPage() {
             </thead>
             <tbody>
               {PENALTY_ROWS.map((row) => (
-                <tr key={row.label} className="border-t border-emerald-100/10">
+                <tr key={row.label} className="border-t border-[var(--border)]">
                   <td className="px-3 py-2">{row.label}</td>
-                  <td className="px-3 py-2 text-amber-100">{row.value}</td>
+                  <td className="px-3 py-2 text-[var(--heading)]">{row.value}</td>
                 </tr>
               ))}
             </tbody>
@@ -229,25 +229,25 @@ export default function HowToPlayPage() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Organizing your hand</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Organizing your hand</h2>
         <p>
           Your hand order is just for your own convenience — it has no effect on the game. Use{" "}
-          <strong className="text-amber-100">Sort by suit</strong> or{" "}
-          <strong className="text-amber-100">Sort by rank</strong> to group cards automatically, or
+          <strong className="text-[var(--heading)]">Sort by suit</strong> or{" "}
+          <strong className="text-[var(--heading)]">Sort by rank</strong> to group cards automatically, or
           press and drag any card to a new spot to arrange your hand exactly how you like.
         </p>
       </section>
 
-      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Settings</h2>
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">Settings</h2>
         <p>
           Settings lets you set a default AI difficulty for new AI opponents you add on the New
           Game screen. It doesn&apos;t change any of the rules above.
         </p>
       </section>
 
-      <Link href="/" className="text-sm text-emerald-100/60 hover:text-emerald-100">
+      <Link href="/" className="text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home
       </Link>
     </main>

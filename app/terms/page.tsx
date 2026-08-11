@@ -8,11 +8,11 @@ export default function TermsPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
-        <h1 className="text-2xl font-bold text-amber-100">Terms of Service</h1>
-        <p className="mt-1 text-sm text-emerald-100/50">Last updated August 10, 2026</p>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">Terms of Service</h1>
+        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 10, 2026</p>
       </div>
 
-      <div className="flex flex-col gap-5 text-sm leading-relaxed text-emerald-100/80">
+      <div className="flex flex-col gap-5 text-sm leading-relaxed text-[var(--muted)]">
         <section>
           <p>
             By using Books &amp; Runs (&quot;the app&quot;), you agree to these terms. If you
@@ -21,12 +21,12 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">The app</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">The app</h2>
           <p>
             Books &amp; Runs is a card game for local pass-and-play and single-player games
             against AI opponents. It works fully offline with no account. Creating an account is
             optional and only unlocks cross-device stats — see our{" "}
-            <Link href="/privacy" className="underline hover:text-amber-100">
+            <Link href="/privacy" className="underline hover:text-[var(--heading)]">
               Privacy Policy
             </Link>{" "}
             for what that involves.
@@ -34,7 +34,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">Accounts</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Accounts</h2>
           <p>
             If you create an account, you&apos;re responsible for keeping your credentials secure
             and for anything that happens under your account. Provide accurate information when
@@ -43,7 +43,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">Acceptable use</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Acceptable use</h2>
           <p>
             Don&apos;t use the app to interfere with its normal operation, attempt to access other
             users&apos; data, or use it for anything unlawful.
@@ -51,7 +51,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">Intellectual property</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Intellectual property</h2>
           <p>
             The app&apos;s design, code, and content belong to its developer. The underlying card
             game rules are a common house-rules variant and aren&apos;t owned by anyone.
@@ -59,7 +59,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">
             Disclaimer and limitation of liability
           </h2>
           <p>
@@ -70,7 +70,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">Termination</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Termination</h2>
           <p>
             You can stop using the app or delete your account at any time (see the Privacy Policy
             for how). We may suspend or terminate accounts that violate these terms.
@@ -78,20 +78,20 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">Changes to these terms</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Changes to these terms</h2>
           <p>If these terms change, we&apos;ll update the date at the top of this page.</p>
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-amber-100">Contact</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Contact</h2>
           <p>
             Questions about these terms? Contact{" "}
-            <span className="text-amber-100">nick.l.dimartino@icloud.com</span>.
+            <span className="text-[var(--heading)]">nick.l.dimartino@icloud.com</span>.
           </p>
         </section>
       </div>
 
-      <Link href="/" className="text-sm text-emerald-100/60 hover:text-emerald-100">
+      <Link href="/" className="text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home
       </Link>
     </main>

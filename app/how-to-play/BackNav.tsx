@@ -10,13 +10,13 @@ export function BackNav() {
     <div className="flex items-center gap-3">
       <button
         onClick={() => router.back()}
-        className="rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
       >
         ← Back
       </button>
       <Link
         href="/"
-        className="rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
       >
         Home
       </Link>

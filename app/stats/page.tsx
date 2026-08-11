@@ -56,13 +56,13 @@ export default function StatsPage() {
   if (!authLoading && !configured) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-amber-100">Stats aren&apos;t set up yet</h1>
-        <p className="text-sm text-emerald-100/70">
+        <h1 className="text-2xl font-bold text-[var(--heading)]">Stats aren&apos;t set up yet</h1>
+        <p className="text-sm text-[var(--muted)]">
           This app doesn&apos;t have a Supabase project connected yet.
         </p>
         <Link
           href="/"
-          className="mt-2 rounded-lg border border-emerald-100/20 px-6 py-3 text-sm font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+          className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
           Back to Home
         </Link>
@@ -73,10 +73,10 @@ export default function StatsPage() {
   if (!authLoading && configured && !user) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-amber-100">Sign in to see your stats</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in to see your stats</h1>
         <Link
           href="/sign-in"
-          className="mt-2 rounded-lg bg-amber-400 px-6 py-3 text-sm font-semibold text-emerald-950 shadow hover:bg-amber-300"
+          className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
         >
           Sign in
         </Link>
@@ -89,12 +89,12 @@ export default function StatsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <h1 className="text-2xl font-bold text-amber-100">Your stats</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">Your stats</h1>
 
       {authLoading || loading ? (
-        <p className="text-sm text-emerald-100/60">Loading…</p>
+        <p className="text-sm text-[var(--faint)]">Loading…</p>
       ) : !stats ? (
-        <p className="text-sm text-emerald-100/60">No games recorded yet — play one to see stats here.</p>
+        <p className="text-sm text-[var(--faint)]">No games recorded yet — play one to see stats here.</p>
       ) : (
         <>
           <section className="grid grid-cols-2 gap-3">
@@ -109,39 +109,39 @@ export default function StatsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Wins by AI difficulty faced
             </h2>
             <div className="flex flex-wrap gap-2">
               {DIFFICULTIES.map((d) => (
                 <div
                   key={d}
-                  className="rounded-lg bg-emerald-900/60 px-3 py-2 text-center text-sm capitalize"
+                  className="rounded-lg bg-[var(--panel)] px-3 py-2 text-center text-sm capitalize"
                 >
-                  <div className="font-semibold text-amber-100">{stats.wins_by_difficulty[d] ?? 0}</div>
-                  <div className="text-xs text-emerald-100/50">{d}</div>
+                  <div className="font-semibold text-[var(--heading)]">{stats.wins_by_difficulty[d] ?? 0}</div>
+                  <div className="text-xs text-[var(--faint)]">{d}</div>
                 </div>
               ))}
             </div>
           </section>
 
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Past games
             </h2>
             {history.length === 0 ? (
-              <p className="text-sm text-emerald-100/50">No games recorded yet.</p>
+              <p className="text-sm text-[var(--faint)]">No games recorded yet.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {history.map((g) => (
-                  <li key={g.id} className="rounded-lg bg-emerald-900/60 px-4 py-3 text-sm">
+                  <li key={g.id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-amber-100">Winner: {g.winner}</span>
-                      <span className="text-xs text-emerald-100/50">
+                      <span className="font-medium text-[var(--heading)]">Winner: {g.winner}</span>
+                      <span className="text-xs text-[var(--faint)]">
                         {new Date(g.played_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-emerald-100/60">
+                    <p className="mt-1 text-xs text-[var(--faint)]">
                       vs. {g.opponents.map((o) => o.name).join(", ")}
                     </p>
                   </li>
@@ -152,7 +152,7 @@ export default function StatsPage() {
         </>
       )}
 
-      <Link href="/" className="text-center text-sm text-emerald-100/60 hover:text-emerald-100">
+      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home
       </Link>
     </main>
@@ -161,10 +161,10 @@ export default function StatsPage() {
 
 function StatTile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="rounded-lg bg-emerald-900/60 px-4 py-3">
-      <div className="text-xl font-bold text-amber-100">{value}</div>
-      <div className="text-xs text-emerald-100/60">{label}</div>
-      {sub && <div className="text-[10px] text-emerald-100/40">{sub}</div>}
+    <div className="rounded-lg bg-[var(--panel)] px-4 py-3">
+      <div className="text-xl font-bold text-[var(--heading)]">{value}</div>
+      <div className="text-xs text-[var(--faint)]">{label}</div>
+      {sub && <div className="text-[10px] text-[var(--faint)]">{sub}</div>}
     </div>
   );
 }

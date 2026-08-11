@@ -19,13 +19,13 @@ export function BuyOfferGate({ playerName, card, onRespond }: BuyOfferGateProps)
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 text-center">
       <div>
-        <p className="text-sm uppercase tracking-wide text-emerald-100/60">Pass the device to</p>
-        <h1 className="mt-2 text-3xl font-bold text-amber-100">{playerName}</h1>
+        <p className="text-sm uppercase tracking-wide text-[var(--faint)]">Pass the device to</p>
+        <h1 className="mt-2 text-3xl font-bold text-[var(--heading)]">{playerName}</h1>
       </div>
 
       <div className="flex flex-col items-center gap-3">
         <PlayingCard card={card} />
-        <p className="max-w-xs text-sm text-emerald-100/80">
+        <p className="max-w-xs text-sm text-[var(--muted)]">
           Buy this discard? You&apos;ll take it plus one penalty card from the draw pile.
         </p>
       </div>
@@ -33,13 +33,13 @@ export function BuyOfferGate({ playerName, card, onRespond }: BuyOfferGateProps)
       <div className="flex gap-3">
         <button
           onClick={() => onRespond(false)}
-          className="rounded-lg border border-emerald-100/20 px-6 py-3 text-base font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
           No thanks
         </button>
         <button
           onClick={() => onRespond(true)}
-          className="rounded-lg bg-amber-400 px-6 py-3 text-base font-semibold text-emerald-950 shadow-lg transition hover:bg-amber-300"
+          className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
         >
           Buy it
         </button>

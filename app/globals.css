@@ -1,15 +1,130 @@
 @import "tailwindcss";
 
+/*
+ * Theme tokens. Every theme defines the same set of variables; components
+ * reference them via Tailwind arbitrary values (e.g. bg-[var(--panel)])
+ * instead of hardcoded palette classes, so switching [data-theme] on <html>
+ * re-colors the whole app without a rebuild. :root holds "Midnight" (the
+ * original look) as the default/fallback.
+ */
 :root {
-  --felt: #0f3d2e;
-  --felt-dark: #0a2b20;
+  --bg: #0a2b20;
+  --panel: #123c2c;
+  --panel-soft: #0f3d2e;
+  --elevated: #16543f;
+  --elevated-hover: #1d6a4e;
+  --border: rgba(209, 250, 229, 0.15);
+  --heading: #fef3c7;
+  --text: #f5f0e6;
+  --muted: rgba(209, 250, 229, 0.78);
+  --faint: rgba(209, 250, 229, 0.45);
+  --accent: #fbbf24;
+  --accent-hover: #fcd34d;
+  --on-accent: #022c22;
+  --danger: #fca5a5;
+  --highlight: #38bdf8;
+  --card-bg: #fdfbf6;
+  --card-text: #1f2937;
   --card-red: #b91c1c;
-  --card-black: #1f2937;
+  --card-wild-bg: #fef3c7;
+  --card-wild-text: #92400e;
+}
+
+[data-theme="daylight"] {
+  --bg: #f4f1ea;
+  --panel: #ffffff;
+  --panel-soft: #ece8dc;
+  --elevated: #e7e2d5;
+  --elevated-hover: #ded7c4;
+  --border: rgba(30, 41, 26, 0.12);
+  --heading: #1f3d2e;
+  --text: #24291f;
+  --muted: rgba(36, 41, 31, 0.68);
+  --faint: rgba(36, 41, 31, 0.42);
+  --accent: #d97706;
+  --accent-hover: #b45309;
+  --on-accent: #fffaf0;
+  --danger: #dc2626;
+  --highlight: #0284c7;
+  --card-bg: #ffffff;
+  --card-text: #1f2937;
+  --card-red: #b91c1c;
+  --card-wild-bg: #fef3c7;
+  --card-wild-text: #92400e;
+}
+
+[data-theme="pastel"] {
+  --bg: #f6eef5;
+  --panel: #ffffff;
+  --panel-soft: #f1e4f0;
+  --elevated: #e7d5ea;
+  --elevated-hover: #dcc3e2;
+  --border: rgba(107, 70, 120, 0.15);
+  --heading: #7c3f88;
+  --text: #4a3b52;
+  --muted: rgba(74, 59, 82, 0.68);
+  --faint: rgba(74, 59, 82, 0.42);
+  --accent: #ef86ab;
+  --accent-hover: #e874a0;
+  --on-accent: #3a1930;
+  --danger: #e0708a;
+  --highlight: #4a9d92;
+  --card-bg: #fffdfb;
+  --card-text: #4a3b52;
+  --card-red: #d1638a;
+  --card-wild-bg: #ffe9c7;
+  --card-wild-text: #9a6a2a;
+}
+
+[data-theme="casino"] {
+  --bg: #170a0a;
+  --panel: #2b1010;
+  --panel-soft: #1f0c0c;
+  --elevated: #3d1515;
+  --elevated-hover: #4d1a1a;
+  --border: rgba(230, 200, 140, 0.18);
+  --heading: #e9c46a;
+  --text: #f2e8d8;
+  --muted: rgba(242, 232, 216, 0.72);
+  --faint: rgba(242, 232, 216, 0.42);
+  --accent: #d4af37;
+  --accent-hover: #e6c65c;
+  --on-accent: #1a0e02;
+  --danger: #ef6a6a;
+  --highlight: #56c1e0;
+  --card-bg: #fbf6ec;
+  --card-text: #1a1a1a;
+  --card-red: #9a1b1b;
+  --card-wild-bg: #f3e0a8;
+  --card-wild-text: #6b4a12;
+}
+
+[data-theme="arcade"] {
+  --bg: #14092b;
+  --panel: #1f1147;
+  --panel-soft: #180d38;
+  --elevated: #2a1660;
+  --elevated-hover: #351d78;
+  --border: rgba(255, 255, 255, 0.14);
+  --heading: #ff5fb0;
+  --text: #ece6ff;
+  --muted: rgba(236, 230, 255, 0.72);
+  --faint: rgba(236, 230, 255, 0.42);
+  --accent: #33e6c9;
+  --accent-hover: #5cf0d8;
+  --on-accent: #0c1220;
+  --danger: #ff5f7e;
+  --highlight: #ffd23f;
+  --card-bg: #fdfaff;
+  --card-text: #1f1147;
+  --card-red: #e8386f;
+  --card-wild-bg: #ffe9a6;
+  --card-wild-text: #7a4a02;
 }
 
 body {
-  background: var(--felt-dark);
-  color: #f5f0e6;
+  background: var(--bg);
+  color: var(--text);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
@@ -17,8 +132,8 @@ body {
 }
 
 .card-face {
-  background: #fdfbf6;
-  color: var(--card-black);
+  background: var(--card-bg);
+  color: var(--card-text);
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
 }
@@ -28,6 +143,6 @@ body {
 }
 
 .card-face.wild {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--card-wild-bg);
+  color: var(--card-wild-text);
 }

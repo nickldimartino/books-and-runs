@@ -170,31 +170,31 @@ export default function GamePage() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/")}
-          className="rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
           ← Home
         </button>
         <Link
           href="/how-to-play"
-          className="rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
           How to play
         </Link>
       </div>
 
-      <header className="flex items-center justify-between rounded-xl bg-emerald-900/60 px-4 py-3">
+      <header className="flex items-center justify-between rounded-xl bg-[var(--panel)] px-4 py-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-emerald-100/60">
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
             Round {state.round} of {state.selectedContracts.length}
           </p>
-          <p className="text-lg font-bold text-amber-100">{contract.label}</p>
+          <p className="text-lg font-bold text-[var(--heading)]">{contract.label}</p>
         </div>
-        <ul className="text-right text-xs text-emerald-100/70">
+        <ul className="text-right text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
               <li key={p.id}>
-                {p.name}: <span className="font-semibold text-amber-100">{p.cumulativeScore}</span>
+                {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
               </li>
             ))}
         </ul>
@@ -202,8 +202,8 @@ export default function GamePage() {
 
       {player.isAI ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <p className="text-lg font-semibold text-amber-100">{player.name} is playing…</p>
-          {aiThinking && <p className="text-sm text-emerald-100/60">thinking…</p>}
+          <p className="text-lg font-semibold text-[var(--heading)]">{player.name} is playing…</p>
+          {aiThinking && <p className="text-sm text-[var(--faint)]">thinking…</p>}
         </div>
       ) : (
         <>
@@ -217,7 +217,7 @@ export default function GamePage() {
               >
                 <PlayingCard card={{ id: "back", suit: "joker", rank: "JOKER", isWild: true }} faceDown />
               </button>
-              <span className="text-xs text-emerald-100/60">Draw ({state.drawPile.length})</span>
+              <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
             </div>
 
             <div className="flex flex-col items-center gap-1">
@@ -230,26 +230,26 @@ export default function GamePage() {
                 {discardTop ? (
                   <PlayingCard card={discardTop} />
                 ) : (
-                  <div className="h-20 w-14 rounded-lg border-2 border-dashed border-emerald-100/20" />
+                  <div className="h-20 w-14 rounded-lg border-2 border-dashed border-[var(--border)]" />
                 )}
               </button>
-              <span className="text-xs text-emerald-100/60">Discard pile</span>
+              <span className="text-xs text-[var(--faint)]">Discard pile</span>
             </div>
           </section>
 
-          <section className="flex-1 rounded-xl bg-emerald-950/40 p-4">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+          <section className="flex-1 rounded-xl bg-[var(--panel-soft)] p-4">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
             </h2>
             {state.melds.length === 0 ? (
-              <p className="text-sm text-emerald-100/40">No melds on the table yet.</p>
+              <p className="text-sm text-[var(--faint)]">No melds on the table yet.</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {[...meldsByOwner.entries()].map(([ownerId, melds]) => {
                   const owner = state.players.find((p) => p.id === ownerId);
                   return (
                     <div key={ownerId}>
-                      <p className="mb-1 text-xs text-emerald-100/50">{owner?.name ?? ownerId}</p>
+                      <p className="mb-1 text-xs text-[var(--faint)]">{owner?.name ?? ownerId}</p>
                       <div className="flex flex-wrap gap-3">
                         {melds.map((meld) => {
                           const isValidTarget = !!selectedCard && player.hasMeldedContract && canLayOff(selectedCard, meld);
@@ -259,7 +259,7 @@ export default function GamePage() {
                               onClick={() => handleMeldClick(meld)}
                               disabled={!isValidTarget}
                               className={`flex items-end gap-1 rounded-lg p-1 transition ${
-                                isValidTarget ? "bg-amber-400/20 ring-2 ring-amber-400" : ""
+                                isValidTarget ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""
                               }`}
                               title={meldLabel(meld)}
                             >
@@ -278,8 +278,8 @@ export default function GamePage() {
           </section>
 
           {!player.hasMeldedContract && (
-            <section className="flex flex-col gap-3 rounded-xl bg-emerald-950/40 p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+            <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
               </h2>
 
@@ -288,9 +288,9 @@ export default function GamePage() {
                   {pendingGroups.map((group) => (
                     <div
                       key={group.id}
-                      className="flex flex-wrap items-center gap-2 rounded-lg bg-emerald-900/60 p-2"
+                      className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] p-2"
                     >
-                      <span className="w-12 shrink-0 text-xs font-semibold capitalize text-amber-300">
+                      <span className="w-12 shrink-0 text-xs font-semibold capitalize text-[var(--accent)]">
                         {group.type}
                       </span>
                       <div className="flex flex-wrap gap-1">
@@ -301,7 +301,7 @@ export default function GamePage() {
                       </div>
                       <button
                         onClick={() => removePendingGroup(group.id)}
-                        className="ml-auto text-xs text-red-300 hover:text-red-200"
+                        className="ml-auto text-xs text-[var(--danger)] hover:opacity-80"
                       >
                         Remove
                       </button>
@@ -310,20 +310,20 @@ export default function GamePage() {
                 </div>
               )}
 
-              {groupError && <p className="text-xs text-red-300">{groupError}</p>}
+              {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={handleGroupSelected}
                   disabled={!hasDrawn || selectedCardIds.length === 0}
-                  className="rounded-lg border border-amber-300/60 px-4 py-2 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Group selected cards
                 </button>
                 <button
                   onClick={handleConfirmMeld}
                   disabled={!hasDrawn || !meldReady}
-                  className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 shadow disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Confirm Meld
                 </button>
@@ -335,7 +335,7 @@ export default function GamePage() {
             <button
               onClick={handleDiscardSelected}
               disabled={!hasDrawn || selectedCardIds.length !== 1}
-              className="rounded-lg border border-amber-300/60 px-4 py-2 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Discard selected card
             </button>
@@ -343,24 +343,24 @@ export default function GamePage() {
 
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-100/60">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
                 {player.hasMeldedContract && (
-                  <span className="ml-2 text-amber-300">— contract melded</span>
+                  <span className="ml-2 text-[var(--accent)]">— contract melded</span>
                 )}
               </h2>
               <div className="flex gap-2">
                 <button
                   onClick={() => sortHand("suit")}
                   title="Group same-suit cards together — good for spotting runs"
-                  className="rounded-md border border-emerald-100/20 px-2 py-1 text-xs font-medium text-emerald-100/70 hover:bg-emerald-900/40"
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                 >
                   Sort by suit
                 </button>
                 <button
                   onClick={() => sortHand("rank")}
                   title="Group same-rank cards together — good for spotting books"
-                  className="rounded-md border border-emerald-100/20 px-2 py-1 text-xs font-medium text-emerald-100/70 hover:bg-emerald-900/40"
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                 >
                   Sort by rank
                 </button>
@@ -373,7 +373,7 @@ export default function GamePage() {
               onCardClick={handleCardClick}
               onReorder={reorderHand}
             />
-            <p className="mt-1 text-xs text-emerald-100/40">Drag a card to reorder your hand.</p>
+            <p className="mt-1 text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
           </section>
         </>
       )}

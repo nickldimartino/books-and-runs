@@ -88,21 +88,21 @@ export default function NewGamePage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
       <Link
         href="/"
-        className="self-start rounded-lg border border-emerald-100/20 px-3 py-1.5 text-xs font-medium text-emerald-100/80 hover:bg-emerald-900/40"
+        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
       >
         ← Home
       </Link>
 
-      <h1 className="text-2xl font-bold text-amber-100">New Game</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-100/60">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
           Human players (pass-and-play)
         </h2>
         <div className="flex items-center gap-4">
           <button
             onClick={() => setHumanCount((n) => Math.max(1, n - 1))}
-            className="h-10 w-10 rounded-full bg-emerald-800 text-lg font-bold text-amber-100 hover:bg-emerald-700"
+            className="h-10 w-10 rounded-full bg-[var(--elevated)] text-lg font-bold text-[var(--heading)] hover:bg-[var(--elevated-hover)]"
             aria-label="Fewer human players"
           >
             −
@@ -110,7 +110,7 @@ export default function NewGamePage() {
           <span className="w-6 text-center text-xl font-semibold">{humanCount}</span>
           <button
             onClick={() => setHumanCount((n) => Math.min(MAX_PLAYERS - aiDifficulties.length, n + 1))}
-            className="h-10 w-10 rounded-full bg-emerald-800 text-lg font-bold text-amber-100 hover:bg-emerald-700"
+            className="h-10 w-10 rounded-full bg-[var(--elevated)] text-lg font-bold text-[var(--heading)] hover:bg-[var(--elevated-hover)]"
             aria-label="More human players"
           >
             +
@@ -120,13 +120,13 @@ export default function NewGamePage() {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-100/60">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
             AI opponents
           </h2>
           <button
             onClick={addAI}
             disabled={totalPlayers >= MAX_PLAYERS}
-            className="rounded-md bg-emerald-800 px-3 py-1 text-sm font-medium text-amber-100 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md bg-[var(--elevated)] px-3 py-1 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             + Add AI
           </button>
@@ -135,13 +135,13 @@ export default function NewGamePage() {
           {aiDifficulties.map((difficulty, i) => (
             <div
               key={i}
-              className="flex items-center justify-between gap-3 rounded-lg bg-emerald-900/60 px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-lg bg-[var(--panel)] px-3 py-2"
             >
-              <span className="text-sm text-emerald-100/80">AI {i + 1}</span>
+              <span className="text-sm text-[var(--muted)]">AI {i + 1}</span>
               <select
                 value={difficulty}
                 onChange={(e) => setAIDifficulty(i, e.target.value as Difficulty)}
-                className="rounded-md bg-emerald-950 px-2 py-1 text-sm capitalize text-amber-100"
+                className="rounded-md bg-[var(--panel-soft)] px-2 py-1 text-sm capitalize text-[var(--heading)]"
               >
                 {DIFFICULTIES.map((d) => (
                   <option key={d} value={d} className="capitalize">
@@ -151,7 +151,7 @@ export default function NewGamePage() {
               </select>
               <button
                 onClick={() => removeAI(i)}
-                className="text-sm text-red-300 hover:text-red-200"
+                className="text-sm text-[var(--danger)] hover:opacity-80"
                 aria-label={`Remove AI ${i + 1}`}
               >
                 Remove
@@ -159,13 +159,13 @@ export default function NewGamePage() {
             </div>
           ))}
           {aiDifficulties.length === 0 && (
-            <p className="text-sm text-emerald-100/50">No AI opponents — human players only.</p>
+            <p className="text-sm text-[var(--faint)]">No AI opponents — human players only.</p>
           )}
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-100/60">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
           Rounds
         </h2>
         <div className="flex gap-2">
@@ -181,8 +181,8 @@ export default function NewGamePage() {
               onClick={() => setRoundMode(mode)}
               className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
                 roundMode === mode
-                  ? "bg-amber-400 text-emerald-950"
-                  : "bg-emerald-900/60 text-emerald-100/80 hover:bg-emerald-900"
+                  ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                  : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
               }`}
             >
               {label}
@@ -190,7 +190,7 @@ export default function NewGamePage() {
           ))}
         </div>
         {roundMode === "short" && (
-          <p className="text-xs text-emerald-100/40">
+          <p className="text-xs text-[var(--faint)]">
             Drops the two hardest mixed rounds — 2 Books + 1 Run, and 1 Book + 2 Runs.
           </p>
         )}
@@ -208,26 +208,26 @@ export default function NewGamePage() {
                   e.preventDefault();
                   toggleCustomRound(c.round);
                 }}
-                className="flex items-center gap-2 rounded-md bg-emerald-900/60 px-3 py-2 text-sm text-emerald-100/80"
+                className="flex items-center gap-2 rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--muted)]"
               >
                 <input
                   type="checkbox"
                   checked={customRounds.has(c.round)}
                   readOnly
-                  className="h-4 w-4 accent-amber-400"
+                  className="h-4 w-4 accent-[var(--accent)]"
                 />
                 Round {c.round}: {c.label}
               </label>
             ))}
             {selectedContracts.length === 0 && (
-              <p className="text-xs text-amber-300">Pick at least one round.</p>
+              <p className="text-xs text-[var(--accent)]">Pick at least one round.</p>
             )}
           </div>
         )}
       </section>
 
       {!canStart && (
-        <p className="text-sm text-amber-300">
+        <p className="text-sm text-[var(--accent)]">
           {selectedContracts.length === 0
             ? "Pick at least one round to start."
             : `Need between 2 and ${MAX_PLAYERS} total players to start.`}
@@ -237,7 +237,7 @@ export default function NewGamePage() {
       <button
         onClick={handleStart}
         disabled={!canStart}
-        className="mt-auto rounded-lg bg-amber-400 px-6 py-3 text-base font-semibold text-emerald-950 shadow-lg transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-auto rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
       >
         Start Game
       </button>

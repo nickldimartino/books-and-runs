@@ -18,9 +18,17 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Applies a previously-chosen theme before first paint, so static export's
+// server-rendered (theme-less) HTML doesn't flash Midnight before swapping
+// to whatever the visitor picked last time.
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("booksAndRuns:theme");if(["midnight","daylight","pastel","casino","arcade"].indexOf(t)!==-1){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen antialiased">
         <AuthProvider>
           <SettingsSync />

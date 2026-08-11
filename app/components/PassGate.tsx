@@ -9,12 +9,12 @@ export function PassGate({ name, onReveal }: PassGateProps) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 text-center">
       <div>
-        <p className="text-sm uppercase tracking-wide text-emerald-100/60">Pass the device to</p>
-        <h1 className="mt-2 text-3xl font-bold text-amber-100">{name}</h1>
+        <p className="text-sm uppercase tracking-wide text-[var(--faint)]">Pass the device to</p>
+        <h1 className="mt-2 text-3xl font-bold text-[var(--heading)]">{name}</h1>
       </div>
       <button
         onClick={onReveal}
-        className="rounded-lg bg-amber-400 px-8 py-3 text-base font-semibold text-emerald-950 shadow-lg transition hover:bg-amber-300"
+        className="rounded-lg bg-[var(--accent)] px-8 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
       >
         I&apos;m ready — show my hand
       </button>

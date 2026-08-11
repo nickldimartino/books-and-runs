@@ -30,7 +30,7 @@ export function PlayingCard({ card, selected, faceDown, small, isNew, onClick }:
   if (faceDown) {
     return (
       <div
-        className={`${size} shrink-0 rounded-lg border-2 border-amber-200/30 bg-emerald-800`}
+        className={`${size} shrink-0 rounded-lg border-2 border-[var(--accent)]/30 bg-[var(--elevated)]`}
       />
     );
   }
@@ -42,7 +42,7 @@ export function PlayingCard({ card, selected, faceDown, small, isNew, onClick }:
   return (
     <div className="relative shrink-0">
       {isNew && (
-        <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-sky-400 px-1 text-[9px] font-bold leading-tight text-emerald-950 shadow">
+        <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
           NEW
         </span>
       )}
@@ -62,8 +62,8 @@ export function PlayingCard({ card, selected, faceDown, small, isNew, onClick }:
         }
         className={`card-face ${colorClass} ${size} flex flex-col items-center justify-center gap-0.5 font-bold transition ${
           onClick ? "cursor-pointer hover:-translate-y-1" : "cursor-default"
-        } ${selected ? "-translate-y-2 ring-2 ring-amber-400" : ""} ${
-          isNew ? "ring-2 ring-sky-400" : ""
+        } ${selected ? "-translate-y-2 ring-2 ring-[var(--accent)]" : ""} ${
+          isNew ? "ring-2 ring-[var(--highlight)]" : ""
         }`}
       >
         <span>{label}</span>
