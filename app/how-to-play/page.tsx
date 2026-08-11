@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CONTRACTS } from "@/types";
 import { BackNav } from "./BackNav";
 
@@ -14,6 +15,14 @@ const PENALTY_ROWS = [
   { label: "Jokers (wild)", value: "50 points each" },
 ];
 
+function Note({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100/90">
+      <strong className="font-semibold">Note:</strong> {children}
+    </p>
+  );
+}
+
 export default function HowToPlayPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
@@ -23,18 +32,22 @@ export default function HowToPlayPage() {
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
         <h2 className="text-base font-semibold text-amber-100">Basic setup</h2>
         <ul className="ml-5 list-disc space-y-1">
-          <li>Best with 3–8 people.</li>
+          <li>2–8 players (pass-and-play on one device, plus any number of AI opponents).</li>
           <li>One standard 52-card deck per 2 players, plus jokers, all shuffled together.</li>
           <li>Each player is dealt 13 cards.</li>
           <li>The rest of the deck forms the draw pile; the top card starts the discard pile.</li>
         </ul>
+        <Note>
+          Games with 3 or more players get an extra option — buying the discard. See below.
+        </Note>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold text-amber-100">The contracts (play in order)</h2>
+        <h2 className="text-base font-semibold text-amber-100">Rounds you&apos;ll play</h2>
         <p className="text-sm text-emerald-100/70">
           Each round has its own required contract. You must complete the full contract for that
-          round — all at once — before you can lay off cards on any meld.
+          round — all at once — before you can lay off cards on any meld. The standard game is all
+          7 rounds below, played in order.
         </p>
         <div className="overflow-hidden rounded-xl border border-emerald-100/10">
           <table className="w-full text-left text-sm">
@@ -64,6 +77,14 @@ export default function HowToPlayPage() {
         <p className="text-xs text-emerald-100/50">
           A book is 3+ matching-rank cards; a run is 4+ same-suit cards in sequence.
         </p>
+        <Note>
+          On the New Game screen, you can change which rounds are played. <strong>Short</strong>{" "}
+          drops rounds 4 and 5 (the two hardest, mixed contracts) and plays the rest in order.{" "}
+          <strong>Custom</strong> lets you pick any subset of the 7 rounds above — they always play
+          in their original 1–7 order, whichever ones you&apos;ve picked. Anywhere this page says
+          &quot;Round 7&quot; or &quot;after all 7 rounds,&quot; read that as this game&apos;s actual
+          last round if you&apos;re playing Short or Custom.
+        </Note>
       </section>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
@@ -75,7 +96,8 @@ export default function HowToPlayPage() {
           </li>
           <li>
             <strong className="text-amber-100">Meld</strong> — you may only lay down cards once you
-            can place your entire round&apos;s contract at once. No partial melds.
+            can place your entire round&apos;s contract at once. No partial melds. You choose which
+            of your own cards go into each book or run — see below.
           </li>
           <li>
             <strong className="text-amber-100">Lay off</strong> — once you&apos;ve melded your
@@ -84,7 +106,7 @@ export default function HowToPlayPage() {
           </li>
           <li>
             <strong className="text-amber-100">Discard</strong> — end your turn by discarding one
-            card, except in Round 7 (see below).
+            card, except in your game&apos;s last round (see the no-discard rule below).
           </li>
           <li>
             <strong className="text-amber-100">Going out</strong> — the round ends the moment a
@@ -95,9 +117,87 @@ export default function HowToPlayPage() {
       </section>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Round 7 special rule — no discard</h2>
+        <h2 className="text-base font-semibold text-amber-100">Choosing your meld cards</h2>
         <p>
-          In Round 7 (3 Runs), a player who can lay down all three runs at once goes out
+          When you&apos;re ready to meld, you build it yourself instead of the game picking for
+          you:
+        </p>
+        <ol className="ml-5 list-decimal space-y-1">
+          <li>Tap cards in your hand to select the ones for one book or run.</li>
+          <li>
+            Tap <strong className="text-amber-100">Group selected cards</strong> — if they form a
+            valid book or run, they&apos;re staged and removed from your visible hand.
+          </li>
+          <li>Repeat for each book/run the round&apos;s contract needs.</li>
+          <li>
+            Once your staged groups exactly match the contract, tap{" "}
+            <strong className="text-amber-100">Confirm Meld</strong> to lay them all down at once.
+          </li>
+        </ol>
+        <p>
+          You can remove a staged group before confirming if you change your mind. If a selection
+          isn&apos;t a valid book or run, you&apos;ll see why (see the rules below).
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
+        <h2 className="text-base font-semibold text-amber-100">Books and runs — the rules</h2>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>
+            <strong className="text-amber-100">Book:</strong> 3 or more cards of the same rank,
+            different suits.
+          </li>
+          <li>
+            <strong className="text-amber-100">Run:</strong> 4 or more cards of the same suit in
+            consecutive rank order.
+          </li>
+          <li>
+            <strong className="text-amber-100">Ace can be low or high</strong> — a run can go A-2-3-4
+            or J-Q-K-A, but never both at once. A run can&apos;t wrap around, like Q-K-A-2 — Ace can
+            anchor one end of a run, not bridge King and 2 in the same one.
+          </li>
+          <li>
+            <strong className="text-amber-100">Wild cards:</strong> Jokers and 2s are wild and can
+            fill in for any missing card in a book or run.
+          </li>
+          <li>
+            <strong className="text-amber-100">Wild-card limit:</strong> a meld can never use more
+            wild cards than natural (non-wild) cards. A 3-card book can have at most 1 wild; a
+            4-card run can have at most 2.
+          </li>
+          <li>
+            <strong className="text-amber-100">No two wilds in a row:</strong> in a run, wild cards
+            can&apos;t fill two consecutive slots — e.g. 6-7-<em>wild</em>-<em>wild</em> isn&apos;t
+            allowed, but 6-7-8-<em>wild</em> or <em>wild</em>-6-7-<em>wild</em> is fine.
+          </li>
+        </ul>
+        <Note>
+          The wild-card limit and no-two-in-a-row rules are always on — there&apos;s no setting to
+          turn them off.
+        </Note>
+      </section>
+
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
+        <h2 className="text-base font-semibold text-amber-100">Buying the discard (3+ players)</h2>
+        <p>
+          Normally, only the next player can take the top of the discard pile, as part of their own
+          draw. In games of 3 or more players, if that next player doesn&apos;t want it, another
+          player further down the turn order can <strong className="text-amber-100">buy</strong> it
+          instead — but only once everyone nearer in turn order has passed on it first.
+        </p>
+        <p>
+          Buying costs a penalty: the buyer takes the discarded card{" "}
+          <strong className="text-amber-100">plus one extra card</strong> off the top of the draw
+          pile. Buying doesn&apos;t use up their turn — normal turn order continues unaffected.
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
+        <h2 className="text-base font-semibold text-amber-100">
+          Round 7 special rule — no discard
+        </h2>
+        <p>
+          In a round that needs 3 runs, a player who can lay down all three runs at once goes out
           immediately upon melding — there&apos;s no final discard required. The round ends the
           instant the last card is melded.
         </p>
@@ -107,7 +207,7 @@ export default function HowToPlayPage() {
         <h2 className="text-base font-semibold text-amber-100">Scoring</h2>
         <p className="text-sm text-emerald-100/70">
           When a round ends, every player who did not go out scores penalty points for the cards
-          left in their hand. Lowest total score after all 7 rounds wins the game.
+          left in their hand. Lowest total score after the game&apos;s last round wins.
         </p>
         <div className="overflow-hidden rounded-xl border border-emerald-100/10">
           <table className="w-full text-left text-sm">
@@ -130,8 +230,21 @@ export default function HowToPlayPage() {
       </section>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
-        <h2 className="text-base font-semibold text-amber-100">Wild cards</h2>
-        <p>Jokers and 2s are wild and may substitute for any card in a book or run.</p>
+        <h2 className="text-base font-semibold text-amber-100">Organizing your hand</h2>
+        <p>
+          Your hand order is just for your own convenience — it has no effect on the game. Use{" "}
+          <strong className="text-amber-100">Sort by suit</strong> or{" "}
+          <strong className="text-amber-100">Sort by rank</strong> to group cards automatically, or
+          press and drag any card to a new spot to arrange your hand exactly how you like.
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-2 text-sm leading-relaxed text-emerald-100/80">
+        <h2 className="text-base font-semibold text-amber-100">Settings</h2>
+        <p>
+          Settings lets you set a default AI difficulty for new AI opponents you add on the New
+          Game screen. It doesn&apos;t change any of the rules above.
+        </p>
       </section>
 
       <Link href="/" className="text-sm text-emerald-100/60 hover:text-emerald-100">
