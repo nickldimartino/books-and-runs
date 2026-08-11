@@ -77,7 +77,7 @@ export function PlayingCard({
               }
             : undefined
         }
-        className={`card-face ${colorClass} ${size} flex flex-col items-center justify-center gap-0.5 font-bold transition ${
+        className={`card-face ${colorClass} ${size} flex flex-col items-center justify-center gap-0.5 font-bold transition will-change-transform ${
           onClick ? "cursor-pointer hover:-translate-y-1" : "cursor-default"
         } ${selected ? "-translate-y-2 ring-2 ring-[var(--accent)]" : ""} ${
           isNew ? "ring-2 ring-[var(--highlight)]" : ""
