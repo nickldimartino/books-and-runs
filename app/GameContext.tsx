@@ -82,7 +82,11 @@ const BUY_DISCARD_ENABLED = false;
 
 const AI_TURN_DELAY_MS = 550;
 
-const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "JOKER"];
+// Ace sorts high (after King), never low — wilds (2s and jokers) are always
+// bucketed to the end separately below, so their position here is moot; this
+// only governs where a natural Ace lands, and low would put it awkwardly
+// next to the wild bucket (since natural "2"s don't exist to sit between).
+const RANK_ORDER = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2", "JOKER"];
 const SUIT_ORDER = ["hearts", "diamonds", "clubs", "spades", "joker"];
 
 export type SortMode = "suit" | "rank";

@@ -54,28 +54,29 @@
 }
 
 [data-theme="pastel"] {
-  /* A broad pastel spread — sage, powder blue, marigold, lemon, coral —
-     rather than a single pink/lavender family. */
-  --bg: #f4f7f0;
+  /* A cool lavender-blue base with coral and mint accents — a broad pastel
+     spread that reads distinctly from Daylight's warm cream/green/amber, not
+     just a lighter version of it, and not a single pink/lavender family. */
+  --bg: #eef1fb;
   --panel: #ffffff;
-  --panel-soft: #edf2e7;
-  --elevated: #dfead6;
-  --elevated-hover: #cee0c2;
-  --border: rgba(53, 74, 53, 0.14);
-  --heading: #2f6a63;
-  --text: #3a362f;
-  --muted: rgba(58, 54, 47, 0.68);
-  --faint: rgba(58, 54, 47, 0.42);
-  --accent: #eaa649;
-  --accent-hover: #e0993a;
-  --on-accent: #3d2200;
-  --danger: #d97361;
-  --highlight: #6fa8c9;
-  --card-bg: #fffdf8;
-  --card-text: #3a362f;
-  --card-red: #bd5b5b;
-  --card-wild-bg: #fde79a;
-  --card-wild-text: #7a5a12;
+  --panel-soft: #e3e8f7;
+  --elevated: #d3dcf2;
+  --elevated-hover: #c0cdec;
+  --border: rgba(58, 66, 110, 0.16);
+  --heading: #3c5e82;
+  --text: #34314a;
+  --muted: rgba(52, 49, 74, 0.68);
+  --faint: rgba(52, 49, 74, 0.42);
+  --accent: #ef8b6b;
+  --accent-hover: #e97a54;
+  --on-accent: #3d1806;
+  --danger: #d9695f;
+  --highlight: #5cb88a;
+  --card-bg: #fffdf9;
+  --card-text: #34314a;
+  --card-red: #c15b6b;
+  --card-wild-bg: #fbe19a;
+  --card-wild-text: #7a5210;
 }
 
 [data-theme="casino"] {

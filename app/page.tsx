@@ -20,7 +20,7 @@ export default function HomePage() {
       <div>
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Local pass-and-play, seven rounds, wild twos and jokers.
+          Local pass-and-play rummy with wild twos and jokers.
         </p>
         {configured && user && (
           <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>

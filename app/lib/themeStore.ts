@@ -9,7 +9,7 @@ export interface ThemeOption {
 export const THEMES: ThemeOption[] = [
   { id: "midnight", name: "Midnight", description: "The original dark felt-table look." },
   { id: "daylight", name: "Daylight", description: "Clean and light, easy to read in bright rooms." },
-  { id: "pastel", name: "Pastel Deck", description: "Sage, powder blue, and marigold — soft and easy on the eyes." },
+  { id: "pastel", name: "Pastel Deck", description: "Periwinkle, coral, and mint — soft and easy on the eyes." },
   { id: "casino", name: "Casino Royale", description: "Deep red and gold, dramatic high-roller felt." },
   { id: "arcade", name: "Retro Arcade", description: "Neon cyan and pink on a synthwave purple table." },
 ];
