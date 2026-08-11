@@ -32,6 +32,11 @@ export default function StatsPage() {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [history, setHistory] = useState<GameHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // Distinct from "stats is null because you haven't played yet" — a query
+  // error (e.g. a migration that added a selected column hasn't been run
+  // against this Supabase project) also leaves stats null, and silently
+  // showing "no games recorded" for that case is actively misleading.
+  const [statsError, setStatsError] = useState(false);
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -39,6 +44,7 @@ export default function StatsPage() {
       return;
     }
     setLoading(true);
+    setStatsError(false);
     Promise.all([
       supabase
         .from("player_stats")
@@ -52,7 +58,11 @@ export default function StatsPage() {
         .order("played_at", { ascending: false })
         .limit(PAST_GAMES_LIMIT),
     ]).then(([statsRes, historyRes]) => {
-      setStats(statsRes.data);
+      if (statsRes.error) {
+        setStatsError(true);
+      } else {
+        setStats(statsRes.data);
+      }
       setHistory((historyRes.data as GameHistoryRow[]) ?? []);
       setLoading(false);
     });
@@ -94,6 +104,13 @@ export default function StatsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
+      <Link
+        href="/"
+        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+      >
+        ← Back to Home
+      </Link>
+
       <h1 className="text-2xl font-bold text-[var(--heading)]">Your stats</h1>
 
       {level && (
@@ -115,6 +132,11 @@ export default function StatsPage() {
 
       {authLoading || loading ? (
         <p className="text-sm text-[var(--faint)]">Loading…</p>
+      ) : statsError ? (
+        <p className="text-sm text-[var(--danger)]">
+          Couldn&apos;t load your stats — check your connection, or that this Supabase project has
+          every migration in <code>supabase/migrations/</code> applied.
+        </p>
       ) : !stats ? (
         <p className="text-sm text-[var(--faint)]">No games recorded yet — play one to see stats here.</p>
       ) : (

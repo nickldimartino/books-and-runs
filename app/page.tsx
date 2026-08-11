@@ -31,7 +31,7 @@ export default function HomePage() {
         )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Seven rounds. Wild cards. Lowest score wins.
+          Build books, complete runs, and win with the lowest score.
         </p>
         {configured && user && (
           <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>

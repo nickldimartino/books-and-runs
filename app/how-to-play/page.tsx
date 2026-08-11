@@ -8,8 +8,8 @@ export const metadata = {
 };
 
 const PENALTY_ROWS = [
-  { label: "Number cards (3 through 10)", value: "5 points each" },
-  { label: "Face cards (J, Q, K)", value: "10 points each" },
+  { label: "Number cards (3 through 9)", value: "5 points each" },
+  { label: "10, J, Q, K", value: "10 points each" },
   { label: "Aces", value: "15 points each" },
   { label: "Twos (wild)", value: "20 points each" },
   { label: "Jokers (wild)", value: "50 points each" },

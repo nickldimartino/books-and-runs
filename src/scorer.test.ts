@@ -3,14 +3,14 @@ import { cardPenalty, handPenalty } from "./scorer";
 import { makeCard, makeHand } from "./testHelpers";
 
 describe("cardPenalty", () => {
-  it("scores number cards (3-10) at 5 points", () => {
-    for (const rank of ["3", "4", "5", "6", "7", "8", "9", "10"] as const) {
+  it("scores number cards (3-9) at 5 points", () => {
+    for (const rank of ["3", "4", "5", "6", "7", "8", "9"] as const) {
       expect(cardPenalty(makeCard(rank))).toBe(5);
     }
   });
 
-  it("scores face cards (J, Q, K) at 10 points", () => {
-    for (const rank of ["J", "Q", "K"] as const) {
+  it("scores 10 and face cards (J, Q, K) at 10 points", () => {
+    for (const rank of ["10", "J", "Q", "K"] as const) {
       expect(cardPenalty(makeCard(rank))).toBe(10);
     }
   });

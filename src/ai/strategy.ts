@@ -1,4 +1,5 @@
 import { bookCandidates, layOffOptions, rankPositions, runCandidates, splitWildsAndNaturals } from "../meld";
+import { cardPenalty } from "../scorer";
 import { Card, GameState, Meld, Player, Rank } from "../types";
 
 export interface LayOffMove {
@@ -106,7 +107,5 @@ export function minRunDistance(a: Rank, b: Rank): number {
 }
 
 export function highestPenaltyCard(cards: Card[]): Card {
-  const penaltyOf = (c: Card) =>
-    c.rank === "JOKER" ? 50 : c.rank === "2" ? 20 : c.rank === "A" ? 15 : ["J", "Q", "K"].includes(c.rank) ? 10 : 5;
-  return [...cards].sort((a, b) => penaltyOf(b) - penaltyOf(a))[0];
+  return [...cards].sort((a, b) => cardPenalty(b) - cardPenalty(a))[0];
 }
