@@ -199,12 +199,21 @@ export default function NewGamePage() {
             {CONTRACTS.map((c) => (
               <label
                 key={c.round}
+                onClick={(e) => {
+                  // Fully React-controlled toggle: suppress the browser's own
+                  // label→checkbox click forwarding (which otherwise races
+                  // against this handler and could flip a different, stale
+                  // checkbox after a fast re-render) and let this be the one
+                  // and only place a toggle happens.
+                  e.preventDefault();
+                  toggleCustomRound(c.round);
+                }}
                 className="flex items-center gap-2 rounded-md bg-emerald-900/60 px-3 py-2 text-sm text-emerald-100/80"
               >
                 <input
                   type="checkbox"
                   checked={customRounds.has(c.round)}
-                  onChange={() => toggleCustomRound(c.round)}
+                  readOnly
                   className="h-4 w-4 accent-amber-400"
                 />
                 Round {c.round}: {c.label}

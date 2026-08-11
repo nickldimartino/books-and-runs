@@ -24,7 +24,6 @@ const BIG_MOVE_PX = 18;
 interface DragTracker {
   id: string;
   pointerId: number;
-  element: HTMLDivElement;
   startX: number;
   startY: number;
   lastX: number;
@@ -38,6 +37,7 @@ interface DragTracker {
   dragging: boolean;
   order: string[];
   holdTimer: ReturnType<typeof setTimeout>;
+  detach: () => void;
 }
 
 /**
@@ -45,6 +45,17 @@ interface DragTracker {
  * (via onCardClick), or press-and-drag it to a new spot to reorder the hand.
  * Uses raw Pointer Events (not HTML5 drag-and-drop) so it works the same on
  * touch (iOS) and mouse.
+ *
+ * Once a drag engages, move/up/cancel are tracked via listeners on
+ * `document` rather than handlers on the dragged card's own element. The
+ * dragged card is `visibility: hidden` while dragging (see below), and
+ * hidden elements don't receive pointer events through normal hit-testing —
+ * only `setPointerCapture` would keep events routed to it, and that isn't
+ * reliably available on every mobile browser. Without it, a pointerup could
+ * land on whatever sibling is now under the finger (siblings physically
+ * shift during a live reorder) instead of the dragged card, which never
+ * resolves the drag — the card stays stuck mid-air. Document-level
+ * listeners don't depend on hit-testing at all, so this can't happen.
  *
  * The dragged card is rendered as a fixed-position ghost that tracks the raw
  * pointer coordinates directly, decoupled from the flex list's own layout.
@@ -109,53 +120,25 @@ export function DraggableHand({
     drag.dragging = true;
     setDragId(card.id);
     setPointerPos({ x: drag.lastX, y: drag.lastY });
-    try {
-      drag.element.setPointerCapture(drag.pointerId);
-    } catch {
-      // Capture is a nicety (keeps events routed here if the pointer
-      // drifts off the element mid-drag) — safe to continue without it.
-    }
   }
 
-  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    const element = e.currentTarget;
-    const rect = element.getBoundingClientRect();
-    dragRef.current = {
-      id: card.id,
-      pointerId: e.pointerId,
-      element,
-      startX: e.clientX,
-      startY: e.clientY,
-      lastX: e.clientX,
-      lastY: e.clientY,
-      grabOffsetX: e.clientX - rect.left,
-      grabOffsetY: e.clientY - rect.top,
-      width: rect.width,
-      height: rect.height,
-      dragging: false,
-      order: order.slice(),
-      holdTimer: setTimeout(() => engageDrag(card), LONG_PRESS_MS),
-    };
-  }
-
-  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
+  function moveTo(card: Card, x: number, y: number) {
     const drag = dragRef.current;
     if (!drag || drag.id !== card.id) return;
-    drag.lastX = e.clientX;
-    drag.lastY = e.clientY;
+    drag.lastX = x;
+    drag.lastY = y;
 
     if (!drag.dragging) {
-      const dx = e.clientX - drag.startX;
-      const dy = e.clientY - drag.startY;
+      const dx = x - drag.startX;
+      const dy = y - drag.startY;
       if (Math.hypot(dx, dy) < BIG_MOVE_PX) return;
       clearTimeout(drag.holdTimer);
       engageDrag(card);
     }
 
-    setPointerPos({ x: e.clientX, y: e.clientY });
+    setPointerPos({ x, y });
 
-    const targetIndex = closestIndex(e.clientX, e.clientY, drag.order);
+    const targetIndex = closestIndex(x, y, drag.order);
     const currentIndex = drag.order.indexOf(drag.id);
     if (targetIndex !== -1 && targetIndex !== currentIndex) {
       const next = drag.order.slice();
@@ -166,7 +149,7 @@ export function DraggableHand({
     }
   }
 
-  function endDrag(card: Card) {
+  function finishDrag(card: Card) {
     const drag = dragRef.current;
     if (!drag || drag.id !== card.id) return;
     clearTimeout(drag.holdTimer);
@@ -179,7 +162,7 @@ export function DraggableHand({
     }
   }
 
-  function handlePointerCancel(card: Card) {
+  function cancelDrag(card: Card) {
     const drag = dragRef.current;
     if (!drag || drag.id !== card.id) return;
     clearTimeout(drag.holdTimer);
@@ -190,6 +173,56 @@ export function DraggableHand({
       // committed order instead of keeping a half-applied reorder.
       setOrder(cards.map((c) => c.id));
     }
+  }
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    // Defensively close out any previous drag whose listeners never got a
+    // chance to detach (the exact failure mode this file used to have).
+    dragRef.current?.detach();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pointerId = e.pointerId;
+
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      moveTo(card, ev.clientX, ev.clientY);
+    };
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      detach();
+      finishDrag(card);
+    };
+    const onCancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      detach();
+      cancelDrag(card);
+    };
+    function detach() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onCancel);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onCancel);
+
+    dragRef.current = {
+      id: card.id,
+      pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      grabOffsetX: e.clientX - rect.left,
+      grabOffsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      dragging: false,
+      order: order.slice(),
+      holdTimer: setTimeout(() => engageDrag(card), LONG_PRESS_MS),
+      detach,
+    };
   }
 
   return (
@@ -206,9 +239,6 @@ export function DraggableHand({
             role="button"
             tabIndex={0}
             onPointerDown={(e) => handlePointerDown(e, card)}
-            onPointerMove={(e) => handlePointerMove(e, card)}
-            onPointerUp={() => endDrag(card)}
-            onPointerCancel={() => handlePointerCancel(card)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
