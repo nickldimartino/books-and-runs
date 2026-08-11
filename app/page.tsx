@@ -77,6 +77,12 @@ export default function HomePage() {
         >
           Settings
         </Link>
+        <Link
+          href="/scorecard"
+          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          In-Person Scorecard
+        </Link>
         {configured && user ? (
           <button
             onClick={() => signOut()}

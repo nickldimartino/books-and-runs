@@ -24,8 +24,14 @@ All six phases of that roadmap are now built.
   difficulty and prints the results, proving the engine works end to end
 - `app/` — the Next.js UI: Home, New Game setup, Game board (with a
   pass-and-play "pass the device" gate between human turns), Round summary,
-  Game over, Sign in, Stats, Achievements, Settings, How to Play, Privacy
-  Policy, and Terms of Service screens
+  Game over, Sign in, Stats, Achievements, Settings, How to Play, History,
+  In-Person Scorecard, Privacy Policy, and Terms of Service screens
+  - `scorecard/page.tsx` — a standalone scoring grid for the physical card
+    game, independent of the digital rules engine and Supabase entirely:
+    unlimited named players, the same round-selection options as New Game,
+    and a live per-round/total grid, persisted to its own `localStorage` key
+    (`lib/scorecardStore.ts`) so an in-progress paper-replacement scorecard
+    survives a reload
   - `GameContext.tsx` wires the screens above to the engine, and persists
     the in-progress game to `localStorage` so Home's "Continue" button can
     resume it (survives a full reload — see `lib/localSave.ts`)
