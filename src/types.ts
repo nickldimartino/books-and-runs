@@ -65,15 +65,6 @@ export interface GameState {
   winnerId?: string;
 }
 
-// Penalty points per card, per the house rules
-export const PENALTY_VALUES: Record<string, number> = {
-  NUMBER: 5, // 3-10
-  FACE: 10, // J, Q, K
-  ACE: 15,
-  WILD: 20, // 2s
-  JOKER: 50,
-};
-
 export const CONTRACTS: ContractRequirement[] = [
   { round: 1, books: 2, runs: 0, bookSize: 3, runSize: 4, label: "2 Books", wholeHandMeld: false },
   { round: 2, books: 1, runs: 1, bookSize: 3, runSize: 4, label: "1 Book + 1 Run", wholeHandMeld: false },

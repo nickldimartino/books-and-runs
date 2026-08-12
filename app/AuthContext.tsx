@@ -110,7 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    // No user-facing surface for this (the button has no error state) — but
+    // every other auth method here at least surfaces its error, so silently
+    // discarding this one would be the odd one out.
+    if (error) console.error("Sign out failed:", error.message);
   }, []);
 
   const value = useMemo<AuthContextValue>(

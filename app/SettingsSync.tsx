@@ -29,7 +29,15 @@ export function SettingsSync() {
       .select("preferred_ai_difficulty_default")
       .eq("user_id", user.id)
       .maybeSingle<SettingsRow>()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          // Non-fatal: this is a background pull with no UI of its own —
+          // worst case is a stale local default, not lost or corrupted data
+          // — but silently proceeding made a real failure indistinguishable
+          // from "no settings saved yet" for anyone debugging it.
+          console.error("Failed to sync settings from account:", error.message);
+          return;
+        }
         if (!data) return;
         // soundEnabled is local-only (like theme) — never overwrite it with
         // an account-synced value that doesn't exist.

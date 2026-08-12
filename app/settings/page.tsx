@@ -84,7 +84,8 @@ export default function SettingsPage() {
       .select("preferred_ai_difficulty_default")
       .eq("user_id", user.id)
       .maybeSingle<SettingsRow>()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load synced settings:", error.message);
         if (data) {
           const synced: HouseSettings = {
             ...loadLocalSettings(),

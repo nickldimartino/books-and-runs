@@ -54,11 +54,18 @@ export async function recordGameResult(
     .filter((p) => p.id !== you.id)
     .map((p) => ({ name: p.name, difficulty: p.isAI ? p.difficulty ?? null : null }));
 
-  const { data: existing } = await supabase
+  // A failed select (RLS rejection, network hiccup) previously looked
+  // identical to "no row yet" — data comes back null either way — so the
+  // code below would treat an existing player as brand new and overwrite
+  // games_played/best_score/etc. with fresh defaults instead of failing
+  // loudly. Throwing here lets GameOverScreen's .catch(() => setSaved
+  // ("error")) do its job, matching recordAchievementProgress.ts.
+  const { data: existing, error: selectError } = await supabase
     .from("player_stats")
     .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
     .eq("user_id", userId)
     .maybeSingle<PlayerStatsRow>();
+  if (selectError) throw selectError;
 
   const priorGames = existing?.games_played ?? 0;
   const gamesPlayed = priorGames + 1;
@@ -80,7 +87,7 @@ export async function recordGameResult(
     }
   }
 
-  await supabase.from("player_stats").upsert({
+  const { error: upsertError } = await supabase.from("player_stats").upsert({
     user_id: userId,
     games_played: gamesPlayed,
     games_won: gamesWon,
@@ -90,11 +97,13 @@ export async function recordGameResult(
     wins_by_difficulty: winsByDifficulty,
     updated_at: new Date().toISOString(),
   });
+  if (upsertError) throw upsertError;
 
-  await supabase.from("game_history").insert({
+  const { error: insertError } = await supabase.from("game_history").insert({
     user_id: userId,
     opponents,
     rounds: roundHistory,
     winner: state.players.find((p) => p.id === state.winnerId)?.name ?? "unknown",
   });
+  if (insertError) throw insertError;
 }
