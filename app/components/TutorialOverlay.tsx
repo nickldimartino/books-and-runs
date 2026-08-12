@@ -83,20 +83,30 @@ export function TutorialOverlay({ step, stepIndex, totalSteps, onContinue, onSki
   tooltipLeft = Math.max(12, Math.min(tooltipLeft, window.innerWidth - TOOLTIP_WIDTH - 12));
 
   return (
-    <div className="fixed inset-0 z-[100]" aria-live="polite">
+    // pointer-events-none on the root is the actual fix here: a
+    // `fixed inset-0` box intercepts clicks anywhere in its box by default,
+    // even over the "empty" cutout where no child paints anything — hit
+    // testing follows the box model, not visible pixels. Without this, the
+    // cutout looks open but a real tap there never reaches the button
+    // underneath. Each strip (and the card) opts back in with
+    // pointer-events-auto so they still block/respond as intended.
+    <div className="fixed inset-0 z-[100] pointer-events-none" aria-live="polite">
       {/* Four dimmed strips framing the cutout — these are what actually
           block clicks outside the spotlighted element. */}
-      <div className="fixed inset-x-0 top-0 bg-black/70" style={{ height: Math.max(0, cutoutTop) }} />
       <div
-        className="fixed inset-x-0 bottom-0 bg-black/70"
+        className="fixed inset-x-0 top-0 bg-black/70 pointer-events-auto"
+        style={{ height: Math.max(0, cutoutTop) }}
+      />
+      <div
+        className="fixed inset-x-0 bottom-0 bg-black/70 pointer-events-auto"
         style={{ top: Math.min(window.innerHeight, cutoutBottom) }}
       />
       <div
-        className="fixed bg-black/70"
+        className="fixed bg-black/70 pointer-events-auto"
         style={{ top: cutoutTop, height: cutoutHeight, left: 0, width: Math.max(0, cutoutLeft) }}
       />
       <div
-        className="fixed bg-black/70"
+        className="fixed bg-black/70 pointer-events-auto"
         style={{ top: cutoutTop, height: cutoutHeight, left: Math.min(window.innerWidth, cutoutRight), right: 0 }}
       />
 
@@ -149,7 +159,10 @@ function TutorialCard({
   caretLeft?: number;
 }) {
   return (
-    <div style={style} className="flex flex-col gap-3 rounded-xl bg-[var(--panel)] p-4 shadow-2xl">
+    <div
+      style={style}
+      className="pointer-events-auto flex flex-col gap-3 rounded-xl bg-[var(--panel)] p-4 shadow-2xl"
+    >
       {caret && (
         <div
           className="absolute h-3 w-3 rotate-45 bg-[var(--panel)]"
