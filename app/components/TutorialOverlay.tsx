@@ -50,17 +50,24 @@ export function TutorialOverlay({ step, stepIndex, totalSteps, onContinue, onSki
         right: Math.max(...rects.map((r) => r.right)),
       };
     }
-    function recompute() {
+    function applyUnion(union: { top: number; left: number; bottom: number; right: number }) {
+      setRect(new DOMRect(union.left, union.top, union.right - union.left, union.bottom - union.top));
+    }
+    // Runs once, right when this step's target first appears, to bring an
+    // off-screen union into view. Deliberately never re-runs in response to
+    // scrolling — an earlier version re-centered on every scroll event,
+    // which meant any scroll (including the one the correction itself
+    // caused, or a player on mobile just trying to scroll manually) got
+    // immediately snapped back. That fight was the mobile "spotlight and
+    // scrolling makes it unplayable" bug: touch-scrolling never held still
+    // long enough to let a tap land, since the page kept jumping back under
+    // the player's finger.
+    function centerIntoView() {
       const union = measure();
       if (!union) {
         setRect(null);
         return;
       }
-      // A target sitting outside the current scroll position leaves the
-      // tooltip nowhere valid to render — for a wide union (e.g. the hand
-      // plus the "Build your meld" section for the book/run steps) this is
-      // routine, not an edge case, so correct for it every time rather than
-      // relying on the player to already happen to be scrolled right.
       const margin = 24;
       if (union.top < margin || union.bottom > window.innerHeight - margin) {
         const centerDocY = window.scrollY + (union.top + union.bottom) / 2;
@@ -71,23 +78,37 @@ export function TutorialOverlay({ step, stepIndex, totalSteps, onContinue, onSki
         // pre-scroll coordinates.
         requestAnimationFrame(() => {
           const settled = measure();
-          if (!settled) return;
-          setRect(new DOMRect(settled.left, settled.top, settled.right - settled.left, settled.bottom - settled.top));
+          if (settled) applyUnion(settled);
         });
         return;
       }
-      setRect(new DOMRect(union.left, union.top, union.right - union.left, union.bottom - union.top));
+      applyUnion(union);
     }
-    recompute();
-    window.addEventListener("resize", recompute);
-    window.addEventListener("scroll", recompute, true);
-    // Catches layout shifts recompute's own listeners can't — e.g. the hand
+    // Keeps the ring/cutout glued to the target's current on-screen position
+    // as the page scrolls or the layout shifts — purely tracking, never
+    // itself moving the scroll position. rAF-throttled since touch-scroll
+    // momentum on mobile can fire many scroll events per second, and a full
+    // measure + state update on every single one is unnecessary work.
+    let rafId: number | null = null;
+    function sync() {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const union = measure();
+        if (union) applyUnion(union);
+      });
+    }
+    centerIntoView();
+    window.addEventListener("resize", sync);
+    window.addEventListener("scroll", sync, true);
+    // Catches layout shifts sync's own listeners can't — e.g. the hand
     // shrinking as cards get staged into a meld group while this step is up.
-    const observer = new MutationObserver(recompute);
+    const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true });
     return () => {
-      window.removeEventListener("resize", recompute);
-      window.removeEventListener("scroll", recompute, true);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("scroll", sync, true);
       observer.disconnect();
     };
   }, [step.target]);
