@@ -143,8 +143,8 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="font-semibold text-[var(--heading)]">How scoring works</p>
           <p className="mt-1">
             Lower is better. Only cards left in your hand when the round ends count against
-            you — anything melded or laid off is free. The goal each round is to empty your
-            hand before anyone else does.
+            you — anything melded or laid off is free. In a full game, whoever has the lowest
+            total score after every round wins.
           </p>
           <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
             <li>3 – 9: 5 pts each</li>

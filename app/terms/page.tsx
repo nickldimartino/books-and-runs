@@ -9,7 +9,7 @@ export default function TermsPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Terms of Service</h1>
-        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 10, 2026</p>
+        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 12, 2026</p>
       </div>
 
       <div className="flex flex-col gap-5 text-sm leading-relaxed text-[var(--muted)]">
@@ -25,7 +25,7 @@ export default function TermsPage() {
           <p>
             Books &amp; Runs is a card game for local pass-and-play and single-player games
             against AI opponents. It works fully offline with no account. Creating an account is
-            optional and only unlocks cross-device stats — see our{" "}
+            optional and unlocks cross-device stats, achievements, and account level — see our{" "}
             <Link href="/privacy" className="underline hover:text-[var(--heading)]">
               Privacy Policy
             </Link>{" "}

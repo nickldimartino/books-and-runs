@@ -9,7 +9,7 @@ export default function PrivacyPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Privacy Policy</h1>
-        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 10, 2026</p>
+        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 12, 2026</p>
       </div>
 
       <div className="flex flex-col gap-5 text-sm leading-relaxed text-[var(--muted)]">
@@ -34,18 +34,25 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">If you create an account</h2>
           <p className="mb-2">
-            Signing in is optional and only unlocks Stats (win/loss history across devices). If
-            you sign in with email or Google, we store:
+            Signing in is optional and unlocks Stats, Achievements, and your account level — win
+            and progress history tied to your account instead of just one device. If you sign in
+            with email or Google, we store:
           </p>
           <ul className="ml-5 list-disc space-y-1">
             <li>Your email address, via our authentication provider (Supabase Auth).</li>
             <li>
-              Game stats tied to your account: games played and won, best and average score, and
-              wins broken down by AI difficulty faced.
+              Game stats tied to your account: games played and won, best, worst, and average
+              score, and wins broken down by AI difficulty faced.
             </li>
             <li>
               A history of your completed games: the AI opponents you faced, per-round scores, the
               winner, and when the game was played.
+            </li>
+            <li>
+              Achievement progress: counts of specific in-game actions — melds made, cards laid
+              off, rounds won a particular way, and similar — used to determine which achievements
+              you&apos;ve unlocked. Your account level is calculated from this data and the stats
+              above, not stored separately.
             </li>
             <li>
               Your default AI difficulty preference, if you set one on the Settings screen. (Theme
@@ -90,8 +97,8 @@ export default function PrivacyPage() {
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Data retention and deletion</h2>
           <p>
             We keep your account data for as long as your account exists. To delete your account
-            and all associated stats and game history, contact us at the address below — we&apos;ll
-            remove it within a reasonable time.
+            and all associated stats, game history, and achievement progress, contact us at the
+            address below — we&apos;ll remove it within a reasonable time.
           </p>
         </section>
 
