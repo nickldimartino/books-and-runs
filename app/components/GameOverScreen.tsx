@@ -66,30 +66,43 @@ export function GameOverScreen({ state }: { state: GameState }) {
       }
     }
 
-    Promise.all([
+    Promise.allSettled([
       recordGameResult(supabase, user.id, state, roundHistory),
       recordAchievementProgress(supabase, user.id, counters),
-    ])
-      .then(async () => {
-        setSaved("saved");
-        clearSessionCounters();
-        const after = await refreshLevel();
-        if (after) {
-          const gained = Math.max(0, after.totalXp - beforeXp);
-          setXpGained(gained);
-          // Whatever's left once the known per-game sources are accounted
-          // for must be from achievement tiers newly unlocked this game.
-          const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
-          const achievementBonus = Math.max(0, gained - knownTotal);
-          setXpBreakdown(
-            achievementBonus > 0
-              ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
-              : breakdown
-          );
-          if (after.level > beforeLevel) setLeveledUpTo(after.level);
-        }
-      })
-      .catch(() => setSaved("error"));
+    ]).then(async ([gameResult, achievementResult]) => {
+      // Promise.all's single opaque error made this genuinely undiagnosable
+      // from the outside — logging which write failed and why is the only
+      // way anyone (developer or a report from a player) can tell a real
+      // Supabase/schema problem apart from an actual network blip.
+      if (gameResult.status === "rejected") {
+        console.error("Failed to save game result:", gameResult.reason);
+      }
+      if (achievementResult.status === "rejected") {
+        console.error("Failed to save achievement progress:", achievementResult.reason);
+      }
+      if (gameResult.status === "rejected" || achievementResult.status === "rejected") {
+        setSaved("error");
+        return;
+      }
+
+      setSaved("saved");
+      clearSessionCounters();
+      const after = await refreshLevel();
+      if (after) {
+        const gained = Math.max(0, after.totalXp - beforeXp);
+        setXpGained(gained);
+        // Whatever's left once the known per-game sources are accounted
+        // for must be from achievement tiers newly unlocked this game.
+        const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
+        const achievementBonus = Math.max(0, gained - knownTotal);
+        setXpBreakdown(
+          achievementBonus > 0
+            ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
+            : breakdown
+        );
+        if (after.level > beforeLevel) setLeveledUpTo(after.level);
+      }
+    });
     // `level` is only read once, at mount, for the before/after diff — it
     // must not retrigger this effect as PlayerLevelProvider's own state
     // updates after refresh().
