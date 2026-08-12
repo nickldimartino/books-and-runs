@@ -12,6 +12,17 @@ const SUIT_SYMBOL: Record<string, string> = {
 
 const RED_SUITS = new Set(["hearts", "diamonds"]);
 
+const RANK_NAME: Record<string, string> = { A: "Ace", K: "King", Q: "Queen", J: "Jack", JOKER: "Joker" };
+
+// Screen readers otherwise only get the rank/suit symbols' raw text content
+// as a card's accessible name, which doesn't reliably announce as anything
+// meaningful (e.g. a suit glyph isn't guaranteed to read as "hearts").
+export function cardLabel(card: Card): string {
+  const rank = RANK_NAME[card.rank] ?? card.rank;
+  if (card.suit === "joker") return rank;
+  return `${rank} of ${card.suit}${card.isWild ? ", wild" : ""}`;
+}
+
 interface PlayingCardProps {
   card: Card;
   selected?: boolean;

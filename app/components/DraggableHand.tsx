@@ -2,7 +2,7 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Card } from "@/types";
-import { PlayingCard } from "./PlayingCard";
+import { cardLabel, PlayingCard } from "./PlayingCard";
 
 interface DraggableHandProps {
   cards: Card[];
@@ -242,6 +242,8 @@ export function DraggableHand({
             }}
             role="button"
             tabIndex={0}
+            aria-label={cardLabel(card)}
+            aria-pressed={selectedCardIds.includes(card.id)}
             onPointerDown={(e) => handlePointerDown(e, card)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {

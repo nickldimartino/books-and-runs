@@ -60,6 +60,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     gate: { type: "tap" },
   },
   {
+    id: "organize-hand",
+    target: "hand",
+    title: "Organize your hand",
+    body: 'Tap "Sort by suit" or "Sort by rank" to group your cards automatically, or press and drag any card to move it wherever you like. This is just for your own convenience — it has no effect on the game.',
+    gate: { type: "tap" },
+  },
+  {
     id: "wildcards",
     target: null,
     title: "Wild cards",
