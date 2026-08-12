@@ -170,8 +170,10 @@ export default function HowToPlayPage() {
             anchor one end of a run, not bridge King and 2 in the same one.
           </li>
           <li>
-            <strong className="text-[var(--heading)]">Wild cards:</strong> Jokers and 2s are wild and can
-            fill in for any missing card in a book or run.
+            <strong className="text-[var(--heading)]">Wild cards:</strong> Jokers are always wild. 2s are
+            dual-purpose — a 2 can fill in for any missing card in a book or run, or it can be played as
+            its own rank (a book of 2s, or the actual &quot;2&quot; in a run like A-2-3-4), whichever you
+            need. The app figures out which one you mean from the rest of your selection.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Wild-card limit:</strong> a meld can never use more

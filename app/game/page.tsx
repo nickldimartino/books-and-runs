@@ -487,14 +487,23 @@ export default function GamePage() {
                               }`}
                               title={meldLabel(meld)}
                             >
-                              {meld.cards.map((c, i) => (
-                                <PlayingCard
-                                  key={c.id}
-                                  card={c}
-                                  small
-                                  standInRank={c.isWild ? runCardRank(meld, i) : undefined}
-                                />
-                              ))}
+                              {meld.cards.map((c, i) => {
+                                // A wild's badge shows what it's standing in
+                                // for; a 2 sitting in its own natural "2"
+                                // slot isn't standing in for anything, so
+                                // this compares actual vs. expected rank
+                                // rather than trusting card.isWild, which is
+                                // always true for a 2 regardless of role.
+                                const expectedRank = runCardRank(meld, i);
+                                return (
+                                  <PlayingCard
+                                    key={c.id}
+                                    card={c}
+                                    small
+                                    standInRank={c.rank !== expectedRank ? expectedRank : undefined}
+                                  />
+                                );
+                              })}
                             </button>
                           );
                         })}

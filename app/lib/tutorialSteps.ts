@@ -70,7 +70,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: "wildcards",
     target: null,
     title: "Wild cards",
-    body: "2s and Jokers are wild — they can stand in for any missing card in a book or run. None in your hand this round, but if you draw one later and lay it onto a run, you may be asked which end it's filling in for.",
+    body: "Jokers are always wild. 2s are dual-purpose — a 2 can stand in for any missing card, or be played as its own rank, whichever fits. None of either in your hand this round, but if you draw a wild later and lay it onto a run, you may be asked which end it's filling in for.",
     gate: { type: "tap" },
   },
   {

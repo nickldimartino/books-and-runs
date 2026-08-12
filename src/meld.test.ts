@@ -302,6 +302,62 @@ describe("validateManualGroup", () => {
     ];
     expect(validateManualGroup(group, round3)).toMatchObject({ valid: true, type: "run" });
   });
+
+  // A 2 is dual-purpose: it can count as its own natural rank ("2") or as a
+  // generic wild, whichever makes the selection valid — unlike a Joker,
+  // which is always wild.
+  it("accepts a book of 2s completed with a Joker", () => {
+    const group = [makeCard("2", "hearts"), makeCard("2", "clubs"), makeCard("JOKER", "joker")];
+    expect(validateManualGroup(group, round1)).toMatchObject({ valid: true, type: "book" });
+  });
+
+  it("accepts a book of three natural 2s, no wild needed", () => {
+    const group = [makeCard("2", "hearts"), makeCard("2", "clubs"), makeCard("2", "spades")];
+    expect(validateManualGroup(group, round1)).toMatchObject({ valid: true, type: "book" });
+  });
+
+  it("still rejects a 'book of Jokers' completed by a 2 — Jokers have no natural rank of their own", () => {
+    const group = [makeCard("JOKER", "joker"), makeCard("JOKER", "joker"), makeCard("2", "hearts")];
+    expect(validateManualGroup(group, round1).valid).toBe(false);
+  });
+
+  it("accepts a run using a natural 2 in its own suit's '2' slot, no wild needed", () => {
+    const group = makeHand([
+      ["A", "spades"],
+      ["2", "spades"],
+      ["3", "spades"],
+      ["4", "spades"],
+    ]);
+    const result = validateManualGroup(group, round3);
+    expect(result).toMatchObject({ valid: true, type: "run" });
+    // All four cards are naturals in their own right — none of them should
+    // have been reclassified as a generic wild filling a gap.
+    expect(result.orderedCards).toEqual(group);
+  });
+
+  it("accepts a run using one 2 naturally and a second 2 as a wild filling a different gap (A-2-[wild 3]-4)", () => {
+    const group = [
+      makeCard("A", "spades"),
+      makeCard("2", "spades"),
+      makeCard("2", "hearts"), // wild, fills the missing "3"
+      makeCard("4", "spades"),
+    ];
+    const result = validateManualGroup(group, round3);
+    expect(result).toMatchObject({ valid: true, type: "run" });
+    expect(result.orderedCards?.map((c) => c.rank)).toEqual(["A", "2", "2", "4"]);
+  });
+
+  it("accepts a run using a natural 2 alongside a Joker filling a different gap (A-2-[wild 3]-4)", () => {
+    const group = [
+      makeCard("A", "spades"),
+      makeCard("2", "spades"),
+      makeCard("JOKER", "joker"), // wild, fills the missing "3"
+      makeCard("4", "spades"),
+    ];
+    const result = validateManualGroup(group, round3);
+    expect(result).toMatchObject({ valid: true, type: "run" });
+    expect(result.orderedCards?.map((c) => c.rank)).toEqual(["A", "2", "JOKER", "4"]);
+  });
 });
 
 describe("canLayOff", () => {
@@ -445,6 +501,53 @@ describe("layOffOptions", () => {
       ]),
     };
     expect(layOffOptions(makeCard("2", "clubs"), atLowBoundary)).toEqual(["high"]);
+  });
+
+  it("offers a natural 2 exactly one option when it fits its own '2' slot and only that end is open", () => {
+    // Spans "3" through the high Ace (indices 2-13) — the high end already
+    // touches the boundary, so only "low" is open, and a same-suit natural
+    // 2 fits there via its own rank (index 1), not just generic wildness.
+    const run: Meld = {
+      id: "run8",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 2,
+      cards: [
+        ...makeHand([
+          ["3", "diamonds"],
+          ["4", "diamonds"],
+          ["5", "diamonds"],
+          ["6", "diamonds"],
+          ["7", "diamonds"],
+          ["8", "diamonds"],
+          ["9", "diamonds"],
+          ["10", "diamonds"],
+          ["J", "diamonds"],
+          ["Q", "diamonds"],
+          ["K", "diamonds"],
+        ]),
+        makeCard("A", "diamonds"),
+      ],
+    };
+    expect(layOffOptions(makeCard("2", "diamonds"), run)).toEqual(["low"]);
+  });
+
+  it("offers a 2 both ends when it could fit its own '2' slot on one end and only as a generic wild on the other", () => {
+    const run: Meld = {
+      id: "run9",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 2, // "3"
+      cards: makeHand([
+        ["3", "diamonds"],
+        ["4", "diamonds"],
+        ["5", "diamonds"],
+        ["6", "diamonds"],
+      ]),
+    };
+    // Low end ("2") matches the incoming card's own rank; high end ("7")
+    // only works because a 2 can also serve as a generic wild there.
+    expect(layOffOptions(makeCard("2", "diamonds"), run)).toEqual(["low", "high"]);
   });
 });
 

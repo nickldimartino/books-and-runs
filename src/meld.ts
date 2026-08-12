@@ -1,7 +1,8 @@
 import { Card, ContractRequirement, Meld, Rank } from "./types";
 
-// Order used for runs. "2" only appears here as a slot that must be filled by
-// a wild, since natural 2s are wild cards, not literal rank-2 cards.
+// Order used for runs. A 2 is dual-purpose (see validateManualGroup) so its
+// "2" slot here can be filled either by an actual 2 played as its own rank,
+// or — same as any other rank's slot — by a wild standing in for it.
 //
 // Ace gets two slots: low (index 0, before 2) and high (index 13, after K) —
 // so a run can go A-2-3-4 or J-Q-K-A. The two Ace slots are 13 apart, farther
@@ -39,6 +40,16 @@ export interface Candidate {
   runSlots?: (Card | null)[];
 }
 
+// Feeds the automatic solver below (solveContract/solveWholeHandContract —
+// used only for AI turns; a human player's own melding always goes through
+// validateManualGroup instead, which does treat 2s as dual-purpose). Every 2
+// is still routed to `wilds` here, so AI opponents currently only ever use a
+// 2 as a generic substitute, never recognizing a hand that happens to have a
+// real "book of 2s" or a natural "2" slot in a run. That's a missed
+// optimization, not a correctness bug — extending it safely would mean
+// tracking which specific 2s get "spent" as naturals so the AI doesn't
+// double-count the same physical card as both a natural and part of the
+// generic wild pool, which is more machinery than this fix needed.
 export function splitWildsAndNaturals(hand: Card[]) {
   const wilds = hand.filter((c) => c.isWild);
   const naturals = hand.filter((c) => !c.isWild);
@@ -372,14 +383,53 @@ export interface GroupValidation {
 }
 
 /**
- * Validates a player-chosen set of cards as a single book or run meld,
- * using the same wild-substitution rules as the automatic solver — this
- * just checks a specific selection instead of searching the hand for one,
- * so a player can build their own melds by hand instead of the engine
- * choosing for them.
+ * Validates a player-chosen set of cards as a single book or run meld, using
+ * the same wild-substitution rules as the automatic solver — this just
+ * checks a specific selection instead of searching the hand for one, so a
+ * player can build their own melds by hand instead of the engine choosing
+ * for them.
+ *
+ * Unlike a Joker, a 2 is dual-purpose: it can count as its own natural rank
+ * (a "2", playable in a book of 2s or a run's actual "2" slot) or as a
+ * generic wild standing in for something else — whichever makes the
+ * selection valid. Since one physical 2 can only serve one role in one
+ * meld, every way of assigning natural-vs-wild across the 2s in this
+ * selection is tried, preferring the fewest treated as wild (so a real "2"
+ * slot or a book of 2s wins over needlessly burning a 2 as a substitute),
+ * until one produces a valid meld.
  */
 export function validateManualGroup(cards: Card[], requirement: ContractRequirement): GroupValidation {
-  const { wilds, naturals } = splitWildsAndNaturals(cards);
+  const twos = cards.filter((c) => c.rank === "2");
+  const maskCount = 1 << twos.length;
+  const masksByFewestWildTwos = Array.from({ length: maskCount }, (_, m) => m).sort(
+    (a, b) => countSetBits(a) - countSetBits(b)
+  );
+
+  let lastResult: GroupValidation = { valid: false, reason: "Include at least one non-wild card." };
+  for (const mask of masksByFewestWildTwos) {
+    const wildTwoIds = new Set(twos.filter((_, i) => (mask >> i) & 1).map((c) => c.id));
+    const result = validateClassifiedGroup(cards, requirement, wildTwoIds);
+    if (result.valid) return result;
+    lastResult = result;
+  }
+  return lastResult;
+}
+
+function countSetBits(n: number): number {
+  let count = 0;
+  for (; n > 0; n >>= 1) count += n & 1;
+  return count;
+}
+
+/** validateManualGroup's actual check, for one specific choice of which 2s (by id) count as wild. */
+function validateClassifiedGroup(
+  cards: Card[],
+  requirement: ContractRequirement,
+  wildTwoIds: Set<string>
+): GroupValidation {
+  const isWildHere = (c: Card) => (c.rank === "2" ? wildTwoIds.has(c.id) : c.isWild);
+  const wilds = cards.filter(isWildHere);
+  const naturals = cards.filter((c) => !isWildHere(c));
 
   if (naturals.length === 0) {
     return { valid: false, reason: "Include at least one non-wild card." };
@@ -477,6 +527,11 @@ export function leftoverAfterMelds(hand: Card[], melds: Meld[]): Card[] {
  * return "low"/"high" for whichever end(s) the card's rank fits (a natural
  * card fits at most one end; a wild fits either end that still has room to
  * extend, which is genuinely ambiguous and the caller must ask the player).
+ *
+ * A 2 is dual-purpose (see validateManualGroup): laying one onto a run
+ * checks both whether it fits its own natural "2" slot *and* whether it
+ * fits as a generic wild, and returns the union — a 2 isn't restricted to
+ * only the interpretation that happens to come first.
  */
 export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
   if (meld.type === "book") {
@@ -490,21 +545,23 @@ export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
   const end = start + meld.cards.length - 1;
   const lowOpen = start > 0;
   const highOpen = end < RUN_ORDER.length - 1;
+  const opts = new Set<"low" | "high">();
 
-  if (card.isWild) {
-    const opts: ("low" | "high")[] = [];
-    if (lowOpen) opts.push("low");
-    if (highOpen) opts.push("high");
-    return opts;
+  if (!card.isWild || card.rank === "2") {
+    const suit = meld.cards.find((c) => !c.isWild)?.suit;
+    if (card.suit === suit) {
+      const positions = rankPositions(card.rank);
+      if (lowOpen && positions.includes(start - 1)) opts.add("low");
+      if (highOpen && positions.includes(end + 1)) opts.add("high");
+    }
   }
 
-  const suit = meld.cards.find((c) => !c.isWild)?.suit;
-  if (card.suit !== suit) return [];
-  const positions = rankPositions(card.rank);
-  const opts: ("low" | "high")[] = [];
-  if (lowOpen && positions.includes(start - 1)) opts.push("low");
-  if (highOpen && positions.includes(end + 1)) opts.push("high");
-  return opts;
+  if (card.isWild) {
+    if (lowOpen) opts.add("low");
+    if (highOpen) opts.add("high");
+  }
+
+  return [...opts];
 }
 
 /**
