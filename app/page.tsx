@@ -83,6 +83,12 @@ export default function HomePage() {
         >
           In-Person Scorecard
         </Link>
+        <Link
+          href="/history"
+          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          History of Books &amp; Runs
+        </Link>
         {configured && user ? (
           <button
             onClick={() => signOut()}
@@ -98,12 +104,6 @@ export default function HomePage() {
             Sign in
           </Link>
         )}
-        <Link
-          href="/history"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          History of Books &amp; Runs
-        </Link>
       </div>
 
       <p className="text-xs text-[var(--faint)]">
