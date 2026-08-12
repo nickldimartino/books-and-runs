@@ -60,6 +60,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     gate: { type: "tap" },
   },
   {
+    id: "wildcards",
+    target: null,
+    title: "Wild cards",
+    body: "2s and Jokers are wild — they can stand in for any missing card in a book or run. None in your hand this round, but if you draw one later and lay it onto a run, you may be asked which end it's filling in for.",
+    gate: { type: "tap" },
+  },
+  {
     id: "book",
     target: ["build-meld", "hand"],
     title: "Make a book",
@@ -91,7 +98,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: "layoff-hint",
     target: "hand",
     title: "Planning ahead",
-    body: "See a gold ↓ badge on a card? That means it fits a meld already on the table — including your own, later in the game. Turn this off anytime in Settings.",
+    body: "Later on, watch for a gold ↓ badge on a card in your hand — it means that card fits a meld already on the table, including your own. Nothing in this hand qualifies yet, but keep an eye out as the round goes on. Turn this off anytime in Settings.",
     gate: { type: "tap" },
   },
   {

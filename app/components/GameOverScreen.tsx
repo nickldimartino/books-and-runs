@@ -138,6 +138,24 @@ export function GameOverScreen({ state }: { state: GameState }) {
         ))}
       </ol>
 
+      {isTutorial && (
+        <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-sm text-[var(--muted)]">
+          <p className="font-semibold text-[var(--heading)]">How scoring works</p>
+          <p className="mt-1">
+            Lower is better. Only cards left in your hand when the round ends count against
+            you — anything melded or laid off is free. The goal each round is to empty your
+            hand before anyone else does.
+          </p>
+          <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <li>3 – 9: 5 pts each</li>
+            <li>10, J, Q, K: 10 pts each</li>
+            <li>Ace: 15 pts each</li>
+            <li>Wild (2): 20 pts each</li>
+            <li>Joker: 50 pts each</li>
+          </ul>
+        </div>
+      )}
+
       {!isTutorial && user && (
         <div className="text-center text-xs text-[var(--faint)]">
           <p>
