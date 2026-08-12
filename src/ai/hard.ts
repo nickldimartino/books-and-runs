@@ -1,15 +1,12 @@
 import { Card, GameState, Player } from "../types";
-import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance } from "./strategy";
+import { AIStrategy, dangerScore, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance, WILD_DISCARD_RISK } from "./strategy";
 
-/** Rough danger score for a rank/suit: how often opponents have picked up near it. */
-function dangerScore(state: GameState, player: Player, card: Card): number {
-  let score = 0;
-  for (const pickup of state.pickupHistory) {
-    if (pickup.playerId === player.id) continue;
-    if (pickup.card.rank === card.rank) score += 2;
-    if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) score += 1;
-  }
-  return score;
+/** dangerScore plus a large penalty for a wild — deadCards() already keeps
+ * wilds out of the normal pool, so this only matters in the fallback where
+ * every natural is still needed; even there, a wild should be close to the
+ * last resort rather than picked purely for its penalty value. */
+function riskScore(state: GameState, player: Player, card: Card): number {
+  return dangerScore(state, player, card) + (card.isWild ? WILD_DISCARD_RISK : 0);
 }
 
 export const hardStrategy: AIStrategy = {
@@ -26,13 +23,9 @@ export const hardStrategy: AIStrategy = {
   chooseDiscard(state: GameState, player: Player): Card {
     const dead = deadCards(player, state);
     const pool = dead.length > 0 ? dead : player.hand;
-    // among viable discards, avoid feeding opponents: prefer low danger, break ties by penalty value
-    const ranked = [...pool].sort((a, b) => {
-      const dangerDiff = dangerScore(state, player, a) - dangerScore(state, player, b);
-      if (dangerDiff !== 0) return dangerDiff;
-      return 0;
-    });
-    const safest = ranked.filter((c) => dangerScore(state, player, c) === dangerScore(state, player, ranked[0]));
+    // among viable discards, avoid feeding opponents: prefer low risk, break ties by penalty value
+    const ranked = [...pool].sort((a, b) => riskScore(state, player, a) - riskScore(state, player, b));
+    const safest = ranked.filter((c) => riskScore(state, player, c) === riskScore(state, player, ranked[0]));
     return highestPenaltyCard(safest);
   },
   planLayOffs(state: GameState, player: Player) {

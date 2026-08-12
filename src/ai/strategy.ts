@@ -109,3 +109,31 @@ export function minRunDistance(a: Rank, b: Rank): number {
 export function highestPenaltyCard(cards: Card[]): Card {
   return [...cards].sort((a, b) => cardPenalty(b) - cardPenalty(a))[0];
 }
+
+/** Rough danger score for a rank/suit: how often opponents have picked up
+ * near it. Shared by the hard and expert tiers — deadCards() already keeps
+ * a wild out of the *normal* discard pool, so this only ever runs against a
+ * wild in the rare fallback where literally everything else in hand is
+ * still needed; it doesn't on its own account for a wild being valuable to
+ * any opponent regardless of history — see WILD_DISCARD_RISK for that. */
+export function dangerScore(state: GameState, player: Player, card: Card): number {
+  let score = 0;
+  for (const pickup of state.pickupHistory) {
+    if (pickup.playerId === player.id) continue;
+    if (pickup.card.rank === card.rank) score += 2;
+    if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) score += 1;
+  }
+  return score;
+}
+
+/**
+ * How much extra "don't discard this" weight a wild card deserves on top of
+ * its plain dangerScore/opponentDemand, for the tiers (hard, expert) that
+ * otherwise hold wilds back entirely. A wild only reaches either tier's
+ * discard-scoring at all in the rare fallback where every natural card is
+ * still needed for the contract — large enough that, in that fallback, a
+ * wild only actually gets discarded when every non-wild alternative scores
+ * comparably badly (e.g. a hand that's nearly all wilds), not just whenever
+ * it happens to have the highest raw penalty value in the pool.
+ */
+export const WILD_DISCARD_RISK = 12;

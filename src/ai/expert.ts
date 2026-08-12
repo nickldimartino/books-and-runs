@@ -1,5 +1,5 @@
 import { Card, GameState, Player } from "../types";
-import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance } from "./strategy";
+import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance, WILD_DISCARD_RISK } from "./strategy";
 
 /**
  * Estimates how much each opponent likely wants this card, using both their
@@ -25,6 +25,15 @@ function opponentDemand(state: GameState, selfId: string, card: Card): number {
   return Math.max(0, demand);
 }
 
+// Baseline bar for "worth taking even though it doesn't directly help my
+// own hand, purely to deny it to opponents." A wild needs meaningfully more
+// than this before expert takes the reveal-cost hit of grabbing one off the
+// discard pile (see wantsDiscardPileDraw) — holding a wild back is the
+// default, same principle as hard, but a card multiple opponents are
+// clearly both hunting for is worth denying outright even at that cost.
+const DENY_OPPONENT_THRESHOLD = 3;
+const DENY_OPPONENT_THRESHOLD_FOR_WILD = DENY_OPPONENT_THRESHOLD + 2;
+
 /**
  * Scores each discard candidate by (opponent demand) vs (how loosely useful
  * it still is to the expert's own hand), picking the cheapest overall cost.
@@ -43,7 +52,11 @@ function scoreBestDiscard(state: GameState, player: Player, candidates: Card[]):
     )
       ? 2
       : 0; // penalize discarding cards still loosely useful to itself
-    const score = -(demand * 2) - selfValue;
+    // deadCards() already keeps wilds out of the normal pool, so this only
+    // matters in the fallback where every natural is still needed — even
+    // there, a wild should be close to the last resort.
+    const wildCost = card.isWild ? WILD_DISCARD_RISK : 0;
+    const score = -(demand * 2) - selfValue - wildCost;
     if (score > bestScore) {
       bestScore = score;
       best = card;
@@ -56,13 +69,18 @@ export const expertStrategy: AIStrategy = {
   wantsDiscardPileDraw(state: GameState, player: Player) {
     const top = state.discardPile[state.discardPile.length - 1];
     if (!top) return false;
+    const demand = opponentDemand(state, player.id, top);
+    if (top.isWild) {
+      // Same "don't reveal need" principle as hard — but a flexible card
+      // multiple opponents are clearly both hunting for is worth denying
+      // outright, even at the cost of showing what it was.
+      return demand >= DENY_OPPONENT_THRESHOLD_FOR_WILD;
+    }
     const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
     const runAdjacent = player.hand.some(
       (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
     );
-    // expert also considers denying a high-demand card to opponents even if it doesn't directly help
-    const wouldDenyOpponent = opponentDemand(state, player.id, top) >= 3;
-    return rankMatch || runAdjacent || wouldDenyOpponent;
+    return rankMatch || runAdjacent || demand >= DENY_OPPONENT_THRESHOLD;
   },
   chooseDiscard(state: GameState, player: Player): Card {
     const dead = deadCards(player, state);

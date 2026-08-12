@@ -4,6 +4,7 @@ import { easyStrategy } from "./easy";
 import { beginnerStrategy } from "./beginner";
 import { mediumStrategy } from "./medium";
 import { hardStrategy } from "./hard";
+import { expertStrategy } from "./expert";
 import { CONTRACTS, Meld } from "../types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "../testHelpers";
 
@@ -200,5 +201,112 @@ describe("mediumStrategy.wantsDiscardPileDraw", () => {
     const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
     const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "clubs")] });
     expect(mediumStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+  });
+});
+
+describe("easyStrategy.wantsDiscardPileDraw", () => {
+  it("takes a wild off the discard pile — doesn't hold back to hide need, unlike hard/expert", () => {
+    const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
+    const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "clubs")] });
+    expect(easyStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+  });
+
+  it("recognizes run-adjacency, not just an exact rank match", () => {
+    const player = makePlayer({ hand: [makeCard("4", "hearts"), makeCard("5", "hearts")] });
+    const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("6", "hearts")] });
+    expect(easyStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+  });
+});
+
+describe("mediumStrategy.chooseDiscard — light opponent awareness", () => {
+  it("avoids discarding a rank an opponent just picked up, when an equally-safe alternative exists", () => {
+    const kingCard = makeCard("K", "hearts", { id: "king" });
+    const threeCard = makeCard("3", "diamonds", { id: "three" });
+    const player = makePlayer({ id: "self", hand: [kingCard, threeCard] });
+    const state = makeGameState({
+      round: 1,
+      currentPlayerIndex: 0,
+      players: [player, makePlayer({ id: "opponent" })],
+      pickupHistory: [{ playerId: "opponent", card: makeCard("3", "clubs") }],
+    });
+
+    const discard = mediumStrategy.chooseDiscard(state, player);
+
+    expect(discard.id).toBe("king"); // higher penalty, and not the rank the opponent just showed interest in
+  });
+
+  it("still discards the just-wanted rank if it's the only option available", () => {
+    const threeCard = makeCard("3", "diamonds", { id: "three" });
+    const player = makePlayer({ id: "self", hand: [threeCard] });
+    const state = makeGameState({
+      round: 1,
+      currentPlayerIndex: 0,
+      players: [player, makePlayer({ id: "opponent" })],
+      pickupHistory: [{ playerId: "opponent", card: makeCard("3", "clubs") }],
+    });
+
+    const discard = mediumStrategy.chooseDiscard(state, player);
+
+    expect(discard.id).toBe("three");
+  });
+});
+
+describe("hardStrategy.chooseDiscard — treats a wild as extra risky in the all-live fallback", () => {
+  it("prefers discarding a natural over a Joker when both are otherwise equally safe", () => {
+    const king1 = makeCard("K", "hearts", { id: "king1" });
+    const king2 = makeCard("K", "clubs", { id: "king2" });
+    const joker = makeCard("JOKER", "joker", { id: "joker" });
+    const player = makePlayer({ hand: [king1, king2, joker] });
+    // Round 1 needs 2 books; the two natural Kings plus this one wild are
+    // exactly enough to complete a book, so nothing here is "dead" —
+    // forces the fallback pool to be the whole hand, wild included.
+    const state = makeGameState({ round: 1, players: [player] });
+
+    const discard = hardStrategy.chooseDiscard(state, player);
+
+    expect(discard.id).not.toBe("joker");
+  });
+});
+
+describe("expertStrategy.wantsDiscardPileDraw — holds wilds back like hard, with a calculated exception", () => {
+  it("declines a wild with low opponent demand, same principle as hard", () => {
+    const player = makePlayer({ id: "self", hand: makeHand(["9", "K", "3"]) });
+    const state = makeGameState({
+      round: 1,
+      players: [player, makePlayer({ id: "opponent" })],
+      discardPile: [makeCard("2", "clubs")],
+    });
+    expect(expertStrategy.wantsDiscardPileDraw(state, player)).toBe(false);
+  });
+
+  it("takes a wild anyway once opponent demand is high enough to be worth denying", () => {
+    const wildOnTop = makeCard("2", "diamonds");
+    const player = makePlayer({ id: "self", hand: makeHand(["9", "K", "3"]) });
+    const state = makeGameState({
+      round: 1,
+      players: [player, makePlayer({ id: "opponent" })],
+      discardPile: [wildOnTop],
+      // Two opponent pickups matching this rank/suit region push demand
+      // comfortably above the higher, wild-specific denial bar.
+      pickupHistory: [
+        { playerId: "opponent", card: makeCard("2", "diamonds") },
+        { playerId: "opponent", card: makeCard("3", "diamonds") },
+      ],
+    });
+    expect(expertStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+  });
+});
+
+describe("expertStrategy.chooseDiscard — treats a wild as extra costly in the all-live fallback", () => {
+  it("prefers discarding a natural over a Joker when both are otherwise equally low-demand", () => {
+    const king1 = makeCard("K", "hearts", { id: "king1" });
+    const king2 = makeCard("K", "clubs", { id: "king2" });
+    const joker = makeCard("JOKER", "joker", { id: "joker" });
+    const player = makePlayer({ id: "self", hand: [king1, king2, joker] });
+    const state = makeGameState({ round: 1, players: [player, makePlayer({ id: "opponent" })] });
+
+    const discard = expertStrategy.chooseDiscard(state, player);
+
+    expect(discard.id).not.toBe("joker");
   });
 });
