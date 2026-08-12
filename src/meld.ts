@@ -40,16 +40,14 @@ export interface Candidate {
   runSlots?: (Card | null)[];
 }
 
-// Feeds the automatic solver below (solveContract/solveWholeHandContract —
-// used only for AI turns; a human player's own melding always goes through
-// validateManualGroup instead, which does treat 2s as dual-purpose). Every 2
-// is still routed to `wilds` here, so AI opponents currently only ever use a
-// 2 as a generic substitute, never recognizing a hand that happens to have a
-// real "book of 2s" or a natural "2" slot in a run. That's a missed
-// optimization, not a correctness bug — extending it safely would mean
-// tracking which specific 2s get "spent" as naturals so the AI doesn't
-// double-count the same physical card as both a natural and part of the
-// generic wild pool, which is more machinery than this fix needed.
+// Base split feeding both the automatic solver below (solveContract/
+// solveWholeHandContract, used for AI turns) and validateManualGroup (a
+// human player's own melding). Every 2 lands in `wilds` here regardless —
+// callers that want to recognize a 2 as its own natural rank reclassify it
+// themselves from this starting point (see the "dual-purpose" handling in
+// solveContract, solveWholeHandContract, and validateManualGroup), since
+// which 2s actually get treated as natural depends on what the rest of the
+// selection needs, not on the card alone.
 export function splitWildsAndNaturals(hand: Card[]) {
   const wilds = hand.filter((c) => c.isWild);
   const naturals = hand.filter((c) => !c.isWild);
@@ -127,6 +125,16 @@ export function runCandidates(naturals: Card[], runSize: number): Candidate[] {
  * the given hand, using backtracking over candidate books/runs. Prefers
  * solutions that use fewer wild cards. Returns null if the contract cannot
  * currently be met.
+ *
+ * 2s are dual-purpose (see validateManualGroup) — they're fed into the
+ * candidate pools alongside naturals, so this can recognize a book of 2s or
+ * a run's own "2" slot instead of only ever treating a 2 as a generic wild.
+ * Each physical 2 can still only serve one role in the final answer: the
+ * ceiling check below counts a candidate's own claimed 2s (naturalCards
+ * whose rank is "2") against the same wilds.length budget as the generic
+ * wildsNeeded gap-fills, and the final wild pool excludes whichever 2s
+ * actually ended up claimed, so a 2 spent as a natural never also gets
+ * handed out to fill some other gap.
  */
 export function solveContract(
   hand: Card[],
@@ -134,11 +142,13 @@ export function solveContract(
   ownerId: string
 ): Meld[] | null {
   const { wilds, naturals } = splitWildsAndNaturals(hand);
+  const twos = wilds.filter((c) => c.rank === "2");
+  const naturalsPlusTwos = [...naturals, ...twos];
 
-  const bookCands = bookCandidates(naturals, requirement.bookSize).filter(
+  const bookCands = bookCandidates(naturalsPlusTwos, requirement.bookSize).filter(
     (c) => c.wildsNeeded <= wilds.length
   );
-  const runCands = runCandidates(naturals, requirement.runSize).filter(
+  const runCands = runCandidates(naturalsPlusTwos, requirement.runSize).filter(
     (c) => c.wildsNeeded <= wilds.length
   );
 
@@ -149,13 +159,18 @@ export function solveContract(
   const usedCardIds = new Set<string>();
   const chosen: Candidate[] = [];
 
+  function twosClaimedBy(list: Candidate[]): number {
+    return list.reduce((sum, c) => sum + c.naturalCards.filter((nc) => nc.rank === "2").length, 0);
+  }
+
   function tryPick(pool: Candidate[], countNeeded: number, startFrom: number): boolean {
     if (countNeeded === 0) return true;
     for (let i = startFrom; i < pool.length; i++) {
       const cand = pool[i];
       if (cand.naturalCards.some((c) => usedCardIds.has(c.id))) continue;
       const wildsUsedSoFar = chosen.reduce((sum, c) => sum + c.wildsNeeded, 0);
-      if (wildsUsedSoFar + cand.wildsNeeded > wilds.length) continue;
+      const twosClaimedIfChosen = twosClaimedBy(chosen) + twosClaimedBy([cand]);
+      if (wildsUsedSoFar + cand.wildsNeeded + twosClaimedIfChosen > wilds.length) continue;
 
       chosen.push(cand);
       cand.naturalCards.forEach((c) => usedCardIds.add(c.id));
@@ -175,8 +190,13 @@ export function solveContract(
 
   // build final Meld objects, assigning wild cards to fill shortfalls — for
   // runs, wilds go into their exact gap slot (via runSlots) so the meld
-  // stays in sorted rank order instead of wilds just being tacked on the end
-  const wildPool = [...wilds];
+  // stays in sorted rank order instead of wilds just being tacked on the end.
+  // Excludes any 2 already claimed as a natural above — that specific card
+  // is spoken for, not free to hand out as a generic filler too.
+  const claimedTwoIds = new Set(
+    chosen.flatMap((c) => c.naturalCards.filter((nc) => nc.rank === "2").map((nc) => nc.id))
+  );
+  const wildPool = wilds.filter((c) => !claimedTwoIds.has(c.id));
   const melds: Meld[] = chosen.map((cand, idx) => {
     const wildsForThis = wildPool.splice(0, cand.wildsNeeded);
     if (cand.type === "run" && cand.runSlots) {
@@ -321,6 +341,16 @@ function findWildExactCombo(
  * turns until a hand that fits comes up, which is the point of this round
  * being the hardest one.
  *
+ * 2s are dual-purpose (see validateManualGroup), but only claimed as a
+ * suit's natural "2" here when that suit already has other naturals to
+ * chain with — a lone 2 with nothing else in its suit can never reach
+ * runSize on its own (extending a single-position chain by at most one slot
+ * each end tops out at 3 cards), so claiming it anyway would only invent an
+ * unsatisfiable phantom chain and make an otherwise-solvable hand fail. At
+ * most one 2 per suit is claimed even when a suit qualifies, matching how
+ * buildChains already treats any other duplicate same-suit natural — a
+ * second copy stays in the wild pool instead of colliding on the same slot.
+ *
  * Returns null if no arrangement uses every single card.
  */
 export function solveWholeHandContract(
@@ -331,16 +361,26 @@ export function solveWholeHandContract(
   if (requirement.books > 0) return null; // not needed by any current round; not implemented
 
   const { wilds, naturals } = splitWildsAndNaturals(hand);
-  if (naturals.length === 0) return null; // a run always needs at least one natural anchor
+
+  const suitsWithNaturals = new Set(naturals.filter((c) => c.suit !== "joker").map((c) => c.suit));
+  const claimedTwos = new Map<string, Card>();
+  for (const c of wilds) {
+    if (c.rank !== "2" || !suitsWithNaturals.has(c.suit)) continue;
+    if (!claimedTwos.has(c.suit)) claimedTwos.set(c.suit, c);
+  }
+  const naturalsPlusTwos = [...naturals, ...claimedTwos.values()];
+  if (naturalsPlusTwos.length === 0) return null; // a run always needs at least one natural anchor
 
   const bySuit = new Map<string, Card[]>();
-  for (const c of naturals) {
+  for (const c of naturalsPlusTwos) {
     if (c.suit === "joker") continue; // jokers are always wild, never a natural
     if (!bySuit.has(c.suit)) bySuit.set(c.suit, []);
     bySuit.get(c.suit)!.push(c);
   }
 
   const aces = naturals.filter((c) => c.rank === "A");
+  const claimedTwoIds = new Set([...claimedTwos.values()].map((c) => c.id));
+  const effectiveWilds = wilds.length - claimedTwos.size;
 
   for (const aceAssignment of aceAssignments(aces)) {
     const chains = buildChains(bySuit, aceAssignment);
@@ -349,10 +389,10 @@ export function solveWholeHandContract(
     const perChainOptions = chains.map((chain) => chainWindowOptions(chain.positions, requirement.runSize));
     if (perChainOptions.some((opts) => opts.length === 0)) continue;
 
-    const combo = findWildExactCombo(perChainOptions, wilds.length);
+    const combo = findWildExactCombo(perChainOptions, effectiveWilds);
     if (!combo) continue;
 
-    const wildPool = [...wilds];
+    const wildPool = wilds.filter((c) => !claimedTwoIds.has(c.id));
     return chains.map((chain, idx) => {
       const { start, end } = combo[idx];
       const cards: Card[] = [];

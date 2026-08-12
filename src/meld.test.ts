@@ -142,6 +142,48 @@ describe("solveContract", () => {
     expect(run.cards.map((c) => c.isWild)).toEqual([false, false, true, false]);
     expect(run.cards.map((_, i) => runCardRank(run, i))).toEqual(["4", "5", "6", "7"]);
   });
+
+  // 2s are dual-purpose for the AI's own melding too (see validateManualGroup
+  // for the rule; here it's the automatic solver's version of the same idea).
+  it("recognizes a book of natural 2s, no wild needed", () => {
+    const hand = [
+      makeCard("2", "hearts"),
+      makeCard("2", "clubs"),
+      makeCard("2", "spades"),
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "spades"]]),
+    ];
+    const melds = solveContract(hand, CONTRACTS[0], "p1");
+    expect(melds).not.toBeNull();
+    expect(melds).toHaveLength(2);
+    const twoBook = melds!.find((m) => m.cards.every((c) => c.rank === "2"));
+    expect(twoBook?.cards).toHaveLength(3);
+  });
+
+  it("recognizes a book of 2s completed by a Joker", () => {
+    const hand = [
+      makeCard("2", "hearts"),
+      makeCard("2", "clubs"),
+      makeCard("JOKER", "joker"),
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "spades"]]),
+    ];
+    const melds = solveContract(hand, CONTRACTS[0], "p1");
+    expect(melds).not.toBeNull();
+    const twoBook = melds!.find((m) => m.cards.some((c) => c.rank === "2"));
+    expect(twoBook?.cards.map((c) => c.rank).sort()).toEqual(["2", "2", "JOKER"]);
+  });
+
+  it("uses a natural 2 in a run's own slot, no wild left over to spend elsewhere", () => {
+    const hand = makeHand([
+      ["A", "hearts"],
+      ["2", "hearts"],
+      ["3", "hearts"],
+      ["4", "hearts"],
+    ]);
+    const oneRun = { ...CONTRACTS[2], runs: 1 };
+    const melds = solveContract(hand, oneRun, "p1");
+    expect(melds).not.toBeNull();
+    expect(melds![0].cards.map((c) => c.rank)).toEqual(["A", "2", "3", "4"]);
+  });
 });
 
 describe("leftoverAfterMelds", () => {
@@ -671,5 +713,49 @@ describe("solveWholeHandContract", () => {
       ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "spades"]]),
     ];
     expect(solveWholeHandContract(hand, mixedRequirement, "p1")).toBeNull();
+  });
+
+  it("uses a natural 2 to complete a run's own suit chain, no wild spent", () => {
+    const hand = [
+      ...makeHand([
+        ["A", "hearts"],
+        ["2", "hearts"],
+        ["3", "hearts"],
+        ["4", "hearts"],
+        ["5", "hearts"],
+      ]),
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+    ];
+    const melds = solveWholeHandContract(hand, ROUND_7, "p1");
+    expect(melds).not.toBeNull();
+    expect(melds).toHaveLength(3);
+    const heartsRun = melds!.find((m) => m.cards.some((c) => c.suit === "hearts"))!;
+    expect(heartsRun.cards.map((c) => c.rank)).toEqual(["A", "2", "3", "4", "5"]);
+    expect(new Set(melds!.flatMap((m) => m.cards.map((c) => c.id))).size).toBe(hand.length);
+  });
+
+  it("still treats a 2 as pure wild when its suit has no other naturals to anchor a chain", () => {
+    // A lone natural 2 with nothing else in its suit can never reach runSize
+    // on its own — claiming it anyway would invent an unsatisfiable phantom
+    // 4th chain instead of correctly using it to bridge hearts' gap.
+    const hand = [
+      ...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]), // missing 6♥
+      ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
+      ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]),
+      makeCard("2", "diamonds"), // wild — no other diamonds in hand
+    ];
+    const melds = solveWholeHandContract(hand, ROUND_7, "p1");
+    expect(melds).not.toBeNull();
+    expect(melds).toHaveLength(3);
+    const heartsRun = melds!.find((m) => m.cards.some((c) => c.suit === "hearts"))!;
+    expect(heartsRun.cards.map((c, i) => (c.isWild ? runCardRank(heartsRun, i) : c.rank))).toEqual([
+      "4",
+      "5",
+      "6",
+      "7",
+    ]);
+    // The diamond 2 filled the gap as a wild, not as its own suit's natural.
+    expect(heartsRun.cards.some((c) => c.suit === "diamonds")).toBe(true);
   });
 });
