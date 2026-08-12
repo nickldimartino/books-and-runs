@@ -31,7 +31,13 @@ export default function HomePage() {
         )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Build books, complete runs, and win with the lowest score.
+          A free Contract Rummy card game you play right in your browser — build books, complete
+          runs, and win with the lowest score.
+        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Play solo against AI opponents of five difficulty levels, or pass-and-play with friends
+          on one device. Sign in with Google to track your stats and achievements across devices —
+          no download required.
         </p>
         {configured && user && (
           <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>

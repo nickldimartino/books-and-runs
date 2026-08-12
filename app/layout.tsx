@@ -7,7 +7,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Books & Runs",
-  description: "Local pass-and-play card game with AI opponents",
+  description:
+    "Books & Runs is a free browser-based Contract Rummy card game. Play solo against AI opponents or pass-and-play with friends on one device — no download required.",
 };
 
 // viewport-fit=cover lets the app draw under the notch/home indicator so the
