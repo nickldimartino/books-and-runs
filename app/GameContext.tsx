@@ -57,10 +57,12 @@ interface GameContextValue {
   respondToBuy: (accept: boolean) => void;
   advanceRound: () => void;
   quitToHome: () => void;
-  /** Achievement counter deltas accumulated so far this game, for the
-   * signed-in seat only — see recordAchievementProgress.ts, called from
-   * GameOverScreen once the game actually ends. */
+  /** Achievement counter deltas accumulated since the last flush, for the
+   * signed-in seat only — see recordAchievementProgress.ts, called from both
+   * RoundSummary (round-end) and GameOverScreen (game-over). */
   getSessionCounters: () => Record<string, number>;
+  /** Call right after a successful recordAchievementProgress flush. */
+  clearSessionCounters: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -153,10 +155,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const roundHistoryRef = useRef<RoundHistoryEntry[]>([]);
 
   // Achievement progress accumulated this game, for YOU_PLAYER_ID only.
-  // Flushed to Supabase once, at game-over (see GameOverScreen.tsx) — same
-  // "a finished game is what counts" rule recordGameResult already follows,
-  // so quitting mid-game drops this session's counters, consistent with how
-  // it already drops that game from games_played/games_won too.
+  // Flushed to Supabase at the end of every round (see RoundSummary.tsx) and
+  // again at game-over (see GameOverScreen.tsx), each flush clearing what it
+  // sent via clearSessionCounters below so nothing double-counts. Melds,
+  // discards, turns, etc. are real the moment they happen, unlike
+  // games_played/games_won — those stay gated on an actually-finished game
+  // (recordGameResult), so quitting mid-round still drops that round's
+  // partial action counts, but nothing from rounds already completed.
   const sessionCountersRef = useRef<Record<string, number>>({});
   const bump = useCallback((key: string, amount = 1) => {
     sessionCountersRef.current[key] = (sessionCountersRef.current[key] ?? 0) + amount;
@@ -193,6 +198,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
     setHasSavedGame(true);
   }, []);
+
+  // Called after a successful recordAchievementProgress flush (round-end or
+  // game-over) so the same deltas never get sent twice — persisted right
+  // away so a reload mid-round-summary can't resurrect already-flushed
+  // counters from the saved game.
+  const clearSessionCounters = useCallback(() => {
+    sessionCountersRef.current = {};
+    persist();
+  }, [persist]);
 
   const commit = useCallback(() => {
     const s = stateRef.current;
@@ -579,6 +593,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       advanceRound,
       quitToHome,
       getSessionCounters,
+      clearSessionCounters,
     }),
     [
       snapshot,
@@ -603,6 +618,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       advanceRound,
       quitToHome,
       getSessionCounters,
+      clearSessionCounters,
     ]
   );
 

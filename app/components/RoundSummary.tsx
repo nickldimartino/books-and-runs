@@ -1,6 +1,11 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { GameState } from "@/types";
+import { useAuth } from "../AuthContext";
+import { useGame } from "../GameContext";
+import { recordAchievementProgress } from "../lib/recordAchievementProgress";
+import { supabase } from "../lib/supabaseClient";
 
 interface RoundSummaryProps {
   state: GameState;
@@ -9,9 +14,32 @@ interface RoundSummaryProps {
 }
 
 export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSummaryProps) {
+  const { getSessionCounters, clearSessionCounters } = useGame();
+  const { user } = useAuth();
+  const flushedRef = useRef<number | null>(null);
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const roundLabel = `Round ${state.round}`;
+
+  // Flush this round's meld/discard/turn/etc. progress now rather than
+  // waiting for the whole game to finish — the game-ending final round never
+  // shows this screen at all (game/page.tsx checks gameOver first), so this
+  // only ever covers rounds 1..N-1, and GameOverScreen's own flush at the
+  // end picks up whatever's left from the last round.
+  useEffect(() => {
+    if (!supabase || !user || flushedRef.current === state.round) return;
+    flushedRef.current = state.round;
+    const counters = { ...getSessionCounters() };
+    recordAchievementProgress(supabase, user.id, counters)
+      .then(() => clearSessionCounters())
+      .catch(() => {});
+    // The flushedRef guard (keyed on the round number, not just a boolean)
+    // is the real idempotency check — it's what stops a double-flush if
+    // this effect re-runs for unrelated reasons while still showing the
+    // same round, so getSessionCounters/clearSessionCounters don't need to
+    // be in the dep array for correctness.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.round, user]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">

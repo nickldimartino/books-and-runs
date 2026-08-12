@@ -418,6 +418,7 @@ export default function GamePage() {
                     <thead>
                       <tr className="text-xs text-[var(--faint)]">
                         <th className="pb-2 pr-3 font-medium">Player</th>
+                        <th className="pb-2 pr-3 font-medium">In hand</th>
                         <th className="pb-2 pr-3 font-medium">Latest discard</th>
                         <th className="pb-2 font-medium">Latest pickup</th>
                       </tr>
@@ -433,6 +434,7 @@ export default function GamePage() {
                         return (
                           <tr key={p.id} className="border-t border-[var(--border)]">
                             <td className="py-2 pr-3 text-[var(--heading)]">{p.name}</td>
+                            <td className="py-2 pr-3 text-[var(--muted)]">{p.hand.length}</td>
                             <td className="py-2 pr-3">
                               {latestDiscard ? (
                                 <PlayingCard card={latestDiscard} small />
@@ -453,9 +455,9 @@ export default function GamePage() {
                     </tbody>
                   </table>
                   <p className="mt-2 text-xs text-[var(--faint)]">
-                    Mirrors what you&apos;d see at a real table — resets at the start of each round.
-                    Blind draws from the draw pile aren&apos;t shown, since no one could see those in
-                    person either.
+                    Mirrors what you&apos;d see at a real table. In hand is always current; the
+                    discard/pickup columns reset at the start of each round. Blind draws from the
+                    draw pile aren&apos;t shown, since no one could see those in person either.
                   </p>
                 </div>
               )}

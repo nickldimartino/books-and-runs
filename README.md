@@ -33,13 +33,13 @@ All six phases of that roadmap are now built.
     (`lib/scorecardStore.ts`) so an in-progress paper-replacement scorecard
     survives a reload
   - `game/page.tsx`'s "Player activity this round" (toggleable in Settings)
-    — a collapsible table of each player's latest discard and latest
-    discard-pile pickup, reading straight from
-    `GameState.discardHistory`/`pickupHistory` (both already reset per round
-    in `gameEngine.ts`). Restores the in-person visibility pass-and-play
-    otherwise hides — you'd normally see what everyone else picks up and
-    discards at a real table. Blind draw-pile draws are never shown, since
-    those aren't visible in person either
+    — a collapsible table of each player's current hand size and latest
+    discard/discard-pile pickup, reading straight from `Player.hand.length`
+    and `GameState.discardHistory`/`pickupHistory` (the latter two already
+    reset per round in `gameEngine.ts`). Restores the in-person visibility
+    pass-and-play otherwise hides — you'd normally see everyone's hand size
+    and what they pick up/discard at a real table. Blind draw-pile draws are
+    never shown, since those aren't visible in person either
   - `GameContext.tsx` wires the screens above to the engine, and persists
     the in-progress game to `localStorage` so Home's "Continue" button can
     resume it (survives a full reload — see `lib/localSave.ts`)
@@ -66,7 +66,14 @@ All six phases of that roadmap are now built.
   table backing the Achievements page (`src/achievements.ts` defines the 200
   achievements — 40 families × 5 tiers — as a pure function of these counters
   plus `player_stats`; `app/GameContext.tsx` increments counters only for the
-  signed-in seat, `human-0`, and flushes them to Supabase once at game-over)
+  signed-in seat, `human-0`). Flushed via `lib/recordAchievementProgress.ts`
+  at the end of every round (`RoundSummary.tsx`) and again at game-over
+  (`GameOverScreen.tsx`), each flush clearing what it sent
+  (`clearSessionCounters`) so nothing double-counts — games_played/games_won
+  still only count a fully-finished game (`recordGameResult`), but meld/
+  discard/turn-style counters no longer wait for one. `recordAchievementProgress`
+  also now surfaces Supabase errors instead of discarding them, since a
+  silently-failed write previously looked identical to a successful no-op
 - `supabase/migrations/0003_worst_score.sql` — adds `worst_score` to
   `player_stats` (highest single-game score, alongside the existing
   `best_score`)

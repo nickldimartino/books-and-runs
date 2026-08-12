@@ -28,6 +28,7 @@ export default function ScorecardPage() {
   );
   const [scores, setScores] = useState<Record<string, Record<number, string>>>({});
   const [loaded, setLoaded] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   // Restore an in-progress scorecard (e.g. the tab got backgrounded
   // mid-game-night) — this page has no database, so localStorage is the
@@ -98,14 +99,14 @@ export default function ScorecardPage() {
     );
   }
 
-  function newScorecard() {
-    if (!window.confirm("Start a new scorecard? This clears all players and scores.")) return;
+  function confirmNewScorecard() {
     clearScorecard();
     setPhase("setup");
     setPlayers(defaultPlayers());
     setRoundMode("all");
     setCustomRounds(new Set(CONTRACTS.map((c) => c.round)));
     setScores({});
+    setConfirmingReset(false);
   }
 
   const totals = players.map((p) => totalFor(p.id));
@@ -329,20 +330,42 @@ export default function ScorecardPage() {
             until you fill it in.
           </p>
 
-          <div className="flex gap-3">
-            <button
-              onClick={addPlayer}
-              className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-            >
-              + Add player
-            </button>
-            <button
-              onClick={newScorecard}
-              className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[var(--panel-soft)]"
-            >
-              New scorecard
-            </button>
-          </div>
+          {confirmingReset ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
+              <p className="text-sm text-[var(--muted)]">
+                Clear this scorecard? This removes every player and score — it can&apos;t be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmingReset(false)}
+                  className="flex-1 rounded-lg border border-[var(--border)] min-h-11 px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmNewScorecard}
+                  className="flex-1 rounded-lg border border-[var(--danger)] min-h-11 px-4 py-2.5 text-sm font-semibold text-[var(--danger)] hover:bg-[var(--panel-soft)]"
+                >
+                  Yes, start over
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={addPlayer}
+                className="flex-1 rounded-lg border border-[var(--border)] min-h-11 px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+              >
+                + Add player
+              </button>
+              <button
+                onClick={() => setConfirmingReset(true)}
+                className="flex-1 rounded-lg border border-[var(--border)] min-h-11 px-4 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[var(--panel-soft)]"
+              >
+                New scorecard
+              </button>
+            </div>
+          )}
         </>
       )}
 

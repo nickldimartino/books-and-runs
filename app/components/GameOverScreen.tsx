@@ -18,7 +18,7 @@ interface XpLineItem {
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory, getSessionCounters } = useGame();
+  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters } = useGame();
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
@@ -70,6 +70,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
     ])
       .then(async () => {
         setSaved("saved");
+        clearSessionCounters();
         const after = await refreshLevel();
         if (after) {
           const gained = Math.max(0, after.totalXp - beforeXp);
