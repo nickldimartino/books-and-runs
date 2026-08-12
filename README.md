@@ -44,12 +44,12 @@ All six phases of that roadmap are now built.
   - `lib/settingsStore.ts` — default AI difficulty (synced to Supabase's
     `settings` table when signed in) and sound-effects on/off (local-only,
     like theme), both saved to `localStorage`
-  - `lib/sound.ts` — short sound effects for draw/discard/lay-off (a tap),
-    sort/drag-reorder (a slide), meld (a tap plus a soft thump), and round/
-    game wins (rising chimes), all synthesized on the fly with the Web Audio
-    API — no audio files, so nothing to license or fetch. Wired into
-    `GameContext.tsx`'s action handlers and `game/page.tsx`'s round/game-over
-    transitions
+  - `lib/sound.ts` — short sound effects for draw/discard/lay-off (a soft
+    flick), sort/drag-reorder (a long sweep), meld (three descending taps),
+    round win (a two-note bell chime), and game win (a melodic victory
+    flourish), all synthesized on the fly with the Web Audio API — no audio
+    files, so nothing to license or fetch. Wired into `GameContext.tsx`'s
+    action handlers and `game/page.tsx`'s round/game-over transitions
 - `supabase/migrations/0001_init.sql` — the `player_stats`, `game_history`,
   and `settings` tables, with row-level security so each user can only ever
   read/write their own rows
