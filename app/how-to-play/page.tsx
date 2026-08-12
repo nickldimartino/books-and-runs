@@ -103,7 +103,10 @@ export default function HowToPlayPage() {
             contract, you may add extra cards to your own or any other player&apos;s already-laid
             melds. A run stays in sorted order as cards are added, and a wild always shows a small
             &quot;as X&quot; badge for the rank it&apos;s standing in for. If a wild could extend
-            either end of a run, you&apos;ll be asked which rank you mean it to be.
+            either end of a run, you&apos;ll be asked which rank you mean it to be. Once you&apos;ve
+            melded, a small ↓ badge marks any hand card or discard-pile card that could currently be
+            laid off onto some meld on the table — turn this off in Settings if you&apos;d rather
+            work it out yourself.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Discard</strong> — end your turn by discarding one
@@ -261,8 +264,10 @@ export default function HowToPlayPage() {
         <h2 className="text-base font-semibold text-[var(--heading)]">Settings</h2>
         <p>
           Settings lets you pick a color theme for the app and table, set a default AI difficulty
-          for new AI opponents you add on the New Game screen, and turn sound effects on or off.
-          None of that changes any of the rules above — it&apos;s all just look-and-feel.
+          for new AI opponents you add on the New Game screen, turn sound effects on or off, choose
+          whether Table melds groups each player&apos;s books before their runs, and turn the
+          possible-lay-off badges on or off. None of that changes any of the rules above —
+          it&apos;s all just look-and-feel and optional assistance.
         </p>
       </section>
 

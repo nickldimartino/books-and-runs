@@ -42,8 +42,9 @@ All six phases of that roadmap are now built.
   - `lib/recordGameResult.ts` — writes stats/history to Supabase when a
     signed-in user finishes a game
   - `lib/settingsStore.ts` — default AI difficulty (synced to Supabase's
-    `settings` table when signed in) and sound-effects on/off (local-only,
-    like theme), both saved to `localStorage`
+    `settings` table when signed in) and sound effects / meld grouping /
+    lay-off highlighting on-off (all local-only, like theme), saved to
+    `localStorage`
   - `lib/sound.ts` — short sound effects for draw/discard/lay-off (a soft
     flick), sort/drag-reorder (a long sweep), meld (three descending taps),
     round win (a two-note bell chime), and game win (a melodic victory

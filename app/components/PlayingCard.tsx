@@ -23,6 +23,10 @@ interface PlayingCardProps {
   // (e.g. "7") — shown as a small badge since an unlabeled wild in a run is
   // otherwise genuinely ambiguous (could be either neighboring gap).
   standInRank?: string;
+  // This card (in hand, or the top of the discard pile) could currently be
+  // laid off onto some meld already on the table — see the "Highlight
+  // possible lay-offs" Settings toggle.
+  canLayOff?: boolean;
 }
 
 // Renders as a <div>, never a <button> — callers (draw pile, discard pile,
@@ -36,6 +40,7 @@ export function PlayingCard({
   isNew,
   onClick,
   standInRank,
+  canLayOff,
 }: PlayingCardProps) {
   const size = small ? "h-14 w-10 text-xs" : "h-20 w-14 text-sm";
 
@@ -56,6 +61,18 @@ export function PlayingCard({
       {isNew && (
         <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
           NEW
+        </span>
+      )}
+      {canLayOff && (
+        <span
+          title="Can be laid off onto a meld on the table"
+          // Wild cards' own face is already a pale gold close to --accent, so
+          // the badge needs a light ring around it to stay visible there —
+          // --card-bg is a near-white constant across every theme, unlike
+          // --panel/--bg which flip dark/light per theme.
+          className="absolute -top-1.5 -left-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[9px] font-bold leading-none text-[var(--on-accent)] shadow ring-2 ring-[var(--card-bg)]"
+        >
+          ↓
         </span>
       )}
       {standInRank && (

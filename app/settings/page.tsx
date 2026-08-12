@@ -14,6 +14,45 @@ interface SettingsRow {
   preferred_ai_difficulty_default: string | null;
 }
 
+function BoolToggle({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[var(--muted)]">{label}</label>
+      <div className="flex gap-2">
+        {(
+          [
+            [true, "On"],
+            [false, "Off"],
+          ] as [boolean, string][]
+        ).map(([v, l]) => (
+          <button
+            key={l}
+            onClick={() => onChange(v)}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+              value === v
+                ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-[var(--faint)]">{description}</p>
+    </section>
+  );
+}
+
 // Small static preview swatches per theme — kept in sync by hand with
 // globals.css's [data-theme] blocks since these render outside the current
 // page's own theme context (so the picker can show every option at once,
@@ -150,33 +189,26 @@ export default function SettingsPage() {
             </p>
           </section>
 
-          <section className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[var(--muted)]">Sound effects</label>
-            <div className="flex gap-2">
-              {(
-                [
-                  [true, "On"],
-                  [false, "Off"],
-                ] as [boolean, string][]
-              ).map(([value, label]) => (
-                <button
-                  key={label}
-                  onClick={() => setSettings((s) => ({ ...s, soundEnabled: value }))}
-                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
-                    settings.soundEnabled === value
-                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
-                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-[var(--faint)]">
-              Short tap/slide/chime sounds for draws, discards, melds, and round/game wins. Local
-              to this device, like the theme — doesn&apos;t sync to your account.
-            </p>
-          </section>
+          <BoolToggle
+            label="Sound effects"
+            value={settings.soundEnabled}
+            onChange={(v) => setSettings((s) => ({ ...s, soundEnabled: v }))}
+            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins. Local to this device, like the theme — doesn't sync to your account."
+          />
+
+          <BoolToggle
+            label="Group melds by type"
+            value={settings.groupMeldsByType}
+            onChange={(v) => setSettings((s) => ({ ...s, groupMeldsByType: v }))}
+            description="In Table melds, show each player's books before their runs, instead of the order they were confirmed in."
+          />
+
+          <BoolToggle
+            label="Highlight possible lay-offs"
+            value={settings.highlightLayoffs}
+            onChange={(v) => setSettings((s) => ({ ...s, highlightLayoffs: v }))}
+            description="Once you've melded your contract, badge hand cards and the top discard-pile card that could be laid off onto a meld on the table."
+          />
 
           <div className="flex flex-col gap-2">
             <button

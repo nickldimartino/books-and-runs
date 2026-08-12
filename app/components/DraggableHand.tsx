@@ -10,6 +10,9 @@ interface DraggableHandProps {
   lastDrawnCardId: string | null;
   onCardClick: (card: Card) => void;
   onReorder: (cardIdsInOrder: string[]) => void;
+  // Card IDs that could currently be laid off onto some meld on the table —
+  // see the "Highlight possible lay-offs" Settings toggle.
+  layoffEligibleIds?: Set<string>;
 }
 
 // Drag engages on whichever comes first: holding roughly still for
@@ -70,6 +73,7 @@ export function DraggableHand({
   lastDrawnCardId,
   onCardClick,
   onReorder,
+  layoffEligibleIds,
 }: DraggableHandProps) {
   const cardElRefs = useRef(new Map<string, HTMLDivElement>());
   const dragRef = useRef<DragTracker | null>(null);
@@ -259,6 +263,7 @@ export function DraggableHand({
               card={card}
               selected={selectedCardIds.includes(card.id)}
               isNew={card.id === lastDrawnCardId}
+              canLayOff={layoffEligibleIds?.has(card.id)}
             />
           </div>
         );
@@ -283,6 +288,7 @@ export function DraggableHand({
             card={draggedCard}
             selected={selectedCardIds.includes(draggedCard.id)}
             isNew={draggedCard.id === lastDrawnCardId}
+            canLayOff={layoffEligibleIds?.has(draggedCard.id)}
           />
         </div>
       )}

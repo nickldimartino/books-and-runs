@@ -198,7 +198,7 @@ export default function ScorecardPage() {
               </p>
             )}
             {roundMode === "custom" && (
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {CONTRACTS.map((c) => {
                   const checked = customRounds.has(c.round);
                   return (
@@ -208,18 +208,18 @@ export default function ScorecardPage() {
                       role="checkbox"
                       aria-checked={checked}
                       onClick={() => toggleCustomRound(c.round)}
-                      className="flex w-full items-center gap-2 rounded-md bg-[var(--panel)] px-3 py-2 text-left text-sm text-[var(--muted)]"
+                      className="flex min-h-11 w-full items-center gap-3 rounded-md bg-[var(--panel)] px-3 py-3 text-left text-sm text-[var(--muted)]"
                     >
                       <span
                         aria-hidden
-                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
                           checked
                             ? "border-[var(--accent)] bg-[var(--accent)]"
                             : "border-[var(--border)] bg-transparent"
                         }`}
                       >
                         {checked && (
-                          <svg viewBox="0 0 16 16" className="h-3 w-3">
+                          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5">
                             <path
                               d="M3 8.5l3 3 7-7"
                               fill="none"

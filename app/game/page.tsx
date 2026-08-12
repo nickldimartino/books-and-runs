@@ -12,6 +12,7 @@ import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
+import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { Card, Meld } from "@/types";
@@ -135,11 +136,31 @@ export default function GamePage() {
     stagedRuns === contract.runs &&
     (!contract.wholeHandMeld || cardsNotYetGrouped === 0);
 
+  const { groupMeldsByType, highlightLayoffs } = loadLocalSettings();
+
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
     const list = meldsByOwner.get(meld.ownerId) ?? [];
     list.push(meld);
     meldsByOwner.set(meld.ownerId, list);
+  }
+  if (groupMeldsByType) {
+    // A stable sort, so within "all books, then all runs" each type's melds
+    // keep the order they were originally confirmed/laid off in.
+    for (const list of meldsByOwner.values()) {
+      list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
+    }
+  }
+
+  // Lay-offs are only ever legal once you've melded your own contract for
+  // the round — matches handleMeldClick's isValidTarget check below.
+  const layoffEligibleHandIds = new Set<string>();
+  let discardTopCanLayOff = false;
+  if (highlightLayoffs && player.hasMeldedContract) {
+    for (const c of player.hand) {
+      if (state.melds.some((m) => layOffOptions(c, m).length > 0)) layoffEligibleHandIds.add(c.id);
+    }
+    discardTopCanLayOff = !!discardTop && state.melds.some((m) => layOffOptions(discardTop, m).length > 0);
   }
 
   function handleCardClick(card: Card) {
@@ -285,7 +306,7 @@ export default function GamePage() {
                 aria-label="Draw from discard"
               >
                 {discardTop ? (
-                  <PlayingCard card={discardTop} />
+                  <PlayingCard card={discardTop} canLayOff={discardTopCanLayOff} />
                 ) : (
                   <div className="h-20 w-14 rounded-lg border-2 border-dashed border-[var(--border)]" />
                 )}
@@ -481,6 +502,7 @@ export default function GamePage() {
               lastDrawnCardId={lastDrawnCardId}
               onCardClick={handleCardClick}
               onReorder={reorderHand}
+              layoffEligibleIds={layoffEligibleHandIds}
             />
             <p className="mt-1 text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
           </section>
