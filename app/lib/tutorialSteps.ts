@@ -119,7 +119,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: "wrapup",
     target: null,
     title: "You've got it!",
-    body: "That's the whole loop — draw, meld, discard. I'll let the Beginner AI take its turns automatically now; keep playing to see the round through to the end. Good luck!",
+    body: "That's the whole loop — draw, meld, discard. The goal each round is to be the first player to empty your hand completely — everyone else gets penalized for whatever's left in theirs. I'll let the Beginner AI take its turns automatically now; keep playing to see the round through to the end. Good luck!",
     gate: { type: "tap" },
   },
 ];
