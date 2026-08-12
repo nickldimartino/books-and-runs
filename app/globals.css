@@ -149,3 +149,19 @@ body {
   background: var(--card-wild-bg);
   color: var(--card-wild-text);
 }
+
+/* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
+@keyframes tutorial-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.tutorial-ring {
+  animation: tutorial-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-ring {
+    animation: none;
+  }
+}

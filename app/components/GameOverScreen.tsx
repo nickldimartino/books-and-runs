@@ -18,7 +18,7 @@ interface XpLineItem {
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters } = useGame();
+  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial } = useGame();
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
@@ -30,7 +30,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
 
   useEffect(() => {
-    if (recordedRef.current || !supabase || !user) return;
+    // Tutorial games are scripted practice — never touch Supabase, so they
+    // can't inflate stats/achievements or count toward "games played."
+    if (recordedRef.current || !supabase || !user || isTutorial) return;
     recordedRef.current = true;
     setSaved("saving");
 
@@ -92,7 +94,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // must not retrigger this effect as PlayerLevelProvider's own state
     // updates after refresh().
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, roundHistory, user, getSessionCounters, refreshLevel]);
+  }, [state, roundHistory, user, getSessionCounters, refreshLevel, isTutorial]);
 
   function playAgain() {
     quitToHome();
@@ -107,8 +109,19 @@ export function GameOverScreen({ state }: { state: GameState }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">
       <div className="text-center">
-        <p className="text-sm uppercase tracking-wide text-[var(--faint)]">Game over</p>
-        <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">{winner.name} won!</h1>
+        <p className="text-sm uppercase tracking-wide text-[var(--faint)]">
+          {isTutorial ? "Tutorial complete" : "Game over"}
+        </p>
+        <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">
+          {isTutorial ? "Nice work!" : `${winner.name} won!`}
+        </h1>
+        {isTutorial && (
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            You just played a full round — draw, meld, discard, and everything in between. This
+            practice round didn&apos;t count toward your stats or achievements. Ready for a real
+            game?
+          </p>
+        )}
       </div>
 
       <ol className="flex flex-col gap-2">
@@ -125,7 +138,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
         ))}
       </ol>
 
-      {user && (
+      {!isTutorial && user && (
         <div className="text-center text-xs text-[var(--faint)]">
           <p>
             {saved === "saving" && "Saving to your stats…"}
@@ -156,7 +169,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
           onClick={playAgain}
           className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
         >
-          Play again
+          {isTutorial ? "Play a real game" : "Play again"}
         </button>
         <button
           onClick={goHome}

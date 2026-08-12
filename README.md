@@ -40,6 +40,22 @@ All six phases of that roadmap are now built.
     pass-and-play otherwise hides — you'd normally see everyone's hand size
     and what they pick up/discard at a real table. Blind draw-pile draws are
     never shown, since those aren't visible in person either
+  - The "Tutorial" option on New Game — a fixed 1-vs-1 practice round (You
+    vs. one Beginner AI, "1 Book + 1 Run" only) with a scripted, non-random
+    hand (`src/tutorial.ts`) guaranteed to contain exactly one obvious book
+    and one obvious run, so the guided walkthrough (`lib/tutorialSteps.ts`,
+    rendered by `components/TutorialOverlay.tsx` — a spotlight-and-tooltip
+    overlay, four dimmed strips framing a cutout around whatever it's
+    pointing at) hits the same teaching moments every time. Steps either
+    dismiss on a tap or wait for the actual action (a real draw, a real
+    meld, a real discard) before advancing. Turns on every optional feature
+    (lay-off hints, player activity, meld grouping, sound) for the
+    tutorial's duration regardless of your saved Settings, without ever
+    writing back to them. `GameContext.tsx`'s `isTutorial` flag makes
+    `persist()` a full no-op and keeps `quitToHome()` from clearing a real
+    saved game if you exit mid-tutorial — a tutorial game never touches the
+    real saved-game slot, Supabase stats, or achievements, in either
+    direction
   - `GameContext.tsx` wires the screens above to the engine, and persists
     the in-progress game to `localStorage` so Home's "Continue" button can
     resume it (survives a full reload — see `lib/localSave.ts`)

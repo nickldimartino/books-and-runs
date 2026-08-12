@@ -11,11 +11,11 @@ import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
 
-type RoundMode = "all" | "short" | "custom";
+type RoundMode = "all" | "short" | "custom" | "tutorial";
 
 export default function NewGamePage() {
   const router = useRouter();
-  const { startNewGame } = useGame();
+  const { startNewGame, startTutorialGame } = useGame();
   const [humanCount, setHumanCount] = useState(1);
   const [humanNames, setHumanNames] = useState<string[]>(["You"]);
   const [aiDifficulties, setAiDifficulties] = useState<Difficulty[]>(["medium"]);
@@ -39,9 +39,13 @@ export default function NewGamePage() {
       ? CONTRACTS
       : roundMode === "short"
         ? SHORT_GAME_CONTRACTS
-        : CONTRACTS.filter((c) => customRounds.has(c.round));
+        : roundMode === "custom"
+          ? CONTRACTS.filter((c) => customRounds.has(c.round))
+          : [CONTRACTS[1]]; // tutorial: always "1 Book + 1 Run"
   const canStart =
-    totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS && selectedContracts.length > 0;
+    roundMode === "tutorial"
+      ? true
+      : totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS && selectedContracts.length > 0;
 
   // Grows/shrinks the editable name list to match humanCount without
   // clobbering names already typed into the slots that stick around.
@@ -92,6 +96,11 @@ export default function NewGamePage() {
 
   function handleStart() {
     if (!canStart) return;
+    if (roundMode === "tutorial") {
+      startTutorialGame();
+      router.push("/game");
+      return;
+    }
     // Only number AI names when there's more than one AI total — with a
     // single AI, plain "Medium AI" reads better than "Medium AI 1". Numbers
     // are per-difficulty (two Easy AIs are "Easy AI 1"/"Easy AI 2" even
@@ -129,6 +138,18 @@ export default function NewGamePage() {
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
 
+      {roundMode === "tutorial" ? (
+        <section className="flex flex-col gap-2 rounded-lg bg-[var(--panel)] p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+            Players
+          </h2>
+          <p className="text-sm text-[var(--muted)]">
+            The tutorial is fixed to you vs. one Beginner AI, so the walkthrough always plays out
+            the same way. Player and round settings are back once you start a real game.
+          </p>
+        </section>
+      ) : (
+        <>
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
           Human players (pass-and-play)
@@ -216,23 +237,26 @@ export default function NewGamePage() {
           )}
         </div>
       </section>
+        </>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
           Rounds
         </h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(
             [
               ["all", "All 7"],
               ["short", "Short"],
               ["custom", "Custom"],
+              ["tutorial", "Tutorial"],
             ] as [RoundMode, string][]
           ).map(([mode, label]) => (
             <button
               key={mode}
               onClick={() => setRoundMode(mode)}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+              className={`min-w-[calc(50%-0.25rem)] flex-1 rounded-md px-3 py-2 text-sm font-medium ${
                 roundMode === mode
                   ? "bg-[var(--accent)] text-[var(--on-accent)]"
                   : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
@@ -245,6 +269,14 @@ export default function NewGamePage() {
         {roundMode === "short" && (
           <p className="text-xs text-[var(--faint)]">
             Drops the two hardest mixed rounds — 2 Books + 1 Run, and 1 Book + 2 Runs.
+          </p>
+        )}
+        {roundMode === "tutorial" && (
+          <p className="text-xs text-[var(--faint)]">
+            A short, guided round — 1 Book + 1 Run — that walks you through drawing, melding, and
+            discarding step by step. Every helper feature (lay-off hints, player activity, etc.)
+            is turned on just for this game, even if you&apos;ve turned any of them off in
+            Settings. Doesn&apos;t count toward your stats or achievements.
           </p>
         )}
         {roundMode === "custom" && (
@@ -305,7 +337,7 @@ export default function NewGamePage() {
         disabled={!canStart}
         className="mt-auto rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Start Game
+        {roundMode === "tutorial" ? "Start Tutorial" : "Start Game"}
       </button>
     </main>
   );

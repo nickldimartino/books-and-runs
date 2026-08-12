@@ -14,7 +14,7 @@ interface RoundSummaryProps {
 }
 
 export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSummaryProps) {
-  const { getSessionCounters, clearSessionCounters } = useGame();
+  const { getSessionCounters, clearSessionCounters, isTutorial } = useGame();
   const { user } = useAuth();
   const flushedRef = useRef<number | null>(null);
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
@@ -27,7 +27,11 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   // only ever covers rounds 1..N-1, and GameOverScreen's own flush at the
   // end picks up whatever's left from the last round.
   useEffect(() => {
-    if (!supabase || !user || flushedRef.current === state.round) return;
+    // Tutorial games never touch Supabase — this shouldn't be reachable for
+    // the current single-round tutorial (game/page.tsx checks gameOver
+    // before roundOver, and a 1-round game sets both at once), but it's
+    // cheap insurance against that changing later.
+    if (!supabase || !user || isTutorial || flushedRef.current === state.round) return;
     flushedRef.current = state.round;
     const counters = { ...getSessionCounters() };
     recordAchievementProgress(supabase, user.id, counters)
@@ -39,7 +43,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
     // same round, so getSessionCounters/clearSessionCounters don't need to
     // be in the dep array for correctness.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.round, user]);
+  }, [state.round, user, isTutorial]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">

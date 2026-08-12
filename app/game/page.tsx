@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
@@ -11,10 +11,13 @@ import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
+import { TutorialOverlay } from "../components/TutorialOverlay";
+import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
+import { TUTORIAL_HUMAN_ID } from "@/tutorial";
 import { Card, Meld } from "@/types";
 
 interface PendingLayOff {
@@ -59,6 +62,7 @@ export default function GamePage() {
     roundStartScores,
     lastDrawnCardId,
     buyOffer,
+    isTutorial,
     revealHand,
     draw,
     confirmMeld,
@@ -68,13 +72,17 @@ export default function GamePage() {
     reorderHand,
     respondToBuy,
     advanceRound,
+    quitToHome,
   } = useGame();
   const { level } = usePlayerLevel();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [pendingLayOff, setPendingLayOff] = useState<PendingLayOff | null>(null);
-  const [activityOpen, setActivityOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(() => isTutorial);
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
+  const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
+  const prevHasDrawnRef = useRef(hasDrawn);
 
   useEffect(() => {
     if (!state) router.replace("/");
@@ -98,29 +106,113 @@ export default function GamePage() {
     }
   }, [state?.roundOver, state?.gameOver]);
 
+  // Auto-advances gated tutorial steps once their underlying action actually
+  // happens — draw, meld a book, meld a run, confirm the meld, or discard.
+  // Order matters here: this reads prevHasDrawnRef *before* updating it, so
+  // it must run above (and thus after, in the commit) the ref's own update.
+  useEffect(() => {
+    const wasDrawn = prevHasDrawnRef.current;
+    prevHasDrawnRef.current = hasDrawn;
+    if (!isTutorial || !state || !tutorialOverlayVisible) return;
+    const step = TUTORIAL_STEPS[tutorialStepIndex];
+    if (!step) return;
+    const human = state.players.find((p) => p.id === TUTORIAL_HUMAN_ID);
+    let satisfied = false;
+    switch (step.gate.type) {
+      case "drawn":
+        satisfied = hasDrawn;
+        break;
+      case "grouped": {
+        const meldType = step.gate.meldType;
+        satisfied = pendingGroups.some((g) => g.type === meldType);
+        break;
+      }
+      case "melded":
+        satisfied = !!human?.hasMeldedContract;
+        break;
+      case "discarded":
+        satisfied = wasDrawn && !hasDrawn && !!human?.hasMeldedContract;
+        break;
+    }
+    if (satisfied) {
+      setTutorialStepIndex((i) => {
+        if (i >= TUTORIAL_STEPS.length - 1) {
+          setTutorialOverlayVisible(false);
+          return i;
+        }
+        return i + 1;
+      });
+    }
+  }, [isTutorial, state, tutorialOverlayVisible, tutorialStepIndex, hasDrawn, pendingGroups]);
+
+  function advanceTutorial() {
+    setTutorialStepIndex((i) => {
+      if (i >= TUTORIAL_STEPS.length - 1) {
+        setTutorialOverlayVisible(false);
+        return i;
+      }
+      return i + 1;
+    });
+  }
+
+  function skipTutorial() {
+    setTutorialOverlayVisible(false);
+    quitToHome();
+    router.push("/");
+  }
+
   if (!state) return null;
+
+  // Computed once and rendered as a sibling on every branch below, tutorial
+  // or not — a pending step (the "wrapup" one especially) needs to stay
+  // dismissable no matter what's on screen underneath it. Placing this only
+  // in the main return further down meant it silently vanished — not
+  // actually dismissed, just not rendered — the instant a PassGate/AI-turn/
+  // round-end screen took over, then reappeared later looking like a bug.
+  const tutorialStep = isTutorial ? TUTORIAL_STEPS[tutorialStepIndex] : undefined;
+  const tutorialOverlayNode =
+    tutorialOverlayVisible && tutorialStep ? (
+      <TutorialOverlay
+        step={tutorialStep}
+        stepIndex={tutorialStepIndex}
+        totalSteps={TUTORIAL_STEPS.length}
+        onContinue={advanceTutorial}
+        onSkip={skipTutorial}
+      />
+    ) : null;
 
   if (state.gameOver) return <GameOverScreen state={state} />;
   if (state.roundOver) {
     return (
-      <RoundSummary state={state} roundStartScores={roundStartScores} onNextRound={advanceRound} />
+      <>
+        <RoundSummary state={state} roundStartScores={roundStartScores} onNextRound={advanceRound} />
+        {tutorialOverlayNode}
+      </>
     );
   }
 
   if (buyOffer) {
     return (
-      <BuyOfferGate
-        playerName={buyOffer.playerName}
-        card={buyOffer.card}
-        onRespond={respondToBuy}
-      />
+      <>
+        <BuyOfferGate
+          playerName={buyOffer.playerName}
+          card={buyOffer.card}
+          onRespond={respondToBuy}
+        />
+        {tutorialOverlayNode}
+      </>
     );
   }
 
   const player = state.players[state.currentPlayerIndex];
 
   if (!player.isAI && awaitingReveal) {
-    return <PassGate name={player.name} onReveal={revealHand} />;
+    return (
+      <>
+        <PassGate name={player.name} onReveal={revealHand} />
+        {tutorialOverlayNode}
+      </>
+    );
   }
 
   const contract = state.selectedContracts[state.round - 1];
@@ -137,7 +229,13 @@ export default function GamePage() {
     stagedRuns === contract.runs &&
     (!contract.wholeHandMeld || cardsNotYetGrouped === 0);
 
-  const { groupMeldsByType, highlightLayoffs, showPlayerActivity } = loadLocalSettings();
+  // The tutorial shows off every optional feature regardless of what's
+  // actually saved in Settings — it never writes back to it, so your real
+  // preferences are exactly as you left them once the tutorial ends.
+  const savedSettings = loadLocalSettings();
+  const groupMeldsByType = isTutorial || savedSettings.groupMeldsByType;
+  const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
+  const showPlayerActivity = isTutorial || savedSettings.showPlayerActivity;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -244,7 +342,12 @@ export default function GamePage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
       <div className="flex items-center justify-between">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => {
+            // Unlike a real game, a tutorial can't be resumed later — clear
+            // it outright instead of leaving it dangling in memory.
+            if (isTutorial) quitToHome();
+            router.push("/");
+          }}
           className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
           ← Home
@@ -257,7 +360,10 @@ export default function GamePage() {
         </Link>
       </div>
 
-      <header className="flex items-center justify-between rounded-xl bg-[var(--panel)] px-4 py-3">
+      <header
+        data-tutorial="round-header"
+        className="flex items-center justify-between rounded-xl bg-[var(--panel)] px-4 py-3"
+      >
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
             Round {state.round} of {state.selectedContracts.length}
@@ -287,7 +393,7 @@ export default function GamePage() {
         </div>
       ) : (
         <>
-          <section className="flex items-center justify-center gap-6">
+          <section data-tutorial="draw-piles" className="flex items-center justify-center gap-6">
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={() => draw(false)}
@@ -351,7 +457,7 @@ export default function GamePage() {
             </section>
           )}
 
-          <section className="rounded-xl bg-[var(--panel-soft)] p-4">
+          <section data-tutorial="table-melds" className="rounded-xl bg-[var(--panel-soft)] p-4">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
             </h2>
@@ -401,7 +507,7 @@ export default function GamePage() {
           </section>
 
           {showPlayerActivity && (
-            <section className="rounded-xl bg-[var(--panel-soft)] p-4">
+            <section data-tutorial="player-activity" className="rounded-xl bg-[var(--panel-soft)] p-4">
               <button
                 onClick={() => setActivityOpen((v) => !v)}
                 className="flex w-full items-center justify-between text-left"
@@ -517,6 +623,7 @@ export default function GamePage() {
                   Group selected cards
                 </button>
                 <button
+                  data-tutorial="confirm-meld"
                   onClick={handleConfirmMeld}
                   disabled={!hasDrawn || !meldReady}
                   className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
@@ -537,7 +644,7 @@ export default function GamePage() {
             </button>
           </section>
 
-          <section>
+          <section data-tutorial="hand">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
@@ -574,6 +681,8 @@ export default function GamePage() {
           </section>
         </>
       )}
+
+      {tutorialOverlayNode}
     </main>
   );
 }

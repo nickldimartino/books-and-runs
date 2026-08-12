@@ -23,8 +23,16 @@ function getContext(): AudioContext | null {
   return ctx;
 }
 
+// Set by GameContext while a tutorial game is active, so the tutorial can
+// show off sound effects regardless of the player's saved preference,
+// without ever touching (or reading as changed) their real setting.
+let tutorialOverride = false;
+export function setTutorialSoundOverride(enabled: boolean): void {
+  tutorialOverride = enabled;
+}
+
 function soundEnabled(): boolean {
-  return loadLocalSettings().soundEnabled;
+  return tutorialOverride || loadLocalSettings().soundEnabled;
 }
 
 function tone(c: AudioContext, freq: number, start: number, duration: number, peak: number, type: OscillatorType) {

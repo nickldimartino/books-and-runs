@@ -15,9 +15,10 @@ import {
 import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
 import { layOffOptions } from "@/meld";
 import { Card, ContractRequirement, GameState } from "@/types";
+import { createTutorialGame } from "@/tutorial";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
-import { playCardSlide, playCardTap, playMeld } from "./lib/sound";
+import { playCardSlide, playCardTap, playMeld, setTutorialSoundOverride } from "./lib/sound";
 import {
   createContext,
   ReactNode,
@@ -46,6 +47,10 @@ interface GameContextValue {
   lastDrawnCardId: string | null;
   buyOffer: BuyOffer | null;
   startNewGame: (configs: PlayerConfig[], contracts?: ContractRequirement[]) => void;
+  /** A fixed, scripted 1-vs-1 practice round (see src/tutorial.ts) — never
+   * touches the real saved-game slot, Supabase stats, or achievements. */
+  startTutorialGame: () => void;
+  isTutorial: boolean;
   continueGame: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
@@ -144,6 +149,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>([]);
   const [lastDrawnCardId, setLastDrawnCardId] = useState<string | null>(null);
   const [buyOffer, setBuyOffer] = useState<BuyOffer | null>(null);
+  const [isTutorial, setIsTutorial] = useState(false);
+  // Mirrors isTutorial for use inside stable callbacks (persist, quitToHome)
+  // that can't take a reactive dependency on it without breaking memoization.
+  const isTutorialRef = useRef(false);
   const buyQueueRef = useRef<string[]>([]);
   const recordedRoundsRef = useRef<Set<number>>(new Set());
 
@@ -183,6 +192,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const persist = useCallback(() => {
+    // Tutorial games are scripted practice, not a real game — never touch
+    // the real saved-game slot, in either direction. Whatever real save
+    // existed before the tutorial started is left completely alone.
+    if (isTutorialRef.current) return;
     const s = stateRef.current;
     if (!s || s.gameOver) {
       clearSavedGame();
@@ -255,6 +268,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const startNewGame = useCallback(
     (configs: PlayerConfig[], contracts?: ContractRequirement[]) => {
+      isTutorialRef.current = false;
+      setIsTutorial(false);
+      setTutorialSoundOverride(false);
       const state = createGame(configs, contracts);
       stateRef.current = state;
       setSnapshot({ ...state });
@@ -288,9 +304,37 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump]
   );
 
+  const startTutorialGame = useCallback(() => {
+    isTutorialRef.current = true;
+    setIsTutorial(true);
+    setTutorialSoundOverride(true);
+    const state = createTutorialGame();
+    stateRef.current = state;
+    setSnapshot({ ...state });
+    setHasDrawnBoth(false);
+    setAwaitingReveal(false); // the tutorial narrates the pass-gate itself, see game/page.tsx
+    setAiThinking(false);
+    setRoundStartScoresBoth(Object.fromEntries(state.players.map((p) => [p.id, p.cumulativeScore])));
+    recordedRoundsRef.current = new Set();
+    roundHistoryRef.current = [];
+    setRoundHistory([]);
+    setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
+    sessionCountersRef.current = {};
+    // No persist() — see the isTutorialRef guard at the top of persist().
+  }, [setHasDrawnBoth, setRoundStartScoresBoth]);
+
   const continueGame = useCallback(() => {
     const saved = loadSavedGame();
     if (!saved) return;
+    // Defensive: a saved game is always real (persist() never runs during a
+    // tutorial), so make sure no stale tutorial flag survives from an
+    // earlier tutorial that got abandoned without going through
+    // quitToHome/startNewGame.
+    isTutorialRef.current = false;
+    setIsTutorial(false);
+    setTutorialSoundOverride(false);
     stateRef.current = saved.state;
     setSnapshot({ ...saved.state });
     setHasDrawnBoth(saved.hasDrawn);
@@ -558,6 +602,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth]);
 
   const quitToHome = useCallback(() => {
+    const wasTutorial = isTutorialRef.current;
     stateRef.current = null;
     setSnapshot(null);
     setHasDrawnBoth(false);
@@ -565,8 +610,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setAiThinking(false);
     setBuyOffer(null);
     buyQueueRef.current = [];
-    clearSavedGame();
-    setHasSavedGame(false);
+    isTutorialRef.current = false;
+    setIsTutorial(false);
+    setTutorialSoundOverride(false);
+    if (wasTutorial) {
+      // The tutorial never touched the real saved-game slot (persist() no-ops
+      // during it) — restore whatever was really there instead of wiping it.
+      setHasSavedGame(loadSavedGame() !== null);
+    } else {
+      clearSavedGame();
+      setHasSavedGame(false);
+    }
   }, [setHasDrawnBoth]);
 
   const value = useMemo<GameContextValue>(
@@ -581,6 +635,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       lastDrawnCardId,
       buyOffer,
       startNewGame,
+      startTutorialGame,
+      isTutorial,
       continueGame,
       revealHand,
       draw,
@@ -606,6 +662,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       lastDrawnCardId,
       buyOffer,
       startNewGame,
+      startTutorialGame,
+      isTutorial,
       continueGame,
       revealHand,
       draw,
