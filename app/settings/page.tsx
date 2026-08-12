@@ -207,7 +207,7 @@ export default function SettingsPage() {
             label="Highlight possible lay-offs"
             value={settings.highlightLayoffs}
             onChange={(v) => setSettings((s) => ({ ...s, highlightLayoffs: v }))}
-            description="Once you've melded your contract, badge hand cards and the top discard-pile card that could be laid off onto a meld on the table."
+            description="Badge hand cards and the top discard-pile card that fit a meld already on the table, so you can plan ahead even before you've melded your own contract."
           />
 
           <div className="flex flex-col gap-2">

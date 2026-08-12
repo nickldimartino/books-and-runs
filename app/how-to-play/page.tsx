@@ -103,10 +103,10 @@ export default function HowToPlayPage() {
             contract, you may add extra cards to your own or any other player&apos;s already-laid
             melds. A run stays in sorted order as cards are added, and a wild always shows a small
             &quot;as X&quot; badge for the rank it&apos;s standing in for. If a wild could extend
-            either end of a run, you&apos;ll be asked which rank you mean it to be. Once you&apos;ve
-            melded, a small ↓ badge marks any hand card or discard-pile card that could currently be
-            laid off onto some meld on the table — turn this off in Settings if you&apos;d rather
-            work it out yourself.
+            either end of a run, you&apos;ll be asked which rank you mean it to be. A small ↓ badge
+            marks any hand card or discard-pile card that fits some meld already on the table —
+            shown even before you&apos;ve melded your own contract, so you can plan which cards to
+            hold onto. Turn this off in Settings if you&apos;d rather work it out yourself.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Discard</strong> — end your turn by discarding one
