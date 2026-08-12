@@ -571,7 +571,7 @@ export default function GamePage() {
           )}
 
           {!player.hasMeldedContract && (
-            <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+            <section data-tutorial="build-meld" className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
               </h2>
@@ -634,7 +634,7 @@ export default function GamePage() {
             </section>
           )}
 
-          <section className="flex flex-wrap items-center justify-center gap-3">
+          <section data-tutorial="discard-btn" className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={handleDiscardSelected}
               disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}

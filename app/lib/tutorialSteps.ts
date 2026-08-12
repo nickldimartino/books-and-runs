@@ -6,8 +6,13 @@
  * advanceTutorialStep() itself once a gated step's condition is met, so
  * there's no "skip" button on those, only on the tutorial as a whole.
  *
- * `target` is a data-tutorial attribute value (see game/page.tsx) the
- * overlay spotlights; null centers the step as a plain modal instead.
+ * `target` is one or more data-tutorial attribute values (see game/page.tsx)
+ * the overlay spotlights; null centers the step as a plain modal instead.
+ * An array spotlights the union of every named element's bounding box — a
+ * step whose instructions span two separate sections (e.g. "select cards in
+ * your hand, then tap Group selected cards" — the hand and the "Build your
+ * meld" section aren't adjacent) needs both reachable at once, not just the
+ * one the step happens to mention first.
  */
 
 export type TutorialGate =
@@ -19,7 +24,7 @@ export type TutorialGate =
 
 export interface TutorialStep {
   id: string;
-  target: string | null;
+  target: string | string[] | null;
   title: string;
   body: string;
   gate: TutorialGate;
@@ -56,14 +61,14 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "book",
-    target: "hand",
+    target: ["build-meld", "hand"],
     title: "Make a book",
     body: 'A book is 3+ cards of the same rank. Tap your three 7s, then tap "Group selected cards."',
     gate: { type: "grouped", meldType: "book" },
   },
   {
     id: "run",
-    target: "hand",
+    target: ["build-meld", "hand"],
     title: "Make a run",
     body: 'A run is 4+ same-suit cards in order. Tap your 3, 4, 5, and 6 of spades, then tap "Group selected cards" again.',
     gate: { type: "grouped", meldType: "run" },
@@ -98,7 +103,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "discard",
-    target: "hand",
+    target: ["discard-btn", "hand"],
     title: "End your turn",
     body: 'Tap one more card in your hand, then tap "Discard selected card" to finish your turn.',
     gate: { type: "discarded" },

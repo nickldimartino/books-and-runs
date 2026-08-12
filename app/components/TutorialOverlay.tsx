@@ -33,9 +33,50 @@ export function TutorialOverlay({ step, stepIndex, totalSteps, onContinue, onSki
       setRect(null);
       return;
     }
+    const targets = Array.isArray(step.target) ? step.target : [step.target];
+    function measure() {
+      const rects = targets
+        .map((t) => document.querySelector(`[data-tutorial="${t}"]`))
+        .filter((el): el is Element => !!el)
+        .map((el) => el.getBoundingClientRect());
+      if (rects.length === 0) return null;
+      // The union of every named target's box — a step whose instructions
+      // span two separate sections needs both spotlighted at once, not just
+      // whichever one it's centered on.
+      return {
+        top: Math.min(...rects.map((r) => r.top)),
+        left: Math.min(...rects.map((r) => r.left)),
+        bottom: Math.max(...rects.map((r) => r.bottom)),
+        right: Math.max(...rects.map((r) => r.right)),
+      };
+    }
     function recompute() {
-      const el = document.querySelector(`[data-tutorial="${step.target}"]`);
-      setRect(el ? el.getBoundingClientRect() : null);
+      const union = measure();
+      if (!union) {
+        setRect(null);
+        return;
+      }
+      // A target sitting outside the current scroll position leaves the
+      // tooltip nowhere valid to render — for a wide union (e.g. the hand
+      // plus the "Build your meld" section for the book/run steps) this is
+      // routine, not an edge case, so correct for it every time rather than
+      // relying on the player to already happen to be scrolled right.
+      const margin = 24;
+      if (union.top < margin || union.bottom > window.innerHeight - margin) {
+        const centerDocY = window.scrollY + (union.top + union.bottom) / 2;
+        window.scrollTo({ top: Math.max(0, centerDocY - window.innerHeight / 2), behavior: "instant" });
+        // getBoundingClientRect() right after scrollTo() isn't guaranteed to
+        // reflect the new scroll position yet — measuring again next frame,
+        // instead of immediately, avoids locking the spotlight onto
+        // pre-scroll coordinates.
+        requestAnimationFrame(() => {
+          const settled = measure();
+          if (!settled) return;
+          setRect(new DOMRect(settled.left, settled.top, settled.right - settled.left, settled.bottom - settled.top));
+        });
+        return;
+      }
+      setRect(new DOMRect(union.left, union.top, union.right - union.left, union.bottom - union.top));
     }
     recompute();
     window.addEventListener("resize", recompute);
