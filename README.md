@@ -32,13 +32,14 @@ All six phases of that roadmap are now built.
     and a live per-round/total grid, persisted to its own `localStorage` key
     (`lib/scorecardStore.ts`) so an in-progress paper-replacement scorecard
     survives a reload
-  - `game/page.tsx`'s "Player activity this round" — a collapsible table of
-    each player's latest discard and latest discard-pile pickup, reading
-    straight from `GameState.discardHistory`/`pickupHistory` (both already
-    reset per round in `gameEngine.ts`). Restores the in-person visibility
-    pass-and-play otherwise hides — you'd normally see what everyone else
-    picks up and discards at a real table. Blind draw-pile draws are never
-    shown, since those aren't visible in person either
+  - `game/page.tsx`'s "Player activity this round" (toggleable in Settings)
+    — a collapsible table of each player's latest discard and latest
+    discard-pile pickup, reading straight from
+    `GameState.discardHistory`/`pickupHistory` (both already reset per round
+    in `gameEngine.ts`). Restores the in-person visibility pass-and-play
+    otherwise hides — you'd normally see what everyone else picks up and
+    discards at a real table. Blind draw-pile draws are never shown, since
+    those aren't visible in person either
   - `GameContext.tsx` wires the screens above to the engine, and persists
     the in-progress game to `localStorage` so Home's "Continue" button can
     resume it (survives a full reload — see `lib/localSave.ts`)

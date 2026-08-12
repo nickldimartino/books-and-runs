@@ -210,6 +210,13 @@ export default function SettingsPage() {
             description="Badge hand cards and the top discard-pile card that fit a meld already on the table, so you can plan ahead even before you've melded your own contract."
           />
 
+          <BoolToggle
+            label="Player activity table"
+            value={settings.showPlayerActivity}
+            onChange={(v) => setSettings((s) => ({ ...s, showPlayerActivity: v }))}
+            description="Show the collapsible 'Player activity this round' table on the game board, with each player's latest discard and discard-pile pickup."
+          />
+
           <div className="flex flex-col gap-2">
             <button
               onClick={handleSave}

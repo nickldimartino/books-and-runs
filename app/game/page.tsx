@@ -137,7 +137,7 @@ export default function GamePage() {
     stagedRuns === contract.runs &&
     (!contract.wholeHandMeld || cardsNotYetGrouped === 0);
 
-  const { groupMeldsByType, highlightLayoffs } = loadLocalSettings();
+  const { groupMeldsByType, highlightLayoffs, showPlayerActivity } = loadLocalSettings();
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -400,65 +400,67 @@ export default function GamePage() {
             )}
           </section>
 
-          <section className="rounded-xl bg-[var(--panel-soft)] p-4">
-            <button
-              onClick={() => setActivityOpen((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-              aria-expanded={activityOpen}
-            >
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Player activity this round
-              </h2>
-              <span className="text-xs text-[var(--faint)]">{activityOpen ? "Hide ▲" : "Show ▼"}</span>
-            </button>
-            {activityOpen && (
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="text-xs text-[var(--faint)]">
-                      <th className="pb-2 pr-3 font-medium">Player</th>
-                      <th className="pb-2 pr-3 font-medium">Latest discard</th>
-                      <th className="pb-2 font-medium">Latest pickup</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {state.players.map((p) => {
-                      const latestDiscard = [...state.discardHistory]
-                        .reverse()
-                        .find((e) => e.playerId === p.id)?.card;
-                      const latestPickup = [...state.pickupHistory]
-                        .reverse()
-                        .find((e) => e.playerId === p.id)?.card;
-                      return (
-                        <tr key={p.id} className="border-t border-[var(--border)]">
-                          <td className="py-2 pr-3 text-[var(--heading)]">{p.name}</td>
-                          <td className="py-2 pr-3">
-                            {latestDiscard ? (
-                              <PlayingCard card={latestDiscard} small />
-                            ) : (
-                              <span className="text-[var(--faint)]">—</span>
-                            )}
-                          </td>
-                          <td className="py-2">
-                            {latestPickup ? (
-                              <PlayingCard card={latestPickup} small />
-                            ) : (
-                              <span className="text-[var(--faint)]">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <p className="mt-2 text-xs text-[var(--faint)]">
-                  Mirrors what you&apos;d see at a real table — resets at the start of each round.
-                  Blind draws from the draw pile aren&apos;t shown, since no one could see those in
-                  person either.
-                </p>
-              </div>
-            )}
-          </section>
+          {showPlayerActivity && (
+            <section className="rounded-xl bg-[var(--panel-soft)] p-4">
+              <button
+                onClick={() => setActivityOpen((v) => !v)}
+                className="flex w-full items-center justify-between text-left"
+                aria-expanded={activityOpen}
+              >
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                  Player activity this round
+                </h2>
+                <span className="text-xs text-[var(--faint)]">{activityOpen ? "Hide ▲" : "Show ▼"}</span>
+              </button>
+              {activityOpen && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="text-xs text-[var(--faint)]">
+                        <th className="pb-2 pr-3 font-medium">Player</th>
+                        <th className="pb-2 pr-3 font-medium">Latest discard</th>
+                        <th className="pb-2 font-medium">Latest pickup</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.players.map((p) => {
+                        const latestDiscard = [...state.discardHistory]
+                          .reverse()
+                          .find((e) => e.playerId === p.id)?.card;
+                        const latestPickup = [...state.pickupHistory]
+                          .reverse()
+                          .find((e) => e.playerId === p.id)?.card;
+                        return (
+                          <tr key={p.id} className="border-t border-[var(--border)]">
+                            <td className="py-2 pr-3 text-[var(--heading)]">{p.name}</td>
+                            <td className="py-2 pr-3">
+                              {latestDiscard ? (
+                                <PlayingCard card={latestDiscard} small />
+                              ) : (
+                                <span className="text-[var(--faint)]">—</span>
+                              )}
+                            </td>
+                            <td className="py-2">
+                              {latestPickup ? (
+                                <PlayingCard card={latestPickup} small />
+                              ) : (
+                                <span className="text-[var(--faint)]">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="mt-2 text-xs text-[var(--faint)]">
+                    Mirrors what you&apos;d see at a real table — resets at the start of each round.
+                    Blind draws from the draw pile aren&apos;t shown, since no one could see those in
+                    person either.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           {!player.hasMeldedContract && (
             <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">

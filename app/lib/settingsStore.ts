@@ -13,6 +13,9 @@ export interface HouseSettings {
   // Badge hand cards and the top discard-pile card that could currently be
   // laid off onto some meld on the table.
   highlightLayoffs: boolean;
+  // Show the "Player activity this round" table (latest discard/pickup per
+  // player) on the game board.
+  showPlayerActivity: boolean;
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
@@ -20,6 +23,7 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   soundEnabled: true,
   groupMeldsByType: true,
   highlightLayoffs: true,
+  showPlayerActivity: true,
 };
 
 export function loadLocalSettings(): HouseSettings {

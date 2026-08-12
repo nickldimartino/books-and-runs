@@ -265,9 +265,10 @@ export default function HowToPlayPage() {
         <p>
           Settings lets you pick a color theme for the app and table, set a default AI difficulty
           for new AI opponents you add on the New Game screen, turn sound effects on or off, choose
-          whether Table melds groups each player&apos;s books before their runs, and turn the
-          possible-lay-off badges on or off. None of that changes any of the rules above —
-          it&apos;s all just look-and-feel and optional assistance.
+          whether Table melds groups each player&apos;s books before their runs, turn the
+          possible-lay-off badges on or off, and show or hide the Player activity table. None of
+          that changes any of the rules above — it&apos;s all just look-and-feel and optional
+          assistance.
         </p>
       </section>
 
