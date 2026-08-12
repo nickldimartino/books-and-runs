@@ -48,8 +48,9 @@ export default function PrivacyPage() {
               winner, and when the game was played.
             </li>
             <li>
-              House-rule preferences (wild-card limit, default AI difficulty, sound on/off), if you
-              set them on the Settings screen.
+              Your default AI difficulty preference, if you set one on the Settings screen. (Theme
+              and sound effects on/off are also set there, but stay local to your device and are
+              never sent to us.)
             </li>
           </ul>
           <p className="mt-2">

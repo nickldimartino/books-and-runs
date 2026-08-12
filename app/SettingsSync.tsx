@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { saveLocalSettings } from "./lib/settingsStore";
+import { loadLocalSettings, saveLocalSettings } from "./lib/settingsStore";
 import { supabase } from "./lib/supabaseClient";
 import { Difficulty } from "@/types";
 
@@ -31,7 +31,10 @@ export function SettingsSync() {
       .maybeSingle<SettingsRow>()
       .then(({ data }) => {
         if (!data) return;
+        // soundEnabled is local-only (like theme) — never overwrite it with
+        // an account-synced value that doesn't exist.
         saveLocalSettings({
+          ...loadLocalSettings(),
           preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
         });
       });

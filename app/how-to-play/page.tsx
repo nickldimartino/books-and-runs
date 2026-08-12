@@ -260,9 +260,9 @@ export default function HowToPlayPage() {
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">Settings</h2>
         <p>
-          Settings lets you pick a color theme for the app and table, and set a default AI
-          difficulty for new AI opponents you add on the New Game screen. Neither one changes any
-          of the rules above — they&apos;re just look-and-feel.
+          Settings lets you pick a color theme for the app and table, set a default AI difficulty
+          for new AI opponents you add on the New Game screen, and turn sound effects on or off.
+          None of that changes any of the rules above — it&apos;s all just look-and-feel.
         </p>
       </section>
 

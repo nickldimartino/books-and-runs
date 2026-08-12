@@ -41,8 +41,15 @@ All six phases of that roadmap are now built.
     state when no Supabase project is connected, so local play always works
   - `lib/recordGameResult.ts` — writes stats/history to Supabase when a
     signed-in user finishes a game
-  - `lib/settingsStore.ts` — default AI difficulty, saved to `localStorage`
-    always and synced to Supabase's `settings` table when signed in
+  - `lib/settingsStore.ts` — default AI difficulty (synced to Supabase's
+    `settings` table when signed in) and sound-effects on/off (local-only,
+    like theme), both saved to `localStorage`
+  - `lib/sound.ts` — short sound effects for draw/discard/lay-off (a tap),
+    sort/drag-reorder (a slide), meld (a tap plus a soft thump), and round/
+    game wins (rising chimes), all synthesized on the fly with the Web Audio
+    API — no audio files, so nothing to license or fetch. Wired into
+    `GameContext.tsx`'s action handlers and `game/page.tsx`'s round/game-over
+    transitions
 - `supabase/migrations/0001_init.sql` — the `player_stats`, `game_history`,
   and `settings` tables, with row-level security so each user can only ever
   read/write their own rows

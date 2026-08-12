@@ -12,6 +12,7 @@ import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
+import { playGameWin, playRoundWin } from "../lib/sound";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { Card, Meld } from "@/types";
 
@@ -83,6 +84,17 @@ export default function GamePage() {
     setGroupError(null);
     setPendingLayOff(null);
   }, [state?.currentPlayerIndex, state?.round]);
+
+  // Fires exactly once per false→true transition, since these are plain
+  // booleans in the dep array — a game-over round is also round-over, so
+  // gameOver takes priority to avoid playing both chimes at once.
+  useEffect(() => {
+    if (state?.gameOver) {
+      playGameWin();
+    } else if (state?.roundOver) {
+      playRoundWin();
+    }
+  }, [state?.roundOver, state?.gameOver]);
 
   if (!state) return null;
 

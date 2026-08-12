@@ -17,6 +17,7 @@ import { layOffOptions } from "@/meld";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
+import { playCardSlide, playCardTap, playMeld } from "./lib/sound";
 import {
   createContext,
   ReactNode,
@@ -329,6 +330,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       setLastDrawnCardId(card.id);
       setHasDrawnBoth(true);
+      playCardTap();
       commit();
     },
     [hasDrawn, commit, setHasDrawnBoth, bump]
@@ -340,6 +342,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!s) return;
       const player = s.players[s.currentPlayerIndex];
       player.hand = [...player.hand].sort(mode === "rank" ? compareByRank : compareBySuit);
+      playCardSlide();
       commit();
     },
     [commit]
@@ -362,6 +365,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         .sort((a, b) => orderIndex.get(a.id)! - orderIndex.get(b.id)!);
       let i = 0;
       player.hand = player.hand.map((c) => (orderIndex.has(c.id) ? reordered[i++] : c));
+      playCardSlide();
       commit();
     },
     [commit]
@@ -398,6 +402,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         bump("rounds_won");
         bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
       }
+      playMeld();
       commit();
       return true;
     },
@@ -428,6 +433,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bump("rounds_won");
           bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
         }
+        playCardTap();
         commit();
       }
       return ok;
@@ -499,6 +505,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bump("rounds_won_via_discard");
         }
       }
+      playCardTap();
       commit();
       setHasDrawnBoth(false);
       setLastDrawnCardId(null);

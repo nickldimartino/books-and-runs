@@ -4,10 +4,14 @@ const KEY = "booksAndRuns:settings";
 
 export interface HouseSettings {
   preferredAiDifficulty: Difficulty;
+  // Local-only, like theme — not synced to the account (see settings/page.tsx's
+  // handleSave, which never includes this in the Supabase upsert).
+  soundEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
   preferredAiDifficulty: "medium",
+  soundEnabled: true,
 };
 
 export function loadLocalSettings(): HouseSettings {

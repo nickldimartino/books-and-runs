@@ -48,6 +48,7 @@ export default function SettingsPage() {
       .then(({ data }) => {
         if (data) {
           const synced: HouseSettings = {
+            ...loadLocalSettings(),
             preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
           };
           setSettings(synced);
@@ -146,6 +147,34 @@ export default function SettingsPage() {
             </select>
             <p className="text-xs text-[var(--faint)]">
               Used as the starting difficulty when you add an AI opponent on the New Game screen.
+            </p>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-[var(--muted)]">Sound effects</label>
+            <div className="flex gap-2">
+              {(
+                [
+                  [true, "On"],
+                  [false, "Off"],
+                ] as [boolean, string][]
+              ).map(([value, label]) => (
+                <button
+                  key={label}
+                  onClick={() => setSettings((s) => ({ ...s, soundEnabled: value }))}
+                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+                    settings.soundEnabled === value
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--faint)]">
+              Short tap/slide/chime sounds for draws, discards, melds, and round/game wins. Local
+              to this device, like the theme — doesn&apos;t sync to your account.
             </p>
           </section>
 
