@@ -339,6 +339,10 @@ export default function NewGamePage() {
       >
         {roundMode === "tutorial" ? "Start Tutorial" : "Start Game"}
       </button>
+
+      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
+        Back to Home
+      </Link>
     </main>
   );
 }

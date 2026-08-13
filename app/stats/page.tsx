@@ -108,7 +108,7 @@ export default function StatsPage() {
         href="/"
         className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
       >
-        ← Back to Home
+        ← Home
       </Link>
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">Your stats</h1>

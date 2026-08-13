@@ -149,7 +149,7 @@ export default function AchievementsPage() {
         href="/"
         className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
       >
-        ← Back to Home
+        ← Home
       </Link>
 
       <div>

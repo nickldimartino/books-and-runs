@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CONTRACTS } from "@/types";
-import { BackNav } from "./BackNav";
 
 export const metadata = {
   title: "How to Play — Books & Runs",
@@ -26,7 +25,12 @@ function Note({ children }: { children: ReactNode }) {
 export default function HowToPlayPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
-      <BackNav />
+      <Link
+        href="/"
+        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+      >
+        ← Home
+      </Link>
       <h1 className="text-2xl font-bold text-[var(--heading)]">How to Play</h1>
 
       <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--heading)]">

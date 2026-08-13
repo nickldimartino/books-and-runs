@@ -59,7 +59,13 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-8 px-6 py-10">
-      <h1 className="text-center text-2xl font-bold text-[var(--heading)]">Set a new password</h1>
+      <Link
+        href="/"
+        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+      >
+        ← Home
+      </Link>
+      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">Set a new password</h1>
 
       {done ? (
         <>

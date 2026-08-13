@@ -4,7 +4,7 @@
 // last cached, so a visitor who's loaded the app before can keep playing
 // with no connection. Bump CACHE_NAME to force clients to drop everything
 // cached under an old version.
-const CACHE_NAME = "books-and-runs-v2";
+const CACHE_NAME = "books-and-runs-v3";
 
 // The core pass-and-play loop, precached so a fresh install works offline
 // even before the visitor has clicked into every page themselves.
@@ -66,13 +66,32 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Cache-first, refreshing in the background — deliberately NOT network-
+  // first. iOS Safari's fetch() is documented to hang instead of rejecting
+  // when the device is genuinely offline (airplane mode, no signal), rather
+  // than failing fast like it does on desktop browsers. A network-first
+  // strategy waits on that hung fetch before ever trying the cache, which
+  // in practice means "the whole navigation just never finishes" — matching
+  // exactly what was reported (every page but Home stalling offline; Home
+  // likely wasn't a real test of this code path at all, since Safari can
+  // show a restored tab's last render without any new network activity).
+  // Returning a cache hit immediately sidesteps waiting on that fetch at
+  // all, while still updating the cache for next time whenever the network
+  // call does resolve.
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        return response;
-      })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
+    caches.match(request).then((cached) => {
+      const networkUpdate = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => null);
+
+      if (cached) return cached;
+      return networkUpdate.then((response) => response || caches.match("/"));
+    })
   );
 });
