@@ -98,8 +98,21 @@ export function TutorialOverlay({ step, stepIndex, totalSteps, onContinue, onSki
         if (union) applyUnion(union);
       });
     }
+    // A resize is different from a scroll: it means the viewport itself
+    // changed shape (most commonly a tablet rotating), which can turn a
+    // target that fit fine into one that no longer does. Re-running the
+    // full center-into-view logic here doesn't fight anything the player
+    // did themselves the way re-centering on every scroll would — the
+    // player didn't scroll, the available space just changed. Without
+    // this, rotating mid-step left the spotlight sized for the old
+    // viewport: correctly tracking the target's position, but never
+    // re-checking whether that position still needed to be scrolled into
+    // view for the new, often much shorter, viewport height.
+    function handleResize() {
+      centerIntoView();
+    }
     centerIntoView();
-    window.addEventListener("resize", sync);
+    window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", sync, true);
     // Catches layout shifts sync's own listeners can't — e.g. the hand
     // shrinking as cards get staged into a meld group while this step is up.
@@ -107,7 +120,7 @@ export function TutorialOverlay({ step, stepIndex, totalSteps, onContinue, onSki
     observer.observe(document.body, { childList: true, subtree: true, attributes: true });
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", sync);
+      window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", sync, true);
       observer.disconnect();
     };
