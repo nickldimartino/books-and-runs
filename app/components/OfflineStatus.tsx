@@ -5,18 +5,32 @@ import { useCallback, useEffect, useState } from "react";
 
 type SwState = "unsupported" | "native" | "none" | "installing" | "waiting" | "active";
 
+interface PrecacheResult {
+  url: string;
+  ok: boolean;
+  error?: string;
+  assetCount?: number;
+  assetFailures?: number;
+}
+
+interface PrecacheStatus {
+  at: number;
+  results: PrecacheResult[];
+}
+
 interface Status {
   swState: SwState;
   controlling: boolean;
   cachedUrls: string[];
+  precache: PrecacheStatus | null;
 }
 
 async function readStatus(): Promise<Status> {
   if (Capacitor.isNativePlatform()) {
-    return { swState: "native", controlling: false, cachedUrls: [] };
+    return { swState: "native", controlling: false, cachedUrls: [], precache: null };
   }
   if (!("serviceWorker" in navigator)) {
-    return { swState: "unsupported", controlling: false, cachedUrls: [] };
+    return { swState: "unsupported", controlling: false, cachedUrls: [], precache: null };
   }
   const registration = await navigator.serviceWorker.getRegistration();
   const swState: SwState = !registration
@@ -30,15 +44,27 @@ async function readStatus(): Promise<Status> {
           : "none";
 
   const cachedUrls: string[] = [];
+  let precache: PrecacheStatus | null = null;
   if ("caches" in window) {
     for (const name of await caches.keys()) {
       for (const request of await (await caches.open(name)).keys()) {
         cachedUrls.push(request.url);
       }
     }
+    // Written by the service worker's own precache pass — see sw.js's
+    // STATUS_URL — so this reports what actually happened on *this*
+    // device, not just whether the file list looks plausible.
+    const statusRes = await caches.match("/__sw-status__");
+    if (statusRes) {
+      try {
+        precache = await statusRes.json();
+      } catch {
+        precache = null;
+      }
+    }
   }
   cachedUrls.sort();
-  return { swState, controlling: !!navigator.serviceWorker.controller, cachedUrls };
+  return { swState, controlling: !!navigator.serviceWorker.controller, cachedUrls, precache };
 }
 
 const LABELS: Record<SwState, string> = {
@@ -107,6 +133,25 @@ export function OfflineStatus() {
             {status.cachedUrls.map((u) => (
               <li key={u} className="break-all">
                 {u.replace(self.location.origin, "")}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {status.precache && (
+        <details className="text-xs text-[var(--faint)]">
+          <summary className="cursor-pointer select-none">
+            Last precache attempt ({new Date(status.precache.at).toLocaleString()})
+          </summary>
+          <ul className="mt-1 flex flex-col gap-1 rounded-md bg-[var(--panel-soft)] p-2">
+            {status.precache.results.map((r) => (
+              <li key={r.url} className="break-all">
+                {r.ok ? "✓" : "✗"} {r.url}
+                {r.ok
+                  ? ` — ${r.assetCount ?? 0} asset${r.assetCount === 1 ? "" : "s"}${
+                      r.assetFailures ? `, ${r.assetFailures} failed` : ""
+                    }`
+                  : ` — ${r.error}`}
               </li>
             ))}
           </ul>
