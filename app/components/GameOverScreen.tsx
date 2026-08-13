@@ -7,6 +7,7 @@ import { DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
@@ -31,10 +32,18 @@ export function GameOverScreen({ state }: { state: GameState }) {
   // whatever's already stored rather than overwriting.
   const gameResultDoneRef = useRef(false);
   const achievementDoneRef = useRef(false);
+  const [gameId] = useState(() => crypto.randomUUID());
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [xpBreakdown, setXpBreakdown] = useState<XpLineItem[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
+
+  // While this screen is up, it owns retrying its own save — see
+  // pendingSaveQueue.ts for why the background sync must not also touch it.
+  useEffect(() => {
+    setActiveForegroundGame(gameId);
+    return () => setActiveForegroundGame(null);
+  }, [gameId]);
 
   const attemptSave = useCallback(async () => {
     if (!supabase || !user) return;
@@ -90,10 +99,23 @@ export function GameOverScreen({ state }: { state: GameState }) {
       console.error("Failed to save achievement progress:", achievementResult.reason);
     }
     if (gameResult.status === "rejected" || achievementResult.status === "rejected") {
+      // Not fully saved — queue it so this game's result survives leaving
+      // this screen or closing the app. PendingSaveSync retries it once the
+      // connection's back, even if this screen never gets revisited.
+      upsertPendingSave({
+        id: gameId,
+        userId: user.id,
+        state,
+        roundHistory,
+        counters,
+        gameResultDone: gameResultDoneRef.current,
+        achievementDone: achievementDoneRef.current,
+      });
       setSaved("error");
       return;
     }
 
+    removePendingSave(gameId);
     setSaved("saved");
     clearSessionCounters();
     const after = await refreshLevel();
@@ -114,7 +136,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // `level` is only read for the before/after diff — it must not retrigger
     // a fresh save as PlayerLevelProvider's own state updates after refresh().
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, roundHistory, user, getSessionCounters, clearSessionCounters, refreshLevel]);
+  }, [state, roundHistory, user, getSessionCounters, clearSessionCounters, refreshLevel, gameId]);
 
   useEffect(() => {
     // Tutorial games are scripted practice — never touch Supabase, so they

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
+import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
 import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 import { SettingsSync } from "./SettingsSync";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <SettingsSync />
           <PlayerLevelProvider>
+            <PendingSaveSync />
             <GameProvider>{children}</GameProvider>
           </PlayerLevelProvider>
         </AuthProvider>
