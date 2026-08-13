@@ -482,7 +482,7 @@ export default function GamePage() {
                               key={meld.id}
                               onClick={() => handleMeldClick(meld)}
                               disabled={!isValidTarget}
-                              className={`flex items-end gap-1 rounded-lg p-1 transition ${
+                              className={`flex max-w-full items-end gap-1 overflow-x-auto rounded-lg p-1 transition ${
                                 isValidTarget ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""
                               }`}
                               title={meldLabel(meld)}
