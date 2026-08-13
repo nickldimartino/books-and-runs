@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { OfflineStatus } from "../components/OfflineStatus";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
 import { supabase } from "../lib/supabaseClient";
@@ -122,7 +123,10 @@ export default function SettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <h1 className="text-2xl font-bold text-[var(--heading)]">Settings</h1>
+      <Link href="/" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
+        ← Home
+      </Link>
+      <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Settings</h1>
 
       {loading ? (
         <p className="text-sm text-[var(--faint)]">Loading…</p>
@@ -245,6 +249,8 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
+
+          <OfflineStatus />
         </>
       )}
 
