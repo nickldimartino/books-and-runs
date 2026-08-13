@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
+import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 import { SettingsSync } from "./SettingsSync";
 import "./globals.css";
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
+        <ServiceWorkerRegister />
         <AuthProvider>
           <SettingsSync />
           <PlayerLevelProvider>

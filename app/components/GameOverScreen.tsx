@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Difficulty, GameState } from "@/types";
 import { DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
@@ -24,16 +24,20 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const winner = standings[0];
   const recordedRef = useRef(false);
+  // Tracked separately from `saved` so a retry after a partial failure (one
+  // write went through, the other didn't) only re-sends the write that
+  // actually failed — neither recordGameResult nor recordAchievementProgress
+  // is safe to run twice, since each one adds its own deltas on top of
+  // whatever's already stored rather than overwriting.
+  const gameResultDoneRef = useRef(false);
+  const achievementDoneRef = useRef(false);
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [xpBreakdown, setXpBreakdown] = useState<XpLineItem[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
 
-  useEffect(() => {
-    // Tutorial games are scripted practice — never touch Supabase, so they
-    // can't inflate stats/achievements or count toward "games played."
-    if (recordedRef.current || !supabase || !user || isTutorial) return;
-    recordedRef.current = true;
+  const attemptSave = useCallback(async () => {
+    if (!supabase || !user) return;
     setSaved("saving");
 
     // Snapshot pre-game XP/level now — PlayerLevelProvider loads once at
@@ -66,48 +70,59 @@ export function GameOverScreen({ state }: { state: GameState }) {
       }
     }
 
-    Promise.allSettled([
-      recordGameResult(supabase, user.id, state, roundHistory),
-      recordAchievementProgress(supabase, user.id, counters),
-    ]).then(async ([gameResult, achievementResult]) => {
-      // Promise.all's single opaque error made this genuinely undiagnosable
-      // from the outside — logging which write failed and why is the only
-      // way anyone (developer or a report from a player) can tell a real
-      // Supabase/schema problem apart from an actual network blip.
-      if (gameResult.status === "rejected") {
-        console.error("Failed to save game result:", gameResult.reason);
-      }
-      if (achievementResult.status === "rejected") {
-        console.error("Failed to save achievement progress:", achievementResult.reason);
-      }
-      if (gameResult.status === "rejected" || achievementResult.status === "rejected") {
-        setSaved("error");
-        return;
-      }
+    const [gameResult, achievementResult] = await Promise.allSettled([
+      gameResultDoneRef.current ? Promise.resolve() : recordGameResult(supabase, user.id, state, roundHistory),
+      achievementDoneRef.current ? Promise.resolve() : recordAchievementProgress(supabase, user.id, counters),
+    ]);
 
-      setSaved("saved");
-      clearSessionCounters();
-      const after = await refreshLevel();
-      if (after) {
-        const gained = Math.max(0, after.totalXp - beforeXp);
-        setXpGained(gained);
-        // Whatever's left once the known per-game sources are accounted
-        // for must be from achievement tiers newly unlocked this game.
-        const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
-        const achievementBonus = Math.max(0, gained - knownTotal);
-        setXpBreakdown(
-          achievementBonus > 0
-            ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
-            : breakdown
-        );
-        if (after.level > beforeLevel) setLeveledUpTo(after.level);
-      }
-    });
-    // `level` is only read once, at mount, for the before/after diff — it
-    // must not retrigger this effect as PlayerLevelProvider's own state
-    // updates after refresh().
+    // Promise.all's single opaque error made this genuinely undiagnosable
+    // from the outside — logging which write failed and why is the only
+    // way anyone (developer or a report from a player) can tell a real
+    // Supabase/schema problem apart from an actual network blip.
+    if (gameResult.status === "fulfilled") {
+      gameResultDoneRef.current = true;
+    } else {
+      console.error("Failed to save game result:", gameResult.reason);
+    }
+    if (achievementResult.status === "fulfilled") {
+      achievementDoneRef.current = true;
+    } else {
+      console.error("Failed to save achievement progress:", achievementResult.reason);
+    }
+    if (gameResult.status === "rejected" || achievementResult.status === "rejected") {
+      setSaved("error");
+      return;
+    }
+
+    setSaved("saved");
+    clearSessionCounters();
+    const after = await refreshLevel();
+    if (after) {
+      const gained = Math.max(0, after.totalXp - beforeXp);
+      setXpGained(gained);
+      // Whatever's left once the known per-game sources are accounted
+      // for must be from achievement tiers newly unlocked this game.
+      const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
+      const achievementBonus = Math.max(0, gained - knownTotal);
+      setXpBreakdown(
+        achievementBonus > 0
+          ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
+          : breakdown
+      );
+      if (after.level > beforeLevel) setLeveledUpTo(after.level);
+    }
+    // `level` is only read for the before/after diff — it must not retrigger
+    // a fresh save as PlayerLevelProvider's own state updates after refresh().
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, roundHistory, user, getSessionCounters, refreshLevel, isTutorial]);
+  }, [state, roundHistory, user, getSessionCounters, clearSessionCounters, refreshLevel]);
+
+  useEffect(() => {
+    // Tutorial games are scripted practice — never touch Supabase, so they
+    // can't inflate stats/achievements or count toward "games played."
+    if (recordedRef.current || !supabase || !user || isTutorial) return;
+    recordedRef.current = true;
+    attemptSave();
+  }, [user, isTutorial, attemptSave]);
 
   function playAgain() {
     quitToHome();
@@ -176,6 +191,14 @@ export function GameOverScreen({ state }: { state: GameState }) {
             {saved === "saved" && "Saved to your stats."}
             {saved === "error" && "Couldn't save to your stats — check your connection."}
           </p>
+          {saved === "error" && (
+            <button
+              onClick={() => attemptSave()}
+              className="mt-1 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            >
+              Try again
+            </button>
+          )}
           {saved === "saved" && xpGained !== null && (
             <div className="mt-1">
               <p className="text-sm font-semibold text-[var(--accent)]">
