@@ -8,15 +8,15 @@ type SwState = "unsupported" | "native" | "none" | "installing" | "waiting" | "a
 interface Status {
   swState: SwState;
   controlling: boolean;
-  fileCount: number;
+  cachedUrls: string[];
 }
 
 async function readStatus(): Promise<Status> {
   if (Capacitor.isNativePlatform()) {
-    return { swState: "native", controlling: false, fileCount: 0 };
+    return { swState: "native", controlling: false, cachedUrls: [] };
   }
   if (!("serviceWorker" in navigator)) {
-    return { swState: "unsupported", controlling: false, fileCount: 0 };
+    return { swState: "unsupported", controlling: false, cachedUrls: [] };
   }
   const registration = await navigator.serviceWorker.getRegistration();
   const swState: SwState = !registration
@@ -29,13 +29,16 @@ async function readStatus(): Promise<Status> {
           ? "active"
           : "none";
 
-  let fileCount = 0;
+  const cachedUrls: string[] = [];
   if ("caches" in window) {
     for (const name of await caches.keys()) {
-      fileCount += (await (await caches.open(name)).keys()).length;
+      for (const request of await (await caches.open(name)).keys()) {
+        cachedUrls.push(request.url);
+      }
     }
   }
-  return { swState, controlling: !!navigator.serviceWorker.controller, fileCount };
+  cachedUrls.sort();
+  return { swState, controlling: !!navigator.serviceWorker.controller, cachedUrls };
 }
 
 const LABELS: Record<SwState, string> = {
@@ -96,9 +99,18 @@ export function OfflineStatus() {
         {status.swState === "active" && !status.controlling && " (not controlling this page — reload)"}
       </p>
       {status.swState !== "unsupported" && status.swState !== "none" && (
-        <p className="text-xs text-[var(--faint)]">
-          {status.fileCount} file{status.fileCount === 1 ? "" : "s"} cached for offline use.
-        </p>
+        <details className="text-xs text-[var(--faint)]">
+          <summary className="cursor-pointer select-none">
+            {status.cachedUrls.length} file{status.cachedUrls.length === 1 ? "" : "s"} cached for offline use
+          </summary>
+          <ul className="mt-1 max-h-40 overflow-y-auto rounded-md bg-[var(--panel-soft)] p-2 font-mono text-[10px] leading-relaxed">
+            {status.cachedUrls.map((u) => (
+              <li key={u} className="break-all">
+                {u.replace(self.location.origin, "")}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {status.swState !== "unsupported" && (
         <button

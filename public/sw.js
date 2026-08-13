@@ -4,7 +4,7 @@
 // last cached, so a visitor who's loaded the app before can keep playing
 // with no connection. Bump CACHE_NAME to force clients to drop everything
 // cached under an old version.
-const CACHE_NAME = "books-and-runs-v3";
+const CACHE_NAME = "books-and-runs-v4";
 
 // The core pass-and-play loop, precached so a fresh install works offline
 // even before the visitor has clicked into every page themselves.
@@ -68,23 +68,28 @@ self.addEventListener("fetch", (event) => {
 
   // Cache-first, refreshing in the background — deliberately NOT network-
   // first. iOS Safari's fetch() is documented to hang instead of rejecting
-  // when the device is genuinely offline (airplane mode, no signal), rather
-  // than failing fast like it does on desktop browsers. A network-first
-  // strategy waits on that hung fetch before ever trying the cache, which
-  // in practice means "the whole navigation just never finishes" — matching
-  // exactly what was reported (every page but Home stalling offline; Home
-  // likely wasn't a real test of this code path at all, since Safari can
-  // show a restored tab's last render without any new network activity).
-  // Returning a cache hit immediately sidesteps waiting on that fetch at
-  // all, while still updating the cache for next time whenever the network
-  // call does resolve.
+  // when the device is genuinely offline, rather than failing fast like it
+  // does on desktop browsers, so waiting on the network before ever trying
+  // the cache can mean the whole navigation just never finishes.
+  //
+  // Matching is done by plain URL string, not the Request object itself.
+  // A real navigation's Request has `mode: "navigate"` — a property script
+  // can never set, so every precached entry (fetched from inside this file)
+  // is necessarily keyed with the default `mode: "cors"` instead. Per spec,
+  // Cache matching should only care about the URL (plus Vary-listed headers
+  // on the response), but Safari has a documented history of being
+  // stricter than that about Request properties that shouldn't matter.
+  // Normalizing both the write side and the read side to `request.url`
+  // sidesteps that entirely by never comparing Request objects at all.
+  const cacheKey = request.url;
+
   event.respondWith(
-    caches.match(request).then((cached) => {
+    caches.match(cacheKey).then((cached) => {
       const networkUpdate = fetch(request)
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, copy));
           }
           return response;
         })
