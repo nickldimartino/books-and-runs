@@ -68,17 +68,29 @@ async function precacheCoreRoutes(cache) {
   );
 }
 
+// Tagged so it's easy to filter for in Safari's Web Inspector console —
+// connect an iPhone to a Mac over USB (Settings > Safari > Advanced > Web
+// Inspector on the phone; Safari > Settings > Advanced > Show features for
+// web developers on the Mac, then Develop menu > the phone > the tab).
+// Airplane Mode only disables wireless radios, not the USB link, so this
+// keeps working even while genuinely offline — the only way left to see
+// what's actually happening instead of inferring it from symptoms.
+const LOG = (...args) => console.log("[SW]", ...args);
+
 self.addEventListener("install", (event) => {
+  LOG("install");
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  LOG("activate: start");
   event.waitUntil(
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => caches.open(CACHE_NAME))
       .then((cache) => Promise.all([self.clients.claim(), precacheCoreRoutes(cache)]))
+      .then(() => LOG("activate: done, precache complete"))
   );
 });
 
@@ -106,21 +118,35 @@ self.addEventListener("fetch", (event) => {
   // Normalizing both the write side and the read side to `request.url`
   // sidesteps that entirely by never comparing Request objects at all.
   const cacheKey = request.url;
+  LOG("fetch:", request.mode, cacheKey);
 
   event.respondWith(
     caches.match(cacheKey).then((cached) => {
+      LOG("cache", cached ? "HIT" : "MISS", "for", cacheKey);
       const networkUpdate = fetch(request)
         .then((response) => {
+          LOG("network resolved", response.status, "for", cacheKey);
           if (response.ok) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, copy));
           }
           return response;
         })
-        .catch(() => null);
+        .catch((err) => {
+          LOG("network failed for", cacheKey, String(err));
+          return null;
+        });
 
-      if (cached) return cached;
-      return networkUpdate.then((response) => response || caches.match("/"));
+      if (cached) {
+        LOG("responding from cache:", cacheKey);
+        return cached;
+      }
+      LOG("no cache hit, waiting on network for", cacheKey);
+      return networkUpdate.then((response) => {
+        if (response) return response;
+        LOG("network+cache both failed, falling back to / for", cacheKey);
+        return caches.match("/");
+      });
     })
   );
 });
