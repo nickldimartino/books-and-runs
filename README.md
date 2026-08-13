@@ -166,14 +166,26 @@ The app runs fine without this — it only unlocks Sign in and Stats.
    `0002_achievements.sql` (unlocks the Achievements page), then
    `0003_worst_score.sql`.
 3. In **Authentication → Providers**, enable Email.
-4. Copy `.env.local.example` to `.env.local` and fill in your project's URL
+4. In **Authentication → URL Configuration**, add
+   `<your-deployed-url>/reset-password` (and `http://localhost:3000/reset-password`
+   for local dev) to the Redirect URLs allow list — "Forgot password?" won't
+   work without it, since Supabase rejects redirecting to any URL not on
+   this list.
+5. Copy `.env.local.example` to `.env.local` and fill in your project's URL
    and anon key from **Project Settings → API**.
-5. `npm run dev` — Sign in and Stats now work.
+6. `npm run dev` — Sign in and Stats now work.
 
 Email/password is the only sign-in method — Google OAuth was removed after
 Google Cloud declined to verify the app's OAuth consent screen for a domain
 this project doesn't own (a shared `vercel.app` subdomain); it would need a
 custom domain to revisit.
+
+Account confirmation and password-reset emails go out through Supabase's
+built-in email service by default, which Supabase itself documents as
+rate-limited and not meant for production use — mail can arrive late, land
+in spam, or not send at all. For real use, set a custom SMTP provider under
+**Project Settings → Auth → SMTP Settings** (Resend, Postmark, and similar
+all have small free tiers).
 
 ## Running the iOS app
 
