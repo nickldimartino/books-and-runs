@@ -7,7 +7,7 @@ import { useAuth } from "../AuthContext";
 
 export default function SignInPage() {
   const router = useRouter();
-  const { configured, user, signInWithPassword, signUpWithPassword, signInWithGoogle } = useAuth();
+  const { configured, user, signInWithPassword, signUpWithPassword } = useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,21 +61,6 @@ export default function SignInPage() {
         </p>
       ) : (
         <>
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => signInWithGoogle().then((r) => r.error && setError(r.error))}
-              className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow hover:bg-emerald-50"
-            >
-              Continue with Google
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-[var(--faint)]">
-            <div className="h-px flex-1 bg-[var(--border)]" />
-            or
-            <div className="h-px flex-1 bg-[var(--border)]" />
-          </div>
-
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <input
               type="email"

@@ -36,7 +36,7 @@ export default function HomePage() {
         </p>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Play solo against AI opponents of five difficulty levels, or pass-and-play with friends
-          on one device. Sign in with Google to track your stats and achievements across devices —
+          on one device. Sign in with email to track your stats and achievements across devices —
           no download required.
         </p>
         {configured && user && (

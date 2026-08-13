@@ -59,8 +59,10 @@ All six phases of that roadmap are now built.
   - `GameContext.tsx` wires the screens above to the engine, and persists
     the in-progress game to `localStorage` so Home's "Continue" button can
     resume it (survives a full reload — see `lib/localSave.ts`)
-  - `AuthContext.tsx` wraps Supabase Auth (email/password, Google), including
-    the native-vs-web OAuth branching Capacitor needs
+  - `AuthContext.tsx` wraps Supabase Auth (email/password only — Google
+    sign-in was removed since Google won't verify an OAuth consent screen
+    for a domain the project doesn't own, like a shared `vercel.app`
+    subdomain; would need a custom domain to revisit)
   - `lib/supabaseClient.ts` — degrades gracefully to a "not configured"
     state when no Supabase project is connected, so local play always works
   - `lib/recordGameResult.ts` — writes stats/history to Supabase when a
@@ -163,17 +165,15 @@ The app runs fine without this — it only unlocks Sign in and Stats.
 2. In the Supabase SQL editor, run `supabase/migrations/0001_init.sql`, then
    `0002_achievements.sql` (unlocks the Achievements page), then
    `0003_worst_score.sql`.
-3. In **Authentication → Providers**, enable Email, and optionally Google
-   (needs its own OAuth credentials from Google Cloud Console — entered into
-   Supabase's provider settings, not into this codebase).
+3. In **Authentication → Providers**, enable Email.
 4. Copy `.env.local.example` to `.env.local` and fill in your project's URL
    and anon key from **Project Settings → API**.
 5. `npm run dev` — Sign in and Stats now work.
 
-For the OAuth redirect URLs, add both of these in Supabase's **URL
-Configuration**:
-- `http://localhost:3000/` (and your real web domain once deployed)
-- `com.booksandruns.app://auth-callback` (for the iOS app)
+Email/password is the only sign-in method — Google OAuth was removed after
+Google Cloud declined to verify the app's OAuth consent screen for a domain
+this project doesn't own (a shared `vercel.app` subdomain); it would need a
+custom domain to revisit.
 
 ## Running the iOS app
 
@@ -188,24 +188,12 @@ npm run ios:open   # opens the project in Xcode
 Pick a Simulator in Xcode and hit Run. A few things need your Apple account
 and can't be done for you:
 
-1. For a real device: you'll need an Apple ID signed into Xcode to set up
-   signing and provisioning, and to change `com.booksandruns.app` in
-   `capacitor.config.json` (and `ios/App/App/Info.plist`'s
-   `CFBundleURLTypes`) to a bundle ID registered under your account. An App
-   Store submission would additionally need a paid Apple Developer Program
-   membership ($99/year) — not currently pursued.
-2. If you enable Google sign-in for the iOS build specifically: Google OAuth
-   apps require you to register `com.booksandruns.app` as an iOS client.
-
-One nuance worth knowing: Google blocks OAuth from completing inside an
-embedded webview, so on native the sign-in button opens the system browser
-(`@capacitor/browser`) instead of redirecting in place, then bounces back
-into the app via the `com.booksandruns.app://auth-callback` custom URL
-scheme registered in `Info.plist`. That handoff is implemented in
-`AuthContext.tsx`; the game-board flow was verified live in Simulator, but
-the OAuth deep-link round trip specifically hasn't been (it needs a real
-Supabase project with providers configured — see "Turning on accounts +
-stats" above).
+For a real device: you'll need an Apple ID signed into Xcode to set up
+signing and provisioning, and to change `com.booksandruns.app` in
+`capacitor.config.json` (and `ios/App/App/Info.plist`'s `CFBundleURLTypes`)
+to a bundle ID registered under your account. An App Store submission would
+additionally need a paid Apple Developer Program membership ($99/year) —
+not currently pursued.
 
 ## Contract-aware AI discards
 
@@ -224,6 +212,3 @@ currently in hand.
 - Stats are tracked for the device owner only (the first human player seat,
   "You") — other pass-and-play participants at the table aren't assumed to
   have their own accounts.
-- The OAuth deep-link round trip (native Google sign-in bouncing back into
-  the app) is implemented but unverified — it needs a real Supabase project
-  with providers configured, which needs your accounts.

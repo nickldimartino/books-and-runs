@@ -9,7 +9,7 @@ export default function PrivacyPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Privacy Policy</h1>
-        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 12, 2026</p>
+        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 13, 2026</p>
       </div>
 
       <div className="flex flex-col gap-5 text-sm leading-relaxed text-[var(--muted)]">
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
           <p className="mb-2">
             Signing in is optional and unlocks Stats, Achievements, and your account level — win
             and progress history tied to your account instead of just one device. If you sign in
-            with email or Google, we store:
+            with email, we store:
           </p>
           <ul className="ml-5 list-disc space-y-1">
             <li>Your email address, via our authentication provider (Supabase Auth).</li>
@@ -78,18 +78,7 @@ export default function PrivacyPage() {
             >
               Supabase
             </a>
-            , protected by row-level security so only you can ever read or write your own rows. If
-            you sign in with Google, that authentication is handled directly by{" "}
-            <a
-              href="https://policies.google.com/privacy"
-              target="_blank"
-              rel="noreferrer"
-              className="underline hover:text-[var(--heading)]"
-            >
-              Google
-            </a>
-            , per their own privacy policy — we only ever receive your email address and account
-            identifier from them, never your password.
+            , protected by row-level security so only you can ever read or write your own rows.
           </p>
         </section>
 
