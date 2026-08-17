@@ -96,7 +96,7 @@ export default function HistoryPage() {
             <strong className="text-[var(--heading)]">LeAnne DiMartino</strong>,{" "}
             <strong className="text-[var(--heading)]">Jennifer Monkiewicz</strong>,{" "}
             <strong className="text-[var(--heading)]">John Lich</strong>, and{" "}
-            <strong className="text-[var(--heading)]">Eric Peraino</strong> for settling the
+            <strong className="text-[var(--heading)]">Erin Peraino</strong> for settling the
             details of how this family actually plays it, which this app now plays by too.
           </p>
           <p className="mt-2">

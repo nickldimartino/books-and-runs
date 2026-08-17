@@ -419,7 +419,7 @@ export default function GamePage() {
           role="status"
           className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow-lg"
         >
-          It&apos;s {player.name}&apos;s turn!
+          It&apos;s Jenny&apos;s turn!
         </div>
       )}
 
