@@ -4,8 +4,20 @@ const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
 /**
- * One standard 52-card deck per 2 players, plus jokers, all shuffled together.
- * numDecks should be Math.ceil(playerCount / 2).
+ * At least 2 decks, scaling up roughly one deck per 2 players. A single
+ * deck only has 4 copies of any given rank — fine once 3+ players are
+ * splitting 2+ decks between them, but a real 2-player game running on
+ * just 1 deck can exhaust a specific rank's cards entirely across both
+ * hands, the draw pile, and the discard pile, deadlocking a round neither
+ * player can ever finish.
+ */
+export function decksForPlayerCount(playerCount: number): number {
+  return Math.max(2, Math.ceil(playerCount / 2));
+}
+
+/**
+ * One standard 52-card deck per numDecks, plus jokers, all shuffled
+ * together — see decksForPlayerCount for how numDecks is chosen.
  */
 export function buildDeck(numDecks: number): Card[] {
   const cards: Card[] = [];

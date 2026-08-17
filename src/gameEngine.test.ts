@@ -34,6 +34,18 @@ describe("createGame", () => {
     expect(state.selectedContracts).toBe(CONTRACTS);
   });
 
+  it("uses 2 decks even for just 2 players, not 1 — a single deck runs out of specific ranks too easily", () => {
+    const state = createGame([
+      { id: "p1", name: "A", isAI: false },
+      { id: "p2", name: "B", isAI: false },
+    ]);
+    const totalCards =
+      state.players.reduce((sum, p) => sum + p.hand.length, 0) +
+      state.drawPile.length +
+      state.discardPile.length;
+    expect(totalCards).toBe(108); // 2 decks, not ceil(2/2) = 1
+  });
+
   it("uses a custom contract list when one is given, instead of the full 7 rounds", () => {
     const state = createGame(
       [
@@ -71,6 +83,7 @@ describe("drawFromPile", () => {
     });
 
     const drawn = drawFromPile(state);
+    if (!drawn) throw new Error("expected a card, not a pile-exhaustion round end");
 
     // the old top card becomes the sole new discard pile card
     expect(state.discardPile).toEqual([top]);
@@ -78,6 +91,26 @@ describe("drawFromPile", () => {
     expect([bottom.id, middle.id]).toContain(drawn.id);
     expect(state.drawPile).toHaveLength(1);
     expect(state.players[0].hand).toHaveLength(1);
+  });
+
+  it("ends the round instead of drawing when both piles are truly exhausted", () => {
+    const p1 = makePlayer({ id: "p1", hand: makeHand(["3", "5"]), cumulativeScore: 10 });
+    const p2 = makePlayer({ id: "p2", hand: makeHand(["7"]), cumulativeScore: 20 });
+    const state = makeGameState({
+      players: [p1, p2],
+      currentPlayerIndex: 0,
+      drawPile: [],
+      discardPile: [makeCard("9", "clubs")], // only the top card — nothing to reshuffle
+    });
+
+    const drawn = drawFromPile(state);
+
+    expect(drawn).toBeNull();
+    expect(state.roundOver).toBe(true);
+    // No winner exemption — nobody actually went out, so every player
+    // (including whoever's turn it was) scores their hand as-is.
+    expect(state.players[0].cumulativeScore).toBe(20); // 10 + (5+5)
+    expect(state.players[1].cumulativeScore).toBe(25); // 20 + 5
   });
 });
 

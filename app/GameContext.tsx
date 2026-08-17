@@ -365,7 +365,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
 
-      let card: Card;
+      let card: Card | null;
       let actuallyFromDiscard = false;
       if (fromDiscard) {
         const got = drawFromDiscard(s);
@@ -377,6 +377,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       } else {
         card = drawFromPile(s);
+      }
+
+      // Null means the draw/discard piles were truly both exhausted —
+      // drawFromPile already ended the round itself (see gameEngine.ts).
+      // Nothing left to draw, so nothing to react to here except syncing
+      // the now-ended round to the UI.
+      if (!card) {
+        commit();
+        return;
       }
 
       if (isYou) {

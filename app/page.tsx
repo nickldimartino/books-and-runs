@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useGame } from "./GameContext";
 import { usePlayerLevel } from "./PlayerLevelContext";
@@ -9,12 +10,24 @@ import { usePlayerLevel } from "./PlayerLevelContext";
 export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
-  const { hasSavedGame, continueGame } = useGame();
+  const { hasSavedGame, continueGame, state } = useGame();
   const { level } = usePlayerLevel();
+  const [continuing, setContinuing] = useState(false);
+
+  // continueGame() sets GameContext's state synchronously, but navigating
+  // to /game immediately afterward isn't guaranteed to see that update —
+  // /game bounces straight back here the instant it renders with no state
+  // (see its own guard effect), so a real gap between the state actually
+  // committing and the route's first render reads as "the page flashed and
+  // stayed on Home." Waiting for `state` to actually show up here before
+  // navigating closes that gap regardless of its exact cause.
+  useEffect(() => {
+    if (continuing && state) router.push("/game");
+  }, [continuing, state, router]);
 
   function handleContinue() {
     continueGame();
-    router.push("/game");
+    setContinuing(true);
   }
 
   return (

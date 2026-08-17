@@ -67,6 +67,14 @@ export default function HistoryPage() {
             meld requirements. Both are recognizable relatives, but distant enough that most
             players wouldn&apos;t call them the same game.
           </p>
+          <p className="mt-2">
+            Phase 10 is the one most people reach for as a comparison, and the resemblance is real:
+            a fixed sequence of required combinations, one per round, that you must complete exactly
+            to advance while everyone else races to do the same. It isn&apos;t a Rummy variant at
+            all, though — Fundex/Mattel built it around its own proprietary deck of colored number
+            cards plus Wild and Skip cards, not a standard 52-card pack, and its ten phases are
+            fixed rather than reshuffled into a new order each time like a real deck would allow.
+          </p>
         </section>
 
         <section>
@@ -77,6 +85,23 @@ export default function HistoryPage() {
             of the game rather than any single official rulebook. Contract Rummy has never had one governing rule set; nearly every family
             that plays it has its own variant, and this is ours, built into a pass-and-play app
             with AI opponents standing in when you don&apos;t have enough players at the table.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Credits</h2>
+          <p>
+            The house rules this app is built on didn&apos;t come from a rulebook — they came from
+            years of actual games around an actual table. Thank you to{" "}
+            <strong className="text-[var(--heading)]">LeAnne DiMartino</strong>,{" "}
+            <strong className="text-[var(--heading)]">Jennifer Monkiewicz</strong>,{" "}
+            <strong className="text-[var(--heading)]">John Lich</strong>, and{" "}
+            <strong className="text-[var(--heading)]">Eric Peraino</strong> for settling the
+            details of how this family actually plays it, which this app now plays by too.
+          </p>
+          <p className="mt-2">
+            This app and website were built by{" "}
+            <strong className="text-[var(--heading)]">Nick DiMartino</strong>.
           </p>
         </section>
       </div>

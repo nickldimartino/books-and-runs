@@ -572,6 +572,14 @@ export function leftoverAfterMelds(hand: Card[], melds: Meld[]): Card[] {
  * checks both whether it fits its own natural "2" slot *and* whether it
  * fits as a generic wild, and returns the union — a 2 isn't restricted to
  * only the interpretation that happens to come first.
+ *
+ * A run can never end up with two wild-*acting* cards in a row — the same
+ * rule validateClassifiedGroup already enforces when a meld is first built
+ * (its hasConsecutiveGaps check). Laying off has to enforce it too: a wild
+ * card can extend an end only if the card currently there isn't itself
+ * standing in as a wild. A natural card (including a 2 sitting in its own
+ * "2" slot) is never "wild" for this purpose, so it's always fine next to
+ * either a natural or a wild.
  */
 export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
   if (meld.type === "book") {
@@ -587,6 +595,15 @@ export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
   const highOpen = end < RUN_ORDER.length - 1;
   const opts = new Set<"low" | "high">();
 
+  const isActingWild = (positionInMeld: number) => {
+    const c = meld.cards[positionInMeld];
+    if (!c.isWild) return false;
+    if (c.rank !== "2") return true; // Joker: always wild, no natural run slot
+    return runCardRank(meld, positionInMeld) !== "2";
+  };
+  const lowEndIsWild = isActingWild(0);
+  const highEndIsWild = isActingWild(meld.cards.length - 1);
+
   if (!card.isWild || card.rank === "2") {
     const suit = meld.cards.find((c) => !c.isWild)?.suit;
     if (card.suit === suit) {
@@ -597,8 +614,8 @@ export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
   }
 
   if (card.isWild) {
-    if (lowOpen) opts.add("low");
-    if (highOpen) opts.add("high");
+    if (lowOpen && !lowEndIsWild) opts.add("low");
+    if (highOpen && !highEndIsWild) opts.add("high");
   }
 
   return [...opts];

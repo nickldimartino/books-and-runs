@@ -591,6 +591,47 @@ describe("layOffOptions", () => {
     // only works because a 2 can also serve as a generic wild there.
     expect(layOffOptions(makeCard("2", "diamonds"), run)).toEqual(["low", "high"]);
   });
+
+  it("refuses to lay a wild onto an end already occupied by a wild — no two wilds in a row", () => {
+    const run: Meld = {
+      id: "run10",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 4, // "5"
+      cards: [
+        ...makeHand([
+          ["5", "diamonds"],
+          ["6", "diamonds"],
+          ["7", "diamonds"],
+        ]),
+        makeCard("JOKER", "joker"), // wild, filling the "8" slot
+      ],
+    };
+    // Low end ("4") is open and touches a natural card — fine. High end
+    // ("9") is open too, but the card already there (the Joker) is itself
+    // wild, so stacking another wild on top of it would make two in a row.
+    expect(layOffOptions(makeCard("JOKER", "joker"), run)).toEqual(["low"]);
+  });
+
+  it("still allows a wild next to a 2 that's sitting in its own natural '2' slot", () => {
+    const run: Meld = {
+      id: "run11",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 1, // "2" — the low end is this 2's own natural slot, not a stand-in
+      cards: [
+        makeCard("2", "diamonds"),
+        makeCard("3", "diamonds"),
+        makeCard("4", "diamonds"),
+        makeCard("5", "diamonds"),
+      ],
+    };
+    // The "2" is a natural card here, not an acting wild, so a wild is
+    // still free to extend past it into the "A" slot — this rule only ever
+    // blocks wild next to wild, never wild next to a natural (even a
+    // dual-purpose one).
+    expect(layOffOptions(makeCard("JOKER", "joker"), run)).toEqual(["low", "high"]);
+  });
 });
 
 describe("solveWholeHandContract", () => {

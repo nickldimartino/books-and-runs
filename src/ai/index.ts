@@ -34,12 +34,16 @@ export function playAITurn(state: GameState): void {
   const strategy = STRATEGIES[player.difficulty ?? "medium"];
 
   const wantsDiscard = state.discardPile.length > 0 && strategy.wantsDiscardPileDraw(state, player);
+  let drew = true;
   if (wantsDiscard) {
     const got = drawFromDiscard(state);
-    if (!got) drawFromPile(state);
+    if (!got) drew = drawFromPile(state) !== null;
   } else {
-    drawFromPile(state);
+    drew = drawFromPile(state) !== null;
   }
+  // A null draw means the pile was truly exhausted and drawFromPile already
+  // ended the round itself — nothing left for this turn to do.
+  if (!drew) return;
 
   attemptMeldContract(state); // always attempt; melding is essentially always beneficial here
 

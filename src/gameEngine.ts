@@ -1,4 +1,4 @@
-import { buildDeck, deal, shuffle } from "./deck";
+import { buildDeck, deal, decksForPlayerCount, shuffle } from "./deck";
 import {
   layOffOptions,
   leftoverAfterMelds,
@@ -24,7 +24,7 @@ export interface PlayerConfig {
  * through whatever was selected, not the original round numbers.
  */
 export function createGame(playerConfigs: PlayerConfig[], contracts: ContractRequirement[] = CONTRACTS): GameState {
-  const numDecks = Math.ceil(playerConfigs.length / 2);
+  const numDecks = decksForPlayerCount(playerConfigs.length);
   const deck = buildDeck(numDecks);
   const { hands, drawPile, discardPile } = deal(deck, playerConfigs.length);
 
@@ -61,9 +61,21 @@ function currentPlayer(state: GameState): Player {
   return state.players[state.currentPlayerIndex];
 }
 
-/** Draw one card from the draw pile, reshuffling the discard pile in if needed. */
-export function drawFromPile(state: GameState): Card {
+/**
+ * Draw one card from the draw pile, reshuffling the discard pile in if
+ * needed. Returns null (and ends the round instead, everyone scoring their
+ * current hand) if there's truly nothing left to draw anywhere — every
+ * remaining card is either in a hand or already melded on the table. Only
+ * possible with a small deck and enough of it already played out; without
+ * this check, reshuffling an empty discard pile would silently hand out an
+ * undefined "card" instead.
+ */
+export function drawFromPile(state: GameState): Card | null {
   if (state.drawPile.length === 0) {
+    if (state.discardPile.length <= 1) {
+      endRound(state, null);
+      return null;
+    }
     const top = state.discardPile.pop()!;
     state.drawPile = shuffle(state.discardPile);
     state.discardPile = [top];
@@ -281,7 +293,10 @@ export function discardAndAdvance(state: GameState, cardId: string): boolean {
   return false;
 }
 
-function endRound(state: GameState, winnerId: string) {
+/** winnerId null means nobody's exempted — everyone scores their current
+ * hand's penalty, for the rare case a round ends with no one going out
+ * (see drawFromPile). */
+function endRound(state: GameState, winnerId: string | null) {
   for (const p of state.players) {
     if (p.id !== winnerId) {
       p.cumulativeScore += handPenalty(p.hand);
@@ -301,7 +316,7 @@ export function startNextRound(state: GameState): GameState {
   if (!state.roundOver || state.gameOver) return state;
 
   const nextRound = state.round + 1;
-  const numDecks = Math.ceil(state.players.length / 2);
+  const numDecks = decksForPlayerCount(state.players.length);
   const deck = buildDeck(numDecks);
   const { hands, drawPile, discardPile } = deal(deck, state.players.length);
 

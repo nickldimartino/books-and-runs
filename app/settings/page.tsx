@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
-import { OfflineStatus } from "../components/OfflineStatus";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
 import { supabase } from "../lib/supabaseClient";
@@ -249,8 +248,6 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
-
-          <OfflineStatus />
         </>
       )}
 
