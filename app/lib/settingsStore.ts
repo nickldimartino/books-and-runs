@@ -16,6 +16,9 @@ export interface HouseSettings {
   // Show the "Player activity this round" table (latest discard/pickup per
   // player) on the game board.
   showPlayerActivity: boolean;
+  // Show the "Who's turn is it?" button on the game board, which pops up a
+  // brief on-screen reminder of whose turn it currently is.
+  showWhoseTurn: boolean;
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
@@ -24,6 +27,7 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   groupMeldsByType: true,
   highlightLayoffs: true,
   showPlayerActivity: true,
+  showWhoseTurn: true,
 };
 
 export function loadLocalSettings(): HouseSettings {

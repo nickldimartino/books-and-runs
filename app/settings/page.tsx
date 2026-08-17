@@ -221,6 +221,13 @@ export default function SettingsPage() {
             description="Show the collapsible 'Player activity this round' table on the game board, with each player's latest discard and discard-pile pickup."
           />
 
+          <BoolToggle
+            label="“Who's turn is it?” button"
+            value={settings.showWhoseTurn}
+            onChange={(v) => setSettings((s) => ({ ...s, showWhoseTurn: v }))}
+            description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
+          />
+
           <div className="flex flex-col gap-2">
             <button
               onClick={handleSave}

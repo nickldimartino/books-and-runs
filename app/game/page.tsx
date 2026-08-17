@@ -82,7 +82,21 @@ export default function GamePage() {
   const [activityOpen, setActivityOpen] = useState(() => isTutorial);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
+  const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
   const prevHasDrawnRef = useRef(hasDrawn);
+  const whoseTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (whoseTurnTimeoutRef.current) clearTimeout(whoseTurnTimeoutRef.current);
+    };
+  }, []);
+
+  function handleShowWhoseTurn() {
+    setWhoseTurnVisible(true);
+    if (whoseTurnTimeoutRef.current) clearTimeout(whoseTurnTimeoutRef.current);
+    whoseTurnTimeoutRef.current = setTimeout(() => setWhoseTurnVisible(false), 5000);
+  }
 
   useEffect(() => {
     if (!state) router.replace("/");
@@ -236,6 +250,7 @@ export default function GamePage() {
   const groupMeldsByType = isTutorial || savedSettings.groupMeldsByType;
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showPlayerActivity = isTutorial || savedSettings.showPlayerActivity;
+  const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -352,13 +367,32 @@ export default function GamePage() {
         >
           ← Home
         </button>
-        <Link
-          href="/how-to-play"
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          How to play
-        </Link>
+        <div className="flex items-center gap-2">
+          {showWhoseTurn && (
+            <button
+              onClick={handleShowWhoseTurn}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            >
+              Who&apos;s turn is it?
+            </button>
+          )}
+          <Link
+            href="/how-to-play"
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            How to play
+          </Link>
+        </div>
       </div>
+
+      {whoseTurnVisible && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow-lg"
+        >
+          It&apos;s {player.name}&apos;s turn!
+        </div>
+      )}
 
       <header
         data-tutorial="round-header"
