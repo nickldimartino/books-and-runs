@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
-import { PlayingCard } from "../components/PlayingCard";
+import { cardLabel, PlayingCard } from "../components/PlayingCard";
 import { DraggableHand } from "../components/DraggableHand";
 import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
@@ -83,6 +83,7 @@ export default function GamePage() {
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
   const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState<Card | null>(null);
   const prevHasDrawnRef = useRef(hasDrawn);
   const whoseTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,7 +108,19 @@ export default function GamePage() {
     setPendingGroups([]);
     setGroupError(null);
     setPendingLayOff(null);
+    setConfirmingDiscard(null);
   }, [state?.currentPlayerIndex, state?.round]);
+
+  // If the selection changes out from under a pending confirmation (the
+  // only way that can happen here is the defensive card-not-found guard in
+  // handleDiscardSelected, but this keeps the two states from ever
+  // silently diverging), drop the stale confirmation rather than let it
+  // reference a card no longer selected.
+  useEffect(() => {
+    if (confirmingDiscard && !selectedCardIds.includes(confirmingDiscard.id)) {
+      setConfirmingDiscard(null);
+    }
+  }, [selectedCardIds, confirmingDiscard]);
 
   // Fires exactly once per false→true transition, since these are plain
   // booleans in the dep array — a game-over round is also round-over, so
@@ -313,11 +326,27 @@ export default function GamePage() {
     setSelectedCardIds([]);
   }
 
+  // A confirmation step before the one action that actually ends a turn —
+  // not an undo (nothing done earlier this turn can be reversed), just a
+  // last check before handing the device to the next player or passing a
+  // turn that can't be taken back.
   function handleDiscardSelected() {
     if (selectedCardIds.length !== 1) return;
-    discard(selectedCardIds[0]);
+    const card = player.hand.find((c) => c.id === selectedCardIds[0]);
+    if (!card) return;
+    setConfirmingDiscard(card);
+  }
+
+  function confirmDiscard() {
+    if (!confirmingDiscard) return;
+    discard(confirmingDiscard.id);
+    setConfirmingDiscard(null);
     setSelectedCardIds([]);
     setPendingLayOff(null);
+  }
+
+  function cancelDiscard() {
+    setConfirmingDiscard(null);
   }
 
   function handleGroupSelected() {
@@ -678,13 +707,33 @@ export default function GamePage() {
           )}
 
           <section data-tutorial="discard-btn" className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={handleDiscardSelected}
-              disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
-              className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Discard selected card
-            </button>
+            {confirmingDiscard ? (
+              <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
+                <span className="text-sm text-[var(--muted)]">
+                  Discard the {cardLabel(confirmingDiscard)} and end your turn?
+                </span>
+                <button
+                  onClick={confirmDiscard}
+                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={cancelDiscard}
+                  className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleDiscardSelected}
+                disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
+                className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Discard selected card
+              </button>
+            )}
           </section>
 
           <section data-tutorial="hand">

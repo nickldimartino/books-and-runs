@@ -119,7 +119,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: "discard",
     target: ["discard-btn", "hand"],
     title: "End your turn",
-    body: 'Tap one more card in your hand, then tap "Discard selected card" to finish your turn.',
+    body: 'Tap one more card in your hand, then tap "Discard selected card," then "Confirm" to finish your turn.',
     gate: { type: "discarded" },
   },
   {
