@@ -99,8 +99,19 @@ export default function GamePage() {
     whoseTurnTimeoutRef.current = setTimeout(() => setWhoseTurnVisible(false), 5000);
   }
 
+  // Only bounces home for a *genuinely* orphaned visit to /game — landing
+  // here with no active game at all (a stale bookmark, a direct URL visit).
+  // Once a real game has been loaded, this must stay quiet if state later
+  // goes back to null: that's exactly what happens when Play
+  // again/Home/quitting a tutorial fire — they null the state via
+  // quitToHome() and then explicitly navigate themselves. Redirecting home
+  // here too raced that explicit navigation (this effect fires on the
+  // resulting re-render, after the explicit router.push already went out,
+  // so it could — and did — overwrite "Play again"'s destination with "/").
+  const everHadStateRef = useRef(false);
+  if (state) everHadStateRef.current = true;
   useEffect(() => {
-    if (!state) router.replace("/");
+    if (!state && !everHadStateRef.current) router.replace("/");
   }, [state, router]);
 
   useEffect(() => {

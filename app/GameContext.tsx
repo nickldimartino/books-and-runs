@@ -464,8 +464,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // finishIfWentOut only ever ends the round by declaring *this* current
+      // player the round's winner (see endRound(state, player.id) inside
+      // it) — wentOut being true already means "you just won this round."
+      // state.winnerId is a different thing entirely: the whole *game's*
+      // winner, which endRound only ever sets on the final round (see its
+      // own comment) — checking it here meant these counters could only
+      // ever bump on whichever round happened to be the game's last one.
       const wentOut = finishIfWentOut(s);
-      if (isYou && wentOut && s.winnerId === player.id) {
+      if (isYou && wentOut) {
         bump("rounds_won");
         bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
       }
@@ -494,8 +501,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
           if (meld.ownerId !== player.id) bump("laid_off_onto_opponent");
           if (wasAmbiguous) bump("ambiguous_wild_choices_made");
         }
+        // See the identical comment in confirmMeld — wentOut alone already
+        // means you won this round; state.winnerId is the game's overall
+        // winner, a different and unrelated thing.
         const wentOut = finishIfWentOut(s);
-        if (isYou && wentOut && s.winnerId === player.id) {
+        if (isYou && wentOut) {
           const contract = s.selectedContracts[s.round - 1];
           bump("rounds_won");
           bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
@@ -567,7 +577,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const roundEnded = discardAndAdvance(s, cardId);
       if (isYou) {
         bump("cards_discarded");
-        if (roundEnded && s.winnerId === player.id) {
+        // discardAndAdvance only ever ends the round for the player whose
+        // turn it currently is (endRound(state, player.id) inside it) — see
+        // the identical comment in confirmMeld/layOff for why this used to
+        // check state.winnerId (the game's overall winner) instead, which
+        // meant this could only ever fire on a game's actual last round —
+        // impossible for "Just in Time" specifically, since the real final
+        // round (3 Runs) never has a discard to trigger it with at all.
+        if (roundEnded) {
           bump("rounds_won");
           bump("rounds_won_via_discard");
         }
