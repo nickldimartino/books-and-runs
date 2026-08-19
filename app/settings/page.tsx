@@ -63,6 +63,11 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   pastel: { bg: "#eef1fb", panel: "#ffffff", accent: "#ef8b6b", heading: "#3c5e82" },
   casino: { bg: "#170a0a", panel: "#2b1010", accent: "#d4af37", heading: "#e9c46a" },
   arcade: { bg: "#14092b", panel: "#1f1147", accent: "#33e6c9", heading: "#ff5fb0" },
+  noir: { bg: "#0d0d0d", panel: "#1c1c1c", accent: "#e8e8e8", heading: "#f5f5f5" },
+  sakura: { bg: "#fdf1f5", panel: "#ffffff", accent: "#d63868", heading: "#7a2142" },
+  ember: { bg: "#0f0906", panel: "#1e120a", accent: "#ff5a1f", heading: "#ff9552" },
+  lagoon: { bg: "#04211f", panel: "#0a3634", accent: "#ff6f91", heading: "#ffe3ec" },
+  sahara: { bg: "#2a1810", panel: "#3d2517", accent: "#2fb6a8", heading: "#f4c78a" },
 };
 
 export default function SettingsPage() {
@@ -133,7 +138,7 @@ export default function SettingsPage() {
         <>
           <section className="flex flex-col gap-2">
             <label className="text-sm font-medium text-[var(--muted)]">Theme</label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-5 gap-2">
               {THEMES.map((t) => {
                 const swatch = THEME_SWATCHES[t.id];
                 const active = theme === t.id;
@@ -141,35 +146,34 @@ export default function SettingsPage() {
                   <button
                     key={t.id}
                     onClick={() => handleThemeChange(t.id)}
-                    className={`flex items-center gap-3 rounded-lg border px-3 py-3 text-left transition ${
-                      active
-                        ? "border-[var(--accent)] bg-[var(--panel)]"
-                        : "border-[var(--border)] bg-[var(--panel)]/80 hover:bg-[var(--panel)]"
-                    }`}
+                    title={t.name}
+                    className="flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-[var(--panel)]"
                   >
                     <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)]"
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition ${
+                        active ? "border-[var(--accent)]" : "border-transparent"
+                      }`}
                       style={{ background: swatch.bg }}
-                      aria-hidden
                     >
                       <span
-                        className="h-6 w-6 rounded-full border"
+                        className="h-5 w-5 rounded-full border"
                         style={{ background: swatch.panel, borderColor: swatch.accent }}
                       />
                     </span>
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-sm font-semibold" style={{ color: active ? "var(--heading)" : "var(--text)" }}>
-                        {t.name}
-                        {active && <span className="ml-1.5 text-xs font-normal text-[var(--accent)]">(active)</span>}
-                      </span>
-                      <span className="text-xs text-[var(--faint)]">{t.description}</span>
+                    <span
+                      className="max-w-full truncate text-[10px] font-medium leading-tight"
+                      style={{ color: active ? "var(--accent)" : "var(--faint)" }}
+                    >
+                      {t.name}
                     </span>
                   </button>
                 );
               })}
             </div>
             <p className="text-xs text-[var(--faint)]">
-              Applies immediately and stays on this device — it doesn&apos;t sync to your account.
+              <span className="font-semibold text-[var(--muted)]">{THEMES.find((t) => t.id === theme)?.name}</span>{" "}
+              — {THEMES.find((t) => t.id === theme)?.description} Applies immediately and stays on this device — it
+              doesn&apos;t sync to your account.
             </p>
           </section>
 

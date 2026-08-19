@@ -5,6 +5,7 @@ import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
 import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 import { SettingsSync } from "./SettingsSync";
+import { THEMES } from "./lib/themeStore";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,8 +28,13 @@ export const viewport: Viewport = {
 
 // Applies a previously-chosen theme before first paint, so static export's
 // server-rendered (theme-less) HTML doesn't flash Midnight before swapping
-// to whatever the visitor picked last time.
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("booksAndRuns:theme");if(["midnight","daylight","pastel","casino","arcade"].indexOf(t)!==-1){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+// to whatever the visitor picked last time. The allow-list is generated
+// from THEMES itself (not hand-copied) so adding a theme there can never
+// again silently leave this check stale — a stale list here meant a saved
+// theme applied fine within a session (applyTheme sets the attribute
+// directly) but silently reverted to Midnight on every full page load.
+const THEME_IDS_JSON = JSON.stringify(THEMES.map((t) => t.id));
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("booksAndRuns:theme");if(${THEME_IDS_JSON}.indexOf(t)!==-1){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

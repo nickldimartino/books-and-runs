@@ -1,4 +1,14 @@
-export type ThemeId = "midnight" | "daylight" | "pastel" | "casino" | "arcade";
+export type ThemeId =
+  | "midnight"
+  | "daylight"
+  | "pastel"
+  | "casino"
+  | "arcade"
+  | "noir"
+  | "sakura"
+  | "ember"
+  | "lagoon"
+  | "sahara";
 
 export interface ThemeOption {
   id: ThemeId;
@@ -12,6 +22,11 @@ export const THEMES: ThemeOption[] = [
   { id: "pastel", name: "Pastel Deck", description: "Periwinkle, coral, and mint — soft and easy on the eyes." },
   { id: "casino", name: "Casino Royale", description: "Deep red and gold, dramatic high-roller felt." },
   { id: "arcade", name: "Retro Arcade", description: "Neon cyan and pink on a synthwave purple table." },
+  { id: "noir", name: "Film Noir", description: "Strictly black, white, and grey — an old movie's card table." },
+  { id: "sakura", name: "Sakura", description: "Cherry-blossom pink and white with a deep crimson accent." },
+  { id: "ember", name: "Obsidian Ember", description: "Volcanic black with a molten orange-red glow." },
+  { id: "lagoon", name: "Coral Lagoon", description: "Deep tropical teal with a vivid coral-pink accent." },
+  { id: "sahara", name: "Sahara Dusk", description: "Warm desert terracotta cooling into a teal evening sky." },
 ];
 
 export const DEFAULT_THEME: ThemeId = "midnight";

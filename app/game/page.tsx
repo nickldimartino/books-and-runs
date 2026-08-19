@@ -17,6 +17,7 @@ import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
+import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
 import { Card, Meld } from "@/types";
 
@@ -751,6 +752,9 @@ export default function GamePage() {
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+                <span className="ml-2 font-normal normal-case text-[var(--muted)]">
+                  ({handPenalty(player.hand)} pts)
+                </span>
                 {player.hasMeldedContract && (
                   <span className="ml-2 text-[var(--accent)]">— contract melded</span>
                 )}

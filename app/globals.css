@@ -125,6 +125,133 @@
   --card-wild-text: #7a4a02;
 }
 
+[data-theme="noir"] {
+  /* Deliberately, strictly greyscale — no hue anywhere, including the card
+     faces themselves (card-red is a dark grey ink, not red), except a
+     small, semantically necessary red kept for --danger so error text
+     doesn't lose its universal "something's wrong" signal. */
+  --bg: #0d0d0d;
+  --panel: #1c1c1c;
+  --panel-soft: #161616;
+  --elevated: #262626;
+  --elevated-hover: #333333;
+  --border: rgba(255, 255, 255, 0.16);
+  --heading: #f5f5f5;
+  --text: #e8e8e8;
+  --muted: rgba(232, 232, 232, 0.72);
+  --faint: rgba(232, 232, 232, 0.42);
+  --accent: #e8e8e8;
+  --accent-hover: #ffffff;
+  --on-accent: #0d0d0d;
+  --danger: #ef7a7a;
+  --highlight: #b3b3b3;
+  --card-bg: #fafafa;
+  --card-text: #111111;
+  --card-red: #555555;
+  --card-wild-bg: #d9d9d9;
+  --card-wild-text: #1a1a1a;
+}
+
+[data-theme="sakura"] {
+  /* Cherry blossom: pale pink and white with a deep crimson accent and a
+     soft jade-green highlight standing in for a blossom branch. */
+  --bg: #fdf1f5;
+  --panel: #ffffff;
+  --panel-soft: #fbe4ec;
+  --elevated: #f7d3e0;
+  --elevated-hover: #f2c0d3;
+  --border: rgba(107, 33, 55, 0.14);
+  --heading: #7a2142;
+  --text: #4a2233;
+  --muted: rgba(74, 34, 51, 0.68);
+  --faint: rgba(74, 34, 51, 0.42);
+  --accent: #d63868;
+  --accent-hover: #c22a58;
+  --on-accent: #fff5f8;
+  --danger: #c0392b;
+  --highlight: #6fa887;
+  --card-bg: #ffffff;
+  --card-text: #3a1f2c;
+  --card-red: #b8264f;
+  --card-wild-bg: #fde3ec;
+  --card-wild-text: #8a2846;
+}
+
+[data-theme="ember"] {
+  /* Volcanic obsidian: near-black warm charcoal with a molten orange-red
+     accent, like lava glowing through cracked rock. */
+  --bg: #0f0906;
+  --panel: #1e120a;
+  --panel-soft: #170d07;
+  --elevated: #2c1a0e;
+  --elevated-hover: #3a2212;
+  --border: rgba(255, 158, 87, 0.18);
+  --heading: #ff9552;
+  --text: #f5e6d8;
+  --muted: rgba(245, 230, 216, 0.72);
+  --faint: rgba(245, 230, 216, 0.42);
+  --accent: #ff5a1f;
+  --accent-hover: #ff7a45;
+  --on-accent: #1a0800;
+  --danger: #ff4d4d;
+  --highlight: #ffcc4d;
+  --card-bg: #fdf6ef;
+  --card-text: #241209;
+  --card-red: #c23b1f;
+  --card-wild-bg: #ffe1b3;
+  --card-wild-text: #7a3a06;
+}
+
+[data-theme="lagoon"] {
+  /* Coral reef: deep teal lagoon water with a vivid coral-pink accent and a
+     bright turquoise highlight for contrast. */
+  --bg: #04211f;
+  --panel: #0a3634;
+  --panel-soft: #082a28;
+  --elevated: #114945;
+  --elevated-hover: #185f59;
+  --border: rgba(255, 214, 224, 0.16);
+  --heading: #ffe3ec;
+  --text: #e3f6f2;
+  --muted: rgba(227, 246, 242, 0.72);
+  --faint: rgba(227, 246, 242, 0.42);
+  --accent: #ff6f91;
+  --accent-hover: #ff8aa8;
+  --on-accent: #2b0410;
+  --danger: #ff6161;
+  --highlight: #4fd8c4;
+  --card-bg: #fbfffe;
+  --card-text: #063230;
+  --card-red: #d1476b;
+  --card-wild-bg: #cdf3ec;
+  --card-wild-text: #0a5c53;
+}
+
+[data-theme="sahara"] {
+  /* Desert dusk: warm terracotta sand with a cool teal accent — the classic
+     complementary pairing of a desert sky cooling off after sunset. */
+  --bg: #2a1810;
+  --panel: #3d2517;
+  --panel-soft: #331f13;
+  --elevated: #4f3320;
+  --elevated-hover: #614029;
+  --border: rgba(255, 214, 165, 0.16);
+  --heading: #f4c78a;
+  --text: #f2e4d3;
+  --muted: rgba(242, 228, 211, 0.72);
+  --faint: rgba(242, 228, 211, 0.42);
+  --accent: #2fb6a8;
+  --accent-hover: #45cabc;
+  --on-accent: #04211d;
+  --danger: #e2604f;
+  --highlight: #e0a458;
+  --card-bg: #fdf7ee;
+  --card-text: #2c1a10;
+  --card-red: #b8482f;
+  --card-wild-bg: #f3ddb3;
+  --card-wild-text: #6b3d0f;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
