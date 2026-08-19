@@ -13,6 +13,7 @@ import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
+import { loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
@@ -74,6 +75,7 @@ export default function GamePage() {
     respondToBuy,
     advanceRound,
     quitToHome,
+    continueGame,
   } = useGame();
   const { level } = usePlayerLevel();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -109,11 +111,27 @@ export default function GamePage() {
   // here too raced that explicit navigation (this effect fires on the
   // resulting re-render, after the explicit router.push already went out,
   // so it could — and did — overwrite "Play again"'s destination with "/").
+  //
+  // Before giving up, though, try loading a saved game directly: Home's
+  // "Continue Local Game" loads the game into memory and then navigates
+  // here client-side, but if that navigation's own fetch fails for any
+  // reason — including, per sw.js, the service worker mishandling it —
+  // Next falls back to a real browser navigation instead of a smooth SPA
+  // transition. A real navigation restarts every React provider from
+  // scratch, wiping the just-loaded in-memory game before this page ever
+  // saw it, which read as "Continue reloads and dumps me back on Home."
+  // Recovering straight from localStorage here means it doesn't matter
+  // whether the trip over was a smooth transition or a hard reload.
   const everHadStateRef = useRef(false);
   if (state) everHadStateRef.current = true;
   useEffect(() => {
-    if (!state && !everHadStateRef.current) router.replace("/");
-  }, [state, router]);
+    if (state || everHadStateRef.current) return;
+    if (loadSavedGame()) {
+      continueGame();
+    } else {
+      router.replace("/");
+    }
+  }, [state, continueGame, router]);
 
   useEffect(() => {
     setSelectedCardIds([]);
