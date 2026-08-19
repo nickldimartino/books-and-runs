@@ -13,7 +13,7 @@ import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
-import { loadSavedGame } from "../lib/localSave";
+import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
@@ -76,6 +76,7 @@ export default function GamePage() {
     advanceRound,
     quitToHome,
     continueGame,
+    startTutorialGame,
   } = useGame();
   const { level } = usePlayerLevel();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -122,16 +123,37 @@ export default function GamePage() {
   // saw it, which read as "Continue reloads and dumps me back on Home."
   // Recovering straight from localStorage here means it doesn't matter
   // whether the trip over was a smooth transition or a hard reload.
+  // A tutorial start hits this same gap but can't be recovered from
+  // localStorage — persist() deliberately never saves a tutorial (see its
+  // isTutorialRef guard). New Game sets a small sessionStorage marker right
+  // before starting one specifically so this can tell "a tutorial start
+  // landed here with nothing to show" apart from "genuinely nothing going
+  // on" — and since the tutorial is always the same fixed, scripted deal
+  // (src/tutorial.ts), restarting it fresh here loses nothing real.
   const everHadStateRef = useRef(false);
   if (state) everHadStateRef.current = true;
+  // Guards the whole recovery attempt separately from state/everHadStateRef,
+  // both of which only update on the *next* render — React's dev-mode
+  // Strict Mode runs a freshly-mounted effect twice back to back with no
+  // render in between, so both invocations would otherwise see the same
+  // stale (still-null) state. That's harmless for continueGame(), which
+  // just re-reads localStorage each time, but consumeTutorialStartingFlag()
+  // deliberately consumes the flag on read — the second invocation would
+  // find it already gone and fall through to redirecting home, undoing
+  // whatever the first invocation just started. Setting this ref
+  // synchronously as the first line of the effect body closes that gap.
+  const recoveryAttemptedRef = useRef(false);
   useEffect(() => {
-    if (state || everHadStateRef.current) return;
+    if (state || everHadStateRef.current || recoveryAttemptedRef.current) return;
+    recoveryAttemptedRef.current = true;
     if (loadSavedGame()) {
       continueGame();
+    } else if (consumeTutorialStartingFlag()) {
+      startTutorialGame();
     } else {
       router.replace("/");
     }
-  }, [state, continueGame, router]);
+  }, [state, continueGame, startTutorialGame, router]);
 
   useEffect(() => {
     setSelectedCardIds([]);

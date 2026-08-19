@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useGame } from "../GameContext";
+import { markTutorialStarting } from "../lib/localSave";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { PlayerConfig } from "@/gameEngine";
 import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
@@ -97,6 +98,7 @@ export default function NewGamePage() {
   function handleStart() {
     if (!canStart) return;
     if (roundMode === "tutorial") {
+      markTutorialStarting();
       startTutorialGame();
       router.push("/game");
       return;

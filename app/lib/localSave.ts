@@ -44,3 +44,33 @@ export function clearSavedGame(): void {
     // ignore
   }
 }
+
+// A tutorial game deliberately never touches SAVE_KEY (see GameContext.tsx's
+// persist()), so /game's "recover from localStorage if a navigation here
+// landed with no in-memory state" fallback has nothing to find for one.
+// This is a much smaller, ephemeral signal for exactly that one case: the
+// tutorial is a fixed, scripted deal (see src/tutorial.ts), so "recovering"
+// it just means starting it fresh again — nothing real to lose. sessionStorage
+// (not localStorage) since this should never survive past the current tab.
+const TUTORIAL_STARTING_KEY = "booksAndRuns:tutorialStarting";
+
+export function markTutorialStarting(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(TUTORIAL_STARTING_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
+/** Reads and clears the flag in one step — it's only ever meant to be acted on once. */
+export function consumeTutorialStartingFlag(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const was = window.sessionStorage.getItem(TUTORIAL_STARTING_KEY) === "1";
+    window.sessionStorage.removeItem(TUTORIAL_STARTING_KEY);
+    return was;
+  } catch {
+    return false;
+  }
+}
