@@ -905,13 +905,6 @@ export default function GamePage() {
                 >
                   Sort by rank
                 </button>
-                <button
-                  onClick={() => sortHand("value")}
-                  title="Order cards from lowest to highest point value — good for planning discards"
-                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                >
-                  Sort by value
-                </button>
               </div>
             </div>
             <DraggableHand
