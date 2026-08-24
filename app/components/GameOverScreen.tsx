@@ -2,15 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { allAchievements } from "@/achievements";
 import { Difficulty, GameState } from "@/types";
-import { DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
+import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 interface XpLineItem {
   label: string;
@@ -32,6 +38,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
   // whatever's already stored rather than overwriting.
   const gameResultDoneRef = useRef(false);
   const achievementDoneRef = useRef(false);
+  // Snapshot of achievement progress from immediately before this game's
+  // writes land — captured once (a retry after a partial failure must reuse
+  // it, not re-snapshot, or a partially-applied write would look like the
+  // pre-game baseline and hide whatever it already unlocked). Used only to
+  // name which specific achievements this game unlocked; best-effort — see
+  // the fallback in attemptSave if this or the after-snapshot fails.
+  const beforeAchievementsRef = useRef<Awaited<ReturnType<typeof loadAchievementProgressState>> | null>(null);
   const [gameId] = useState(() => crypto.randomUUID());
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [xpGained, setXpGained] = useState<number | null>(null);
@@ -55,6 +68,14 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // against once recordGameResult/recordAchievementProgress land.
     const beforeXp = level?.totalXp ?? 0;
     const beforeLevel = level?.level ?? 0;
+
+    if (!beforeAchievementsRef.current) {
+      try {
+        beforeAchievementsRef.current = await loadAchievementProgressState(supabase, user.id);
+      } catch (err) {
+        console.error("Failed to snapshot pre-game achievement progress:", err);
+      }
+    }
 
     const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
     const counters = { ...getSessionCounters() };
@@ -122,14 +143,39 @@ export function GameOverScreen({ state }: { state: GameState }) {
     if (after) {
       const gained = Math.max(0, after.totalXp - beforeXp);
       setXpGained(gained);
-      // Whatever's left once the known per-game sources are accounted
-      // for must be from achievement tiers newly unlocked this game.
+      // Whatever's left once the known per-game sources are accounted for
+      // must be from achievement tiers newly unlocked this game — used as
+      // the fallback total if naming them individually below doesn't work
+      // out, so the XP is never just silently unaccounted for.
       const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
       const achievementBonus = Math.max(0, gained - knownTotal);
+
+      let achievementLines: XpLineItem[] = [];
+      if (achievementBonus > 0 && beforeAchievementsRef.current) {
+        try {
+          const afterProgress = await loadAchievementProgressState(supabase, user.id);
+          const beforeUnlocked = new Set(
+            allAchievements(beforeAchievementsRef.current)
+              .filter((a) => a.unlocked)
+              .map((a) => `${a.familyId}:${a.tier}`)
+          );
+          achievementLines = allAchievements(afterProgress)
+            .filter((a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`))
+            .map((a) => ({
+              label: `${a.familyTitle} (${capitalize(a.tier)})`,
+              amount: ACHIEVEMENT_TIER_XP[a.tier],
+            }));
+        } catch (err) {
+          console.error("Failed to determine which achievements this game unlocked:", err);
+        }
+      }
+
       setXpBreakdown(
-        achievementBonus > 0
-          ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
-          : breakdown
+        achievementLines.length > 0
+          ? [...breakdown, ...achievementLines]
+          : achievementBonus > 0
+            ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
+            : breakdown
       );
       if (after.level > beforeLevel) setLeveledUpTo(after.level);
     }

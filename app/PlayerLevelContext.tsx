@@ -1,20 +1,10 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
-import { AchievementProgressState, EMPTY_PROGRESS_STATE } from "@/achievements";
 import { levelProgress, LevelProgress } from "@/leveling";
 import { useAuth } from "./AuthContext";
+import { loadAchievementProgressState } from "./lib/loadAchievementProgress";
 import { supabase } from "./lib/supabaseClient";
-
-interface PlayerStatsRow {
-  games_played: number;
-  games_won: number;
-  wins_by_difficulty: Record<string, number>;
-}
-
-interface AchievementCountersRow {
-  counters: Record<string, number>;
-}
 
 interface PlayerLevelContextValue {
   level: LevelProgress | null;
@@ -41,37 +31,18 @@ export function PlayerLevelProvider({ children }: { children: ReactNode }) {
   const [level, setLevel] = useState<LevelProgress | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback((): Promise<LevelProgress | null> => {
+  const load = useCallback(async (): Promise<LevelProgress | null> => {
     if (!supabase || !user) {
       setLevel(null);
       setLoading(false);
-      return Promise.resolve(null);
+      return null;
     }
     setLoading(true);
-    return Promise.all([
-      supabase
-        .from("player_stats")
-        .select("games_played, games_won, wins_by_difficulty")
-        .eq("user_id", user.id)
-        .maybeSingle<PlayerStatsRow>(),
-      supabase
-        .from("achievement_counters")
-        .select("counters")
-        .eq("user_id", user.id)
-        .maybeSingle<AchievementCountersRow>(),
-    ]).then(([statsRes, countersRes]) => {
-      const state: AchievementProgressState = {
-        ...EMPTY_PROGRESS_STATE,
-        counters: countersRes.data?.counters ?? {},
-        gamesPlayed: statsRes.data?.games_played ?? 0,
-        gamesWon: statsRes.data?.games_won ?? 0,
-        winsByDifficulty: statsRes.data?.wins_by_difficulty ?? {},
-      };
-      const fresh = levelProgress(state);
-      setLevel(fresh);
-      setLoading(false);
-      return fresh;
-    });
+    const state = await loadAchievementProgressState(supabase, user.id);
+    const fresh = levelProgress(state);
+    setLevel(fresh);
+    setLoading(false);
+    return fresh;
   }, [user]);
 
   useEffect(() => {
