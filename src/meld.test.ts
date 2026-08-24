@@ -400,6 +400,46 @@ describe("validateManualGroup", () => {
     expect(result).toMatchObject({ valid: true, type: "run" });
     expect(result.orderedCards?.map((c) => c.rank)).toEqual(["A", "2", "JOKER", "4"]);
   });
+
+  it("flags genuine ambiguity instead of silently picking a window — naturals 3-4-5 plus one wild could be 2-3-4-5 or 3-4-5-6", () => {
+    const group = [...makeHand([["3", "hearts"], ["4", "hearts"], ["5", "hearts"]]), makeCard("2", "clubs")];
+    const result = validateManualGroup(group, round3);
+    expect(result.valid).toBe(false);
+    expect(result.type).toBe("run");
+    expect(result.needsRunStartChoice).toEqual([1, 2]); // start=1 -> wild is "2"; start=2 -> wild is "6"
+  });
+
+  it("resolves an ambiguous run once given the player's chosen start, wild in the low ('2') slot", () => {
+    const three = makeCard("3", "hearts");
+    const four = makeCard("4", "hearts");
+    const five = makeCard("5", "hearts");
+    const wild = makeCard("2", "clubs");
+    const result = validateManualGroup([three, four, five, wild], round3, 1);
+    expect(result).toMatchObject({ valid: true, type: "run", runStartIndex: 1 });
+    expect(result.orderedCards).toEqual([wild, three, four, five]);
+    // The wild's own rank ("2") happens to equal the rank of the slot it's
+    // filling here — wildCardIds is what correctly marks it as a stand-in
+    // rather than a natural, since comparing ranks can't tell the two apart
+    // in this specific case.
+    expect(result.wildCardIds).toEqual(new Set([wild.id]));
+  });
+
+  it("resolves the same ambiguous run with the other choice, wild in the high ('6') slot", () => {
+    const three = makeCard("3", "hearts");
+    const four = makeCard("4", "hearts");
+    const five = makeCard("5", "hearts");
+    const wild = makeCard("2", "clubs");
+    const result = validateManualGroup([three, four, five, wild], round3, 2);
+    expect(result).toMatchObject({ valid: true, type: "run", runStartIndex: 2 });
+    expect(result.orderedCards).toEqual([three, four, five, wild]);
+  });
+
+  it("still flags ambiguity if the given preferredRunStart isn't actually one of the valid options", () => {
+    const group = [...makeHand([["3", "hearts"], ["4", "hearts"], ["5", "hearts"]]), makeCard("2", "clubs")];
+    const result = validateManualGroup(group, round3, 7); // not a valid start for this selection
+    expect(result.valid).toBe(false);
+    expect(result.needsRunStartChoice).toEqual([1, 2]);
+  });
 });
 
 describe("canLayOff", () => {

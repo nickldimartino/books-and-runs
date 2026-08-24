@@ -352,6 +352,47 @@ describe("meldChosenGroups", () => {
     expect(state.players[0].hasMeldedContract).toBe(true);
     expect(state.players[0].hand).toEqual([]);
   });
+
+  it("rejects an ambiguous run when no preferredRunStarts is given", () => {
+    const three = makeCard("3", "hearts");
+    const four = makeCard("4", "hearts");
+    const five = makeCard("5", "hearts");
+    const wild = makeCard("2", "clubs");
+    const otherRun = makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]);
+    const state = makeGameState({
+      round: 3, // 2 Runs
+      players: [makePlayer({ id: "p1", hand: [three, four, five, wild, ...otherRun] })],
+    });
+
+    const result = meldChosenGroups(state, [[three.id, four.id, five.id, wild.id], otherRun.map((c) => c.id)]);
+
+    expect(result).toBeNull();
+    expect(state.players[0].hasMeldedContract).toBe(false);
+  });
+
+  it("accepts the same ambiguous run once given the player's chosen runStartIndex", () => {
+    const three = makeCard("3", "hearts");
+    const four = makeCard("4", "hearts");
+    const five = makeCard("5", "hearts");
+    const wild = makeCard("2", "clubs");
+    const otherRun = makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"], ["7", "spades"]]);
+    const state = makeGameState({
+      round: 3,
+      players: [makePlayer({ id: "p1", hand: [three, four, five, wild, ...otherRun] })],
+    });
+
+    const result = meldChosenGroups(
+      state,
+      [[three.id, four.id, five.id, wild.id], otherRun.map((c) => c.id)],
+      [2, undefined] // wild stands for "6", the high end
+    );
+
+    expect(result).toHaveLength(2);
+    expect(state.players[0].hasMeldedContract).toBe(true);
+    const heartsRun = result!.find((m) => m.cards.some((c) => c.suit === "hearts"));
+    expect(heartsRun?.cards.map((c) => c.rank)).toEqual(["3", "4", "5", "2"]);
+    expect(heartsRun?.runStartIndex).toBe(2);
+  });
 });
 
 describe("layOffCard", () => {

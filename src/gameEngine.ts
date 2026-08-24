@@ -179,8 +179,19 @@ export function attemptMeldContract(state: GameState): Meld[] | null {
  * Returns the melds laid if successful, or null (no state changes) if
  * anything doesn't check out: an unknown/reused card id, an invalid group,
  * or a set of groups that doesn't exactly match what the round requires.
+ *
+ * `preferredRunStarts`, if given, is parallel to `groups` (same length/
+ * order) — an optional chosen runStartIndex per group, for a run whose wild
+ * placement is genuinely ambiguous (see validateManualGroup). The caller
+ * (game/page.tsx) is expected to have already resolved any ambiguity with
+ * the player before calling this; a group still left ambiguous here just
+ * fails validation like any other invalid group, rather than guessing.
  */
-export function meldChosenGroups(state: GameState, groups: string[][]): Meld[] | null {
+export function meldChosenGroups(
+  state: GameState,
+  groups: string[][],
+  preferredRunStarts?: (number | undefined)[]
+): Meld[] | null {
   const player = currentPlayer(state);
   if (player.hasMeldedContract) return null;
   const req = currentContract(state);
@@ -200,7 +211,7 @@ export function meldChosenGroups(state: GameState, groups: string[][]): Meld[] |
     resolvedGroups.push(cards);
   }
 
-  const validations = resolvedGroups.map((cards) => validateManualGroup(cards, req));
+  const validations = resolvedGroups.map((cards, i) => validateManualGroup(cards, req, preferredRunStarts?.[i]));
   if (validations.some((v) => !v.valid)) return null;
 
   const bookCount = validations.filter((v) => v.type === "book").length;

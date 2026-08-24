@@ -20,7 +20,7 @@ import { playGameWin, playRoundWin } from "../lib/sound";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
-import { Card, Meld } from "@/types";
+import { Card, ContractRequirement, Meld } from "@/types";
 
 interface PendingLayOff {
   card: Card;
@@ -41,6 +41,36 @@ interface PendingGroup {
   id: string;
   type: "book" | "run";
   cardIds: string[];
+  // Set for a run whose wild placement the player explicitly chose (see
+  // PendingGroupChoice) — carried through to confirmMeld so the final
+  // server-side meld reproduces the exact same choice, not a different
+  // (still-valid) one.
+  runStartIndex?: number;
+}
+
+interface PendingGroupChoice {
+  cards: Card[];
+  cardIds: string[];
+  options: number[];
+}
+
+/** For one candidate run window, which rank(s) a wild in this selection
+ * would stand in for — e.g. "2" or "6" for the two ways naturals 3-4-5 plus
+ * one wild could resolve. Uses wildCardIds rather than comparing a card's
+ * own rank to its slot's rank — a 2 standing in for a *different* suit's
+ * "2" slot has a rank that happens to match its slot anyway, which a naive
+ * comparison would misread as "natural, not a stand-in." */
+function wildStandInLabel(cards: Card[], contract: ContractRequirement, start: number): string {
+  const result = validateManualGroup(cards, contract, start);
+  if (!result.orderedCards || !result.wildCardIds) return String(start);
+  const ranks: string[] = [];
+  result.orderedCards.forEach((c, i) => {
+    if (result.wildCardIds!.has(c.id)) {
+      const expected = RUN_ORDER[start + i];
+      ranks.push(expected === "JOKER" ? "JKR" : expected);
+    }
+  });
+  return ranks.join(", ");
 }
 
 function meldLabel(meld: Meld): string {
@@ -83,6 +113,7 @@ export default function GamePage() {
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [pendingLayOff, setPendingLayOff] = useState<PendingLayOff | null>(null);
+  const [pendingGroupChoice, setPendingGroupChoice] = useState<PendingGroupChoice | null>(null);
   const [activityOpen, setActivityOpen] = useState(() => isTutorial);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
@@ -407,14 +438,48 @@ export default function GamePage() {
       .map((id) => player.hand.find((c) => c.id === id))
       .filter((c): c is Card => !!c);
     const result = validateManualGroup(cards, contract);
+    if (result.needsRunStartChoice) {
+      setPendingGroupChoice({ cards, cardIds: selectedCardIds, options: result.needsRunStartChoice });
+      setGroupError(null);
+      return;
+    }
     if (!result.valid || !result.type) {
       setGroupError(result.reason ?? "Not a valid book or run.");
       return;
     }
     setPendingGroups((prev) => [
       ...prev,
-      { id: `group-${Date.now()}-${prev.length}`, type: result.type!, cardIds: selectedCardIds },
+      {
+        id: `group-${Date.now()}-${prev.length}`,
+        type: result.type!,
+        cardIds: selectedCardIds,
+        runStartIndex: result.runStartIndex,
+      },
     ]);
+    setSelectedCardIds([]);
+    setGroupError(null);
+  }
+
+  function chooseGroupRunStart(start: number) {
+    if (!pendingGroupChoice) return;
+    const result = validateManualGroup(pendingGroupChoice.cards, contract, start);
+    if (!result.valid || !result.type) {
+      // Shouldn't happen — `start` came from our own offered options — but
+      // fail safely rather than stage something invalid.
+      setGroupError(result.reason ?? "Not a valid book or run.");
+      setPendingGroupChoice(null);
+      return;
+    }
+    setPendingGroups((prev) => [
+      ...prev,
+      {
+        id: `group-${Date.now()}-${prev.length}`,
+        type: result.type!,
+        cardIds: pendingGroupChoice.cardIds,
+        runStartIndex: result.runStartIndex,
+      },
+    ]);
+    setPendingGroupChoice(null);
     setSelectedCardIds([]);
     setGroupError(null);
   }
@@ -424,7 +489,10 @@ export default function GamePage() {
   }
 
   function handleConfirmMeld() {
-    const success = confirmMeld(pendingGroups.map((g) => g.cardIds));
+    const success = confirmMeld(
+      pendingGroups.map((g) => g.cardIds),
+      pendingGroups.map((g) => g.runStartIndex)
+    );
     if (success) {
       setPendingGroups([]);
       setSelectedCardIds([]);
@@ -736,12 +804,37 @@ export default function GamePage() {
                 </div>
               )}
 
+              {pendingGroupChoice && (
+                <div className="flex flex-col gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                    Which card is the wild standing in for?
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {pendingGroupChoice.options.map((start) => (
+                      <button
+                        key={start}
+                        onClick={() => chooseGroupRunStart(start)}
+                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                      >
+                        {wildStandInLabel(pendingGroupChoice.cards, contract, start)}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setPendingGroupChoice(null)}
+                      className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={handleGroupSelected}
-                  disabled={!hasDrawn || selectedCardIds.length === 0}
+                  disabled={!hasDrawn || selectedCardIds.length === 0 || !!pendingGroupChoice}
                   className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Group selected cards
@@ -749,7 +842,7 @@ export default function GamePage() {
                 <button
                   data-tutorial="confirm-meld"
                   onClick={handleConfirmMeld}
-                  disabled={!hasDrawn || !meldReady}
+                  disabled={!hasDrawn || !meldReady || !!pendingGroupChoice}
                   className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Confirm Meld

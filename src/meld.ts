@@ -419,7 +419,19 @@ export interface GroupValidation {
   // For runs: the cards in sorted positional order (wilds placed in their
   // correct gap slot), ready to store directly as a Meld's cards array.
   orderedCards?: Card[];
+  // For runs: ids of cards in orderedCards actually filling a gap as a
+  // generic wild, for this specific resolution. Not derivable by comparing
+  // a card's own rank to its slot's rank — a 2 (whose own .rank is always
+  // "2") standing in for a *different* suit's "2" slot has a rank that
+  // happens to match anyway, which a naive comparison reads as "natural."
+  wildCardIds?: Set<string>;
   reason?: string;
+  // Set (with valid: false) when a run selection has more than one legal
+  // window — e.g. naturals 3-4-5 plus one wild could be 2-3-4-5 or 3-4-5-6,
+  // and the wild means something different in each. Each entry is a
+  // possible runStartIndex; the caller should ask the player and re-call
+  // with that choice as preferredRunStart rather than silently picking one.
+  needsRunStartChoice?: number[];
 }
 
 /**
@@ -437,8 +449,17 @@ export interface GroupValidation {
  * selection is tried, preferring the fewest treated as wild (so a real "2"
  * slot or a book of 2s wins over needlessly burning a 2 as a substitute),
  * until one produces a valid meld.
+ *
+ * `preferredRunStart`: when a run's wild placement is genuinely ambiguous
+ * (see GroupValidation.needsRunStartChoice), pass back whichever start the
+ * player chose to get a fully-resolved result instead of another choice
+ * prompt.
  */
-export function validateManualGroup(cards: Card[], requirement: ContractRequirement): GroupValidation {
+export function validateManualGroup(
+  cards: Card[],
+  requirement: ContractRequirement,
+  preferredRunStart?: number
+): GroupValidation {
   const twos = cards.filter((c) => c.rank === "2");
   const maskCount = 1 << twos.length;
   const masksByFewestWildTwos = Array.from({ length: maskCount }, (_, m) => m).sort(
@@ -448,8 +469,12 @@ export function validateManualGroup(cards: Card[], requirement: ContractRequirem
   let lastResult: GroupValidation = { valid: false, reason: "Include at least one non-wild card." };
   for (const mask of masksByFewestWildTwos) {
     const wildTwoIds = new Set(twos.filter((_, i) => (mask >> i) & 1).map((c) => c.id));
-    const result = validateClassifiedGroup(cards, requirement, wildTwoIds);
-    if (result.valid) return result;
+    const result = validateClassifiedGroup(cards, requirement, wildTwoIds, preferredRunStart);
+    // A result that just needs a player choice is still "this classification
+    // works" — treat it the same as valid so it isn't passed over in favor
+    // of a different (less-preferred, fewer-natural-2s) classification that
+    // happens to resolve unambiguously.
+    if (result.valid || result.needsRunStartChoice) return result;
     lastResult = result;
   }
   return lastResult;
@@ -465,7 +490,8 @@ function countSetBits(n: number): number {
 function validateClassifiedGroup(
   cards: Card[],
   requirement: ContractRequirement,
-  wildTwoIds: Set<string>
+  wildTwoIds: Set<string>,
+  preferredRunStart?: number
 ): GroupValidation {
   const isWildHere = (c: Card) => (c.rank === "2" ? wildTwoIds.has(c.id) : c.isWild);
   const wilds = cards.filter(isWildHere);
@@ -501,7 +527,7 @@ function validateClassifiedGroup(
     // are too far apart to ever land in the same window) and a run like
     // 6-7-_-_ (two wilds back to back).
     const options = naturals.map((c) => rankPositions(c.rank));
-    function tryAssign(i: number, chosen: number[]): { positions: number[]; start: number } | null {
+    function tryAssign(i: number, chosen: number[]): { positions: number[]; validStarts: number[] } | null {
       if (i === options.length) {
         if (new Set(chosen).size !== chosen.length) return null;
         const minPos = Math.min(...chosen);
@@ -509,6 +535,7 @@ function validateClassifiedGroup(
         const lowStart = Math.max(0, maxPos - size + 1);
         const highStart = Math.min(minPos, RUN_ORDER.length - size);
         const filled = new Set(chosen);
+        const validStarts: number[] = [];
         for (let start = lowStart; start <= highStart; start++) {
           let hasConsecutiveGaps = false;
           for (let k = start; k < start + size - 1; k++) {
@@ -517,9 +544,9 @@ function validateClassifiedGroup(
               break;
             }
           }
-          if (!hasConsecutiveGaps) return { positions: chosen, start };
+          if (!hasConsecutiveGaps) validStarts.push(start);
         }
-        return null;
+        return validStarts.length > 0 ? { positions: chosen, validStarts } : null;
       }
       for (const pos of options[i]) {
         const result = tryAssign(i + 1, [...chosen, pos]);
@@ -536,17 +563,41 @@ function validateClassifiedGroup(
       };
     }
 
+    // More than one window can legally fit these naturals — e.g. naturals
+    // 3-4-5 plus one wild could be 2-3-4-5 or 3-4-5-6, and the wild stands
+    // for a different rank in each. Ask rather than silently picking one,
+    // unless the caller already has a player's answer for this exact set.
+    let start: number;
+    if (assignment.validStarts.length === 1) {
+      start = assignment.validStarts[0];
+    } else if (preferredRunStart !== undefined && assignment.validStarts.includes(preferredRunStart)) {
+      start = preferredRunStart;
+    } else {
+      return {
+        valid: false,
+        type: "run",
+        needsRunStartChoice: assignment.validStarts,
+        reason: "Choose which card the wild represents.",
+      };
+    }
+
     // Arrange the full window in sorted position order: naturals at their
     // resolved position, wilds filling whatever gaps remain (assignment
     // order among wilds doesn't matter — they're interchangeable).
     const naturalByPos = new Map(assignment.positions.map((pos, i) => [pos, naturals[i]]));
     const wildQueue = [...wilds];
     const orderedCards: Card[] = [];
-    for (let i = assignment.start; i < assignment.start + size; i++) {
+    for (let i = start; i < start + size; i++) {
       orderedCards.push(naturalByPos.get(i) ?? wildQueue.shift()!);
     }
 
-    return { valid: true, type: "run", runStartIndex: assignment.start, orderedCards };
+    return {
+      valid: true,
+      type: "run",
+      runStartIndex: start,
+      orderedCards,
+      wildCardIds: new Set(wilds.map((c) => c.id)),
+    };
   }
 
   return {

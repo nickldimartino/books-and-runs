@@ -54,7 +54,7 @@ interface GameContextValue {
   continueGame: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
-  confirmMeld: (groups: string[][]) => boolean;
+  confirmMeld: (groups: string[][], preferredRunStarts?: (number | undefined)[]) => boolean;
   layOff: (cardId: string, meldId: string, position?: "low" | "high") => boolean;
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
@@ -439,13 +439,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const confirmMeld = useCallback(
-    (groups: string[][]) => {
+    (groups: string[][], preferredRunStarts?: (number | undefined)[]) => {
       const s = stateRef.current;
       if (!s || !hasDrawn) return false;
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
       const contract = s.selectedContracts[s.round - 1];
-      const melds = meldChosenGroups(s, groups);
+      const melds = meldChosenGroups(s, groups, preferredRunStarts);
       if (!melds) return false;
 
       if (isYou) {
