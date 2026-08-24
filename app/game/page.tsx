@@ -672,20 +672,18 @@ export default function GamePage() {
                             >
                               {meld.cards.map((c, i) => {
                                 // A wild's badge shows what it's standing in
-                                // for; a 2 sitting in its own natural "2"
-                                // slot isn't standing in for anything, so
-                                // this compares actual vs. expected rank
-                                // rather than trusting card.isWild, which is
-                                // always true for a 2 regardless of role.
-                                const expectedRank = runCardRank(meld, i);
-                                return (
-                                  <PlayingCard
-                                    key={c.id}
-                                    card={c}
-                                    small
-                                    standInRank={c.rank !== expectedRank ? expectedRank : undefined}
-                                  />
-                                );
+                                // for. meld.wildCardIds is the ground truth
+                                // for which cards are actually acting as a
+                                // wild here — comparing a card's own rank to
+                                // its slot's rank instead would misfire for
+                                // a 2 standing in for a *different* suit's
+                                // own "2" slot, whose rank happens to match
+                                // its slot anyway despite genuinely being a
+                                // stand-in, not a natural fit.
+                                const isWildHere = meld.wildCardIds?.includes(c.id) ?? false;
+                                const standInRank =
+                                  isWildHere && meld.type === "run" ? runCardRank(meld, i) : undefined;
+                                return <PlayingCard key={c.id} card={c} small standInRank={standInRank} />;
                               })}
                             </button>
                           );

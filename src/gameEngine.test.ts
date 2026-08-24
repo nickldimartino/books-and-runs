@@ -507,6 +507,44 @@ describe("layOffCard", () => {
     expect(run.cards[0].id).toBe("wild");
     expect(run.runStartIndex).toBe(3); // "4" slot, now wild-filled
   });
+
+  // Regression coverage for the exact bug this Meld.wildCardIds field fixes:
+  // a 2's own rank is always "2" regardless of role, so a wild 2 landing on
+  // a run's own "2" slot has a rank that coincidentally matches that slot
+  // even though it's genuinely standing in, not fitting naturally.
+  it("marks a same-rank wild (a 2 from a different suit) as a stand-in in wildCardIds", () => {
+    const run: Meld = {
+      id: "run2",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 2, // "3"
+      cards: makeHand([["3", "diamonds"], ["4", "diamonds"], ["5", "diamonds"], ["6", "diamonds"]]),
+    };
+    const wildTwo = makeCard("2", "clubs", { id: "wildtwo" }); // different suit — can only be a generic wild here
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [wildTwo] })],
+    });
+    expect(layOffCard(state, wildTwo.id, run.id, "low")).toBe(true);
+    expect(run.wildCardIds).toEqual(["wildtwo"]);
+  });
+
+  it("does not mark a natural 2 (same suit, own slot) as a wild in wildCardIds", () => {
+    const run: Meld = {
+      id: "run3",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 2, // "3"
+      cards: makeHand([["3", "diamonds"], ["4", "diamonds"], ["5", "diamonds"], ["6", "diamonds"]]),
+    };
+    const naturalTwo = makeCard("2", "diamonds", { id: "naturaltwo" }); // same suit, fits its own "2" slot
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [naturalTwo] })],
+    });
+    expect(layOffCard(state, naturalTwo.id, run.id, "low")).toBe(true);
+    expect(run.wildCardIds ?? []).toEqual([]);
+  });
 });
 
 describe("eligibleBuyers / buyDiscard", () => {

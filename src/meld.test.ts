@@ -42,6 +42,21 @@ describe("solveContract", () => {
     expect(fiveBook?.cards.some((c) => c.isWild)).toBe(true);
   });
 
+  it("marks the wild filler in wildCardIds, leaving natural-only melds empty", () => {
+    const wild = makeCard("2", "hearts");
+    const hand = [
+      ...makeHand([["5", "hearts"], ["5", "clubs"]]),
+      wild,
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "spades"]]),
+    ];
+    const melds = solveContract(hand, CONTRACTS[0], "p1");
+    expect(melds).not.toBeNull();
+    const fiveBook = melds!.find((m) => m.cards.some((c) => c.rank === "5"));
+    expect(fiveBook?.wildCardIds).toEqual([wild.id]);
+    const nineBook = melds!.find((m) => m.cards.every((c) => c.rank === "9"));
+    expect(nineBook?.wildCardIds).toEqual([]);
+  });
+
   it("returns null when the contract can't currently be met", () => {
     const hand = makeHand([
       ["5", "hearts"],
@@ -131,16 +146,15 @@ describe("solveContract", () => {
   });
 
   it("keeps a run's cards in sorted rank order with a wild filling the correct gap", () => {
-    const hand = [
-      ...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]),
-      makeCard("2", "clubs"), // wild — must fill the "6" slot, not just tack onto the end
-    ];
+    const wild = makeCard("2", "clubs"); // wild — must fill the "6" slot, not just tack onto the end
+    const hand = [...makeHand([["4", "hearts"], ["5", "hearts"], ["7", "hearts"]]), wild];
     const oneRun = { ...CONTRACTS[2], runs: 1 }; // round 3's shape, but needing only 1 run
     const melds = solveContract(hand, oneRun, "p1");
     expect(melds).not.toBeNull();
     const run = melds![0];
     expect(run.cards.map((c) => c.isWild)).toEqual([false, false, true, false]);
     expect(run.cards.map((_, i) => runCardRank(run, i))).toEqual(["4", "5", "6", "7"]);
+    expect(run.wildCardIds).toEqual([wild.id]);
   });
 
   // 2s are dual-purpose for the AI's own melding too (see validateManualGroup
@@ -701,17 +715,21 @@ describe("solveWholeHandContract", () => {
   });
 
   it("pads a run beyond the minimum length to absorb an otherwise-unplaceable wild", () => {
+    const joker = makeCard("JOKER", "joker");
     const hand = [
       ...makeHand([["4", "hearts"], ["5", "hearts"], ["6", "hearts"], ["7", "hearts"]]),
       ...makeHand([["4", "clubs"], ["5", "clubs"], ["6", "clubs"], ["7", "clubs"]]),
       ...makeHand([["4", "spades"], ["5", "spades"], ["6", "spades"]]), // one short of runSize
-      makeCard("JOKER", "joker"),
+      joker,
     ];
     const melds = solveWholeHandContract(hand, ROUND_7, "p1");
     expect(melds).not.toBeNull();
     const spadesRun = melds!.find((m) => m.cards.some((c) => c.suit === "spades"));
     expect(spadesRun!.cards).toHaveLength(4);
     expect(new Set(melds!.flatMap((m) => m.cards.map((c) => c.id))).size).toBe(hand.length);
+    expect(spadesRun!.wildCardIds).toEqual([joker.id]);
+    const heartsRun = melds!.find((m) => m.cards.some((c) => c.suit === "hearts"));
+    expect(heartsRun!.wildCardIds).toEqual([]);
   });
 
   it("uses a wild to bridge a genuine gap inside a run", () => {

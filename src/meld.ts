@@ -199,17 +199,19 @@ export function solveContract(
   const wildPool = wilds.filter((c) => !claimedTwoIds.has(c.id));
   const melds: Meld[] = chosen.map((cand, idx) => {
     const wildsForThis = wildPool.splice(0, cand.wildsNeeded);
+    const wildCardIds = wildsForThis.map((c) => c.id);
     if (cand.type === "run" && cand.runSlots) {
       let wi = 0;
       const cards = cand.runSlots.map((slot) => slot ?? wildsForThis[wi++]);
       const runStartIndex = Number(cand.key.split(":")[2]);
-      return { id: `${ownerId}-meld-${idx}-${cand.key}`, type: "run", ownerId, cards, runStartIndex };
+      return { id: `${ownerId}-meld-${idx}-${cand.key}`, type: "run", ownerId, cards, runStartIndex, wildCardIds };
     }
     return {
       id: `${ownerId}-meld-${idx}-${cand.key}`,
       type: cand.type,
       ownerId,
       cards: [...cand.naturalCards, ...wildsForThis],
+      wildCardIds,
     };
   });
 
@@ -396,8 +398,16 @@ export function solveWholeHandContract(
     return chains.map((chain, idx) => {
       const { start, end } = combo[idx];
       const cards: Card[] = [];
+      const wildCardIds: string[] = [];
       for (let pos = start; pos <= end; pos++) {
-        cards.push(chain.cardsByPosition.get(pos) ?? wildPool.shift()!);
+        const natural = chain.cardsByPosition.get(pos);
+        if (natural) {
+          cards.push(natural);
+        } else {
+          const wild = wildPool.shift()!;
+          cards.push(wild);
+          wildCardIds.push(wild.id);
+        }
       }
       return {
         id: `${ownerId}-meld-${idx}-run:${chain.suit}:${start}`,
@@ -405,6 +415,7 @@ export function solveWholeHandContract(
         ownerId,
         cards,
         runStartIndex: start,
+        wildCardIds,
       };
     });
   }
@@ -509,7 +520,7 @@ function validateClassifiedGroup(
     if (cards.length < requirement.bookSize) {
       return { valid: false, reason: `A book needs at least ${requirement.bookSize} cards.` };
     }
-    return { valid: true, type: "book" };
+    return { valid: true, type: "book", wildCardIds: new Set(wilds.map((c) => c.id)) };
   }
 
   const suits = new Set(naturals.map((c) => c.suit));

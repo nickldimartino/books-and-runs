@@ -2,6 +2,7 @@ import { buildDeck, deal, decksForPlayerCount, shuffle } from "./deck";
 import {
   layOffOptions,
   leftoverAfterMelds,
+  RUN_ORDER,
   solveContract,
   solveWholeHandContract,
   validateManualGroup,
@@ -229,12 +230,34 @@ export function meldChosenGroups(
     // slot) rather than whatever order the player happened to tap cards in.
     cards: validations[idx].orderedCards ?? cards,
     runStartIndex: validations[idx].runStartIndex,
+    wildCardIds: validations[idx].wildCardIds ? [...validations[idx].wildCardIds!] : undefined,
   }));
 
   player.hand = player.hand.filter((c) => !seen.has(c.id));
   player.hasMeldedContract = true;
   state.melds.push(...melds);
   return melds;
+}
+
+/**
+ * Whether a card being laid off is genuinely acting as a generic wild here,
+ * for the "as X" display badge (see Meld.wildCardIds) — not derivable from
+ * comparing the card's own rank to its slot's rank, since a 2 (whose own
+ * rank is always "2") standing in for a *different* suit's own "2" slot has
+ * a rank that happens to match its slot anyway.
+ */
+function isLayOffWild(card: Card, meld: Meld, direction: "low" | "high"): boolean {
+  if (!card.isWild) return false;
+  // layOffOptions has no "natural 2 joins a book of 2s" path the way
+  // meld-time validation does (it unconditionally allows any isWild card
+  // onto any book) — so for a lay-off specifically, every isWild card
+  // landing on a book really is going through the generic-wild path.
+  if (meld.type === "book") return true;
+  if (card.rank !== "2") return true; // Joker: always wild, no natural run slot
+  const suit = meld.cards.find((c) => !c.isWild)?.suit;
+  const start = meld.runStartIndex ?? 0;
+  const targetPos = direction === "low" ? start - 1 : start + meld.cards.length;
+  return !(card.suit === suit && RUN_ORDER[targetPos] === "2");
 }
 
 /**
@@ -263,6 +286,9 @@ export function layOffCard(
   const direction = options.length === 1 ? options[0] : position;
   if (!direction || !options.includes(direction)) return false;
 
+  if (isLayOffWild(card, meld, direction)) {
+    meld.wildCardIds = [...(meld.wildCardIds ?? []), card.id];
+  }
   if (meld.type === "run" && direction === "low") {
     meld.cards.unshift(card);
     meld.runStartIndex = (meld.runStartIndex ?? 0) - 1;

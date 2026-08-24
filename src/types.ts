@@ -18,6 +18,14 @@ export interface Meld {
   ownerId: string; // player who originally laid this meld
   cards: Card[];
   runStartIndex?: number; // for runs: index into RUN_ORDER of the leftmost slot, so lay-offs know the range
+  // Ids of cards in `cards` actually functioning as a generic wild here, for
+  // display (the "as X" badge) — not derivable by comparing a card's own
+  // rank to its slot's rank, since a 2 (whose own rank is always "2")
+  // standing in for a *different* suit's own "2" slot has a rank that
+  // happens to match its slot anyway. A plain array (not a Set) since Meld
+  // is part of GameState, which round-trips through JSON for local/Supabase
+  // persistence — a Set would silently serialize as "{}".
+  wildCardIds?: string[];
 }
 
 export interface ContractRequirement {
