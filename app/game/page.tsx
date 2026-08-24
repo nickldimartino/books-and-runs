@@ -880,7 +880,7 @@ export default function GamePage() {
           </section>
 
           <section data-tutorial="hand">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
                 <span className="ml-2 font-normal normal-case text-[var(--muted)]">
@@ -890,7 +890,7 @@ export default function GamePage() {
                   <span className="ml-2 text-[var(--accent)]">— contract melded</span>
                 )}
               </h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => sortHand("suit")}
                   title="Group same-suit cards together — good for spotting runs"
@@ -904,6 +904,13 @@ export default function GamePage() {
                   className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                 >
                   Sort by rank
+                </button>
+                <button
+                  onClick={() => sortHand("value")}
+                  title="Order cards from lowest to highest point value — good for planning discards"
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                >
+                  Sort by value
                 </button>
               </div>
             </div>

@@ -266,8 +266,9 @@ export default function HowToPlayPage() {
         <h2 className="text-base font-semibold text-[var(--heading)]">Organizing your hand</h2>
         <p>
           Your hand order is just for your own convenience — it has no effect on the game. Use{" "}
-          <strong className="text-[var(--heading)]">Sort by suit</strong> or{" "}
-          <strong className="text-[var(--heading)]">Sort by rank</strong> to group cards automatically, or
+          <strong className="text-[var(--heading)]">Sort by suit</strong>,{" "}
+          <strong className="text-[var(--heading)]">Sort by rank</strong>, or{" "}
+          <strong className="text-[var(--heading)]">Sort by value</strong> to group cards automatically, or
           press and drag any card to a new spot to arrange your hand exactly how you like.
         </p>
       </section>

@@ -14,6 +14,7 @@ import {
 } from "@/gameEngine";
 import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
 import { layOffOptions } from "@/meld";
+import { cardPenalty } from "@/scorer";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
@@ -104,7 +105,7 @@ const RANK_ORDER = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
 // scan than grouping both reds together, then both blacks.
 const SUIT_ORDER = ["hearts", "spades", "diamonds", "clubs", "joker"];
 
-export type SortMode = "suit" | "rank";
+export type SortMode = "suit" | "rank" | "value";
 
 /** Groups same-suit cards together, in sequence — good for spotting runs. */
 function compareBySuit(a: Card, b: Card): number {
@@ -120,6 +121,26 @@ function compareByRank(a: Card, b: Card): number {
   const rankDiff = RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
   if (rankDiff !== 0) return rankDiff;
   return SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
+}
+
+/**
+ * Orders lowest penalty value first — good for spotting safe discards. Cards
+ * worth the same (e.g. every 3-9 is 5 pts) still need to land in rank order
+ * (3, 6, 8 — not 6, 3, 8), so rank is the tiebreak, then suit as a final,
+ * purely cosmetic tiebreak for cards that are identical in both.
+ */
+function compareByValue(a: Card, b: Card): number {
+  const valueDiff = cardPenalty(a) - cardPenalty(b);
+  if (valueDiff !== 0) return valueDiff;
+  const rankDiff = RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
+  if (rankDiff !== 0) return rankDiff;
+  return SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
+}
+
+function comparatorForSortMode(mode: SortMode): (a: Card, b: Card) => number {
+  if (mode === "rank") return compareByRank;
+  if (mode === "value") return compareByValue;
+  return compareBySuit;
 }
 
 /**
@@ -408,7 +429,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const s = stateRef.current;
       if (!s) return;
       const player = s.players[s.currentPlayerIndex];
-      player.hand = [...player.hand].sort(mode === "rank" ? compareByRank : compareBySuit);
+      player.hand = [...player.hand].sort(comparatorForSortMode(mode));
       playCardSlide();
       commit();
     },
