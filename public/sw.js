@@ -4,7 +4,7 @@
 // visitor who's loaded the app before can keep playing with no connection.
 // Bump CACHE_NAME to force clients to drop everything cached under an old
 // version.
-const CACHE_NAME = "books-and-runs-v5";
+const CACHE_NAME = "books-and-runs-v6";
 
 // The core pass-and-play loop, precached so a fresh install works offline
 // even before the visitor has clicked into every page themselves.
