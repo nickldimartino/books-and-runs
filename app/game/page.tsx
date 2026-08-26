@@ -147,10 +147,9 @@ export default function GamePage() {
   // Before giving up, though, try loading a saved game directly: Home's
   // "Continue Local Game" loads the game into memory and then navigates
   // here client-side, but if that navigation's own fetch fails for any
-  // reason — including, per sw.js, the service worker mishandling it —
-  // Next falls back to a real browser navigation instead of a smooth SPA
-  // transition. A real navigation restarts every React provider from
-  // scratch, wiping the just-loaded in-memory game before this page ever
+  // reason, Next falls back to a real browser navigation instead of a
+  // smooth SPA transition. A real navigation restarts every React provider
+  // from scratch, wiping the just-loaded in-memory game before this page ever
   // saw it, which read as "Continue reloads and dumps me back on Home."
   // Recovering straight from localStorage here means it doesn't matter
   // whether the trip over was a smooth transition or a hard reload.
