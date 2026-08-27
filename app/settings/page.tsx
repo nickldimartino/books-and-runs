@@ -27,27 +27,30 @@ interface SettingsRow {
 // a wall of explanatory paragraphs — the description is still one tap away
 // for anyone who wants it, same disclosure pattern this app already uses
 // elsewhere (native <details>, so it needs no extra state and works
-// identically on touch and desktop). The trigger is the familiar circled-"i"
-// info icon rather than a text link — list-none plus hiding the
-// WebKit-specific marker pseudo-element strip the browser's own default
-// disclosure triangle in both Firefox and Chrome/Safari so only the icon
-// shows; the label text moves to an sr-only span so screen readers still
-// get something to announce.
-function InfoDetails({ children }: { children: ReactNode }) {
+// identically on touch and desktop). The whole label row is the summary (not
+// just the icon) so the tap target is bigger than a bare 14px glyph, and the
+// icon — the familiar circled-"i" convention rather than a text link — sits
+// right after the label text. list-none plus hiding the WebKit-specific
+// marker pseudo-element strip the browser's own default disclosure triangle
+// in both Firefox and Chrome/Safari so only this icon shows; "What does this
+// do?" moves to an sr-only span so screen readers still get something to
+// announce beyond the label itself.
+function InfoDetails({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <details className="text-xs text-[var(--faint)]">
+    <details>
       <summary
-        className="flex w-fit cursor-pointer list-none items-center text-[var(--faint)] hover:text-[var(--muted)] [&::-webkit-details-marker]:hidden"
+        className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden"
         title="What does this do?"
       >
-        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
+        <span>{label}</span>
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[var(--faint)]" aria-hidden="true">
           <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.3" />
           <circle cx="8" cy="4.7" r="0.9" fill="currentColor" />
           <path d="M8 7.2v4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
         </svg>
         <span className="sr-only">What does this do?</span>
       </summary>
-      <p className="mt-1">{children}</p>
+      <p className="mt-1 text-xs text-[var(--faint)]">{children}</p>
     </details>
   );
 }
@@ -65,7 +68,7 @@ function BoolToggle({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-[var(--muted)]">{label}</label>
+      <InfoDetails label={label}>{description}</InfoDetails>
       <div className="flex gap-2">
         {(
           [
@@ -86,7 +89,6 @@ function BoolToggle({
           </button>
         ))}
       </div>
-      <InfoDetails>{description}</InfoDetails>
     </section>
   );
 }
@@ -225,7 +227,9 @@ export default function SettingsPage() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[var(--muted)]">Default AI difficulty</label>
+            <InfoDetails label="Default AI difficulty">
+              Used as the starting difficulty when you add an AI opponent on the New Game screen.
+            </InfoDetails>
             <select
               value={settings.preferredAiDifficulty}
               onChange={(e) =>
@@ -239,9 +243,6 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            <InfoDetails>
-              Used as the starting difficulty when you add an AI opponent on the New Game screen.
-            </InfoDetails>
           </section>
 
           <BoolToggle
