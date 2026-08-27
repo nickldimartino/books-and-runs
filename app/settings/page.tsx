@@ -24,14 +24,29 @@ interface SettingsRow {
 }
 
 // Collapsed by default so a settings screen full of toggles doesn't read as
-// a wall of explanatory paragraphs — the "what does this do?" text is still
-// one tap away for anyone who wants it, same disclosure pattern this app
-// already uses elsewhere (native <details>, so it needs no extra state and
-// works identically on touch and desktop).
+// a wall of explanatory paragraphs — the description is still one tap away
+// for anyone who wants it, same disclosure pattern this app already uses
+// elsewhere (native <details>, so it needs no extra state and works
+// identically on touch and desktop). The trigger is the familiar circled-"i"
+// info icon rather than a text link — list-none plus hiding the
+// WebKit-specific marker pseudo-element strip the browser's own default
+// disclosure triangle in both Firefox and Chrome/Safari so only the icon
+// shows; the label text moves to an sr-only span so screen readers still
+// get something to announce.
 function InfoDetails({ children }: { children: ReactNode }) {
   return (
     <details className="text-xs text-[var(--faint)]">
-      <summary className="cursor-pointer select-none">What does this do?</summary>
+      <summary
+        className="flex w-fit cursor-pointer list-none items-center text-[var(--faint)] hover:text-[var(--muted)] [&::-webkit-details-marker]:hidden"
+        title="What does this do?"
+      >
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
+          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <circle cx="8" cy="4.7" r="0.9" fill="currentColor" />
+          <path d="M8 7.2v4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+        <span className="sr-only">What does this do?</span>
+      </summary>
       <p className="mt-1">{children}</p>
     </details>
   );
