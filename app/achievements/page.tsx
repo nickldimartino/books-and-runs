@@ -353,31 +353,59 @@ function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
 
   const headline = pickHeadlineTier(tiers);
   const unlockedCount = tiers.filter((t) => t.unlocked).length;
+  // True only when all 5 of this family's tiers are unlocked — not merely
+  // every tier currently passing the status/tier filters (unlockedCount is
+  // always the real, filter-independent count: the "unlocked" status filter
+  // can only ever narrow tiers down to exactly the ones already unlocked,
+  // never inflate this, and the family-group shell above already bypasses
+  // itself down to a plain AchievementCard whenever a tier filter leaves
+  // just one tier visible — so this can't misfire in either direction).
+  const isMastered = unlockedCount === ACHIEVEMENT_TIERS.length;
 
   return (
-    <li className={cardClassName(headline.unlocked)}>
+    <li
+      className={
+        isMastered
+          ? "rounded-lg border border-[var(--accent)] bg-[var(--accent)]/20 px-4 py-3 ring-1 ring-[var(--accent)]/60"
+          : cardClassName(headline.unlocked)
+      }
+    >
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-2 text-left"
         aria-expanded={open}
       >
         <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--heading)]">
-          <AchievementIcon
-            category={headline.category}
-            className={`h-5 w-5 shrink-0 ${headline.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
-          />
+          {isMastered ? (
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]"
+              title="Mastered — every tier unlocked"
+            >
+              <AchievementIcon category={headline.category} className="h-4 w-4 text-[var(--on-accent)]" />
+            </span>
+          ) : (
+            <AchievementIcon
+              category={headline.category}
+              className={`h-5 w-5 shrink-0 ${headline.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
+            />
+          )}
           <span className="truncate">{headline.familyTitle}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          <span className="rounded-full bg-[var(--panel-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-            {unlockedCount}/{tiers.length} tiers
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+              isMastered ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)]"
+            }`}
+          >
+            {isMastered ? "★ Mastered" : `${unlockedCount}/${tiers.length} tiers`}
           </span>
           <span className="text-xs text-[var(--faint)]">{open ? "▲" : "▼"}</span>
         </span>
       </button>
       <p className="mt-1 text-xs text-[var(--faint)]">
-        {TIER_LABEL[headline.tier]}
-        {headline.unlocked ? " unlocked" : ""} — {formatProgress(headline)}
+        {isMastered ? "All 5 tiers unlocked" : `${TIER_LABEL[headline.tier]}${headline.unlocked ? " unlocked" : ""}`}
+        {" — "}
+        {formatProgress(headline)}
       </p>
       {!headline.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">

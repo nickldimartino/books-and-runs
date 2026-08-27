@@ -25,7 +25,10 @@ function summarizeSavedGame(state: GameState): string {
   if (humanCount > 1) parts.push(`${humanCount} players`);
   if (ais.length === 1) parts.push(`vs. ${capitalize(ais[0].difficulty ?? "medium")} AI`);
   else if (ais.length > 1) parts.push(`vs. ${ais.length} AI opponents`);
-  return `Round ${state.round} of ${state.selectedContracts.length}${parts.length ? " · " + parts.join(", ") : ""}`;
+  // Joined with a space, not a comma — "2 players vs. 2 AI opponents" reads
+  // as one phrase; a comma there ("2 players, vs. 2 AI opponents") read like
+  // two disconnected fragments instead of "these two groups facing off."
+  return `Round ${state.round} of ${state.selectedContracts.length}${parts.length ? " · " + parts.join(" ") : ""}`;
 }
 
 export default function HomePage() {
