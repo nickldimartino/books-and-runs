@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Difficulty, GameState } from "@/types";
+import { joinNames } from "./formatNames";
 
 /**
  * The seat id that represents "the signed-in account" in pass-and-play,
@@ -49,7 +50,12 @@ export async function recordGameResult(
   const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
   if (!you) return;
 
-  const won = state.winnerId === you.id;
+  // Lowest score wins; being tied for it isn't a loss, so anyone sharing
+  // that exact score counts as having won too — matches GameOverScreen's
+  // identical rule for the XP breakdown it shows for this same game.
+  const lowestScore = Math.min(...state.players.map((p) => p.cumulativeScore));
+  const winners = state.players.filter((p) => p.cumulativeScore === lowestScore);
+  const won = you.cumulativeScore === lowestScore;
   const opponents = state.players
     .filter((p) => p.id !== you.id)
     .map((p) => ({ name: p.name, difficulty: p.isAI ? p.difficulty ?? null : null }));
@@ -103,7 +109,8 @@ export async function recordGameResult(
     user_id: userId,
     opponents,
     rounds: roundHistory,
-    winner: state.players.find((p) => p.id === state.winnerId)?.name ?? "unknown",
+    winner:
+      winners.length > 1 ? `${joinNames(winners.map((p) => p.name))} (tied)` : (winners[0]?.name ?? "unknown"),
   });
   if (insertError) throw insertError;
 }

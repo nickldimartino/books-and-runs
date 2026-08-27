@@ -8,6 +8,7 @@ import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } f
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { joinNames } from "../lib/formatNames";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
@@ -25,7 +26,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
-  const winner = standings[0];
+  // Lowest score wins; everyone sharing that exact score is tied for it —
+  // being tied isn't a loss, so `winners` (plural) is who actually takes
+  // the game, not just whichever tied player a plain sort happens to list
+  // first. `winners.length === 1` in the ordinary, non-tie case.
+  const lowestScore = Math.min(...state.players.map((p) => p.cumulativeScore));
+  const winners = standings.filter((p) => p.cumulativeScore === lowestScore);
+  const isTie = winners.length > 1;
   // Who emptied their hand THIS round (see the identical technique in
   // RoundSummary.tsx) — not necessarily the same person as `winner`, who is
   // whoever has the lowest cumulative score across the whole game. A round
@@ -90,7 +97,8 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // The per-game XP sources (finishing, winning, difficulty bonus) are
     // fully known from this game alone — matches the exact rule
     // recordGameResult uses for which AI difficulties count toward a win.
-    const won = !!you && state.winnerId === you.id;
+    // Being tied for the lowest score counts as a win, same as recordGameResult.
+    const won = !!you && you.cumulativeScore === lowestScore;
     const breakdown: XpLineItem[] = [{ label: "Finished the game", amount: FINISH_GAME_XP }];
     if (won) {
       breakdown.push({ label: "Won", amount: WIN_GAME_XP });
@@ -216,7 +224,11 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="mt-1 text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
         )}
         <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">
-          {isTutorial ? "Nice work!" : `${winner.name} won!`}
+          {isTutorial
+            ? "Nice work!"
+            : isTie
+              ? `${joinNames(winners.map((w) => w.name))} tied!`
+              : `${winners[0].name} won!`}
         </h1>
         {isTutorial && (
           <p className="mt-2 text-sm text-[var(--muted)]">
@@ -228,17 +240,23 @@ export function GameOverScreen({ state }: { state: GameState }) {
       </div>
 
       <ol className="flex flex-col gap-2">
-        {standings.map((p, i) => (
-          <li
-            key={p.id}
-            className="flex items-center justify-between rounded-lg bg-[var(--panel)] px-4 py-3"
-          >
-            <span className="font-medium">
-              {i + 1}. {p.name}
-            </span>
-            <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore} pts</span>
-          </li>
-        ))}
+        {standings.map((p) => {
+          // Competition ranking (1, 1, 3, 4 — not 1, 2, 3, 4), so a tie
+          // anywhere in the standings shares a place instead of implying a
+          // margin that isn't there.
+          const rank = standings.filter((o) => o.cumulativeScore < p.cumulativeScore).length + 1;
+          return (
+            <li
+              key={p.id}
+              className="flex items-center justify-between rounded-lg bg-[var(--panel)] px-4 py-3"
+            >
+              <span className="font-medium">
+                {rank}. {p.name}
+              </span>
+              <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore} pts</span>
+            </li>
+          );
+        })}
       </ol>
 
       {isTutorial && (
