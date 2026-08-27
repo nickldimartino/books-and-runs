@@ -286,25 +286,23 @@ export default function HowToPlayPage() {
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">
-          In-person rules not implemented
+          What&apos;s different from playing at a table
         </h2>
-        <p>
-          A few house rules from in-person play didn&apos;t make it into this app.
-        </p>
+        <p>A few house rules from playing with real cards aren&apos;t part of this app.</p>
         <ul className="ml-5 list-disc space-y-1">
           <li>
             <strong className="text-[var(--heading)]">Buy the discard</strong> — any player other
             than the one who just discarded, or whoever&apos;s up next, could &quot;buy&quot; the
             top of the discard pile out of turn: taking it, plus one penalty card from the draw
-            pile, without it becoming their turn. This needs a player watching their own private
-            hand to react out of turn, which doesn&apos;t work on one shared pass-and-play screen
-            with AI opponents auto-playing their turns, so it&apos;s off.
+            pile, without it becoming their turn. That relies on everyone secretly watching their
+            own hand so they can jump in at the right moment — hard to pull off when everyone
+            shares one screen and the AI plays its own turns automatically, so it&apos;s left out.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Player!</strong> — a player who spots a
             discard that fits someone else&apos;s already-laid meld could call it, move that card
-            onto the meld themselves, and discard one of their own cards as a reward. Same
-            single-shared-screen problem as buying the discard, so this one was never built at all.
+            onto the meld themselves, and discard one of their own cards as a reward. Same problem
+            as buying the discard — it needs a private hand to watch, so it&apos;s not here either.
           </li>
           <li>
             <strong className="text-[var(--heading)]">Book of Jokers</strong> — 2s can complete a

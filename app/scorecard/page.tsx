@@ -124,9 +124,8 @@ export default function ScorecardPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">In-Person Scorecard</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          For scoring the physical card game at the table — no account, no game logic, just
-          addition. Nothing here is saved to your account or synced anywhere; it only lives in
-          this browser.
+          For scoring the physical card game at the table — just addition, nothing fancy. It stays
+          only here, so it won&apos;t follow you if you switch devices.
         </p>
       </div>
 

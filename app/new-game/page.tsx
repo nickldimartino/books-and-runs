@@ -197,10 +197,7 @@ export default function NewGamePage() {
             />
           ))}
         </div>
-        <p className="text-xs text-[var(--faint)]">
-          Names are just for this game and this device — they don&apos;t affect your signed-in
-          account.
-        </p>
+        <p className="text-xs text-[var(--faint)]">Just for this game — these names won&apos;t change your account.</p>
       </section>
 
       <section className="flex flex-col gap-3">
