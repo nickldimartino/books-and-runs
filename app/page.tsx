@@ -57,72 +57,85 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="flex w-full flex-col gap-3">
-        <Link
-          href="/new-game"
-          className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
-        >
-          New Game
-        </Link>
-        <button
-          onClick={handleContinue}
-          disabled={!hasSavedGame}
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
-          title={hasSavedGame ? undefined : "No game in progress"}
-        >
-          Continue Local Game
-        </button>
-        <Link
-          href="/how-to-play"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          How to Play
-        </Link>
-        <Link
-          href="/stats"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Stats
-        </Link>
-        <Link
-          href="/achievements"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Achievements
-        </Link>
-        <Link
-          href="/settings"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Settings
-        </Link>
-        <Link
-          href="/scorecard"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Scorekeeper
-        </Link>
-        <Link
-          href="/history"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          History of Books &amp; Runs
-        </Link>
-        {configured && user ? (
-          <button
-            onClick={() => signOut()}
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Sign out
-          </button>
-        ) : (
+      <div className="flex w-full flex-col gap-6">
+        <section className="flex flex-col gap-3">
+          <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Play</h2>
           <Link
-            href="/sign-in"
+            href="/new-game"
+            className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
+          >
+            New Game
+          </Link>
+          <button
+            onClick={handleContinue}
+            disabled={!hasSavedGame}
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
+            title={hasSavedGame ? undefined : "No game in progress"}
+          >
+            Continue Local Game
+          </button>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+            Your progress
+          </h2>
+          <Link
+            href="/stats"
             className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
-            Sign in
+            Stats
           </Link>
-        )}
+          <Link
+            href="/achievements"
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Achievements
+          </Link>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">More</h2>
+          <Link
+            href="/how-to-play"
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            How to Play
+          </Link>
+          <Link
+            href="/settings"
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Settings
+          </Link>
+          <Link
+            href="/scorecard"
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Scorekeeper
+          </Link>
+          <Link
+            href="/history"
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            History of Books &amp; Runs
+          </Link>
+          {configured && user ? (
+            <button
+              onClick={() => signOut()}
+              className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            >
+              Sign out
+            </button>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            >
+              Sign in
+            </Link>
+          )}
+        </section>
       </div>
 
       <p className="text-xs text-[var(--faint)]">
