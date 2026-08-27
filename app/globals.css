@@ -252,6 +252,134 @@
   --card-wild-text: #6b3d0f;
 }
 
+[data-theme="aurora"] {
+  /* Polar night: a near-black deep-navy sky lit by a three-color aurora
+     curtain — green heading text, violet accent, icy cyan highlight. */
+  --bg: #060b14;
+  --panel: #0f1d2e;
+  --panel-soft: #0b1622;
+  --elevated: #16293d;
+  --elevated-hover: #1e3650;
+  --border: rgba(103, 232, 249, 0.16);
+  --heading: #86efac;
+  --text: #e0f2f7;
+  --muted: rgba(224, 242, 247, 0.72);
+  --faint: rgba(224, 242, 247, 0.42);
+  --accent: #c084fc;
+  --accent-hover: #d8b4fe;
+  --on-accent: #1e0a2e;
+  --danger: #fca5a5;
+  --highlight: #67e8f9;
+  --card-bg: #f8fbfa;
+  --card-text: #10241c;
+  --card-red: #be123c;
+  --card-wild-bg: #d9f2e6;
+  --card-wild-text: #065f46;
+}
+
+[data-theme="jade"] {
+  /* Imperial lacquerware: near-black lacquer panels, rich jade-green accent,
+     trimmed in soft antique gold — a different register from Midnight's
+     olive-felt-and-amber, more lacquer box than card table. */
+  --bg: #0b1210;
+  --panel: #132019;
+  --panel-soft: #0e1913;
+  --elevated: #1c3126;
+  --elevated-hover: #254032;
+  --border: rgba(212, 175, 55, 0.18);
+  --heading: #f0d78c;
+  --text: #eaf3ec;
+  --muted: rgba(234, 243, 236, 0.72);
+  --faint: rgba(234, 243, 236, 0.42);
+  --accent: #2fae72;
+  --accent-hover: #3fc588;
+  --on-accent: #04140c;
+  --danger: #e0685a;
+  --highlight: #c9a227;
+  --card-bg: #fbf8f0;
+  --card-text: #14251c;
+  --card-red: #a3272f;
+  --card-wild-bg: #f5e6b8;
+  --card-wild-text: #6b4a12;
+}
+
+[data-theme="verdigris"] {
+  /* Weathered bronze: aged copper-green patina with a polished copper-orange
+     accent — a statue left out in the weather, not a jewel box. */
+  --bg: #0c1613;
+  --panel: #16241f;
+  --panel-soft: #101c18;
+  --elevated: #203830;
+  --elevated-hover: #2b4a3f;
+  --border: rgba(212, 149, 96, 0.18);
+  --heading: #8fd4bd;
+  --text: #e9f2ee;
+  --muted: rgba(233, 242, 238, 0.72);
+  --faint: rgba(233, 242, 238, 0.42);
+  --accent: #d97b45;
+  --accent-hover: #e8935f;
+  --on-accent: #2a0f02;
+  --danger: #e2685a;
+  --highlight: #c9a86a;
+  --card-bg: #f7f3ec;
+  --card-text: #1c2e28;
+  --card-red: #a8452a;
+  --card-wild-bg: #ecd9b8;
+  --card-wild-text: #6b4318;
+}
+
+[data-theme="abyss"] {
+  /* Deep-sea trench: near-black cold ocean water lit by a bioluminescent
+     teal glow, with a single warm anglerfish-lure orange for contrast —
+     moodier and colder than Lagoon's bright tropical reef. */
+  --bg: #010b12;
+  --panel: #041824;
+  --panel-soft: #02121b;
+  --elevated: #082638;
+  --elevated-hover: #0d3349;
+  --border: rgba(94, 234, 212, 0.16);
+  --heading: #5eead4;
+  --text: #dff7f3;
+  --muted: rgba(223, 247, 243, 0.72);
+  --faint: rgba(223, 247, 243, 0.42);
+  --accent: #ff7849;
+  --accent-hover: #ff9166;
+  --on-accent: #2a0800;
+  --danger: #ff6b6b;
+  --highlight: #22d3ee;
+  --card-bg: #f2fbfa;
+  --card-text: #062018;
+  --card-red: #b8452f;
+  --card-wild-bg: #cdf5ef;
+  --card-wild-text: #075a4d;
+}
+
+[data-theme="citrus"] {
+  /* Citrus grove at midday: a bright, warm light theme (not another dark
+     one) — vivid blood-orange against deep grove-leaf green, distinct from
+     Daylight's neutral cream and Pastel's cool lavender. */
+  --bg: #fff8ee;
+  --panel: #ffffff;
+  --panel-soft: #fdeed8;
+  --elevated: #fbdfb8;
+  --elevated-hover: #f7ce93;
+  --border: rgba(120, 53, 15, 0.14);
+  --heading: #7a3b12;
+  --text: #3d2611;
+  --muted: rgba(61, 38, 17, 0.7);
+  --faint: rgba(61, 38, 17, 0.42);
+  --accent: #f2711d;
+  --accent-hover: #ff8a3d;
+  --on-accent: #2a0d00;
+  --danger: #d13b2f;
+  --highlight: #4d7c0f;
+  --card-bg: #ffffff;
+  --card-text: #2b1a0a;
+  --card-red: #b8452f;
+  --card-wild-bg: #fde5c2;
+  --card-wild-text: #7a3b12;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

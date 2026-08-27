@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { allAchievements } from "@/achievements";
+import { allAchievements, tierNumber } from "@/achievements";
 import { Difficulty, GameState } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
@@ -13,10 +13,6 @@ import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from ".
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 interface XpLineItem {
   label: string;
@@ -30,6 +26,14 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const winner = standings[0];
+  // Who emptied their hand THIS round (see the identical technique in
+  // RoundSummary.tsx) — not necessarily the same person as `winner`, who is
+  // whoever has the lowest cumulative score across the whole game. A round
+  // can be won by going out while someone else still takes the game on
+  // total score, so both need to be shown, even when they're the same
+  // player. Undefined in the rare case nobody went out (e.g. the draw pile
+  // was exhausted).
+  const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const recordedRef = useRef(false);
   // Tracked separately from `saved` so a retry after a partial failure (one
   // write went through, the other didn't) only re-sends the write that
@@ -162,7 +166,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
           achievementLines = allAchievements(afterProgress)
             .filter((a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`))
             .map((a) => ({
-              label: `${a.familyTitle} (${capitalize(a.tier)})`,
+              label: `${a.familyTitle} ${tierNumber(a.tier)}`,
               amount: ACHIEVEMENT_TIER_XP[a.tier],
             }));
         } catch (err) {
@@ -208,6 +212,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">
           {isTutorial ? "Tutorial complete" : "Game over"}
         </p>
+        {!isTutorial && wentOut && (
+          <p className="mt-1 text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
+        )}
         <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">
           {isTutorial ? "Nice work!" : `${winner.name} won!`}
         </h1>

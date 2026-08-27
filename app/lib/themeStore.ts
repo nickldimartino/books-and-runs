@@ -8,7 +8,12 @@ export type ThemeId =
   | "sakura"
   | "ember"
   | "lagoon"
-  | "sahara";
+  | "sahara"
+  | "aurora"
+  | "jade"
+  | "verdigris"
+  | "abyss"
+  | "citrus";
 
 export interface ThemeOption {
   id: ThemeId;
@@ -27,6 +32,11 @@ export const THEMES: ThemeOption[] = [
   { id: "ember", name: "Obsidian Ember", description: "Volcanic black with a molten orange-red glow." },
   { id: "lagoon", name: "Coral Lagoon", description: "Deep tropical teal with a vivid coral-pink accent." },
   { id: "sahara", name: "Sahara Dusk", description: "Warm desert terracotta cooling into a teal evening sky." },
+  { id: "aurora", name: "Aurora", description: "Polar night sky glowing green, violet, and icy cyan." },
+  { id: "jade", name: "Jade Imperial", description: "Black lacquer and jade green, trimmed in imperial gold." },
+  { id: "verdigris", name: "Verdigris", description: "Weathered copper patina warmed by a polished copper glow." },
+  { id: "abyss", name: "Abyss", description: "Deep-sea black lit by bioluminescent teal and an anglerfish glow." },
+  { id: "citrus", name: "Citrus Grove", description: "Bright blood-orange and citrus-leaf green in the sun." },
 ];
 
 export const DEFAULT_THEME: ThemeId = "midnight";

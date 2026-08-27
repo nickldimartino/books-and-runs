@@ -10,6 +10,15 @@ import { Difficulty } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 
+// Rendering the actual capitalized label, rather than lowercase text plus a
+// CSS text-transform, avoids a real cross-platform bug: iOS Safari's native
+// picker wheel (the opened <select> list) doesn't apply text-transform to
+// <option> text, so it showed "easy" while the closed box — rendered by the
+// page itself, which does honor the CSS — showed "Easy".
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 interface SettingsRow {
   preferred_ai_difficulty_default: string | null;
 }
@@ -68,6 +77,11 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   ember: { bg: "#0f0906", panel: "#1e120a", accent: "#ff5a1f", heading: "#ff9552" },
   lagoon: { bg: "#04211f", panel: "#0a3634", accent: "#ff6f91", heading: "#ffe3ec" },
   sahara: { bg: "#2a1810", panel: "#3d2517", accent: "#2fb6a8", heading: "#f4c78a" },
+  aurora: { bg: "#060b14", panel: "#0f1d2e", accent: "#c084fc", heading: "#86efac" },
+  jade: { bg: "#0b1210", panel: "#132019", accent: "#2fae72", heading: "#f0d78c" },
+  verdigris: { bg: "#0c1613", panel: "#16241f", accent: "#d97b45", heading: "#8fd4bd" },
+  abyss: { bg: "#010b12", panel: "#041824", accent: "#ff7849", heading: "#5eead4" },
+  citrus: { bg: "#fff8ee", panel: "#ffffff", accent: "#f2711d", heading: "#7a3b12" },
 };
 
 export default function SettingsPage() {
@@ -184,11 +198,11 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setSettings((s) => ({ ...s, preferredAiDifficulty: e.target.value as Difficulty }))
               }
-              className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm capitalize text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+              className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
             >
               {DIFFICULTIES.map((d) => (
-                <option key={d} value={d} className="capitalize">
-                  {d}
+                <option key={d} value={d}>
+                  {capitalize(d)}
                 </option>
               ))}
             </select>

@@ -6,7 +6,14 @@ import {
   achievementValue,
   allAchievements,
   EMPTY_PROGRESS_STATE,
+  tierNumber,
 } from "./achievements";
+
+describe("tierNumber", () => {
+  it("numbers beginner through expert as 1 through 5", () => {
+    expect(ACHIEVEMENT_TIERS.map(tierNumber)).toEqual([1, 2, 3, 4, 5]);
+  });
+});
 
 describe("ACHIEVEMENT_FAMILIES", () => {
   it("has exactly 40 families, giving 200 achievements at 5 tiers each", () => {

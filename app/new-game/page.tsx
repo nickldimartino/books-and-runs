@@ -12,6 +12,15 @@ import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
 
+// Rendering the actual capitalized label, rather than lowercase text plus a
+// CSS text-transform, avoids a real cross-platform bug: iOS Safari's native
+// picker wheel (the opened <select> list) doesn't apply text-transform to
+// <option> text, so it showed "easy" while the closed box — rendered by the
+// page itself, which does honor the CSS — showed "Easy".
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 type RoundMode = "all" | "short" | "custom" | "tutorial";
 
 export default function NewGamePage() {
@@ -116,7 +125,7 @@ export default function NewGamePage() {
       })),
       ...aiDifficulties.map((difficulty, i) => {
         seenByDifficulty[difficulty] = (seenByDifficulty[difficulty] ?? 0) + 1;
-        const label = `${difficulty[0].toUpperCase()}${difficulty.slice(1)} AI`;
+        const label = `${capitalize(difficulty)} AI`;
         return {
           id: `ai-${i}`,
           name: aiDifficulties.length > 1 ? `${label} ${seenByDifficulty[difficulty]}` : label,
@@ -217,11 +226,11 @@ export default function NewGamePage() {
               <select
                 value={difficulty}
                 onChange={(e) => setAIDifficulty(i, e.target.value as Difficulty)}
-                className="rounded-md bg-[var(--panel-soft)] px-2 py-1 text-sm capitalize text-[var(--heading)]"
+                className="rounded-md bg-[var(--panel-soft)] px-2 py-1 text-sm text-[var(--heading)]"
               >
                 {DIFFICULTIES.map((d) => (
-                  <option key={d} value={d} className="capitalize">
-                    {d}
+                  <option key={d} value={d}>
+                    {capitalize(d)}
                   </option>
                 ))}
               </select>

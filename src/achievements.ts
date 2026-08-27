@@ -20,6 +20,13 @@ export type AchievementTier = "beginner" | "easy" | "medium" | "hard" | "expert"
 
 export const ACHIEVEMENT_TIERS: AchievementTier[] = ["beginner", "easy", "medium", "hard", "expert"];
 
+/** 1-5 (beginner=1 .. expert=5) — every family defines all 5 tiers, so a
+ * bare family title alone (e.g. in a short game-over summary line) can't
+ * tell you which one just unlocked without this. */
+export function tierNumber(tier: AchievementTier): number {
+  return ACHIEVEMENT_TIERS.indexOf(tier) + 1;
+}
+
 export type AchievementSource =
   | { kind: "counter"; key: string }
   | { kind: "gamesPlayed" }
