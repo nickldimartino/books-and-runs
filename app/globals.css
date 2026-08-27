@@ -518,6 +518,20 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/* App-wide tactile press feedback — a small scale-down while a button or
+   link is actively pressed, so tapping anything gives a little physical
+   "give" instead of the state just silently changing. :active never fires
+   on a disabled control by spec, so :not(:disabled) here is belt-and-braces
+   rather than load-bearing. PlayingCard's own hand/table cards are <div>s,
+   never real <button> elements (see that component's own comment on why),
+   so this can't conflict with their separate hover-lift/shadow treatment.
+   prefers-reduced-motion below disables it like every other animation in
+   this file. */
+button:not(:disabled):active,
+a:active {
+  transform: scale(0.97);
+}
+
 /* Two shadow layers (a tight contact shadow plus a softer, wider one) reads
    as a real card resting on the table instead of a flat colored rectangle;
    the inset highlight is a faint "sheen" along the top edge.
@@ -606,5 +620,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .tutorial-ring {
     animation: none;
+  }
+
+  button:not(:disabled):active,
+  a:active {
+    transform: none;
   }
 }
