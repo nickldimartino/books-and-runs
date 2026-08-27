@@ -108,6 +108,8 @@ export default function GamePage() {
     quitToHome,
     continueGame,
     startTutorialGame,
+    canUndo,
+    undoLastAction,
   } = useGame();
   const { level } = usePlayerLevel();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -570,6 +572,21 @@ export default function GamePage() {
             ))}
         </ul>
       </header>
+
+      {canUndo && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-lg bg-[var(--accent)]/15 px-4 py-2 text-sm"
+        >
+          <span className="text-[var(--muted)]">Meld or lay-off confirmed.</span>
+          <button
+            onClick={undoLastAction}
+            className="shrink-0 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+          >
+            Undo
+          </button>
+        </div>
+      )}
 
       {player.isAI ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">

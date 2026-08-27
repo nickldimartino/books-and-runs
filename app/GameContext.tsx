@@ -63,6 +63,14 @@ interface GameContextValue {
   respondToBuy: (accept: boolean) => void;
   advanceRound: () => void;
   quitToHome: () => void;
+  /** True for a few seconds right after confirmMeld/layOff succeeds (and
+   * didn't also end the round — see undoLastAction), then auto-expires. */
+  canUndo: boolean;
+  /** Reverts the most recent confirmMeld/layOff while canUndo is true; a
+   * no-op otherwise. Any other action (draw, sort, reorder, discard, a new
+   * meld/lay-off, advancing rounds, leaving the game) invalidates the grace
+   * window immediately rather than waiting for it to time out. */
+  undoLastAction: () => void;
   /** Achievement counter deltas accumulated since the last flush, for the
    * signed-in seat only — see recordAchievementProgress.ts, called from both
    * RoundSummary (round-end) and GameOverScreen (game-over). */
@@ -95,6 +103,30 @@ const GameContext = createContext<GameContextValue | null>(null);
 const BUY_DISCARD_ENABLED = false;
 
 const AI_TURN_DELAY_MS = 550;
+
+// How long a confirmMeld/layOff stays undoable before the grace window
+// silently expires — long enough to catch an immediate "oops, wrong meld"
+// without turning into a real move-history/redo feature.
+const UNDO_GRACE_MS = 6000;
+
+/**
+ * Everything undoLastAction needs to put back exactly as it was.
+ * Deliberately does NOT include roundHistory/recordedRounds/hasDrawn/
+ * lastDrawnCardId: confirmMeld/layOff only ever get armed as undoable when
+ * they *didn't* also end the round (see the wentOut check at both call
+ * sites) — a round-ending meld/lay-off is scoped out entirely, since
+ * RoundSummary/GameOverScreen would immediately take over the whole screen
+ * with no "Undo" control reachable there, and reverting a win would also
+ * mean unwinding the achievement-flush bookkeeping those screens trigger.
+ * That leaves state (for the meld/lay-off itself) and sessionCounters (for
+ * the achievement-progress bump() calls confirmMeld/layOff make along the
+ * way) as the only two things that can actually change on the path this
+ * type covers.
+ */
+interface UndoSnapshot {
+  state: GameState;
+  sessionCounters: Record<string, number>;
+}
 
 // Ace sorts high (after King), never low — wilds (2s and jokers) are always
 // bucketed to the end separately below, so their position here is moot; this
@@ -178,6 +210,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   const getSessionCounters = useCallback(() => sessionCountersRef.current, []);
 
+  // See UndoSnapshot's own comment for exactly what this does and doesn't
+  // cover. canUndo is the only piece of this that needs to be reactive (for
+  // the UI to show/hide the Undo control) — the snapshot and its expiry
+  // timer live in refs, mutated directly, same as every other ref in this
+  // provider that a callback needs to read/write outside a render.
+  const [canUndo, setCanUndo] = useState(false);
+  const undoSnapshotRef = useRef<UndoSnapshot | null>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     setHasSavedGame(loadSavedGame() !== null);
   }, []);
@@ -234,6 +275,38 @@ export function GameProvider({ children }: { children: ReactNode }) {
     persist();
   }, [persist]);
 
+  // Invalidates a pending undo grace window outright — called at the top of
+  // every action other than confirmMeld/layOff themselves (those instead
+  // overwrite undoSnapshotRef with their own fresh snapshot, which already
+  // supersedes whatever was there — see armUndo).
+  const clearUndoState = useCallback(() => {
+    undoSnapshotRef.current = null;
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+    setCanUndo(false);
+  }, []);
+
+  const armUndo = useCallback(
+    (snapshot: UndoSnapshot) => {
+      undoSnapshotRef.current = snapshot;
+      setCanUndo(true);
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = setTimeout(clearUndoState, UNDO_GRACE_MS);
+    },
+    [clearUndoState]
+  );
+
+  const undoLastAction = useCallback(() => {
+    const snapshot = undoSnapshotRef.current;
+    if (!snapshot) return;
+    stateRef.current = snapshot.state;
+    sessionCountersRef.current = { ...snapshot.sessionCounters };
+    clearUndoState();
+    commit();
+  }, [clearUndoState, commit]);
+
   /** Runs AI turns one at a time (with a small delay for visibility) until it's a
    * human's turn again, or the round/game ends. */
   const runAiLoop = useCallback(() => {
@@ -272,6 +345,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isTutorialRef.current = false;
       setIsTutorial(false);
       setTutorialSoundOverride(false);
+      clearUndoState();
       const state = createGame(configs, contracts);
       stateRef.current = state;
       setSnapshot({ ...state });
@@ -302,13 +376,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         runAiLoop();
       }
     },
-    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump]
+    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump, clearUndoState]
   );
 
   const startTutorialGame = useCallback(() => {
     isTutorialRef.current = true;
     setIsTutorial(true);
     setTutorialSoundOverride(true);
+    clearUndoState();
     const state = createTutorialGame();
     stateRef.current = state;
     setSnapshot({ ...state });
@@ -324,7 +399,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     buyQueueRef.current = [];
     sessionCountersRef.current = {};
     // No persist() — see the isTutorialRef guard at the top of persist().
-  }, [setHasDrawnBoth, setRoundStartScoresBoth]);
+  }, [setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState]);
 
   const continueGame = useCallback(() => {
     const saved = loadSavedGame();
@@ -336,6 +411,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     isTutorialRef.current = false;
     setIsTutorial(false);
     setTutorialSoundOverride(false);
+    clearUndoState();
     stateRef.current = saved.state;
     setSnapshot({ ...saved.state });
     setHasDrawnBoth(saved.hasDrawn);
@@ -355,7 +431,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     } else {
       setAwaitingReveal(true);
     }
-  }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth]);
+  }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState]);
 
   const revealHand = useCallback(() => setAwaitingReveal(false), []);
 
@@ -363,6 +439,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (fromDiscard: boolean) => {
       const s = stateRef.current;
       if (!s || hasDrawn) return;
+      clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
 
@@ -402,20 +479,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hapticLight();
       commit();
     },
-    [hasDrawn, commit, setHasDrawnBoth, bump]
+    [hasDrawn, commit, setHasDrawnBoth, bump, clearUndoState]
   );
 
   const sortHand = useCallback(
     (mode: SortMode) => {
       const s = stateRef.current;
       if (!s) return;
+      clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       player.hand = [...player.hand].sort(mode === "rank" ? compareByRank : compareBySuit);
       playCardSlide();
       hapticLight();
       commit();
     },
-    [commit]
+    [commit, clearUndoState]
   );
 
   /**
@@ -428,6 +506,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (cardIdsInOrder: string[]) => {
       const s = stateRef.current;
       if (!s) return;
+      clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       const orderIndex = new Map(cardIdsInOrder.map((id, i) => [id, i]));
       const reordered = player.hand
@@ -439,7 +518,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hapticLight();
       commit();
     },
-    [commit]
+    [commit, clearUndoState]
   );
 
   const confirmMeld = useCallback(
@@ -449,6 +528,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
       const contract = s.selectedContracts[s.round - 1];
+      // Snapshot before mutating — armed as an undo option below only if
+      // this meld doesn't also end the round (see UndoSnapshot's comment).
+      const preActionState = structuredClone(s);
+      const preActionCounters = { ...sessionCountersRef.current };
       const melds = meldChosenGroups(s, groups, preferredRunStarts);
       if (!melds) return false;
 
@@ -482,10 +565,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       playMeld();
       hapticMedium();
+      if (!wentOut) armUndo({ state: preActionState, sessionCounters: preActionCounters });
       commit();
       return true;
     },
-    [hasDrawn, commit, bump]
+    [hasDrawn, commit, bump, armUndo]
   );
 
   const layOff = useCallback(
@@ -497,6 +581,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const card = player.hand.find((c) => c.id === cardId);
       const meld = s.melds.find((m) => m.id === meldId);
       const wasAmbiguous = !!(card && meld && layOffOptions(card, meld).length === 2);
+      // See the identical snapshot in confirmMeld — same reasoning applies.
+      const preActionState = structuredClone(s);
+      const preActionCounters = { ...sessionCountersRef.current };
 
       const ok = layOffCard(s, cardId, meldId, position);
       if (ok) {
@@ -517,11 +604,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
         playCardTap();
         hapticLight();
+        if (!wentOut) armUndo({ state: preActionState, sessionCounters: preActionCounters });
         commit();
       }
       return ok;
     },
-    [hasDrawn, commit, bump]
+    [hasDrawn, commit, bump, armUndo]
   );
 
   /**
@@ -577,6 +665,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (cardId: string) => {
       const s = stateRef.current;
       if (!s || !hasDrawn) return;
+      clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
 
@@ -611,12 +700,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump]
+    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump, clearUndoState]
   );
 
   const advanceRound = useCallback(() => {
     const s = stateRef.current;
     if (!s || !s.roundOver) return;
+    clearUndoState();
     const next = startNextRound(s);
     stateRef.current = next;
     setSnapshot({ ...next });
@@ -632,9 +722,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     } else {
       setAwaitingReveal(true);
     }
-  }, [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth]);
+  }, [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState]);
 
   const quitToHome = useCallback(() => {
+    clearUndoState();
     const wasTutorial = isTutorialRef.current;
     stateRef.current = null;
     setSnapshot(null);
@@ -654,7 +745,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       clearSavedGame();
       setHasSavedGame(false);
     }
-  }, [setHasDrawnBoth]);
+  }, [setHasDrawnBoth, clearUndoState]);
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -683,6 +774,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       quitToHome,
       getSessionCounters,
       clearSessionCounters,
+      canUndo,
+      undoLastAction,
     }),
     [
       snapshot,
@@ -710,6 +803,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       quitToHome,
       getSessionCounters,
       clearSessionCounters,
+      canUndo,
+      undoLastAction,
     ]
   );
 
