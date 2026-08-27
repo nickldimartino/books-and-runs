@@ -20,14 +20,23 @@ export type ThemeId =
   | "lilac"
   | "champagne"
   | "valentines"
+  | "sweetheart"
   | "stpatricks"
+  | "cloverfield"
   | "easter"
+  | "springdusk"
   | "july4th"
+  | "starsandstripes"
   | "halloween"
+  | "candycorn"
   | "thanksgiving"
+  | "pumpkinspice"
   | "hanukkah"
+  | "festivaloflights"
   | "christmas"
-  | "newyears";
+  | "candycane"
+  | "newyears"
+  | "confetti";
 
 export type ThemeCategory = "classic" | "holiday";
 
@@ -60,16 +69,26 @@ export const THEMES: ThemeOption[] = [
   { id: "verdigris", name: "Verdigris", description: "Weathered copper patina warmed by a polished copper glow.", category: "classic" },
   { id: "alabaster", name: "Alabaster", description: "Strictly stone and charcoal — Film Noir's light-toned twin.", category: "classic" },
 
-  // Holiday themes, ordered by where they fall on the calendar.
+  // Holiday themes, ordered by where they fall on the calendar — each
+  // holiday's dark and light versions sit next to each other.
   { id: "valentines", name: "Valentine's Day", description: "Romantic rose-red and deep burgundy.", category: "holiday" },
+  { id: "sweetheart", name: "Sweetheart", description: "Blush pink and white, like a valentine card.", category: "holiday" },
   { id: "stpatricks", name: "St. Patrick's Day", description: "Shamrock green and gold, with a touch of Irish orange.", category: "holiday" },
+  { id: "cloverfield", name: "Clover Field", description: "Pale mint and cream, with a bright shamrock-green accent.", category: "holiday" },
   { id: "easter", name: "Easter", description: "Pastel lavender, spring mint, and jellybean yellow.", category: "holiday" },
+  { id: "springdusk", name: "Spring Dusk", description: "Twilight plum with pastel mint and lavender popping through.", category: "holiday" },
   { id: "july4th", name: "4th of July", description: "Fireworks over a midnight-blue sky, red, white, and blue.", category: "holiday" },
+  { id: "starsandstripes", name: "Stars & Stripes", description: "Crisp daytime red, white, and blue — a backyard cookout.", category: "holiday" },
   { id: "halloween", name: "Halloween", description: "Witchy purple and jack-o'-lantern orange after dark.", category: "holiday" },
+  { id: "candycorn", name: "Candy Corn", description: "Cream and pumpkin orange with a playful purple accent.", category: "holiday" },
   { id: "thanksgiving", name: "Thanksgiving", description: "Harvest brown and pumpkin orange, warm and cozy.", category: "holiday" },
+  { id: "pumpkinspice", name: "Pumpkin Spice", description: "Warm cream and cinnamon brown with a pumpkin-orange accent.", category: "holiday" },
   { id: "hanukkah", name: "Hanukkah", description: "Royal blue and silver, lit by menorah gold.", category: "holiday" },
+  { id: "festivaloflights", name: "Festival of Lights", description: "Pale ice-blue and white, lit by menorah gold.", category: "holiday" },
   { id: "christmas", name: "Christmas", description: "Pine green and holly red, trimmed in gold.", category: "holiday" },
+  { id: "candycane", name: "Candy Cane", description: "Peppermint white and red, striped with pine green.", category: "holiday" },
   { id: "newyears", name: "New Year's Eve", description: "Black-tie black and champagne gold, ready for midnight.", category: "holiday" },
+  { id: "confetti", name: "Confetti", description: "Bright white with a gold and confetti-pink pop.", category: "holiday" },
 ];
 
 export const DEFAULT_THEME: ThemeId = "midnight";

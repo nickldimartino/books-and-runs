@@ -752,6 +752,247 @@
   --card-wild-text: #6b4f12;
 }
 
+/* Light counterparts to the 8 dark holiday themes above, plus one dark
+   counterpart to Easter (the one holiday theme that started out light) —
+   every holiday now has both a light and a dark version. Each pairs with
+   its partner by keeping the same accent-color family (so the two still
+   read as "the same holiday, different light") while genuinely changing
+   mood: e.g. Halloween's witchy-purple-at-night vs. Candy Corn's playful
+   daytime trick-or-treating. */
+
+[data-theme="sweetheart"] {
+  /* Valentine's Day, daytime: a blush valentine card rather than
+     Valentine's Day's candlelit-dinner burgundy. */
+  --bg: #fff0f4;
+  --panel: #ffffff;
+  --panel-soft: #fce0e8;
+  --elevated: #f8c9d6;
+  --elevated-hover: #f2adc0;
+  --border: rgba(180, 20, 70, 0.14);
+  --heading: #a8154a;
+  --text: #4a1428;
+  --muted: rgba(74, 20, 40, 0.68);
+  --faint: rgba(74, 20, 40, 0.42);
+  --accent: #e0245e;
+  --accent-hover: #f0407a;
+  --on-accent: #fff0f4;
+  --danger: #c8194f;
+  --highlight: #d4a5c7;
+  --card-bg: #ffffff;
+  --card-text: #4a1428;
+  --card-red: #c8194f;
+  --card-wild-bg: #ffd6e5;
+  --card-wild-text: #8a1f45;
+}
+
+[data-theme="cloverfield"] {
+  /* St. Patrick's Day, daytime: a sunny clover meadow rather than St.
+     Patrick's Day's deep shamrock-green night. */
+  --bg: #f3fbf3;
+  --panel: #ffffff;
+  --panel-soft: #e2f5e4;
+  --elevated: #c8ebcc;
+  --elevated-hover: #aadfaf;
+  --border: rgba(10, 90, 40, 0.14);
+  --heading: #0d5c30;
+  --text: #143a20;
+  --muted: rgba(20, 58, 32, 0.68);
+  --faint: rgba(20, 58, 32, 0.42);
+  --accent: #2fa864;
+  --accent-hover: #3fc078;
+  --on-accent: #04140a;
+  --danger: #c1483f;
+  --highlight: #d99a2b;
+  --card-bg: #ffffff;
+  --card-text: #143a20;
+  --card-red: #a8452a;
+  --card-wild-bg: #d0f0d8;
+  --card-wild-text: #0c3f1f;
+}
+
+[data-theme="springdusk"] {
+  /* Easter, nighttime: a twilight-plum evening with pastel mint/lavender/
+     yellow popping through the dark, rather than Easter's own pastel-lit
+     daytime. The one holiday theme going dark instead of light, since
+     Easter itself was the one that started out light. */
+  --bg: #1c1030;
+  --panel: #281848;
+  --panel-soft: #21133c;
+  --elevated: #34205c;
+  --elevated-hover: #402a70;
+  --border: rgba(200, 170, 255, 0.16);
+  --heading: #d8b8f0;
+  --text: #ede4f5;
+  --muted: rgba(237, 228, 245, 0.72);
+  --faint: rgba(237, 228, 245, 0.42);
+  --accent: #7fd9a8;
+  --accent-hover: #98e6bc;
+  --on-accent: #0a2214;
+  --danger: #e0808a;
+  --highlight: #f2c94c;
+  --card-bg: #fdf8ff;
+  --card-text: #281848;
+  --card-red: #a8456f;
+  --card-wild-bg: #fbe9b0;
+  --card-wild-text: #7a5a12;
+}
+
+[data-theme="starsandstripes"] {
+  /* 4th of July, daytime: a crisp white backyard-cookout palette rather
+     than 4th of July's midnight fireworks sky. */
+  --bg: #f7f9fd;
+  --panel: #ffffff;
+  --panel-soft: #e8edfa;
+  --elevated: #d0daf2;
+  --elevated-hover: #b6c5e8;
+  --border: rgba(20, 40, 100, 0.14);
+  --heading: #16255e;
+  --text: #14203f;
+  --muted: rgba(20, 32, 63, 0.68);
+  --faint: rgba(20, 32, 63, 0.42);
+  --accent: #c8102e;
+  --accent-hover: #dc3048;
+  --on-accent: #fff5f5;
+  --danger: #b8102e;
+  --highlight: #3a5fd9;
+  --card-bg: #ffffff;
+  --card-text: #14203f;
+  --card-red: #b8102e;
+  --card-wild-bg: #d6e0ff;
+  --card-wild-text: #16255e;
+}
+
+[data-theme="candycorn"] {
+  /* Halloween, daytime: playful cream-and-candy-corn trick-or-treating
+     rather than Halloween's witchy purple night — purple stays as the
+     accent so the pair still reads as the same holiday. */
+  --bg: #fff8ec;
+  --panel: #ffffff;
+  --panel-soft: #fbe9c8;
+  --elevated: #f5d59a;
+  --elevated-hover: #eec06e;
+  --border: rgba(120, 60, 180, 0.16);
+  --heading: #7a3d0f;
+  --text: #4a2e0a;
+  --muted: rgba(74, 46, 10, 0.68);
+  --faint: rgba(74, 46, 10, 0.42);
+  --accent: #8b3fd9;
+  --accent-hover: #a05de6;
+  --on-accent: #fbf5ff;
+  --danger: #c1483f;
+  --highlight: #ff8c1a;
+  --card-bg: #ffffff;
+  --card-text: #4a2e0a;
+  --card-red: #a8452a;
+  --card-wild-bg: #ecd4ff;
+  --card-wild-text: #5c1f9d;
+}
+
+[data-theme="pumpkinspice"] {
+  /* Thanksgiving, daytime: a warm cream harvest-table cloth rather than
+     Thanksgiving's own deep cozy-cabin brown. */
+  --bg: #fbf0e0;
+  --panel: #ffffff;
+  --panel-soft: #f5e2c4;
+  --elevated: #ecce9e;
+  --elevated-hover: #e2ba7a;
+  --border: rgba(120, 65, 20, 0.16);
+  --heading: #7a3d0f;
+  --text: #4a3018;
+  --muted: rgba(74, 48, 24, 0.68);
+  --faint: rgba(74, 48, 24, 0.42);
+  --accent: #d2691e;
+  --accent-hover: #e07d36;
+  --on-accent: #2a0d00;
+  --danger: #b8452f;
+  --highlight: #a8722e;
+  --card-bg: #ffffff;
+  --card-text: #4a3018;
+  --card-red: #a8452a;
+  --card-wild-bg: #f3d9a8;
+  --card-wild-text: #6b4318;
+}
+
+[data-theme="festivaloflights"] {
+  /* Hanukkah, daytime: pale ice-blue and white rather than Hanukkah's own
+     deep royal-blue night — gold stays the accent so the pair still reads
+     as the same holiday. */
+  --bg: #f2f6ff;
+  --panel: #ffffff;
+  --panel-soft: #e4ecfb;
+  --elevated: #cddaf5;
+  --elevated-hover: #b3c5ee;
+  --border: rgba(30, 50, 120, 0.14);
+  --heading: #1a3a7a;
+  --text: #16224a;
+  --muted: rgba(22, 34, 74, 0.68);
+  --faint: rgba(22, 34, 74, 0.42);
+  --accent: #c9972f;
+  --accent-hover: #ddab48;
+  --on-accent: #2a1c00;
+  --danger: #c1483f;
+  --highlight: #7fa8ff;
+  --card-bg: #ffffff;
+  --card-text: #16224a;
+  --card-red: #a8324f;
+  --card-wild-bg: #dbe4ff;
+  --card-wild-text: #1a2a58;
+}
+
+[data-theme="candycane"] {
+  /* Christmas, daytime: peppermint white and red rather than Christmas's
+     own pine-forest-at-night green — green moves to a heading/highlight
+     role instead of being the dominant background. */
+  --bg: #fef7f5;
+  --panel: #ffffff;
+  --panel-soft: #fbe8e4;
+  --elevated: #f5d0c8;
+  --elevated-hover: #edb8ac;
+  --border: rgba(180, 20, 40, 0.14);
+  --heading: #0d5c34;
+  --text: #3a1418;
+  --muted: rgba(58, 20, 24, 0.68);
+  --faint: rgba(58, 20, 24, 0.42);
+  --accent: #d2122e;
+  --accent-hover: #e8324a;
+  --on-accent: #fff5f5;
+  --danger: #b8102e;
+  --highlight: #0d5c34;
+  --card-bg: #ffffff;
+  --card-text: #3a1418;
+  --card-red: #b8102e;
+  --card-wild-bg: #d0f0dc;
+  --card-wild-text: #0d5c34;
+}
+
+[data-theme="confetti"] {
+  /* New Year's Eve, daytime: bright white with a lively confetti-pink pop
+     rather than New Year's Eve's own black-tie black-and-gold glamour —
+     gold moves to a secondary highlight so the primary accent (pink)
+     keeps this from just reading as another version of the Champagne
+     classic theme. */
+  --bg: #fffaf0;
+  --panel: #ffffff;
+  --panel-soft: #f7ecd6;
+  --elevated: #edd9ab;
+  --elevated-hover: #e2c47f;
+  --border: rgba(150, 110, 20, 0.16);
+  --heading: #8a6510;
+  --text: #3a2e10;
+  --muted: rgba(58, 46, 16, 0.68);
+  --faint: rgba(58, 46, 16, 0.42);
+  --accent: #d94f9e;
+  --accent-hover: #e56db3;
+  --on-accent: #2a0a1c;
+  --danger: #c1483f;
+  --highlight: #d4af37;
+  --card-bg: #ffffff;
+  --card-text: #3a2e10;
+  --card-red: #a8324f;
+  --card-wild-bg: #f3e0b3;
+  --card-wild-text: #6b4f12;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

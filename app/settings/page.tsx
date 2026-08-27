@@ -127,6 +127,15 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   hanukkah: { bg: "#0a1230", panel: "#121c42", accent: "#d4af37", heading: "#e8ecff" },
   christmas: { bg: "#0a2818", panel: "#123821", accent: "#c8102e", heading: "#f4c95d" },
   newyears: { bg: "#0a0a0c", panel: "#18161c", accent: "#d4af37", heading: "#f0d78c" },
+  sweetheart: { bg: "#fff0f4", panel: "#ffffff", accent: "#e0245e", heading: "#a8154a" },
+  cloverfield: { bg: "#f3fbf3", panel: "#ffffff", accent: "#2fa864", heading: "#0d5c30" },
+  springdusk: { bg: "#1c1030", panel: "#281848", accent: "#7fd9a8", heading: "#d8b8f0" },
+  starsandstripes: { bg: "#f7f9fd", panel: "#ffffff", accent: "#c8102e", heading: "#16255e" },
+  candycorn: { bg: "#fff8ec", panel: "#ffffff", accent: "#8b3fd9", heading: "#7a3d0f" },
+  pumpkinspice: { bg: "#fbf0e0", panel: "#ffffff", accent: "#d2691e", heading: "#7a3d0f" },
+  festivaloflights: { bg: "#f2f6ff", panel: "#ffffff", accent: "#c9972f", heading: "#1a3a7a" },
+  candycane: { bg: "#fef7f5", panel: "#ffffff", accent: "#d2122e", heading: "#0d5c34" },
+  confetti: { bg: "#fffaf0", panel: "#ffffff", accent: "#d94f9e", heading: "#8a6510" },
 };
 
 function ThemeGrid({
