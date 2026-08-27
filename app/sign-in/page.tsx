@@ -77,6 +77,7 @@ export default function SignInPage() {
     setMode(next);
     setError(null);
     setResetEmailSent(false);
+    setCheckEmail(false);
   }
 
   return (
@@ -90,9 +91,17 @@ export default function SignInPage() {
       <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">Sign in</h1>
 
       {checkEmail ? (
-        <p className="text-center text-sm text-[var(--muted)]">
-          Check your email (including spam) to confirm your account, then come back and sign in.
-        </p>
+        <>
+          <p className="text-center text-sm text-[var(--muted)]">
+            Check your email (including spam) to confirm your account, then come back and sign in.
+          </p>
+          <button
+            onClick={() => switchMode("sign-in")}
+            className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
+          >
+            Back to sign in
+          </button>
+        </>
       ) : resetEmailSent ? (
         <>
           <p className="text-center text-sm text-[var(--muted)]">

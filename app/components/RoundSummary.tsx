@@ -19,6 +19,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   const flushedRef = useRef<number | null>(null);
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
+  const lowestTotal = Math.min(...state.players.map((p) => p.cumulativeScore));
   const roundLabel = `Round ${state.round}`;
 
   // Flush this round's meld/discard/turn/etc. progress now rather than
@@ -64,15 +65,36 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
             </tr>
           </thead>
           <tbody>
-            {standings.map((p) => (
-              <tr key={p.id} className="border-t border-[var(--border)]">
-                <td className="px-4 py-2">{p.name}</td>
-                <td className="px-4 py-2">
-                  +{p.cumulativeScore - (roundStartScores[p.id] ?? 0)}
-                </td>
-                <td className="px-4 py-2 font-semibold">{p.cumulativeScore}</td>
-              </tr>
-            ))}
+            {standings.map((p) => {
+              // Lowest cumulative score is the overall game lead — distinct
+              // from `wentOut` (this round's winner) above, which can be a
+              // different player entirely. Without this, the only way to
+              // tell who's actually ahead in the game was to manually scan
+              // Total for the smallest number; the Scorekeeper and
+              // GameOverScreen already made their equivalent "who's winning"
+              // signal this obvious, this table was the one place that didn't.
+              const isLeading = p.cumulativeScore === lowestTotal;
+              return (
+                <tr key={p.id} className="border-t border-[var(--border)]">
+                  <td className="px-4 py-2">
+                    {p.name}
+                    {isLeading && (
+                      <span className="ml-1.5 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                        Leading
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    +{p.cumulativeScore - (roundStartScores[p.id] ?? 0)}
+                  </td>
+                  <td
+                    className={`px-4 py-2 font-semibold ${isLeading ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}
+                  >
+                    {p.cumulativeScore}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
