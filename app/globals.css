@@ -607,6 +607,34 @@ a:active {
   box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+/* A card fading/rising in on its own — no JS state, no orchestration. This
+   plays purely because CSS animations run automatically the moment an
+   element with one is inserted into the DOM; it never replays on a re-render
+   that reuses the same DOM node. PlayingCard is always keyed by card.id
+   (see DraggableHand.tsx and every table-meld list in game/page.tsx), so
+   sorting or reordering a hand moves existing nodes rather than recreating
+   them — only a card that's genuinely new to wherever it's rendered (dealt,
+   drawn, or just laid onto a meld — moving into a different list is its own
+   mount even with a stable key, since key stability only prevents remount
+   within the *same* list) gets this. Applied to face-up cards only; the
+   draw/discard piles' single face-down/face-up representation isn't "a new
+   card arriving" in the same sense and re-triggering it on every unrelated
+   state change would read as flickery rather than intentional. */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-enter {
+  animation: card-enter 0.22s ease-out;
+}
+
 /* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
 @keyframes tutorial-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--accent); }
@@ -625,5 +653,9 @@ a:active {
   button:not(:disabled):active,
   a:active {
     transform: none;
+  }
+
+  .card-enter {
+    animation: none;
   }
 }
