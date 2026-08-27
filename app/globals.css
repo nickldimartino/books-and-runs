@@ -993,6 +993,43 @@
   --card-wild-text: #6b4f12;
 }
 
+/*
+ * Colorblind-friendly card color overrides — see PlayingCard.tsx's
+ * .card-face.red/.wild below for where --card-red/--card-wild-bg/
+ * --card-wild-text actually get consumed. Placed after every [data-theme]
+ * block above on purpose: [data-theme] and [data-colorblind] both target
+ * <html>, so these have identical specificity to a theme block's own rules —
+ * later source wins, which is what lets one of these three variables
+ * override whichever theme happens to be active rather than only working
+ * with Midnight's default palette.
+ *
+ * Suit symbols (♥♦♣♠) already fully disambiguate every suit regardless of
+ * color, so the only thing color-blindness actually threatens here is the
+ * quick, at-a-glance "red vs. black vs. wild" scan a sighted player gets for
+ * free — restoring that is the whole goal, not inventing new shape/pattern
+ * cues suits don't need.
+ *
+ * Protanopia/deuteranopia are both red-green confusions, so only --card-red
+ * needs to move (to a blue with no red-green ambiguity) — the existing pale
+ * gold/brown wild-card colors sit far enough outside the red-green axis to
+ * stay legible as-is for both types, so they're left untouched here.
+ * Tritanopia is a blue-yellow confusion instead — red-vs-black is already
+ * reliably distinct for it, so --card-red is left alone, but the wild card's
+ * yellow-toned bg/text (easy to mistake for un-wild in this specific type)
+ * moves to a magenta pairing that sits outside the blue-yellow confusion
+ * line instead.
+ */
+[data-colorblind="protanopia"] {
+  --card-red: #1d4ed8;
+}
+[data-colorblind="deuteranopia"] {
+  --card-red: #c2410c;
+}
+[data-colorblind="tritanopia"] {
+  --card-wild-bg: #f3d0ec;
+  --card-wild-text: #7a1f6b;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

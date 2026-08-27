@@ -5,6 +5,7 @@ import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
 import { SettingsSync } from "./SettingsSync";
 import { THEMES } from "./lib/themeStore";
+import { COLORBLIND_MODES } from "./lib/colorblindStore";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,11 +36,22 @@ export const viewport: Viewport = {
 const THEME_IDS_JSON = JSON.stringify(THEMES.map((t) => t.id));
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("booksAndRuns:theme");if(${THEME_IDS_JSON}.indexOf(t)!==-1){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
 
+// Same reasoning as THEME_INIT_SCRIPT, for the colorblind card-color
+// override (see colorblindStore.ts) — applied before first paint so a
+// returning visitor with a non-default mode saved doesn't see a flash of
+// standard card colors before hydration catches up. "off" is deliberately
+// excluded from the allow-list: applyColorblindMode() never sets the
+// attribute for "off" (it removes it instead), and the CSS in globals.css
+// has no [data-colorblind="off"] block to match anyway.
+const COLORBLIND_IDS_JSON = JSON.stringify(COLORBLIND_MODES.map((m) => m.id).filter((id) => id !== "off"));
+const COLORBLIND_INIT_SCRIPT = `(function(){try{var c=localStorage.getItem("booksAndRuns:colorblindMode");if(${COLORBLIND_IDS_JSON}.indexOf(c)!==-1){document.documentElement.setAttribute("data-colorblind",c);}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: COLORBLIND_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
         <AuthProvider>

@@ -5,6 +5,14 @@ import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId, ThemeOption } from "../lib/themeStore";
+import {
+  applyColorblindMode,
+  ColorblindMode,
+  COLORBLIND_MODES,
+  DEFAULT_COLORBLIND_MODE,
+  loadLocalColorblindMode,
+  saveLocalColorblindMode,
+} from "../lib/colorblindStore";
 import { supabase } from "../lib/supabaseClient";
 import { Difficulty } from "@/types";
 
@@ -187,12 +195,14 @@ export default function SettingsPage() {
   const { configured, user } = useAuth();
   const [settings, setSettings] = useState<HouseSettings>(DEFAULT_SETTINGS);
   const [theme, setTheme] = useState<ThemeId>("midnight");
+  const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
     setSettings(loadLocalSettings());
     setTheme(loadLocalTheme());
+    setColorblindMode(loadLocalColorblindMode());
     if (!supabase || !user) {
       setLoading(false);
       return;
@@ -222,6 +232,12 @@ export default function SettingsPage() {
     setTheme(id);
     saveLocalTheme(id);
     applyTheme(id);
+  }
+
+  function handleColorblindModeChange(mode: ColorblindMode) {
+    setColorblindMode(mode);
+    saveLocalColorblindMode(mode);
+    applyColorblindMode(mode);
   }
 
   async function handleSave() {
@@ -274,6 +290,29 @@ export default function SettingsPage() {
               <span className="font-semibold text-[var(--muted)]">{THEMES.find((t) => t.id === theme)?.name}</span>{" "}
               — {THEMES.find((t) => t.id === theme)?.description}
             </p>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <InfoDetails label="Colorblind-friendly cards">
+              Shifts red and/or wild card colors to be easier to tell apart, for the color blindness
+              type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
+            </InfoDetails>
+            <div className="grid grid-cols-2 gap-2">
+              {COLORBLIND_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => handleColorblindModeChange(m.id)}
+                  title={m.description}
+                  className={`rounded-md px-3 py-2 text-sm font-medium ${
+                    colorblindMode === m.id
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
           </section>
 
           <section className="flex flex-col gap-2">
