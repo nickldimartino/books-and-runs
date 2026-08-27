@@ -191,8 +191,7 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-[var(--faint)]">
               <span className="font-semibold text-[var(--muted)]">{THEMES.find((t) => t.id === theme)?.name}</span>{" "}
-              — {THEMES.find((t) => t.id === theme)?.description} Applies right away. It&apos;s just for this
-              device though, so you&apos;ll want to pick it again if you play somewhere else.
+              — {THEMES.find((t) => t.id === theme)?.description}
             </p>
           </section>
 
@@ -220,7 +219,7 @@ export default function SettingsPage() {
             label="Sound effects"
             value={settings.soundEnabled}
             onChange={(v) => setSettings((s) => ({ ...s, soundEnabled: v }))}
-            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins. Just for this device, like the theme."
+            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins."
           />
 
           <BoolToggle
