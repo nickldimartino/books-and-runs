@@ -122,7 +122,7 @@ export default function ScorecardPage() {
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">In-Person Scorecard</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">Scorekeeper</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           For scoring the physical card game at the table — just addition, nothing fancy.
         </p>

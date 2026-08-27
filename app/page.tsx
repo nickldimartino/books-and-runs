@@ -100,7 +100,7 @@ export default function HomePage() {
           href="/scorecard"
           className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
-          In-Person Scorecard
+          Scorekeeper
         </Link>
         <Link
           href="/history"
