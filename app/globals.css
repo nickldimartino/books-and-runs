@@ -661,6 +661,33 @@ a:active {
   animation: level-up-pulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Each line of the game-over XP breakdown (GameOverScreen.tsx) fades/slides
+   in with a small stagger via an inline animation-delay set per index — the
+   whole list reveals as a little cascade instead of appearing all at once.
+   animation-fill-mode: both is load-bearing here specifically because of
+   that per-item delay: without it, a delayed item would render at its
+   normal (fully visible) styles for the whole delay period and only jump to
+   the "from" keyframe once its turn actually starts, flashing visible then
+   invisible then back in; "both" applies the first keyframe retroactively
+   through the delay so every line stays invisible from the very start. Same
+   no-JS-state reasoning as card-enter/level-up-pulse above — xpBreakdown is
+   set once by attemptSave and this list is never rebuilt with different
+   items afterward, so it only ever mounts once. */
+@keyframes line-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.line-enter {
+  animation: line-enter 0.3s ease-out both;
+}
+
 /* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
 @keyframes tutorial-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--accent); }
@@ -686,6 +713,10 @@ a:active {
   }
 
   .level-up-pulse {
+    animation: none;
+  }
+
+  .line-enter {
     animation: none;
   }
 }

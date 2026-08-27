@@ -307,7 +307,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
               {xpBreakdown.length > 0 && (
                 <ul className="mt-1 flex flex-col gap-0.5">
                   {xpBreakdown.map((item, i) => (
-                    <li key={i}>
+                    <li key={i} className="line-enter" style={{ animationDelay: `${i * 70}ms` }}>
                       +{item.amount} XP — {item.label}
                     </li>
                   ))}
