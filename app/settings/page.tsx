@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
@@ -21,6 +21,20 @@ function capitalize(s: string): string {
 
 interface SettingsRow {
   preferred_ai_difficulty_default: string | null;
+}
+
+// Collapsed by default so a settings screen full of toggles doesn't read as
+// a wall of explanatory paragraphs — the "what does this do?" text is still
+// one tap away for anyone who wants it, same disclosure pattern this app
+// already uses elsewhere (native <details>, so it needs no extra state and
+// works identically on touch and desktop).
+function InfoDetails({ children }: { children: ReactNode }) {
+  return (
+    <details className="text-xs text-[var(--faint)]">
+      <summary className="cursor-pointer select-none">What does this do?</summary>
+      <p className="mt-1">{children}</p>
+    </details>
+  );
 }
 
 function BoolToggle({
@@ -57,7 +71,7 @@ function BoolToggle({
           </button>
         ))}
       </div>
-      <p className="text-xs text-[var(--faint)]">{description}</p>
+      <InfoDetails>{description}</InfoDetails>
     </section>
   );
 }
@@ -210,9 +224,9 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-[var(--faint)]">
+            <InfoDetails>
               Used as the starting difficulty when you add an AI opponent on the New Game screen.
-            </p>
+            </InfoDetails>
           </section>
 
           <BoolToggle
