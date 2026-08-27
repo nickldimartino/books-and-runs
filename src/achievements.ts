@@ -35,6 +35,23 @@ export type AchievementSource =
   | { kind: "winRate" } // gamesWon / gamesPlayed, gated by a minimum sample size
   | { kind: "winsByDifficulty"; difficulty: string };
 
+// One of 8 broad groupings, matching the section comments below — used only
+// to pick which of the 8 hand-drawn icons (see AchievementIcon in
+// app/components/AchievementIcons.tsx) a family's achievements show. Kept
+// coarser than one icon per family (40 families) deliberately: distinct
+// bespoke art for every family would be a much bigger asset-design effort
+// than 8 categories reused within each, for the same practical benefit —
+// scanning the Achievements list quickly by kind of accomplishment.
+export type AchievementCategory =
+  | "accountStats"
+  | "aiRivals"
+  | "melding"
+  | "layingOff"
+  | "drawDiscard"
+  | "goingOut"
+  | "contracts"
+  | "tableComposition";
+
 export interface AchievementFamily {
   id: string;
   title: string;
@@ -44,6 +61,7 @@ export interface AchievementFamily {
   thresholds: Record<AchievementTier, number>;
   /** True for families where a *lower* value is the achievement (best score). */
   lowerIsBetter?: boolean;
+  category: AchievementCategory;
 }
 
 /** Everything needed to evaluate every family's current value. */
@@ -84,6 +102,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- Derived from account-level stats already tracked in player_stats ---
   {
     id: "games_played",
+    category: "accountStats",
     title: "Tablehand",
     unit: "games played",
     source: { kind: "gamesPlayed" },
@@ -91,6 +110,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "games_won",
+    category: "accountStats",
     title: "Champion",
     unit: "games won",
     source: { kind: "gamesWon" },
@@ -98,6 +118,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "best_score",
+    category: "accountStats",
     title: "Sharpshooter",
     unit: `final score in a single game (min. ${BEST_SCORE_MIN_GAMES} games played)`,
     source: { kind: "bestScore" },
@@ -106,6 +127,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "win_rate",
+    category: "accountStats",
     title: "Consistent",
     unit: `% win rate (min. ${WIN_RATE_MIN_GAMES} games)`,
     source: { kind: "winRate" },
@@ -115,6 +137,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- One per AI difficulty, from wins_by_difficulty ---
   {
     id: "wins_vs_beginner",
+    category: "aiRivals",
     title: "Rival: Beginner AI",
     unit: "wins with a Beginner AI at the table",
     source: { kind: "winsByDifficulty", difficulty: "beginner" },
@@ -122,6 +145,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wins_vs_easy",
+    category: "aiRivals",
     title: "Rival: Easy AI",
     unit: "wins with an Easy AI at the table",
     source: { kind: "winsByDifficulty", difficulty: "easy" },
@@ -129,6 +153,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wins_vs_medium",
+    category: "aiRivals",
     title: "Rival: Medium AI",
     unit: "wins with a Medium AI at the table",
     source: { kind: "winsByDifficulty", difficulty: "medium" },
@@ -136,6 +161,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wins_vs_hard",
+    category: "aiRivals",
     title: "Rival: Hard AI",
     unit: "wins with a Hard AI at the table",
     source: { kind: "winsByDifficulty", difficulty: "hard" },
@@ -143,6 +169,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wins_vs_expert",
+    category: "aiRivals",
     title: "Rival: Expert AI",
     unit: "wins with an Expert AI at the table",
     source: { kind: "winsByDifficulty", difficulty: "expert" },
@@ -152,6 +179,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- Melding ---
   {
     id: "books_melded",
+    category: "melding",
     title: "Bookworm",
     unit: "books melded",
     source: { kind: "counter", key: "books_melded" },
@@ -159,6 +187,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "runs_melded",
+    category: "melding",
     title: "Runner",
     unit: "runs melded",
     source: { kind: "counter", key: "runs_melded" },
@@ -166,6 +195,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "oversized_books_melded",
+    category: "melding",
     title: "Overstuffed",
     unit: "oversized books melded (bigger than the minimum)",
     source: { kind: "counter", key: "oversized_books_melded" },
@@ -173,6 +203,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "oversized_runs_melded",
+    category: "melding",
     title: "Long Haul",
     unit: "oversized runs melded (longer than the minimum)",
     source: { kind: "counter", key: "oversized_runs_melded" },
@@ -180,6 +211,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wilds_used_in_melds",
+    category: "melding",
     title: "Wild Card",
     unit: "wilds used in melds",
     source: { kind: "counter", key: "wilds_used_in_melds" },
@@ -187,6 +219,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "melds_with_zero_wilds",
+    category: "melding",
     title: "Purist",
     unit: "all-natural melds (no wilds)",
     source: { kind: "counter", key: "melds_with_zero_wilds" },
@@ -196,6 +229,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- Laying off ---
   {
     id: "cards_laid_off",
+    category: "layingOff",
     title: "Offloader",
     unit: "cards laid off",
     source: { kind: "counter", key: "cards_laid_off" },
@@ -203,6 +237,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wilds_laid_off",
+    category: "layingOff",
     title: "Generous",
     unit: "wilds laid off",
     source: { kind: "counter", key: "wilds_laid_off" },
@@ -210,6 +245,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "laid_off_onto_opponent",
+    category: "layingOff",
     title: "Team Player",
     unit: "cards laid onto an opponent's meld",
     source: { kind: "counter", key: "laid_off_onto_opponent" },
@@ -217,6 +253,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "ambiguous_wild_choices_made",
+    category: "layingOff",
     title: "Decisive",
     unit: "ambiguous wild placements resolved",
     source: { kind: "counter", key: "ambiguous_wild_choices_made" },
@@ -226,6 +263,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- Draw / discard economy ---
   {
     id: "cards_drawn_blind",
+    category: "drawDiscard",
     title: "Gambler",
     unit: "cards drawn blind from the pile",
     source: { kind: "counter", key: "cards_drawn_blind" },
@@ -233,6 +271,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "cards_drawn_from_discard",
+    category: "drawDiscard",
     title: "Scavenger",
     unit: "cards taken from the discard pile",
     source: { kind: "counter", key: "cards_drawn_from_discard" },
@@ -240,6 +279,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "wilds_drawn",
+    category: "drawDiscard",
     title: "Lucky Draw",
     unit: "wilds drawn",
     source: { kind: "counter", key: "wilds_drawn" },
@@ -247,6 +287,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "jokers_drawn",
+    category: "drawDiscard",
     title: "Joker's Wild",
     unit: "jokers drawn",
     source: { kind: "counter", key: "jokers_drawn" },
@@ -254,6 +295,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "cards_discarded",
+    category: "drawDiscard",
     title: "Declutterer",
     unit: "cards discarded",
     source: { kind: "counter", key: "cards_discarded" },
@@ -263,6 +305,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- Going out ---
   {
     id: "rounds_won",
+    category: "goingOut",
     title: "Round Winner",
     unit: "rounds won",
     source: { kind: "counter", key: "rounds_won" },
@@ -270,6 +313,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "rounds_won_no_discard",
+    category: "goingOut",
     title: "Clean Sweep",
     unit: "rounds won by going out with no discard needed (outside the final round)",
     source: { kind: "counter", key: "rounds_won_no_discard" },
@@ -277,6 +321,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "rounds_won_via_discard",
+    category: "goingOut",
     title: "Just in Time",
     unit: "rounds won by discarding your last card",
     source: { kind: "counter", key: "rounds_won_via_discard" },
@@ -284,6 +329,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "rounds_won_final_round",
+    category: "goingOut",
     title: "No Rummy",
     unit: "final (3 Runs) rounds won",
     source: { kind: "counter", key: "rounds_won_final_round" },
@@ -291,6 +337,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "zero_penalty_games",
+    category: "goingOut",
     title: "Flawless",
     unit: "games finished with a final score of 0",
     source: { kind: "counter", key: "zero_penalty_games" },
@@ -302,6 +349,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // where in the sequence that round actually falls) ---
   {
     id: "completed_round_1",
+    category: "contracts",
     title: "2 Books Regular",
     unit: "times melded 2 Books",
     source: { kind: "counter", key: "completed_round_1" },
@@ -309,6 +357,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "completed_round_2",
+    category: "contracts",
     title: "Mixed Bag",
     unit: "times melded 1 Book + 1 Run",
     source: { kind: "counter", key: "completed_round_2" },
@@ -316,6 +365,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "completed_round_3",
+    category: "contracts",
     title: "Straight Runner",
     unit: "times melded 2 Runs",
     source: { kind: "counter", key: "completed_round_3" },
@@ -323,6 +373,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "completed_round_4",
+    category: "contracts",
     title: "Heavy Lifter",
     unit: "times melded 2 Books + 1 Run",
     source: { kind: "counter", key: "completed_round_4" },
@@ -330,6 +381,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "completed_round_5",
+    category: "contracts",
     title: "Triple Threat",
     unit: "times melded 1 Book + 2 Runs",
     source: { kind: "counter", key: "completed_round_5" },
@@ -337,6 +389,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "completed_round_6",
+    category: "contracts",
     title: "Trilogy",
     unit: "times melded 3 Books",
     source: { kind: "counter", key: "completed_round_6" },
@@ -344,6 +397,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "completed_round_7",
+    category: "contracts",
     title: "The Hardest Round",
     unit: "times melded 3 Runs (the whole hand at once)",
     source: { kind: "counter", key: "completed_round_7" },
@@ -353,6 +407,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   // --- Table composition ---
   {
     id: "pass_and_play_games",
+    category: "tableComposition",
     title: "Around the Table",
     unit: "games with 2+ human players",
     source: { kind: "counter", key: "pass_and_play_games" },
@@ -360,6 +415,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "solo_vs_ai_games",
+    category: "tableComposition",
     title: "Solo Act",
     unit: "games playing alone against AI",
     source: { kind: "counter", key: "solo_vs_ai_games" },
@@ -367,6 +423,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "large_table_games",
+    category: "tableComposition",
     title: "Full House",
     unit: "games with 6 or more players",
     source: { kind: "counter", key: "large_table_games" },
@@ -374,6 +431,7 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
   },
   {
     id: "turns_taken",
+    category: "tableComposition",
     title: "Marathoner",
     unit: "turns taken",
     source: { kind: "counter", key: "turns_taken" },
@@ -407,6 +465,7 @@ export function achievementValue(family: AchievementFamily, state: AchievementPr
 export interface AchievementInstance {
   familyId: string;
   familyTitle: string;
+  category: AchievementCategory;
   tier: AchievementTier;
   unit: string;
   threshold: number;
@@ -449,6 +508,7 @@ export function allAchievements(state: AchievementProgressState): AchievementIns
       out.push({
         familyId: family.id,
         familyTitle: family.title,
+        category: family.category,
         tier,
         unit: family.unit,
         threshold,

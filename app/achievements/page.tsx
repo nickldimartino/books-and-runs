@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { AchievementIcon } from "../components/AchievementIcons";
 import {
   ACHIEVEMENT_TIERS,
   AchievementInstance,
@@ -255,9 +256,15 @@ function AchievementCard({ achievement }: { achievement: AchievementInstance }) 
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-[var(--heading)]">
-          {achievement.unlocked ? "✓ " : ""}
-          {achievement.familyTitle}
+        <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--heading)]">
+          <AchievementIcon
+            category={achievement.category}
+            className={`h-5 w-5 shrink-0 ${achievement.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
+          />
+          <span className="truncate">
+            {achievement.unlocked ? "✓ " : ""}
+            {achievement.familyTitle}
+          </span>
         </span>
         <span className="shrink-0 rounded-full bg-[var(--panel-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
           {TIER_LABEL[achievement.tier]}
