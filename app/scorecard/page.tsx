@@ -284,8 +284,23 @@ export default function ScorecardPage() {
                   const isLeader = minTotal !== null && total === minTotal;
                   return (
                     <tr key={p.id} className="border-t border-[var(--border)]">
-                      <td className="sticky left-0 bg-[var(--bg)] px-3 py-2 font-medium text-[var(--heading)]">
-                        {p.name || `Player ${i + 1}`}
+                      <td className="sticky left-0 bg-[var(--bg)] px-3 py-2">
+                        {/* Was static text here — a typo'd name, or a late
+                            arrival who needs relabeling from "Player 3",
+                            meant starting the whole scorecard over, wiping
+                            every score already entered, since the only
+                            other place a name could be edited was the setup
+                            screen this table replaces. bg-transparent until
+                            focused keeps the table looking like a table, not
+                            a form, until someone actually taps in to rename. */}
+                        <input
+                          type="text"
+                          value={p.name}
+                          onChange={(e) => renamePlayer(p.id, e.target.value)}
+                          placeholder={`Player ${i + 1}`}
+                          maxLength={20}
+                          className="w-full min-w-[6rem] rounded-md bg-transparent px-1.5 py-1 text-sm font-medium text-[var(--heading)] outline-none ring-1 ring-transparent focus:bg-[var(--panel-soft)] focus:ring-[var(--accent)]"
+                        />
                       </td>
                       {selectedContracts.map((c) => (
                         <td key={c.round} className="px-2 py-1.5 text-center">

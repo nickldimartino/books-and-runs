@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
 
 interface PlayerStats {
@@ -23,7 +24,37 @@ interface GameHistoryRow {
   // Only present on games recorded after this column was added — null for
   // anything older, which the list below shows plainly rather than a 0.
   winner_score: number | null;
+  // Round-by-round cumulative totals for every player, keyed by name —
+  // recordGameResult.ts has always stored this (it's the same roundHistory
+  // GameContext already tracks for RoundSummary), but the Stats page never
+  // read it back until now. See yourScoreFor below for why it's the only
+  // way to recover *your* score for a game you didn't win — winner_score is
+  // only ever the winner's score.
+  rounds: RoundHistoryEntry[] | null;
   played_at: string;
+}
+
+/**
+ * Your final score for this game, or null if it can't be determined (a row
+ * from before the `rounds` column existed, or the degenerate case where
+ * your seat's name happens to collide with an opponent's — see below).
+ * winner_score alone can't answer this for a loss: it's only ever the
+ * *winner's* score, so a page whose purpose is tracking your own play over
+ * time was otherwise mute on every game you didn't win.
+ *
+ * Derived rather than stored as its own column: the last entry in `rounds`
+ * already has every player's final cumulative total, keyed by name — "your"
+ * name is just whichever key isn't one of the recorded opponents' names.
+ * (Two players sharing an identical name — you and a pass-and-play
+ * opponent — would make that ambiguous; rare enough, and low-stakes enough
+ * when it happens, not to be worth a schema change to rule out.)
+ */
+function yourScoreFor(g: GameHistoryRow): number | null {
+  if (!g.rounds || g.rounds.length === 0) return null;
+  const lastRound = g.rounds[g.rounds.length - 1];
+  const opponentNames = new Set(g.opponents.map((o) => o.name));
+  const candidates = Object.keys(lastRound.totals).filter((name) => !opponentNames.has(name));
+  return candidates.length === 1 ? lastRound.totals[candidates[0]] : null;
 }
 
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
@@ -57,7 +88,7 @@ export default function StatsPage() {
         .maybeSingle<PlayerStats>(),
       supabase
         .from("game_history")
-        .select("id, opponents, winner, winner_score, played_at")
+        .select("id, opponents, winner, winner_score, rounds, played_at")
         .eq("user_id", user.id)
         .order("played_at", { ascending: false })
         .limit(PAST_GAMES_LIMIT),
@@ -183,27 +214,43 @@ export default function StatsPage() {
               <p className="text-sm text-[var(--faint)]">No games recorded yet.</p>
             ) : (
               <ul className="flex flex-col gap-2">
-                {history.map((g) => (
-                  <li key={g.id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-[var(--heading)]">
-                        Winner: {g.winner}
-                        {g.winner_score != null && (
-                          <span className="font-normal text-[var(--faint)]"> ({g.winner_score} pts)</span>
-                        )}
-                      </span>
-                      <span className="text-xs text-[var(--faint)]">
-                        {new Date(g.played_at).toLocaleString(undefined, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-[var(--faint)]">
-                      vs. {g.opponents.map((o) => o.name).join(", ")}
-                    </p>
-                  </li>
-                ))}
+                {history.map((g) => {
+                  const yourScore = yourScoreFor(g);
+                  // If your score matches the winner's, you won it outright
+                  // or were part of a tie for it — either way winner_score
+                  // already *is* your score, so a separate "Your score" line
+                  // would just repeat the same number back.
+                  const wonOrTied = yourScore !== null && g.winner_score != null && yourScore === g.winner_score;
+                  return (
+                    <li key={g.id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`font-medium ${wonOrTied ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}
+                        >
+                          Winner: {g.winner}
+                          {g.winner_score != null && (
+                            <span className={`font-normal ${wonOrTied ? "" : "text-[var(--faint)]"}`}>
+                              {" "}
+                              ({g.winner_score} pts)
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-xs text-[var(--faint)]">
+                          {new Date(g.played_at).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                      </div>
+                      {yourScore !== null && !wonOrTied && (
+                        <p className="mt-0.5 text-xs text-[var(--muted)]">Your score: {yourScore} pts</p>
+                      )}
+                      <p className="mt-1 text-xs text-[var(--faint)]">
+                        vs. {g.opponents.map((o) => o.name).join(", ")}
+                      </p>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
