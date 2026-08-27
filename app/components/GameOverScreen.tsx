@@ -297,7 +297,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
           {saved === "saved" && xpGained !== null && (
             <div className="mt-1">
               <p className="text-sm font-semibold text-[var(--accent)]">
-                +{xpGained} XP{leveledUpTo !== null && ` — Level up! Now level ${leveledUpTo}`}
+                +{xpGained} XP
+                {leveledUpTo !== null && (
+                  <span className="level-up-pulse ml-1 inline-block font-bold">
+                    — Level up! Now level {leveledUpTo}
+                  </span>
+                )}
               </p>
               {xpBreakdown.length > 0 && (
                 <ul className="mt-1 flex flex-col gap-0.5">
