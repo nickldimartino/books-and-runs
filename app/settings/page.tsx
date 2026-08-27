@@ -162,7 +162,15 @@ const COLORBLIND_SWATCHES: Record<ColorblindMode, { red: string; wildBg: string;
   tritanopia: { red: "#b91c1c", wildBg: "#f3d0ec", wildText: "#7a1f6b" },
 };
 
-function ThemeGrid({
+// A row per theme (swatch + full name, never truncated) instead of the
+// small-grid-cell-with-a-caption layout this replaced — that grid packed 5
+// swatches per row on a phone-width screen, leaving each theme's name maybe
+// 55px to render in, which clipped anything longer than ~8-9 characters
+// ("St. Patrick's Day", "Festival of Lights", etc.). A single-column list
+// gives every name the full row width, so nothing needs truncating; the
+// swatch itself already carries most of the "which one is this" signal at a
+// glance, with the name as the reliable, always-fully-readable identifier.
+function ThemeList({
   themes,
   active,
   onSelect,
@@ -172,7 +180,7 @@ function ThemeGrid({
   onSelect: (id: ThemeId) => void;
 }) {
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="flex flex-col gap-1">
       {themes.map((t) => {
         const swatch = THEME_SWATCHES[t.id];
         const isActive = active === t.id;
@@ -180,29 +188,79 @@ function ThemeGrid({
           <button
             key={t.id}
             onClick={() => onSelect(t.id)}
-            title={t.name}
-            className="flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-[var(--panel)]"
+            aria-current={isActive}
+            className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
+              isActive ? "bg-[var(--accent)]/15" : "hover:bg-[var(--panel)]"
+            }`}
           >
             <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition ${
                 isActive ? "border-[var(--accent)]" : "border-transparent"
               }`}
               style={{ background: swatch.bg }}
             >
               <span
-                className="h-5 w-5 rounded-full border"
+                className="h-4 w-4 rounded-full border"
                 style={{ background: swatch.panel, borderColor: swatch.accent }}
               />
             </span>
-            <span
-              className="max-w-full truncate text-[10px] font-medium leading-tight"
-              style={{ color: isActive ? "var(--accent)" : "var(--faint)" }}
-            >
-              {t.name}
-            </span>
+            <span className="min-w-0 flex-1 text-sm font-medium text-[var(--heading)]">{t.name}</span>
+            {isActive && (
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4 shrink-0 text-[var(--accent)]"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Collapsed by default (except whichever category holds the currently
+// active theme) so the settings page doesn't open with ~38 rows' worth of
+// theme list already unfurled — same collapse-by-default reasoning as the
+// "Player activity this round" table on the game board. Plain useState
+// rather than the native <details> InfoDetails uses elsewhere: this needs a
+// visible open row-count and an explicit Show/Hide affordance bigger than a
+// bare disclosure triangle, since tapping into a ~20-row list is a more
+// deliberate action than glancing at a one-line setting description.
+function ThemeCategorySection({
+  title,
+  themes,
+  active,
+  onSelect,
+  defaultOpen,
+}: {
+  title: string;
+  themes: ThemeOption[];
+  active: ThemeId;
+  onSelect: (id: ThemeId) => void;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-left"
+        aria-expanded={open}
+      >
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+          {title} <span className="normal-case text-[var(--faint)]">({themes.length})</span>
+        </h3>
+        <span className="text-xs text-[var(--faint)]">{open ? "Hide ▲" : "Show ▼"}</span>
+      </button>
+      {open && <ThemeList themes={themes} active={active} onSelect={onSelect} />}
     </div>
   );
 }
@@ -284,28 +342,44 @@ export default function SettingsPage() {
           <section className="flex flex-col gap-3">
             <label className="text-sm font-medium text-[var(--muted)]">Theme</label>
 
-            <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Classic</h3>
-              <ThemeGrid
-                themes={THEMES.filter((t) => t.category === "classic")}
-                active={theme}
-                onSelect={handleThemeChange}
-              />
-            </div>
+            {(() => {
+              const active = THEMES.find((t) => t.id === theme);
+              const swatch = THEME_SWATCHES[theme];
+              if (!active) return null;
+              return (
+                <div className="flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5">
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent)]"
+                    style={{ background: swatch.bg }}
+                  >
+                    <span
+                      className="h-5 w-5 rounded-full border"
+                      style={{ background: swatch.panel, borderColor: swatch.accent }}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--heading)]">{active.name}</p>
+                    <p className="text-xs text-[var(--faint)]">{active.description}</p>
+                  </div>
+                </div>
+              );
+            })()}
 
-            <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Holiday</h3>
-              <ThemeGrid
-                themes={THEMES.filter((t) => t.category === "holiday")}
-                active={theme}
-                onSelect={handleThemeChange}
-              />
-            </div>
+            <ThemeCategorySection
+              title="Classic"
+              themes={THEMES.filter((t) => t.category === "classic")}
+              active={theme}
+              onSelect={handleThemeChange}
+              defaultOpen={THEMES.find((t) => t.id === theme)?.category === "classic"}
+            />
 
-            <p className="text-xs text-[var(--faint)]">
-              <span className="font-semibold text-[var(--muted)]">{THEMES.find((t) => t.id === theme)?.name}</span>{" "}
-              — {THEMES.find((t) => t.id === theme)?.description}
-            </p>
+            <ThemeCategorySection
+              title="Holiday"
+              themes={THEMES.filter((t) => t.category === "holiday")}
+              active={theme}
+              onSelect={handleThemeChange}
+              defaultOpen={THEMES.find((t) => t.id === theme)?.category === "holiday"}
+            />
           </section>
 
           <section className="flex flex-col gap-2">
