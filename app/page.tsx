@@ -5,7 +5,28 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useGame } from "./GameContext";
+import { loadSavedGame } from "./lib/localSave";
 import { usePlayerLevel } from "./PlayerLevelContext";
+import { GameState } from "@/types";
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** "Round 3 of 7 · vs. Medium AI" — enough context to decide whether to jump
+ * back in without needing to actually load the game first. Reads straight
+ * from the raw saved state rather than GameContext (which only has a game
+ * loaded once continueGame() has actually been called) — this needs to know
+ * what's *there* before committing to resuming it. */
+function summarizeSavedGame(state: GameState): string {
+  const ais = state.players.filter((p) => p.isAI);
+  const humanCount = state.players.length - ais.length;
+  const parts: string[] = [];
+  if (humanCount > 1) parts.push(`${humanCount} players`);
+  if (ais.length === 1) parts.push(`vs. ${capitalize(ais[0].difficulty ?? "medium")} AI`);
+  else if (ais.length > 1) parts.push(`vs. ${ais.length} AI opponents`);
+  return `Round ${state.round} of ${state.selectedContracts.length}${parts.length ? " · " + parts.join(", ") : ""}`;
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -13,6 +34,26 @@ export default function HomePage() {
   const { hasSavedGame, continueGame, state } = useGame();
   const { level } = usePlayerLevel();
   const [continuing, setContinuing] = useState(false);
+  const [savedSummary, setSavedSummary] = useState<string | null>(null);
+
+  // Re-reads on every hasSavedGame flip (a game starting, finishing, or
+  // being quit) rather than once on mount, so this stays in sync with the
+  // Continue button's own disabled state without a page reload.
+  useEffect(() => {
+    const saved = loadSavedGame();
+    setSavedSummary(saved ? summarizeSavedGame(saved.state) : null);
+  }, [hasSavedGame]);
+
+  // A first-time nudge toward the Tutorial, shown only when there's nothing
+  // else already pulling that role: no game in progress to resume, and (for
+  // a signed-in account) no XP yet — the one signal available without a
+  // dedicated fetch that "this account has never actually finished a game."
+  // Left showing for a signed-out/guest visitor and for an unconfigured
+  // deployment, since neither has any other way to tell "have I played
+  // before" — mildly redundant for a returning guest, but never wrong for a
+  // genuinely new one, which is the case this is actually for.
+  const isNewAccount = !configured || !user || (level !== null && level.totalXp === 0);
+  const showTutorialPrompt = !hasSavedGame && isNewAccount;
 
   // continueGame() sets GameContext's state synchronously, but navigating
   // to /game immediately afterward isn't guaranteed to see that update —
@@ -58,6 +99,14 @@ export default function HomePage() {
       </div>
 
       <div className="flex w-full flex-col gap-6">
+        {showTutorialPrompt && (
+          <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-left text-xs text-[var(--heading)]">
+            <strong className="font-semibold">New here?</strong> On the New Game screen, pick{" "}
+            <strong className="font-semibold">Tutorial</strong> for a short guided round that walks
+            you through a real turn step by step.
+          </p>
+        )}
+
         <section className="flex flex-col gap-3">
           <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Play</h2>
           <Link
@@ -66,14 +115,17 @@ export default function HomePage() {
           >
             New Game
           </Link>
-          <button
-            onClick={handleContinue}
-            disabled={!hasSavedGame}
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
-            title={hasSavedGame ? undefined : "No game in progress"}
-          >
-            Continue Local Game
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={handleContinue}
+              disabled={!hasSavedGame}
+              className="w-full rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
+              title={hasSavedGame ? undefined : "No game in progress"}
+            >
+              Continue Local Game
+            </button>
+            {savedSummary && <p className="text-center text-xs text-[var(--faint)]">{savedSummary}</p>}
+          </div>
         </section>
 
         <section className="flex flex-col gap-3">
