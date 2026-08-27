@@ -17,6 +17,7 @@ import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
+import { hapticSuccess } from "../lib/haptics";
 import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
@@ -210,8 +211,10 @@ export default function GamePage() {
   useEffect(() => {
     if (state?.gameOver) {
       playGameWin();
+      hapticSuccess();
     } else if (state?.roundOver) {
       playRoundWin();
+      hapticSuccess();
     }
   }, [state?.roundOver, state?.gameOver]);
 

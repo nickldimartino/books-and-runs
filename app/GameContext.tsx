@@ -19,6 +19,7 @@ import { createTutorialGame } from "@/tutorial";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
 import { playCardSlide, playCardTap, playMeld, setTutorialSoundOverride } from "./lib/sound";
+import { hapticLight, hapticMedium } from "./lib/haptics";
 import {
   createContext,
   ReactNode,
@@ -398,6 +399,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastDrawnCardId(card.id);
       setHasDrawnBoth(true);
       playCardTap();
+      hapticLight();
       commit();
     },
     [hasDrawn, commit, setHasDrawnBoth, bump]
@@ -410,6 +412,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const player = s.players[s.currentPlayerIndex];
       player.hand = [...player.hand].sort(mode === "rank" ? compareByRank : compareBySuit);
       playCardSlide();
+      hapticLight();
       commit();
     },
     [commit]
@@ -433,6 +436,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       let i = 0;
       player.hand = player.hand.map((c) => (orderIndex.has(c.id) ? reordered[i++] : c));
       playCardSlide();
+      hapticLight();
       commit();
     },
     [commit]
@@ -477,6 +481,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
       }
       playMeld();
+      hapticMedium();
       commit();
       return true;
     },
@@ -511,6 +516,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
         }
         playCardTap();
+        hapticLight();
         commit();
       }
       return ok;
@@ -590,6 +596,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
       playCardTap();
+      hapticLight();
       commit();
       setHasDrawnBoth(false);
       setLastDrawnCardId(null);

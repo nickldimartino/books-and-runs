@@ -31,7 +31,11 @@ export function setTutorialSoundOverride(enabled: boolean): void {
   tutorialOverride = enabled;
 }
 
-function soundEnabled(): boolean {
+// Exported so haptics.ts can reuse the exact same on/off + tutorial-override
+// logic instead of duplicating it — this app's Settings groups "Sound
+// effects" as one toggle covering both, matching how iOS itself groups
+// Sound & Haptics together rather than as two separate settings.
+export function soundEnabled(): boolean {
   return tutorialOverride || loadLocalSettings().soundEnabled;
 }
 
