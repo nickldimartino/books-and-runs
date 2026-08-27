@@ -544,7 +544,7 @@ export default function GamePage() {
 
       <header
         data-tutorial="round-header"
-        className="flex items-center justify-between rounded-xl bg-[var(--panel)] px-4 py-3"
+        className="panel-elevated flex items-center justify-between rounded-xl bg-[var(--panel)] px-4 py-3"
       >
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
@@ -639,7 +639,7 @@ export default function GamePage() {
             </section>
           )}
 
-          <section data-tutorial="table-melds" className="rounded-xl bg-[var(--panel-soft)] p-4">
+          <section data-tutorial="table-melds" className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
             </h2>
@@ -696,7 +696,7 @@ export default function GamePage() {
           </section>
 
           {showPlayerActivity && (
-            <section data-tutorial="player-activity" className="rounded-xl bg-[var(--panel-soft)] p-4">
+            <section data-tutorial="player-activity" className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4">
               <button
                 onClick={() => setActivityOpen((v) => !v)}
                 className="flex w-full items-center justify-between text-left"
@@ -760,7 +760,7 @@ export default function GamePage() {
           )}
 
           {!player.hasMeldedContract && (
-            <section data-tutorial="build-meld" className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+            <section data-tutorial="build-meld" className="panel-elevated flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
               </h2>

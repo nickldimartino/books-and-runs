@@ -58,7 +58,7 @@ export function PlayingCard({
   if (faceDown) {
     return (
       <div
-        className={`${size} shrink-0 rounded-lg border-2 border-[var(--accent)]/30 bg-[var(--elevated)]`}
+        className={`card-back ${size} shrink-0 rounded-lg border-2 border-[var(--accent)]/30 bg-[var(--elevated)]`}
       />
     );
   }
@@ -107,7 +107,7 @@ export function PlayingCard({
         }
         className={`card-face ${colorClass} ${size} flex flex-col items-center justify-center gap-0.5 font-bold transition will-change-transform ${
           onClick ? "cursor-pointer hover:-translate-y-1" : "cursor-default"
-        } ${selected ? "-translate-y-2 ring-2 ring-[var(--accent)]" : ""} ${
+        } ${selected ? "card-lifted -translate-y-2 ring-2 ring-[var(--accent)]" : ""} ${
           isNew ? "ring-2 ring-[var(--highlight)]" : ""
         }`}
       >

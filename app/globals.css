@@ -518,11 +518,37 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/* Two shadow layers (a tight contact shadow plus a softer, wider one) reads
+   as a real card resting on the table instead of a flat colored rectangle;
+   the inset highlight is a faint "sheen" along the top edge. All three use
+   a fixed black/white regardless of theme — --card-bg is white or near-white
+   in every theme (see each [data-theme] block), so this never needs
+   per-theme tuning. cursor-pointer:hover and .card-lifted (applied by
+   PlayingCard.tsx while `selected`) grow the shadow further, so a raised
+   card visibly casts more shadow — a lifted card that still cast a flat
+   shadow would look like it was floating, not raised. */
 .card-face {
   background: var(--card-bg);
   color: var(--card-text);
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  border-radius: 0.625rem;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.card-face.cursor-pointer:hover {
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.32),
+    0 8px 14px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.card-face.card-lifted {
+  box-shadow:
+    0 3px 4px rgba(0, 0, 0, 0.32),
+    0 12px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .card-face.red {
@@ -532,6 +558,23 @@ body {
 .card-face.wild {
   background: var(--card-wild-bg);
   color: var(--card-wild-text);
+}
+
+/* Face-down card back (draw pile) — same lift as a face-up card so the
+   draw pile doesn't read as visually flatter than the rest of the table. */
+.card-back {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.22);
+}
+
+/* A --panel/--panel-soft surface on its own only differs from the page
+   background by color, which reads as flat in themes where that contrast is
+   subtle. A soft, wide, fixed-black shadow (same reasoning as the card
+   shadows above — it needs no per-theme tuning) gives the game board's main
+   sections real separation instead of relying on background color alone. */
+.panel-elevated {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 /* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
