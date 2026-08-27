@@ -228,10 +228,21 @@ export default function AchievementsPage() {
 
           {visible.length === 0 ? (
             <p className="text-sm text-[var(--faint)]">No achievements match these filters.</p>
-          ) : (
+          ) : sortMode === "closest" ? (
+            // "Closest to completion" is inherently a flat ranking across
+            // every family at once — grouping by family here would scatter
+            // the very thing this sort mode exists to surface, so it keeps
+            // the original one-row-per-tier list instead of the grouped view
+            // below.
             <ul className="flex flex-col gap-2">
               {visible.map((a) => (
                 <AchievementCard key={`${a.familyId}-${a.tier}`} achievement={a} />
+              ))}
+            </ul>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {groupByFamily(visible).map((tiers) => (
+                <FamilyAchievementGroup key={tiers[0].familyId} tiers={tiers} />
               ))}
             </ul>
           )}
@@ -245,38 +256,144 @@ export default function AchievementsPage() {
   );
 }
 
-function AchievementCard({ achievement }: { achievement: AchievementInstance }) {
+function cardClassName(unlocked: boolean): string {
+  return `rounded-lg border px-4 py-3 ${
+    unlocked ? "border-[var(--accent)]/50 bg-[var(--accent)]/10" : "border-[var(--border)] bg-[var(--panel)]"
+  }`;
+}
+
+/** The actual card content, with no li/div wrapper of its own — reused both
+ * standalone (AchievementCard, one <li> per tier) and nested inside an
+ * expanded FamilyAchievementGroup, where each tier is a <div> instead (an
+ * <li> isn't valid there — it's already inside one, not a direct child of a
+ * <ul>). `compact` drops the family title/icon row (already shown once, on
+ * the group's own header) down to just the tier badge, for those nested rows. */
+function AchievementCardContent({ achievement, compact }: { achievement: AchievementInstance; compact?: boolean }) {
   const pct = Math.round(achievement.progressFraction * 100);
   return (
-    <li
-      className={`rounded-lg border px-4 py-3 ${
-        achievement.unlocked
-          ? "border-[var(--accent)]/50 bg-[var(--accent)]/10"
-          : "border-[var(--border)] bg-[var(--panel)]"
-      }`}
-    >
+    <>
       <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--heading)]">
-          <AchievementIcon
-            category={achievement.category}
-            className={`h-5 w-5 shrink-0 ${achievement.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
-          />
-          <span className="truncate">
+        {compact ? (
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
             {achievement.unlocked ? "✓ " : ""}
-            {achievement.familyTitle}
+            {TIER_LABEL[achievement.tier]}
           </span>
-        </span>
-        <span className="shrink-0 rounded-full bg-[var(--panel-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-          {TIER_LABEL[achievement.tier]}
-        </span>
+        ) : (
+          <>
+            <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--heading)]">
+              <AchievementIcon
+                category={achievement.category}
+                className={`h-5 w-5 shrink-0 ${achievement.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
+              />
+              <span className="truncate">
+                {achievement.unlocked ? "✓ " : ""}
+                {achievement.familyTitle}
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full bg-[var(--panel-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+              {TIER_LABEL[achievement.tier]}
+            </span>
+          </>
+        )}
       </div>
       <p className="mt-1 text-xs text-[var(--faint)]">{formatProgress(achievement)}</p>
       {!achievement.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
+          <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </>
+  );
+}
+
+function AchievementCard({ achievement }: { achievement: AchievementInstance }) {
+  return (
+    <li className={cardClassName(achievement.unlocked)}>
+      <AchievementCardContent achievement={achievement} />
+    </li>
+  );
+}
+
+/** Same family, one entry per tier that survived the current status/tier
+ * filters — Map preserves first-insertion order, which for the unfiltered
+ * "default order" sort already matches ACHIEVEMENT_FAMILIES' own order, so
+ * no extra sort is needed here. */
+function groupByFamily(list: AchievementInstance[]): AchievementInstance[][] {
+  const map = new Map<string, AchievementInstance[]>();
+  for (const a of list) {
+    if (!map.has(a.familyId)) map.set(a.familyId, []);
+    map.get(a.familyId)!.push(a);
+  }
+  return [...map.values()];
+}
+
+/** Which tier to show on a family's collapsed summary row: the highest tier
+ * actually unlocked (the most impressive true thing about this family right
+ * now), or — if none yet — whichever tier is closest to unlocking, so the
+ * summary always shows genuinely useful progress instead of always defaulting
+ * to Beginner. */
+function pickHeadlineTier(tiers: AchievementInstance[]): AchievementInstance {
+  const unlocked = tiers.filter((t) => t.unlocked);
+  if (unlocked.length > 0) return unlocked[unlocked.length - 1];
+  return [...tiers].sort((a, b) => b.progressFraction - a.progressFraction)[0];
+}
+
+/**
+ * One family's achievements, collapsed to a single summary row by default —
+ * this is what turns a flat 200-row list (40 families × 5 tiers) into 40
+ * scannable rows, expandable one at a time for the full tier breakdown. A
+ * family reduced to exactly one surviving tier (typically because a specific
+ * tier filter is active) skips the expand/collapse shell entirely — nothing
+ * to collapse — and renders as a plain AchievementCard instead.
+ */
+function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
+  const [open, setOpen] = useState(false);
+  if (tiers.length === 0) return null;
+  if (tiers.length === 1) return <AchievementCard achievement={tiers[0]} />;
+
+  const headline = pickHeadlineTier(tiers);
+  const unlockedCount = tiers.filter((t) => t.unlocked).length;
+
+  return (
+    <li className={cardClassName(headline.unlocked)}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 text-left"
+        aria-expanded={open}
+      >
+        <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--heading)]">
+          <AchievementIcon
+            category={headline.category}
+            className={`h-5 w-5 shrink-0 ${headline.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
+          />
+          <span className="truncate">{headline.familyTitle}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-[var(--panel-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+            {unlockedCount}/{tiers.length} tiers
+          </span>
+          <span className="text-xs text-[var(--faint)]">{open ? "▲" : "▼"}</span>
+        </span>
+      </button>
+      <p className="mt-1 text-xs text-[var(--faint)]">
+        {TIER_LABEL[headline.tier]}
+        {headline.unlocked ? " unlocked" : ""} — {formatProgress(headline)}
+      </p>
+      {!headline.unlocked && (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
           <div
             className="h-full rounded-full bg-[var(--accent)]"
-            style={{ width: `${pct}%` }}
+            style={{ width: `${Math.round(headline.progressFraction * 100)}%` }}
           />
+        </div>
+      )}
+      {open && (
+        <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
+          {tiers.map((t) => (
+            <div key={t.tier} className={cardClassName(t.unlocked)}>
+              <AchievementCardContent achievement={t} compact />
+            </div>
+          ))}
         </div>
       )}
     </li>
