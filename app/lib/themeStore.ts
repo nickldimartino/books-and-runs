@@ -18,38 +18,58 @@ export type ThemeId =
   | "meadow"
   | "coralsand"
   | "lilac"
-  | "champagne";
+  | "champagne"
+  | "valentines"
+  | "stpatricks"
+  | "easter"
+  | "july4th"
+  | "halloween"
+  | "thanksgiving"
+  | "hanukkah"
+  | "christmas"
+  | "newyears";
+
+export type ThemeCategory = "classic" | "holiday";
 
 export interface ThemeOption {
   id: ThemeId;
   name: string;
   description: string;
+  category: ThemeCategory;
 }
 
-// Deliberately interleaved light/dark (10 of each) rather than grouped by
-// when each was added — 5 dark then 5 light in a row reads as two solid
-// blocks in the settings grid instead of a spread of options.
 export const THEMES: ThemeOption[] = [
-  { id: "midnight", name: "Midnight", description: "The original dark felt-table look." },
-  { id: "daylight", name: "Daylight", description: "Clean and light, easy to read in bright rooms." },
-  { id: "casino", name: "Casino Royale", description: "Deep red and gold, dramatic high-roller felt." },
-  { id: "pastel", name: "Pastel Deck", description: "Periwinkle, coral, and mint — soft and easy on the eyes." },
-  { id: "arcade", name: "Retro Arcade", description: "Neon cyan and pink on a synthwave purple table." },
-  { id: "sakura", name: "Sakura", description: "Cherry-blossom pink and white with a deep crimson accent." },
-  { id: "noir", name: "Film Noir", description: "Strictly black, white, and grey — an old movie's card table." },
-  { id: "citrus", name: "Citrus Grove", description: "Bright blood-orange and citrus-leaf green in the sun." },
-  { id: "ember", name: "Obsidian Ember", description: "Volcanic black with a molten orange-red glow." },
-  { id: "frost", name: "Frost", description: "Icy pale blue-white with a crisp glacier-blue accent." },
-  { id: "lagoon", name: "Coral Lagoon", description: "Deep tropical teal with a vivid coral-pink accent." },
-  { id: "meadow", name: "Meadow", description: "Sage green and cream, warmed by a buttery golden accent." },
-  { id: "sahara", name: "Sahara Dusk", description: "Warm desert terracotta cooling into a teal evening sky." },
-  { id: "coralsand", name: "Coral Sand", description: "Sun-bleached beach sand with a coral and ocean-blue accent." },
-  { id: "aurora", name: "Aurora", description: "Polar night sky glowing green, violet, and icy cyan." },
-  { id: "lilac", name: "Lilac Mist", description: "Soft grey-lavender fog with a deep plum accent." },
-  { id: "jade", name: "Jade Imperial", description: "Black lacquer and jade green, trimmed in imperial gold." },
-  { id: "champagne", name: "Champagne", description: "Pale gold and ivory, elegant and celebratory." },
-  { id: "verdigris", name: "Verdigris", description: "Weathered copper patina warmed by a polished copper glow." },
-  { id: "alabaster", name: "Alabaster", description: "Strictly stone and charcoal — Film Noir's light-toned twin." },
+  { id: "midnight", name: "Midnight", description: "The original dark felt-table look.", category: "classic" },
+  { id: "daylight", name: "Daylight", description: "Clean and light, easy to read in bright rooms.", category: "classic" },
+  { id: "casino", name: "Casino Royale", description: "Deep red and gold, dramatic high-roller felt.", category: "classic" },
+  { id: "pastel", name: "Pastel Deck", description: "Periwinkle, coral, and mint — soft and easy on the eyes.", category: "classic" },
+  { id: "arcade", name: "Retro Arcade", description: "Neon cyan and pink on a synthwave purple table.", category: "classic" },
+  { id: "sakura", name: "Sakura", description: "Cherry-blossom pink and white with a deep crimson accent.", category: "classic" },
+  { id: "noir", name: "Film Noir", description: "Strictly black, white, and grey — an old movie's card table.", category: "classic" },
+  { id: "citrus", name: "Citrus Grove", description: "Bright blood-orange and citrus-leaf green in the sun.", category: "classic" },
+  { id: "ember", name: "Obsidian Ember", description: "Volcanic black with a molten orange-red glow.", category: "classic" },
+  { id: "frost", name: "Frost", description: "Icy pale blue-white with a crisp glacier-blue accent.", category: "classic" },
+  { id: "lagoon", name: "Coral Lagoon", description: "Deep tropical teal with a vivid coral-pink accent.", category: "classic" },
+  { id: "meadow", name: "Meadow", description: "Sage green and cream, warmed by a buttery golden accent.", category: "classic" },
+  { id: "sahara", name: "Sahara Dusk", description: "Warm desert terracotta cooling into a teal evening sky.", category: "classic" },
+  { id: "coralsand", name: "Coral Sand", description: "Sun-bleached beach sand with a coral and ocean-blue accent.", category: "classic" },
+  { id: "aurora", name: "Aurora", description: "Polar night sky glowing green, violet, and icy cyan.", category: "classic" },
+  { id: "lilac", name: "Lilac Mist", description: "Soft grey-lavender fog with a deep plum accent.", category: "classic" },
+  { id: "jade", name: "Jade Imperial", description: "Black lacquer and jade green, trimmed in imperial gold.", category: "classic" },
+  { id: "champagne", name: "Champagne", description: "Pale gold and ivory, elegant and celebratory.", category: "classic" },
+  { id: "verdigris", name: "Verdigris", description: "Weathered copper patina warmed by a polished copper glow.", category: "classic" },
+  { id: "alabaster", name: "Alabaster", description: "Strictly stone and charcoal — Film Noir's light-toned twin.", category: "classic" },
+
+  // Holiday themes, ordered by where they fall on the calendar.
+  { id: "valentines", name: "Valentine's Day", description: "Romantic rose-red and deep burgundy.", category: "holiday" },
+  { id: "stpatricks", name: "St. Patrick's Day", description: "Shamrock green and gold, with a touch of Irish orange.", category: "holiday" },
+  { id: "easter", name: "Easter", description: "Pastel lavender, spring mint, and jellybean yellow.", category: "holiday" },
+  { id: "july4th", name: "4th of July", description: "Fireworks over a midnight-blue sky, red, white, and blue.", category: "holiday" },
+  { id: "halloween", name: "Halloween", description: "Witchy purple and jack-o'-lantern orange after dark.", category: "holiday" },
+  { id: "thanksgiving", name: "Thanksgiving", description: "Harvest brown and pumpkin orange, warm and cozy.", category: "holiday" },
+  { id: "hanukkah", name: "Hanukkah", description: "Royal blue and silver, lit by menorah gold.", category: "holiday" },
+  { id: "christmas", name: "Christmas", description: "Pine green and holly red, trimmed in gold.", category: "holiday" },
+  { id: "newyears", name: "New Year's Eve", description: "Black-tie black and champagne gold, ready for midnight.", category: "holiday" },
 ];
 
 export const DEFAULT_THEME: ThemeId = "midnight";

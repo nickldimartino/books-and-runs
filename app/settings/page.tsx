@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
-import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
+import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId, ThemeOption } from "../lib/themeStore";
 import { supabase } from "../lib/supabaseClient";
 import { Difficulty } from "@/types";
 
@@ -118,7 +118,61 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   coralsand: { bg: "#fdf3e7", panel: "#ffffff", accent: "#ff7a5c", heading: "#8a4a1e" },
   lilac: { bg: "#f4f1f6", panel: "#ffffff", accent: "#8654a3", heading: "#4a2c5e" },
   champagne: { bg: "#faf3e4", panel: "#ffffff", accent: "#c9972f", heading: "#6b4f12" },
+  valentines: { bg: "#2b0a14", panel: "#3d1220", accent: "#e0245e", heading: "#ff8fab" },
+  stpatricks: { bg: "#052e16", panel: "#0c3f1f", accent: "#2fbf6f", heading: "#ffd93d" },
+  easter: { bg: "#fdf6fb", panel: "#ffffff", accent: "#6fb88a", heading: "#7a3d70" },
+  july4th: { bg: "#050e2e", panel: "#0d1a44", accent: "#d9263a", heading: "#ffffff" },
+  halloween: { bg: "#0d0710", panel: "#1c1020", accent: "#9d5cff", heading: "#ff8c1a" },
+  thanksgiving: { bg: "#2a1608", panel: "#3d2410", accent: "#c1541f", heading: "#e08a2e" },
+  hanukkah: { bg: "#0a1230", panel: "#121c42", accent: "#d4af37", heading: "#e8ecff" },
+  christmas: { bg: "#0a2818", panel: "#123821", accent: "#c8102e", heading: "#f4c95d" },
+  newyears: { bg: "#0a0a0c", panel: "#18161c", accent: "#d4af37", heading: "#f0d78c" },
 };
+
+function ThemeGrid({
+  themes,
+  active,
+  onSelect,
+}: {
+  themes: ThemeOption[];
+  active: ThemeId;
+  onSelect: (id: ThemeId) => void;
+}) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {themes.map((t) => {
+        const swatch = THEME_SWATCHES[t.id];
+        const isActive = active === t.id;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onSelect(t.id)}
+            title={t.name}
+            className="flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-[var(--panel)]"
+          >
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition ${
+                isActive ? "border-[var(--accent)]" : "border-transparent"
+              }`}
+              style={{ background: swatch.bg }}
+            >
+              <span
+                className="h-5 w-5 rounded-full border"
+                style={{ background: swatch.panel, borderColor: swatch.accent }}
+              />
+            </span>
+            <span
+              className="max-w-full truncate text-[10px] font-medium leading-tight"
+              style={{ color: isActive ? "var(--accent)" : "var(--faint)" }}
+            >
+              {t.name}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { configured, user } = useAuth();
@@ -186,40 +240,27 @@ export default function SettingsPage() {
         <p className="text-sm text-[var(--faint)]">Loading…</p>
       ) : (
         <>
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-3">
             <label className="text-sm font-medium text-[var(--muted)]">Theme</label>
-            <div className="grid grid-cols-5 gap-2">
-              {THEMES.map((t) => {
-                const swatch = THEME_SWATCHES[t.id];
-                const active = theme === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => handleThemeChange(t.id)}
-                    title={t.name}
-                    className="flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-[var(--panel)]"
-                  >
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition ${
-                        active ? "border-[var(--accent)]" : "border-transparent"
-                      }`}
-                      style={{ background: swatch.bg }}
-                    >
-                      <span
-                        className="h-5 w-5 rounded-full border"
-                        style={{ background: swatch.panel, borderColor: swatch.accent }}
-                      />
-                    </span>
-                    <span
-                      className="max-w-full truncate text-[10px] font-medium leading-tight"
-                      style={{ color: active ? "var(--accent)" : "var(--faint)" }}
-                    >
-                      {t.name}
-                    </span>
-                  </button>
-                );
-              })}
+
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Classic</h3>
+              <ThemeGrid
+                themes={THEMES.filter((t) => t.category === "classic")}
+                active={theme}
+                onSelect={handleThemeChange}
+              />
             </div>
+
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Holiday</h3>
+              <ThemeGrid
+                themes={THEMES.filter((t) => t.category === "holiday")}
+                active={theme}
+                onSelect={handleThemeChange}
+              />
+            </div>
+
             <p className="text-xs text-[var(--faint)]">
               <span className="font-semibold text-[var(--muted)]">{THEMES.find((t) => t.id === theme)?.name}</span>{" "}
               — {THEMES.find((t) => t.id === theme)?.description}

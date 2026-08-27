@@ -509,6 +509,249 @@
   --card-wild-text: #6b4f12;
 }
 
+/* Holiday themes, ordered by where they fall on the calendar — see
+   app/lib/themeStore.ts's THEMES array for the matching order. Picked to
+   read unmistakably as their holiday first, distinct-palette second; where
+   a holiday's traditional colors land close to an existing classic theme
+   (Halloween's orange-on-black vs. Obsidian Ember, for instance), the
+   holiday theme deliberately leans harder into its *other* traditional
+   color (purple, for Halloween) as the primary accent rather than just
+   being a reskin. */
+
+[data-theme="valentines"] {
+  /* Romantic rose-red and deep burgundy — not a light pastel pink like
+     Sakura, a moodier "candlelit dinner" red. */
+  --bg: #2b0a14;
+  --panel: #3d1220;
+  --panel-soft: #330e1a;
+  --elevated: #4f1a2e;
+  --elevated-hover: #61233a;
+  --border: rgba(255, 182, 200, 0.18);
+  --heading: #ff8fab;
+  --text: #f5e4ea;
+  --muted: rgba(245, 228, 234, 0.72);
+  --faint: rgba(245, 228, 234, 0.42);
+  --accent: #e0245e;
+  --accent-hover: #f0407a;
+  --on-accent: #fff0f4;
+  --danger: #ff6b6b;
+  --highlight: #d4a5c7;
+  --card-bg: #fff5f8;
+  --card-text: #3a1220;
+  --card-red: #c8194f;
+  --card-wild-bg: #ffd6e5;
+  --card-wild-text: #8a1f45;
+}
+
+[data-theme="stpatricks"] {
+  /* Shamrock green and gold, with a touch of Irish-flag orange as the
+     secondary highlight — distinct from Verdigris/Jade's green by keeping
+     a single bright, saturated "clover" green rather than a patina or
+     lacquer finish. */
+  --bg: #052e16;
+  --panel: #0c3f1f;
+  --panel-soft: #083518;
+  --elevated: #145630;
+  --elevated-hover: #1b6b3c;
+  --border: rgba(255, 215, 130, 0.16);
+  --heading: #ffd93d;
+  --text: #eafaf0;
+  --muted: rgba(234, 250, 240, 0.72);
+  --faint: rgba(234, 250, 240, 0.42);
+  --accent: #2fbf6f;
+  --accent-hover: #45d685;
+  --on-accent: #04140a;
+  --danger: #ff6b6b;
+  --highlight: #ff9f45;
+  --card-bg: #fdfff8;
+  --card-text: #0a2814;
+  --card-red: #b8452f;
+  --card-wild-bg: #d0f0d8;
+  --card-wild-text: #0c3f1f;
+}
+
+[data-theme="easter"] {
+  /* Pastel spring — a light theme, unlike most other holidays here, since
+     that's authentically Easter: lavender, mint, and jellybean yellow
+     rather than anything dark or moody. */
+  --bg: #fdf6fb;
+  --panel: #ffffff;
+  --panel-soft: #f8ecf5;
+  --elevated: #f0dcee;
+  --elevated-hover: #e6c9e3;
+  --border: rgba(120, 60, 110, 0.14);
+  --heading: #7a3d70;
+  --text: #4a2e46;
+  --muted: rgba(74, 46, 70, 0.68);
+  --faint: rgba(74, 46, 70, 0.42);
+  --accent: #6fb88a;
+  --accent-hover: #85cc9e;
+  --on-accent: #0a2214;
+  --danger: #d9707a;
+  --highlight: #f2c94c;
+  --card-bg: #ffffff;
+  --card-text: #4a2e46;
+  --card-red: #c1607a;
+  --card-wild-bg: #fbe9b0;
+  --card-wild-text: #7a5a12;
+}
+
+[data-theme="july4th"] {
+  /* Fireworks over a midnight sky — navy rather than Frost's icy pale
+     blue, with a firework-red accent and a spark-blue highlight. */
+  --bg: #050e2e;
+  --panel: #0d1a44;
+  --panel-soft: #091438;
+  --elevated: #16265c;
+  --elevated-hover: #1f3370;
+  --border: rgba(255, 255, 255, 0.16);
+  --heading: #ffffff;
+  --text: #f0f2fa;
+  --muted: rgba(240, 242, 250, 0.72);
+  --faint: rgba(240, 242, 250, 0.42);
+  --accent: #d9263a;
+  --accent-hover: #ec4256;
+  --on-accent: #fff5f5;
+  --danger: #ff6b6b;
+  --highlight: #4d7fff;
+  --card-bg: #fdfdff;
+  --card-text: #0a1230;
+  --card-red: #b8203a;
+  --card-wild-bg: #d8e0ff;
+  --card-wild-text: #0d1a44;
+}
+
+[data-theme="halloween"] {
+  /* Witchy purple-on-black as the primary identity, with jack-o'-lantern
+     orange as the secondary highlight — deliberately not "orange on black"
+     as the main story, since that would read as a reskin of Obsidian
+     Ember's molten-orange palette rather than its own thing. */
+  --bg: #0d0710;
+  --panel: #1c1020;
+  --panel-soft: #150c18;
+  --elevated: #2c1a34;
+  --elevated-hover: #3a2444;
+  --border: rgba(157, 92, 255, 0.18);
+  --heading: #ff8c1a;
+  --text: #f0e6f5;
+  --muted: rgba(240, 230, 245, 0.72);
+  --faint: rgba(240, 230, 245, 0.42);
+  --accent: #9d5cff;
+  --accent-hover: #b47dff;
+  --on-accent: #150a20;
+  --danger: #ff5555;
+  --highlight: #ff6a1a;
+  --card-bg: #fdf8f2;
+  --card-text: #1c1020;
+  --card-red: #b8452f;
+  --card-wild-bg: #e8d4ff;
+  --card-wild-text: #4a1a7a;
+}
+
+[data-theme="thanksgiving"] {
+  /* Harvest brown and pumpkin orange — a deliberately narrower, browner
+     autumn palette than Sahara Dusk's terracotta-cooling-to-teal or
+     Verdigris's copper patina, with no blue/teal note at all. */
+  --bg: #2a1608;
+  --panel: #3d2410;
+  --panel-soft: #331d0c;
+  --elevated: #4f3018;
+  --elevated-hover: #613c1f;
+  --border: rgba(230, 150, 60, 0.18);
+  --heading: #e08a2e;
+  --text: #f2e4d3;
+  --muted: rgba(242, 228, 211, 0.72);
+  --faint: rgba(242, 228, 211, 0.42);
+  --accent: #c1541f;
+  --accent-hover: #d76b32;
+  --on-accent: #2a0d00;
+  --danger: #d9503a;
+  --highlight: #a8722e;
+  --card-bg: #fdf6ec;
+  --card-text: #2c1a0a;
+  --card-red: #a8452a;
+  --card-wild-bg: #f3d9a8;
+  --card-wild-text: #6b4318;
+}
+
+[data-theme="hanukkah"] {
+  /* Royal blue and silvery white, lit by menorah gold — the one theme here
+     where blue is the dominant hue rather than an accent. */
+  --bg: #0a1230;
+  --panel: #121c42;
+  --panel-soft: #0d1636;
+  --elevated: #1a2a58;
+  --elevated-hover: #23386c;
+  --border: rgba(200, 210, 255, 0.16);
+  --heading: #e8ecff;
+  --text: #eef0fa;
+  --muted: rgba(238, 240, 250, 0.72);
+  --faint: rgba(238, 240, 250, 0.42);
+  --accent: #d4af37;
+  --accent-hover: #e6c65c;
+  --on-accent: #1a1400;
+  --danger: #ff6b6b;
+  --highlight: #7fa8ff;
+  --card-bg: #fbfbff;
+  --card-text: #12183a;
+  --card-red: #a8324f;
+  --card-wild-bg: #dbe4ff;
+  --card-wild-text: #1a2a58;
+}
+
+[data-theme="christmas"] {
+  /* Pine green and holly red, trimmed in gold — the classic pairing none
+     of the other green themes (Jade Imperial, St. Patrick's, Verdigris)
+     use, since red as the accent is what makes it read as Christmas
+     specifically rather than just "another dark green theme." */
+  --bg: #0a2818;
+  --panel: #123821;
+  --panel-soft: #0d301c;
+  --elevated: #1a4a2c;
+  --elevated-hover: #235c39;
+  --border: rgba(255, 215, 200, 0.16);
+  --heading: #f4c95d;
+  --text: #f0ede3;
+  --muted: rgba(240, 237, 227, 0.72);
+  --faint: rgba(240, 237, 227, 0.42);
+  --accent: #c8102e;
+  --accent-hover: #e0304a;
+  --on-accent: #fff5f5;
+  --danger: #ff6b6b;
+  --highlight: #f4c95d;
+  --card-bg: #fffdf8;
+  --card-text: #14251a;
+  --card-red: #b8102e;
+  --card-wild-bg: #f4e0a8;
+  --card-wild-text: #6b4a12;
+}
+
+[data-theme="newyears"] {
+  /* Black-tie black and champagne gold, with a touch of sparkly lavender —
+     glamorous rather than cozy, distinct from Champagne (a light,
+     daytime-elegant theme) by staying dark and after-midnight. */
+  --bg: #0a0a0c;
+  --panel: #18161c;
+  --panel-soft: #121014;
+  --elevated: #262230;
+  --elevated-hover: #322c3e;
+  --border: rgba(230, 200, 120, 0.2);
+  --heading: #f0d78c;
+  --text: #f0eef2;
+  --muted: rgba(240, 238, 242, 0.72);
+  --faint: rgba(240, 238, 242, 0.42);
+  --accent: #d4af37;
+  --accent-hover: #e6c65c;
+  --on-accent: #1a1400;
+  --danger: #ff6b6b;
+  --highlight: #c9a8e0;
+  --card-bg: #fffdf8;
+  --card-text: #18161c;
+  --card-red: #a8324f;
+  --card-wild-bg: #f3e0b3;
+  --card-wild-text: #6b4f12;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
