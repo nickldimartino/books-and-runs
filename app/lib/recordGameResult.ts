@@ -116,6 +116,7 @@ export async function recordGameResult(
     rounds: roundHistory,
     winner:
       winners.length > 1 ? `${joinNames(winners.map((p) => p.name))} (tied)` : (winners[0]?.name ?? "unknown"),
+    winner_score: lowestScore,
   });
   if (insertError) throw insertError;
 }

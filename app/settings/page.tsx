@@ -80,7 +80,7 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   aurora: { bg: "#060b14", panel: "#0f1d2e", accent: "#c084fc", heading: "#86efac" },
   jade: { bg: "#0b1210", panel: "#132019", accent: "#2fae72", heading: "#f0d78c" },
   verdigris: { bg: "#0c1613", panel: "#16241f", accent: "#d97b45", heading: "#8fd4bd" },
-  abyss: { bg: "#010b12", panel: "#041824", accent: "#ff7849", heading: "#5eead4" },
+  alabaster: { bg: "#f2f1ef", panel: "#ffffff", accent: "#2b2a27", heading: "#2b2a27" },
   citrus: { bg: "#fff8ee", panel: "#ffffff", accent: "#f2711d", heading: "#7a3b12" },
   frost: { bg: "#f4f9fc", panel: "#ffffff", accent: "#2ba7d9", heading: "#0f3a5f" },
   meadow: { bg: "#f9f8ec", panel: "#ffffff", accent: "#d6a419", heading: "#2f4a1e" },

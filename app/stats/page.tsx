@@ -20,6 +20,9 @@ interface GameHistoryRow {
   id: string;
   opponents: { name: string; difficulty: string | null }[];
   winner: string;
+  // Only present on games recorded after this column was added — null for
+  // anything older, which the list below shows plainly rather than a 0.
+  winner_score: number | null;
   played_at: string;
 }
 
@@ -54,7 +57,7 @@ export default function StatsPage() {
         .maybeSingle<PlayerStats>(),
       supabase
         .from("game_history")
-        .select("id, opponents, winner, played_at")
+        .select("id, opponents, winner, winner_score, played_at")
         .eq("user_id", user.id)
         .order("played_at", { ascending: false })
         .limit(PAST_GAMES_LIMIT),
@@ -145,14 +148,14 @@ export default function StatsPage() {
           <section className="grid grid-cols-2 gap-3">
             <StatTile label="Games played" value={stats.games_played} />
             <StatTile label="Games won" value={stats.games_won} />
-            <StatTile label="Games tied" value={stats.games_tied} sub="a rare result" />
-            <StatTile label="Win rate" value={winRate !== null ? `${winRate}%` : "—"} />
             <StatTile label="Best score" value={stats.best_score ?? "—"} sub="lower is better" />
             <StatTile label="Worst score" value={stats.worst_score ?? "—"} sub="higher is worse" />
             <StatTile
               label="Average score"
               value={stats.average_score != null ? Math.round(stats.average_score) : "—"}
             />
+            <StatTile label="Win rate" value={winRate !== null ? `${winRate}%` : "—"} />
+            <StatTile label="Games tied" value={stats.games_tied} sub="a rare result" />
           </section>
 
           <section>
@@ -183,9 +186,17 @@ export default function StatsPage() {
                 {history.map((g) => (
                   <li key={g.id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-[var(--heading)]">Winner: {g.winner}</span>
+                      <span className="font-medium text-[var(--heading)]">
+                        Winner: {g.winner}
+                        {g.winner_score != null && (
+                          <span className="font-normal text-[var(--faint)]"> ({g.winner_score} pts)</span>
+                        )}
+                      </span>
                       <span className="text-xs text-[var(--faint)]">
-                        {new Date(g.played_at).toLocaleDateString()}
+                        {new Date(g.played_at).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-[var(--faint)]">

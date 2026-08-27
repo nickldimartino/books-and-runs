@@ -328,30 +328,31 @@
   --card-wild-text: #6b4318;
 }
 
-[data-theme="abyss"] {
-  /* Deep-sea trench: near-black cold ocean water lit by a bioluminescent
-     teal glow, with a single warm anglerfish-lure orange for contrast —
-     moodier and colder than Lagoon's bright tropical reef. */
-  --bg: #010b12;
-  --panel: #041824;
-  --panel-soft: #02121b;
-  --elevated: #082638;
-  --elevated-hover: #0d3349;
-  --border: rgba(94, 234, 212, 0.16);
-  --heading: #5eead4;
-  --text: #dff7f3;
-  --muted: rgba(223, 247, 243, 0.72);
-  --faint: rgba(223, 247, 243, 0.42);
-  --accent: #ff7849;
-  --accent-hover: #ff9166;
-  --on-accent: #2a0800;
-  --danger: #ff6b6b;
-  --highlight: #22d3ee;
-  --card-bg: #f2fbfa;
-  --card-text: #062018;
-  --card-red: #b8452f;
-  --card-wild-bg: #cdf5ef;
-  --card-wild-text: #075a4d;
+[data-theme="alabaster"] {
+  /* Stone and charcoal: Film Noir's light-toned twin — the same strict
+     greyscale discipline (a small, semantically necessary red kept for
+     --danger only), just inverted to a pale stone ground instead of
+     Noir's near-black. No other light theme here is monochrome. */
+  --bg: #f2f1ef;
+  --panel: #ffffff;
+  --panel-soft: #e8e6e2;
+  --elevated: #d8d5cf;
+  --elevated-hover: #c7c3bb;
+  --border: rgba(30, 30, 28, 0.14);
+  --heading: #2b2a27;
+  --text: #333230;
+  --muted: rgba(51, 50, 48, 0.68);
+  --faint: rgba(51, 50, 48, 0.42);
+  --accent: #2b2a27;
+  --accent-hover: #3d3b37;
+  --on-accent: #f2f1ef;
+  --danger: #b23b3b;
+  --highlight: #8a8680;
+  --card-bg: #ffffff;
+  --card-text: #1a1a1a;
+  --card-red: #6b6b6b;
+  --card-wild-bg: #ddd9d2;
+  --card-wild-text: #2b2a27;
 }
 
 [data-theme="citrus"] {

@@ -12,7 +12,7 @@ export type ThemeId =
   | "aurora"
   | "jade"
   | "verdigris"
-  | "abyss"
+  | "alabaster"
   | "citrus"
   | "frost"
   | "meadow"
@@ -26,8 +26,8 @@ export interface ThemeOption {
   description: string;
 }
 
-// Deliberately interleaved light/dark (9 light, 11 dark) rather than grouped
-// by when each was added — 5 dark then 5 light in a row reads as two solid
+// Deliberately interleaved light/dark (10 of each) rather than grouped by
+// when each was added — 5 dark then 5 light in a row reads as two solid
 // blocks in the settings grid instead of a spread of options.
 export const THEMES: ThemeOption[] = [
   { id: "midnight", name: "Midnight", description: "The original dark felt-table look." },
@@ -49,7 +49,7 @@ export const THEMES: ThemeOption[] = [
   { id: "jade", name: "Jade Imperial", description: "Black lacquer and jade green, trimmed in imperial gold." },
   { id: "champagne", name: "Champagne", description: "Pale gold and ivory, elegant and celebratory." },
   { id: "verdigris", name: "Verdigris", description: "Weathered copper patina warmed by a polished copper glow." },
-  { id: "abyss", name: "Abyss", description: "Deep-sea black lit by bioluminescent teal and an anglerfish glow." },
+  { id: "alabaster", name: "Alabaster", description: "Strictly stone and charcoal — Film Noir's light-toned twin." },
 ];
 
 export const DEFAULT_THEME: ThemeId = "midnight";
