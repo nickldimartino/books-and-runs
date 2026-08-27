@@ -520,34 +520,48 @@ body {
 
 /* Two shadow layers (a tight contact shadow plus a softer, wider one) reads
    as a real card resting on the table instead of a flat colored rectangle;
-   the inset highlight is a faint "sheen" along the top edge. All three use
-   a fixed black/white regardless of theme — --card-bg is white or near-white
-   in every theme (see each [data-theme] block), so this never needs
-   per-theme tuning. cursor-pointer:hover and .card-lifted (applied by
-   PlayingCard.tsx while `selected`) grow the shadow further, so a raised
-   card visibly casts more shadow — a lifted card that still cast a flat
-   shadow would look like it was floating, not raised. */
+   the inset highlight is a faint "sheen" along the top edge.
+   The tight contact shadow stays plain black — that layer is about "the
+   card touches the surface right here," which is correct regardless of
+   theme even though it's barely visible against a near-black page in a dark
+   theme. The wider ambient layer is what actually needs to read as "lifted
+   off the table," and a fixed black there is nearly invisible once the page
+   background is already close to black (a first pass at this used flat
+   black for everything and lost all depth on the dark themes) — color-mix()
+   tints it with the active theme's own --accent instead, at a low enough
+   opacity to read as a soft glow rather than a colored halo. Since --accent
+   is deliberately bright/saturated in every theme (it's the button/CTA
+   color), that glow stays visible against a dark background where a
+   same-opacity black one wouldn't, and it ties the card's elevation cue to
+   the theme's own palette rather than being a generic, theme-blind effect.
+   color-mix() is a modern CSS function (Chrome 111+/Safari 16.4+/Firefox
+   113+, so effectively any browser this app targets) — needed here because
+   plain CSS can't blend an opacity into a var()-defined hex color otherwise.
+   cursor-pointer:hover and .card-lifted (applied by PlayingCard.tsx while
+   `selected`) grow both layers further, so a raised card visibly casts more
+   shadow — a lifted card that still cast the same shadow as a resting one
+   would look like it was floating, not raised. */
 .card-face {
   background: var(--card-bg);
   color: var(--card-text);
   border-radius: 0.625rem;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(0, 0, 0, 0.22),
+    0 4px 10px color-mix(in srgb, var(--accent) 32%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .card-face.cursor-pointer:hover {
   box-shadow:
     0 2px 3px rgba(0, 0, 0, 0.32),
-    0 8px 14px rgba(0, 0, 0, 0.28),
+    0 8px 18px color-mix(in srgb, var(--accent) 42%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .card-face.card-lifted {
   box-shadow:
     0 3px 4px rgba(0, 0, 0, 0.32),
-    0 12px 20px rgba(0, 0, 0, 0.3),
+    0 12px 26px color-mix(in srgb, var(--accent) 48%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
@@ -565,16 +579,18 @@ body {
 .card-back {
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(0, 0, 0, 0.22);
+    0 4px 10px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 /* A --panel/--panel-soft surface on its own only differs from the page
    background by color, which reads as flat in themes where that contrast is
-   subtle. A soft, wide, fixed-black shadow (same reasoning as the card
-   shadows above — it needs no per-theme tuning) gives the game board's main
-   sections real separation instead of relying on background color alone. */
+   subtle — and in a dark theme, a plain black shadow is nearly invisible
+   against a page background that's already close to black. Same accent-
+   tinted color-mix() approach as the cards above, at a lower opacity since
+   this sits under much bigger surfaces than a card — a glow this size at
+   card-strength opacity would read as gaudy rather than a subtle lift. */
 .panel-elevated {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
