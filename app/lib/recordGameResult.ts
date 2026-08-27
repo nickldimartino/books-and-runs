@@ -21,6 +21,7 @@ export interface RoundHistoryEntry {
 interface PlayerStatsRow {
   games_played: number;
   games_won: number;
+  games_tied: number;
   best_score: number | null;
   worst_score: number | null;
   average_score: number | null;
@@ -50,12 +51,14 @@ export async function recordGameResult(
   const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
   if (!you) return;
 
-  // Lowest score wins; being tied for it isn't a loss, so anyone sharing
-  // that exact score counts as having won too — matches GameOverScreen's
-  // identical rule for the XP breakdown it shows for this same game.
+  // Lowest score wins, but a tie for it is a tie, not a win — ties are
+  // rare and tracked as their own stat (games_tied) instead of inflating
+  // games_won/wins_by_difficulty. Matches GameOverScreen's identical rule
+  // for the XP breakdown it shows for this same game.
   const lowestScore = Math.min(...state.players.map((p) => p.cumulativeScore));
   const winners = state.players.filter((p) => p.cumulativeScore === lowestScore);
-  const won = you.cumulativeScore === lowestScore;
+  const won = winners.length === 1 && you.cumulativeScore === lowestScore;
+  const tied = winners.length > 1 && you.cumulativeScore === lowestScore;
   const opponents = state.players
     .filter((p) => p.id !== you.id)
     .map((p) => ({ name: p.name, difficulty: p.isAI ? p.difficulty ?? null : null }));
@@ -68,7 +71,7 @@ export async function recordGameResult(
   // ("error")) do its job, matching recordAchievementProgress.ts.
   const { data: existing, error: selectError } = await supabase
     .from("player_stats")
-    .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
+    .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty")
     .eq("user_id", userId)
     .maybeSingle<PlayerStatsRow>();
   if (selectError) throw selectError;
@@ -76,6 +79,7 @@ export async function recordGameResult(
   const priorGames = existing?.games_played ?? 0;
   const gamesPlayed = priorGames + 1;
   const gamesWon = (existing?.games_won ?? 0) + (won ? 1 : 0);
+  const gamesTied = (existing?.games_tied ?? 0) + (tied ? 1 : 0);
   const bestScore =
     existing?.best_score != null ? Math.min(existing.best_score, you.cumulativeScore) : you.cumulativeScore;
   const worstScore =
@@ -97,6 +101,7 @@ export async function recordGameResult(
     user_id: userId,
     games_played: gamesPlayed,
     games_won: gamesWon,
+    games_tied: gamesTied,
     best_score: bestScore,
     worst_score: worstScore,
     average_score: averageScore,

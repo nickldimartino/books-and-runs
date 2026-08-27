@@ -82,6 +82,11 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   verdigris: { bg: "#0c1613", panel: "#16241f", accent: "#d97b45", heading: "#8fd4bd" },
   abyss: { bg: "#010b12", panel: "#041824", accent: "#ff7849", heading: "#5eead4" },
   citrus: { bg: "#fff8ee", panel: "#ffffff", accent: "#f2711d", heading: "#7a3b12" },
+  frost: { bg: "#f4f9fc", panel: "#ffffff", accent: "#2ba7d9", heading: "#0f3a5f" },
+  meadow: { bg: "#f9f8ec", panel: "#ffffff", accent: "#d6a419", heading: "#2f4a1e" },
+  coralsand: { bg: "#fdf3e7", panel: "#ffffff", accent: "#ff7a5c", heading: "#8a4a1e" },
+  lilac: { bg: "#f4f1f6", panel: "#ffffff", accent: "#8654a3", heading: "#4a2c5e" },
+  champagne: { bg: "#faf3e4", panel: "#ffffff", accent: "#c9972f", heading: "#6b4f12" },
 };
 
 export default function SettingsPage() {

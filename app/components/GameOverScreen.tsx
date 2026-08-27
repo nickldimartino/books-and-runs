@@ -26,10 +26,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
-  // Lowest score wins; everyone sharing that exact score is tied for it —
-  // being tied isn't a loss, so `winners` (plural) is who actually takes
-  // the game, not just whichever tied player a plain sort happens to list
-  // first. `winners.length === 1` in the ordinary, non-tie case.
+  // Lowest score wins; everyone sharing that exact score is tied for it, so
+  // `winners` (plural) is who to actually display, not just whichever tied
+  // player a plain sort happens to list first. `winners.length === 1` in
+  // the ordinary, non-tie case. Display only — being tied isn't a loss, but
+  // it isn't a win either; see the separate, stricter `won` check below,
+  // which gates the XP breakdown and matches recordGameResult's own rule.
   const lowestScore = Math.min(...state.players.map((p) => p.cumulativeScore));
   const winners = standings.filter((p) => p.cumulativeScore === lowestScore);
   const isTie = winners.length > 1;
@@ -97,8 +99,8 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // The per-game XP sources (finishing, winning, difficulty bonus) are
     // fully known from this game alone — matches the exact rule
     // recordGameResult uses for which AI difficulties count toward a win.
-    // Being tied for the lowest score counts as a win, same as recordGameResult.
-    const won = !!you && you.cumulativeScore === lowestScore;
+    // A tie for the lowest score is a tie, not a win — no "Won" XP bonus.
+    const won = !!you && !isTie && you.cumulativeScore === lowestScore;
     const breakdown: XpLineItem[] = [{ label: "Finished the game", amount: FINISH_GAME_XP }];
     if (won) {
       breakdown.push({ label: "Won", amount: WIN_GAME_XP });

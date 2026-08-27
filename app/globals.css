@@ -380,6 +380,134 @@
   --card-wild-text: #7a3b12;
 }
 
+[data-theme="frost"] {
+  /* Glacier: icy pale blue-white, cold and crisp — a winter-glass light
+     theme, distinct from Daylight's neutral warm cream. */
+  --bg: #f4f9fc;
+  --panel: #ffffff;
+  --panel-soft: #e8f2f8;
+  --elevated: #d7e9f3;
+  --elevated-hover: #c3dceb;
+  --border: rgba(15, 52, 79, 0.14);
+  --heading: #0f3a5f;
+  --text: #16324a;
+  --muted: rgba(22, 50, 74, 0.68);
+  --faint: rgba(22, 50, 74, 0.42);
+  --accent: #2ba7d9;
+  --accent-hover: #45bcec;
+  --on-accent: #f0fbff;
+  --danger: #d3453a;
+  --highlight: #7dd3e8;
+  --card-bg: #ffffff;
+  --card-text: #16324a;
+  --card-red: #b8342b;
+  --card-wild-bg: #d7f0f8;
+  --card-wild-text: #0c5271;
+}
+
+[data-theme="meadow"] {
+  /* Spring meadow: sage-cream base, forest-green heading, buttery golden
+     accent — pastoral warmth, not another neutral cream like Daylight. */
+  --bg: #f9f8ec;
+  --panel: #ffffff;
+  --panel-soft: #f0eed6;
+  --elevated: #e3e0b8;
+  --elevated-hover: #d6d29c;
+  --border: rgba(45, 74, 30, 0.14);
+  --heading: #2f4a1e;
+  --text: #33341c;
+  --muted: rgba(51, 52, 28, 0.68);
+  --faint: rgba(51, 52, 28, 0.42);
+  --accent: #d6a419;
+  --accent-hover: #e8b62f;
+  --on-accent: #2a1c00;
+  --danger: #c1432f;
+  --highlight: #7fae4a;
+  --card-bg: #ffffff;
+  --card-text: #2c2f18;
+  --card-red: #a8402b;
+  --card-wild-bg: #f3e6ae;
+  --card-wild-text: #6b4f0c;
+}
+
+[data-theme="coralsand"] {
+  /* Beach at midday: sun-bleached sand, coral-orange accent, and an
+     ocean-blue highlight — warmer and sandier than Citrus Grove's vivid
+     orange-and-leaf-green grove. */
+  --bg: #fdf3e7;
+  --panel: #ffffff;
+  --panel-soft: #f8e6d0;
+  --elevated: #f2d6b3;
+  --elevated-hover: #ecc496;
+  --border: rgba(120, 65, 20, 0.14);
+  --heading: #8a4a1e;
+  --text: #4a3420;
+  --muted: rgba(74, 52, 32, 0.68);
+  --faint: rgba(74, 52, 32, 0.42);
+  --accent: #ff7a5c;
+  --accent-hover: #ff9276;
+  --on-accent: #2a0800;
+  --danger: #d13b2f;
+  --highlight: #3ba3c9;
+  --card-bg: #ffffff;
+  --card-text: #3d2a18;
+  --card-red: #b8452f;
+  --card-wild-bg: #ffe0d0;
+  --card-wild-text: #8a3a1e;
+}
+
+[data-theme="lilac"] {
+  /* Foggy morning: a tight, moody grey-lavender monochrome with a deep
+     plum accent — quieter and narrower than Pastel Deck's playful
+     lavender/coral/mint spread. */
+  --bg: #f4f1f6;
+  --panel: #ffffff;
+  --panel-soft: #e9e2ef;
+  --elevated: #d9cce3;
+  --elevated-hover: #c8b5d6;
+  --border: rgba(70, 40, 90, 0.14);
+  --heading: #4a2c5e;
+  --text: #362640;
+  --muted: rgba(54, 38, 64, 0.68);
+  --faint: rgba(54, 38, 64, 0.42);
+  --accent: #8654a3;
+  --accent-hover: #9968b8;
+  --on-accent: #fbf7fd;
+  --danger: #c1483f;
+  --highlight: #b48ccf;
+  --card-bg: #ffffff;
+  --card-text: #362640;
+  --card-red: #a13c6b;
+  --card-wild-bg: #e9d9f0;
+  --card-wild-text: #5c3170;
+}
+
+[data-theme="champagne"] {
+  /* Toast at a celebration: pale gold-ivory with a deep bronze heading and
+     a rich champagne-gold accent — elegant rather than another neutral
+     cream. */
+  --bg: #faf3e4;
+  --panel: #ffffff;
+  --panel-soft: #f3e6cb;
+  --elevated: #ecd8ab;
+  --elevated-hover: #e4c98c;
+  --border: rgba(120, 90, 20, 0.14);
+  --heading: #6b4f12;
+  --text: #3d2f14;
+  --muted: rgba(61, 47, 20, 0.68);
+  --faint: rgba(61, 47, 20, 0.42);
+  --accent: #c9972f;
+  --accent-hover: #ddab48;
+  --on-accent: #2a1c00;
+  --danger: #b8452f;
+  --highlight: #e0c27a;
+  --card-bg: #ffffff;
+  --card-text: #3d2f14;
+  --card-red: #a8452a;
+  --card-wild-bg: #f3e0b3;
+  --card-wild-text: #6b4f12;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

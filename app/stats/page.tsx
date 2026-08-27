@@ -9,6 +9,7 @@ import { supabase } from "../lib/supabaseClient";
 interface PlayerStats {
   games_played: number;
   games_won: number;
+  games_tied: number;
   best_score: number | null;
   worst_score: number | null;
   average_score: number | null;
@@ -48,7 +49,7 @@ export default function StatsPage() {
     Promise.all([
       supabase
         .from("player_stats")
-        .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
+        .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty")
         .eq("user_id", user.id)
         .maybeSingle<PlayerStats>(),
       supabase
@@ -144,6 +145,7 @@ export default function StatsPage() {
           <section className="grid grid-cols-2 gap-3">
             <StatTile label="Games played" value={stats.games_played} />
             <StatTile label="Games won" value={stats.games_won} />
+            <StatTile label="Games tied" value={stats.games_tied} sub="a rare result" />
             <StatTile label="Win rate" value={winRate !== null ? `${winRate}%` : "—"} />
             <StatTile label="Best score" value={stats.best_score ?? "—"} sub="lower is better" />
             <StatTile label="Worst score" value={stats.worst_score ?? "—"} sub="higher is worse" />
