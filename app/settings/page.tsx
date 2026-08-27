@@ -314,18 +314,32 @@ export default function SettingsPage() {
     applyColorblindMode(mode);
   }
 
-  async function handleSave() {
+  // Applies and persists a change to any local-only setting immediately —
+  // same instant-apply behavior Theme and Colorblind mode already have.
+  // None of these fields (AI difficulty aside) are ever synced to Supabase
+  // (see saveLocalSettings' own callers), so there's nothing an explicit
+  // "Save" step was ever protecting here; requiring one just meant a toggle
+  // flipped and then navigated away from — without noticing a button lower
+  // on the page — silently reverted on the next visit. preferredAiDifficulty
+  // is included here too (it needs to persist locally right away, same as
+  // everything else) — syncAiDifficultyToAccount below handles the one
+  // genuinely separate action: mirroring it to a signed-in account.
+  function updateSettings(patch: Partial<HouseSettings>) {
+    setSettings((s) => {
+      const next = { ...s, ...patch };
+      saveLocalSettings(next);
+      return next;
+    });
+  }
+
+  async function syncAiDifficultyToAccount() {
+    if (!supabase || !user) return;
     setSaveState("saving");
-    saveLocalSettings(settings);
-    if (supabase && user) {
-      const { error } = await supabase.from("settings").upsert({
-        user_id: user.id,
-        preferred_ai_difficulty_default: settings.preferredAiDifficulty,
-      });
-      setSaveState(error ? "error" : "saved");
-    } else {
-      setSaveState("saved");
-    }
+    const { error } = await supabase.from("settings").upsert({
+      user_id: user.id,
+      preferred_ai_difficulty_default: settings.preferredAiDifficulty,
+    });
+    setSaveState(error ? "error" : "saved");
   }
 
   return (
@@ -426,9 +440,7 @@ export default function SettingsPage() {
             </InfoDetails>
             <select
               value={settings.preferredAiDifficulty}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, preferredAiDifficulty: e.target.value as Difficulty }))
-              }
+              onChange={(e) => updateSettings({ preferredAiDifficulty: e.target.value as Difficulty })}
               className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
             >
               {DIFFICULTIES.map((d) => (
@@ -437,70 +449,73 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
+            {/* Every other setting on this page saves the instant it changes
+                (see updateSettings) — this is the one exception, since it's
+                the only field with somewhere else to go: a signed-in
+                account, reachable from any device. That's a deliberate,
+                explicit action, not something that should fire on every
+                keystroke through a dropdown. */}
+            {configured && user && (
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={syncAiDifficultyToAccount}
+                  disabled={saveState === "saving"}
+                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+                >
+                  {saveState === "saving" ? "Saving…" : "Sync to your account"}
+                </button>
+                {saveState === "saved" && (
+                  <p className="text-xs text-[var(--muted)]">Saved to your account.</p>
+                )}
+                {saveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">Couldn&apos;t reach your account to save it there.</p>
+                )}
+              </div>
+            )}
+            {configured && !user && (
+              <p className="text-xs text-[var(--faint)]">
+                <Link href="/sign-in" className="underline hover:text-[var(--muted)]">
+                  Sign in
+                </Link>{" "}
+                to keep this the same everywhere you play.
+              </p>
+            )}
           </section>
 
           <BoolToggle
             label="Sound effects"
             value={settings.soundEnabled}
-            onChange={(v) => setSettings((s) => ({ ...s, soundEnabled: v }))}
+            onChange={(v) => updateSettings({ soundEnabled: v })}
             description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins."
           />
 
           <BoolToggle
             label="Group melds by type"
             value={settings.groupMeldsByType}
-            onChange={(v) => setSettings((s) => ({ ...s, groupMeldsByType: v }))}
+            onChange={(v) => updateSettings({ groupMeldsByType: v })}
             description="In Table melds, show each player's books before their runs, instead of the order they were confirmed in."
           />
 
           <BoolToggle
             label="Highlight possible lay-offs"
             value={settings.highlightLayoffs}
-            onChange={(v) => setSettings((s) => ({ ...s, highlightLayoffs: v }))}
+            onChange={(v) => updateSettings({ highlightLayoffs: v })}
             description="Badge hand cards and the top discard-pile card that fit a meld already on the table, so you can plan ahead even before you've melded your own contract."
           />
 
           <BoolToggle
             label="Player activity table"
             value={settings.showPlayerActivity}
-            onChange={(v) => setSettings((s) => ({ ...s, showPlayerActivity: v }))}
+            onChange={(v) => updateSettings({ showPlayerActivity: v })}
             description="Show the collapsible 'Player activity this round' table on the game board, with each player's latest discard and discard-pile pickup."
           />
 
           <BoolToggle
             label="“Who's turn is it?” button"
             value={settings.showWhoseTurn}
-            onChange={(v) => setSettings((s) => ({ ...s, showWhoseTurn: v }))}
+            onChange={(v) => updateSettings({ showWhoseTurn: v })}
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
           />
-
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={handleSave}
-              disabled={saveState === "saving"}
-              className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
-            >
-              {saveState === "saving" ? "Saving…" : "Save settings"}
-            </button>
-            {saveState === "saved" && (
-              <p className="text-center text-xs text-[var(--muted)]">
-                {configured && user ? "Saved to your account." : "Saved."}
-              </p>
-            )}
-            {saveState === "error" && (
-              <p className="text-center text-xs text-[var(--danger)]">
-                Saved here, but couldn&apos;t reach your account to save it there too.
-              </p>
-            )}
-            {configured && !user && (
-              <p className="text-center text-xs text-[var(--faint)]">
-                <Link href="/sign-in" className="underline hover:text-[var(--muted)]">
-                  Sign in
-                </Link>{" "}
-                to keep these the same everywhere you play.
-              </p>
-            )}
-          </div>
         </>
       )}
 
