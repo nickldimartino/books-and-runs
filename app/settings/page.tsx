@@ -146,6 +146,22 @@ const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: strin
   confetti: { bg: "#fffaf0", panel: "#ffffff", accent: "#d94f9e", heading: "#8a6510" },
 };
 
+// Representative preview colors per colorblind mode, so the Settings page
+// can show what each mode actually does without needing a real card on
+// screen (a wild card especially — Tritanopia's only visible change is on
+// those, so without this preview, checking it meant hunting for a 2 or
+// Joker in an active game). Hand-maintained against globals.css's
+// [data-colorblind] blocks, same as THEME_SWATCHES above/below — these
+// render outside the current [data-colorblind] context (so every option can
+// be compared side by side at once), so they can't just read the live CSS
+// variables the way an actual card does.
+const COLORBLIND_SWATCHES: Record<ColorblindMode, { red: string; wildBg: string; wildText: string }> = {
+  off: { red: "#b91c1c", wildBg: "#fef3c7", wildText: "#92400e" },
+  protanopia: { red: "#1d4ed8", wildBg: "#fef3c7", wildText: "#92400e" },
+  deuteranopia: { red: "#d55e00", wildBg: "#fef3c7", wildText: "#92400e" },
+  tritanopia: { red: "#b91c1c", wildBg: "#f3d0ec", wildText: "#7a1f6b" },
+};
+
 function ThemeGrid({
   themes,
   active,
@@ -298,20 +314,35 @@ export default function SettingsPage() {
               type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
             </InfoDetails>
             <div className="grid grid-cols-2 gap-2">
-              {COLORBLIND_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => handleColorblindModeChange(m.id)}
-                  title={m.description}
-                  className={`rounded-md px-3 py-2 text-sm font-medium ${
-                    colorblindMode === m.id
-                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
-                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                  }`}
-                >
-                  {m.name}
-                </button>
-              ))}
+              {COLORBLIND_MODES.map((m) => {
+                const swatch = COLORBLIND_SWATCHES[m.id];
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleColorblindModeChange(m.id)}
+                    title={m.description}
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                      colorblindMode === m.id
+                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: swatch.red }}
+                        title="Red card color"
+                      />
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: swatch.wildBg }}
+                        title="Wild card color"
+                      />
+                    </span>
+                    {m.name}
+                  </button>
+                );
+              })}
             </div>
           </section>
 

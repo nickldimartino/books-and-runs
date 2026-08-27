@@ -1010,20 +1010,28 @@
  * cues suits don't need.
  *
  * Protanopia/deuteranopia are both red-green confusions, so only --card-red
- * needs to move (to a blue with no red-green ambiguity) — the existing pale
- * gold/brown wild-card colors sit far enough outside the red-green axis to
- * stay legible as-is for both types, so they're left untouched here.
+ * needs to move — the existing pale gold/brown wild-card colors sit far
+ * enough outside the red-green axis to stay legible as-is for both types, so
+ * they're left untouched here. The two substitutes are deliberately two
+ * different, strongly saturated hues (a blue and a vermillion-orange, both
+ * standard colorblind-safe choices — see the Okabe–Ito palette) rather than
+ * two shades of one color: distinct hues make the shift unmistakable at a
+ * glance for whichever type is actually active, instead of a subtle tint
+ * that's easy to mistake for no change at all (an earlier, more muted orange
+ * here read as "nothing happened" even to normal color vision).
  * Tritanopia is a blue-yellow confusion instead — red-vs-black is already
  * reliably distinct for it, so --card-red is left alone, but the wild card's
  * yellow-toned bg/text (easy to mistake for un-wild in this specific type)
  * moves to a magenta pairing that sits outside the blue-yellow confusion
- * line instead.
+ * line instead. This means Tritanopia only changes anything when a wild
+ * card (a 2 or Joker) is actually on screen — red/black cards look
+ * unchanged on purpose, not because the mode failed to apply.
  */
 [data-colorblind="protanopia"] {
   --card-red: #1d4ed8;
 }
 [data-colorblind="deuteranopia"] {
-  --card-red: #c2410c;
+  --card-red: #d55e00;
 }
 [data-colorblind="tritanopia"] {
   --card-wild-bg: #f3d0ec;

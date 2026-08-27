@@ -25,12 +25,13 @@ export const COLORBLIND_MODES: ColorblindOption[] = [
   {
     id: "deuteranopia",
     name: "Deuteranopia",
-    description: "Red cards shift to a burnt orange, easier to tell apart from black for green-blind vision.",
+    description: "Red cards shift to a vivid orange, easier to tell apart from black for green-blind vision.",
   },
   {
     id: "tritanopia",
     name: "Tritanopia",
-    description: "Wild cards shift from gold to magenta, easier to tell apart from red/black for blue-blind vision.",
+    description:
+      "Wild cards shift from gold to magenta, easier to tell apart from red/black for blue-blind vision. Red and black cards are left unchanged — that distinction already reads fine for this type.",
   },
 ];
 
