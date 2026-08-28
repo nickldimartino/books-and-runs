@@ -147,6 +147,12 @@ export default function HomePage() {
           >
             Achievements
           </Link>
+          <Link
+            href="/leaderboard"
+            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Leaderboard
+          </Link>
         </section>
 
         <section className="flex flex-col gap-3">
@@ -163,6 +169,14 @@ export default function HomePage() {
           >
             Settings
           </Link>
+          {configured && user && (
+            <Link
+              href="/account"
+              className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            >
+              Account
+            </Link>
+          )}
           <Link
             href="/scorecard"
             className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"

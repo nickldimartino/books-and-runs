@@ -83,7 +83,10 @@ export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
 
 // A win-rate achievement with only 1-2 games played is meaningless (100%
 // off a single lucky game) — require a minimum sample before it counts.
-const WIN_RATE_MIN_GAMES = 10;
+// Exported so anything else showing a win-rate stat (e.g. the leaderboard)
+// can apply the exact same "too small a sample to mean anything" floor
+// instead of picking its own number.
+export const WIN_RATE_MIN_GAMES = 10;
 
 // Unlike a counter that climbs gradually, "best score" is a personal record
 // that can hit its theoretical floor (0) in a single short or lucky game —

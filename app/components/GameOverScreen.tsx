@@ -9,6 +9,7 @@ import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { joinNames } from "../lib/formatNames";
+import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
@@ -153,6 +154,14 @@ export function GameOverScreen({ state }: { state: GameState }) {
     removePendingSave(gameId);
     setSaved("saved");
     clearSessionCounters();
+    // Best-effort — the leaderboard just shows slightly stale numbers until
+    // the next successful sync (a later game, or visiting the Leaderboard/
+    // Account page, both of which sync again on their own) rather than
+    // surfacing a second error state for a table the player didn't
+    // necessarily ask to see right now.
+    syncLeaderboardStats(supabase, user.id).catch((err) => {
+      console.error("Failed to sync leaderboard entry:", err);
+    });
     const after = await refreshLevel();
     if (after) {
       const gained = Math.max(0, after.totalXp - beforeXp);

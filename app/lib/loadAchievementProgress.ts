@@ -4,6 +4,7 @@ import { AchievementProgressState, EMPTY_PROGRESS_STATE } from "@/achievements";
 interface PlayerStatsRow {
   games_played: number;
   games_won: number;
+  best_score: number | null;
   wins_by_difficulty: Record<string, number>;
 }
 
