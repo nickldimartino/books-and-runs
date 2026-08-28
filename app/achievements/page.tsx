@@ -6,6 +6,7 @@ import { useAuth } from "../AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { AchievementIcon } from "../components/AchievementIcons";
 import {
+  ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
   AchievementInstance,
   AchievementProgressState,
@@ -91,6 +92,15 @@ export default function AchievementsPage() {
 
   const achievements = useMemo(() => allAchievements(progress), [progress]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
+  // Independent of statusFilter/tierFilter on purpose — a top-level summary
+  // stat should reflect the true total, not whatever's currently filtered.
+  const masteredFamilyCount = useMemo(() => {
+    const unlockedPerFamily = new Map<string, number>();
+    for (const a of achievements) {
+      if (a.unlocked) unlockedPerFamily.set(a.familyId, (unlockedPerFamily.get(a.familyId) ?? 0) + 1);
+    }
+    return [...unlockedPerFamily.values()].filter((count) => count === ACHIEVEMENT_TIERS.length).length;
+  }, [achievements]);
 
   const visible = useMemo(() => {
     let list = achievements;
@@ -158,6 +168,8 @@ export default function AchievementsPage() {
         {!authLoading && !loading && (
           <p className="mt-1 text-sm text-[var(--muted)]">
             {unlockedCount} / {achievements.length} unlocked
+            {masteredFamilyCount > 0 &&
+              ` · ${masteredFamilyCount} of ${ACHIEVEMENT_FAMILIES.length} families mastered`}
           </p>
         )}
       </div>

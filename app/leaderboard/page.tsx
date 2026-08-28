@@ -44,6 +44,13 @@ export default function LeaderboardPage() {
           .select(
             "user_id, display_name, level, total_xp, achievements_unlocked, games_played, games_won, average_score, worst_score, updated_at"
           )
+          // Every signed-in visit to Account/Leaderboard self-heals a row for
+          // that account (see the sync above) — without this filter, an
+          // account that only ever opened one of those pages once, and never
+          // actually finished a tracked game, would sit on the board
+          // permanently at 0/0/0. A leaderboard should only ever rank real
+          // activity.
+          .gt("games_played", 0)
           .order("level", { ascending: false })
           .order("total_xp", { ascending: false })
           .then(({ data, error }) => {
@@ -121,7 +128,7 @@ export default function LeaderboardPage() {
           every migration in <code>supabase/migrations/</code> applied.
         </p>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-[var(--faint)]">Nobody&apos;s on the board yet.</p>
+        <p className="text-sm text-[var(--faint)]">Nobody&apos;s finished a tracked game yet — play one to be the first.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
           <table className="w-full border-collapse text-left text-sm">
@@ -166,6 +173,15 @@ export default function LeaderboardPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* entries.length > 0 guard: with an empty board, the message above
+          this already says the same thing ("play one to be the first") —
+          showing both would just repeat it. */}
+      {!authLoading && !loading && !loadError && user && entries.length > 0 && !entries.some((e) => e.user_id === user.id) && (
+        <p className="text-center text-xs text-[var(--faint)]">
+          You haven&apos;t finished a tracked game yet — play one to show up here.
+        </p>
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">

@@ -4,7 +4,15 @@ import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
-import { applyTheme, loadLocalTheme, saveLocalTheme, THEMES, ThemeId, ThemeOption } from "../lib/themeStore";
+import {
+  applyTheme,
+  DEFAULT_THEME,
+  loadLocalTheme,
+  saveLocalTheme,
+  THEMES,
+  ThemeId,
+  ThemeOption,
+} from "../lib/themeStore";
 import {
   applyColorblindMode,
   ColorblindMode,
@@ -272,6 +280,7 @@ export default function SettingsPage() {
   const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   useEffect(() => {
     setSettings(loadLocalSettings());
@@ -312,6 +321,27 @@ export default function SettingsPage() {
     setColorblindMode(mode);
     saveLocalColorblindMode(mode);
     applyColorblindMode(mode);
+  }
+
+  // Covers everything on this page that's local-only and instant-apply —
+  // theme and colorblind mode live in their own separate stores (see their
+  // own handlers above), not HouseSettings, so a plain updateSettings(
+  // DEFAULT_SETTINGS) alone wouldn't touch them; this calls all three
+  // reset paths together so "Reset to defaults" really means the whole
+  // page, not just the toggles. Doesn't touch the signed-in account's
+  // synced AI difficulty by itself — that only ever changes via the
+  // separate, explicit "Sync to your account" action, same as any other
+  // local change here.
+  function handleResetToDefaults() {
+    setSettings(DEFAULT_SETTINGS);
+    saveLocalSettings(DEFAULT_SETTINGS);
+    setTheme(DEFAULT_THEME);
+    saveLocalTheme(DEFAULT_THEME);
+    applyTheme(DEFAULT_THEME);
+    setColorblindMode(DEFAULT_COLORBLIND_MODE);
+    saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
+    applyColorblindMode(DEFAULT_COLORBLIND_MODE);
+    setConfirmingReset(false);
   }
 
   // Applies and persists a change to any local-only setting immediately —
@@ -516,6 +546,35 @@ export default function SettingsPage() {
             onChange={(v) => updateSettings({ showWhoseTurn: v })}
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
           />
+
+          {confirmingReset ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
+              <p className="text-sm text-[var(--muted)]">
+                Reset theme, colorblind mode, and every toggle on this page back to their defaults?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmingReset(false)}
+                  className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetToDefaults}
+                  className="flex-1 rounded-lg border border-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-[var(--danger)] hover:bg-[var(--panel-soft)]"
+                >
+                  Yes, reset
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingReset(true)}
+              className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+            >
+              Reset to defaults
+            </button>
+          )}
         </>
       )}
 

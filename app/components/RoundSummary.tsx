@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AchievementInstance, AchievementProgressState, allAchievements, tierNumber } from "@/achievements";
 import { GameState } from "@/types";
 import { useAuth } from "../AuthContext";
+import { AchievementIcon } from "./AchievementIcons";
 import { useGame } from "../GameContext";
+import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { supabase } from "../lib/supabaseClient";
 
@@ -17,6 +20,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   const { getSessionCounters, clearSessionCounters, isTutorial, trackStats } = useGame();
   const { user } = useAuth();
   const flushedRef = useRef<number | null>(null);
+  const [newlyUnlocked, setNewlyUnlocked] = useState<AchievementInstance[]>([]);
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const lowestTotal = Math.min(...state.players.map((p) => p.cumulativeScore));
@@ -27,6 +31,14 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   // shows this screen at all (game/page.tsx checks gameOver first), so this
   // only ever covers rounds 1..N-1, and GameOverScreen's own flush at the
   // end picks up whatever's left from the last round.
+  //
+  // Also snapshots achievement progress immediately before and after the
+  // flush (same technique GameOverScreen already uses for its own XP
+  // breakdown) so any newly-unlocked tier can be shown right here — a
+  // player used to only finding out what they'd unlocked at the very end of
+  // a whole game now sees it after every round instead. Best-effort: these
+  // two extra reads are purely for this on-screen reveal, so a failure here
+  // never blocks or retries the actual counter flush above it.
   useEffect(() => {
     // Tutorial games never touch Supabase — this shouldn't be reachable for
     // the current single-round tutorial (game/page.tsx checks gameOver
@@ -37,10 +49,45 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
     // rather than record something the player explicitly asked not to.
     if (!supabase || !user || isTutorial || !trackStats || flushedRef.current === state.round) return;
     flushedRef.current = state.round;
+    const client = supabase;
+    const userId = user.id;
     const counters = { ...getSessionCounters() };
-    recordAchievementProgress(supabase, user.id, counters)
-      .then(() => clearSessionCounters())
-      .catch(() => {});
+
+    (async () => {
+      let before: AchievementProgressState | null = null;
+      try {
+        before = await loadAchievementProgressState(client, userId);
+      } catch (err) {
+        console.error("Failed to snapshot achievement progress before this round's flush:", err);
+      }
+
+      try {
+        await recordAchievementProgress(client, userId, counters);
+        clearSessionCounters();
+      } catch {
+        // recordAchievementProgress's own errors are already surfaced
+        // elsewhere (it's re-attempted at game-over) — nothing new to do
+        // with one here, and definitely nothing to name as "unlocked" from
+        // a flush that never actually landed.
+        return;
+      }
+
+      if (!before) return;
+      try {
+        const after = await loadAchievementProgressState(client, userId);
+        const beforeUnlocked = new Set(
+          allAchievements(before)
+            .filter((a) => a.unlocked)
+            .map((a) => `${a.familyId}:${a.tier}`)
+        );
+        const newly = allAchievements(after).filter(
+          (a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`)
+        );
+        if (newly.length > 0) setNewlyUnlocked(newly);
+      } catch (err) {
+        console.error("Failed to determine which achievements this round unlocked:", err);
+      }
+    })();
     // The flushedRef guard (keyed on the round number, not just a boolean)
     // is the real idempotency check — it's what stops a double-flush if
     // this effect re-runs for unrelated reasons while still showing the
@@ -57,6 +104,22 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
           <h1 className="mt-1 text-2xl font-bold text-[var(--heading)]">{wentOut.name} went out!</h1>
         )}
       </div>
+
+      {newlyUnlocked.length > 0 && (
+        <div className="rounded-xl bg-[var(--accent)]/10 p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
+            Achievement{newlyUnlocked.length > 1 ? "s" : ""} unlocked this round
+          </h2>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {newlyUnlocked.map((a) => (
+              <li key={`${a.familyId}-${a.tier}`} className="flex items-center gap-2 text-sm text-[var(--heading)]">
+                <AchievementIcon category={a.category} className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+                {a.familyTitle} {tierNumber(a.tier)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-[var(--border)]">
         <table className="w-full text-left text-sm">
