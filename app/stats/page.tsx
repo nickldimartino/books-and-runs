@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { formatScore } from "../lib/formatScore";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
 
@@ -179,12 +180,9 @@ export default function StatsPage() {
           <section className="grid grid-cols-2 gap-3">
             <StatTile label="Games played" value={stats.games_played} />
             <StatTile label="Games won" value={stats.games_won} />
-            <StatTile label="Best score" value={stats.best_score ?? "—"} sub="lower is better" />
-            <StatTile label="Worst score" value={stats.worst_score ?? "—"} sub="higher is worse" />
-            <StatTile
-              label="Average score"
-              value={stats.average_score != null ? Math.round(stats.average_score) : "—"}
-            />
+            <StatTile label="Best score" value={formatScore(stats.best_score)} sub="lower is better" />
+            <StatTile label="Worst score" value={formatScore(stats.worst_score)} sub="higher is worse" />
+            <StatTile label="Average score" value={formatScore(stats.average_score)} />
             <StatTile label="Win rate" value={winRate !== null ? `${winRate}%` : "—"} />
             <StatTile label="Games tied" value={stats.games_tied} sub="a rare result" />
           </section>

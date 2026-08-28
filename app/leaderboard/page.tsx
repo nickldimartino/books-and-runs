@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, WIN_RATE_MIN_GAMES } from "@/achievements";
 import { useAuth } from "../AuthContext";
+import { formatScore } from "../lib/formatScore";
 import { displayNameFor, LeaderboardEntry, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
@@ -12,11 +13,6 @@ const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.lengt
 function formatWinRate(entry: LeaderboardEntry): string {
   if (entry.games_played < WIN_RATE_MIN_GAMES) return "—";
   return `${Math.round((100 * entry.games_won) / entry.games_played)}%`;
-}
-
-function formatScore(value: number | null): string {
-  if (value == null) return "—";
-  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
 }
 
 export default function LeaderboardPage() {
