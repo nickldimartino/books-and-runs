@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { syncLeaderboardStats } from "./lib/leaderboardStore";
 import {
   isActiveForegroundGame,
   loadPendingSaves,
@@ -68,7 +69,19 @@ export function PendingSaveSync() {
       break;
     }
 
-    if (syncedAny) refreshLevel();
+    if (syncedAny) {
+      refreshLevel();
+      // Same reasoning as GameOverScreen's own call: best-effort, so a
+      // queued game recovering here doesn't also need its leaderboard row
+      // to succeed before the underlying player_stats/achievement_counters
+      // writes above are considered done. Without this, an offline-then-
+      // recovered game correctly updated the account's real stats but left
+      // the leaderboard showing stale numbers until some *other* trigger
+      // (a later game, or opening Account/Leaderboard) happened to sync it.
+      syncLeaderboardStats(supabase, user.id).catch((err) => {
+        console.error("Failed to sync leaderboard entry:", err);
+      });
+    }
   }, [user, refreshLevel]);
 
   useEffect(() => {
