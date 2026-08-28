@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { markTutorialStarting } from "../lib/localSave";
 import { loadLocalSettings } from "../lib/settingsStore";
@@ -25,6 +26,7 @@ type RoundMode = "all" | "short" | "custom" | "tutorial";
 
 export default function NewGamePage() {
   const router = useRouter();
+  const { configured, user } = useAuth();
   const { startNewGame, startTutorialGame } = useGame();
   const [humanCount, setHumanCount] = useState(1);
   const [humanNames, setHumanNames] = useState<string[]>(["You"]);
@@ -34,6 +36,11 @@ export default function NewGamePage() {
   const [customRounds, setCustomRounds] = useState<Set<number>>(
     () => new Set(CONTRACTS.map((c) => c.round))
   );
+  // Only meaningful once there's a second human at the table — see the note
+  // and toggle rendered below the name inputs. Only ever actually applied
+  // (in handleStart) once there are 3+ humans; with exactly 2, tracking
+  // stays on by default rather than surfacing a toggle for it, too.
+  const [trackStatsOn, setTrackStatsOn] = useState(true);
 
   // Pick up the house-rule default from Settings once mounted (before the
   // player has had a chance to touch the AI difficulty picker themselves).
@@ -134,7 +141,11 @@ export default function NewGamePage() {
         };
       }),
     ];
-    startNewGame(configs, selectedContracts);
+    // The toggle only ever renders (and so can only ever have been touched)
+    // once there are 3+ human players — below that, tracking always stays
+    // on, regardless of whatever trackStatsOn happens to still hold from a
+    // player count that was previously higher and has since been reduced.
+    startNewGame(configs, selectedContracts, humanCount > 2 ? trackStatsOn : true);
     router.push("/game");
   }
 
@@ -198,6 +209,46 @@ export default function NewGamePage() {
           ))}
         </div>
         <p className="text-xs text-[var(--faint)]">Just for this game — these names won&apos;t change your account.</p>
+
+        {configured && user && humanCount >= 2 && (
+          <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--heading)]">
+            Only <strong className="font-semibold">{humanNames[0]?.trim() || "the first player"}</strong>
+            &apos;s stats, achievements, and leaderboard entry are affected by this game — the other
+            player{humanCount > 2 ? "s" : ""} here aren&apos;t signed in as their own account, so
+            nothing of theirs gets recorded either way.
+          </p>
+        )}
+
+        {configured && user && humanCount > 2 && (
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-[var(--muted)]">Track stats for this game</label>
+            <div className="flex gap-2">
+              {(
+                [
+                  [true, "On"],
+                  [false, "Off"],
+                ] as [boolean, string][]
+              ).map(([v, l]) => (
+                <button
+                  key={l}
+                  onClick={() => setTrackStatsOn(v)}
+                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+                    trackStatsOn === v
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--faint)]">
+              With a bigger table, {humanNames[0]?.trim() || "the first player"} isn&apos;t always the
+              same person game to game — turn this off if tonight&apos;s results shouldn&apos;t count
+              toward their stats.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">

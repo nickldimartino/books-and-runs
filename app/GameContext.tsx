@@ -47,11 +47,18 @@ interface GameContextValue {
   roundHistory: RoundHistoryEntry[];
   lastDrawnCardId: string | null;
   buyOffer: BuyOffer | null;
-  startNewGame: (configs: PlayerConfig[], contracts?: ContractRequirement[]) => void;
+  /** `trackStats` (default true) sets whether this game's results are
+   * recorded to the signed-in account at all — see New Game's "Track stats
+   * for this game" toggle. */
+  startNewGame: (configs: PlayerConfig[], contracts?: ContractRequirement[], trackStats?: boolean) => void;
   /** A fixed, scripted 1-vs-1 practice round (see src/tutorial.ts) — never
    * touches the real saved-game slot, Supabase stats, or achievements. */
   startTutorialGame: () => void;
   isTutorial: boolean;
+  /** Whether this game's results are being recorded to the signed-in
+   * account — see startNewGame's own doc. Always true during a tutorial
+   * (moot either way; isTutorial already gates every write on its own). */
+  trackStats: boolean;
   continueGame: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
@@ -186,6 +193,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // Mirrors isTutorial for use inside stable callbacks (persist, quitToHome)
   // that can't take a reactive dependency on it without breaking memoization.
   const isTutorialRef = useRef(false);
+  // Whether this game's results should be recorded to the signed-in account
+  // at all — set once at New Game (see its own "Track stats for this game"
+  // toggle, offered for 3+ pass-and-play human players) and carried through
+  // persist()/continueGame() so resuming a saved game later can't silently
+  // revert an "off" choice back to tracking. Defaults to true; RoundSummary
+  // and GameOverScreen both gate their Supabase writes on this the same way
+  // they already gate on isTutorial.
+  const [trackStats, setTrackStats] = useState(true);
+  const trackStatsRef = useRef(true);
+  const setTrackStatsBoth = useCallback((value: boolean) => {
+    trackStatsRef.current = value;
+    setTrackStats(value);
+  }, []);
   const buyQueueRef = useRef<string[]>([]);
   const recordedRoundsRef = useRef<Set<number>>(new Set());
 
@@ -250,6 +270,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundStartScores: roundStartScoresRef.current,
       roundHistory: roundHistoryRef.current,
       sessionCounters: sessionCountersRef.current,
+      trackStats: trackStatsRef.current,
     });
     setHasSavedGame(true);
   }, []);
@@ -341,11 +362,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [commit, setHasDrawnBoth]);
 
   const startNewGame = useCallback(
-    (configs: PlayerConfig[], contracts?: ContractRequirement[]) => {
+    (configs: PlayerConfig[], contracts?: ContractRequirement[], trackStats: boolean = true) => {
       isTutorialRef.current = false;
       setIsTutorial(false);
       setTutorialSoundOverride(false);
       clearUndoState();
+      setTrackStatsBoth(trackStats);
       const state = createGame(configs, contracts);
       stateRef.current = state;
       setSnapshot({ ...state });
@@ -376,7 +398,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         runAiLoop();
       }
     },
-    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump, clearUndoState]
+    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump, clearUndoState, setTrackStatsBoth]
   );
 
   const startTutorialGame = useCallback(() => {
@@ -384,6 +406,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsTutorial(true);
     setTutorialSoundOverride(true);
     clearUndoState();
+    // Irrelevant either way — isTutorialRef alone already fully gates every
+    // Supabase write RoundSummary/GameOverScreen make — but reset to the
+    // default so nothing looks inconsistent if this were ever inspected
+    // mid-tutorial.
+    setTrackStatsBoth(true);
     const state = createTutorialGame();
     stateRef.current = state;
     setSnapshot({ ...state });
@@ -399,7 +426,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     buyQueueRef.current = [];
     sessionCountersRef.current = {};
     // No persist() — see the isTutorialRef guard at the top of persist().
-  }, [setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState]);
+  }, [setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
   const continueGame = useCallback(() => {
     const saved = loadSavedGame();
@@ -412,6 +439,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsTutorial(false);
     setTutorialSoundOverride(false);
     clearUndoState();
+    setTrackStatsBoth(saved.trackStats ?? true);
     stateRef.current = saved.state;
     setSnapshot({ ...saved.state });
     setHasDrawnBoth(saved.hasDrawn);
@@ -431,7 +459,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     } else {
       setAwaitingReveal(true);
     }
-  }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState]);
+  }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
   const revealHand = useCallback(() => setAwaitingReveal(false), []);
 
@@ -737,6 +765,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     isTutorialRef.current = false;
     setIsTutorial(false);
     setTutorialSoundOverride(false);
+    setTrackStatsBoth(true);
     if (wasTutorial) {
       // The tutorial never touched the real saved-game slot (persist() no-ops
       // during it) — restore whatever was really there instead of wiping it.
@@ -745,7 +774,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       clearSavedGame();
       setHasSavedGame(false);
     }
-  }, [setHasDrawnBoth, clearUndoState]);
+  }, [setHasDrawnBoth, clearUndoState, setTrackStatsBoth]);
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -761,6 +790,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startNewGame,
       startTutorialGame,
       isTutorial,
+      trackStats,
       continueGame,
       revealHand,
       draw,
@@ -790,6 +820,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startNewGame,
       startTutorialGame,
       isTutorial,
+      trackStats,
       continueGame,
       revealHand,
       draw,

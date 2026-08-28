@@ -23,7 +23,7 @@ interface XpLineItem {
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial } = useGame();
+  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial, trackStats } = useGame();
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
@@ -210,10 +210,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
   useEffect(() => {
     // Tutorial games are scripted practice — never touch Supabase, so they
     // can't inflate stats/achievements or count toward "games played."
-    if (recordedRef.current || !supabase || !user || isTutorial) return;
+    // trackStats is New Game's own opt-out (offered for 3+ pass-and-play
+    // human players) — same rule, skip the write outright.
+    if (recordedRef.current || !supabase || !user || isTutorial || !trackStats) return;
     recordedRef.current = true;
     attemptSave();
-  }, [user, isTutorial, attemptSave]);
+  }, [user, isTutorial, trackStats, attemptSave]);
 
   function playAgain() {
     quitToHome();
@@ -288,7 +290,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
         </div>
       )}
 
-      {!isTutorial && user && (
+      {!isTutorial && user && !trackStats && (
+        <p className="text-center text-xs text-[var(--faint)]">
+          Stats weren&apos;t tracked for this game — you turned that off on the New Game screen.
+        </p>
+      )}
+
+      {!isTutorial && user && trackStats && (
         <div className="text-center text-xs text-[var(--faint)]">
           <p>
             {saved === "saving" && "Saving to your stats…"}

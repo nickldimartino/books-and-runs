@@ -13,6 +13,13 @@ export interface SavedGame {
   // game after closing the app doesn't silently drop this game's progress.
   // Optional since saves made before this field existed won't have it.
   sessionCounters?: Record<string, number>;
+  // Whether this game's results should be recorded to the signed-in
+  // account at all (player_stats, achievement_counters, the leaderboard) —
+  // set once at New Game and carried through so resuming a saved game
+  // later doesn't silently revert an "off" choice back to tracking.
+  // Optional/defaults to true (tracking on) for saves made before this
+  // field existed.
+  trackStats?: boolean;
   savedAt: number;
 }
 
