@@ -28,6 +28,8 @@
   --card-red: #b91c1c;
   --card-wild-bg: #fef3c7;
   --card-wild-text: #92400e;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L14%2010%20L22%2012%20L14%2014%20L12%2022%20L10%2014%20L2%2012%20L10%2010%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="daylight"] {
@@ -51,6 +53,8 @@
   --card-red: #b91c1c;
   --card-wild-bg: #fef3c7;
   --card-wild-text: #92400e;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'3.4'%2F%3E%3Cg%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%201%20L13.4%206%20L10.6%206%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%2023%20L13.4%2018%20L10.6%2018%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M1%2012%20L6%2010.6%20L6%2013.4%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M23%2012%20L18%2010.6%20L18%2013.4%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M4%204%20L8.2%207.4%20L5.9%208.7%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20%2020%20L15.8%2016.6%20L18.1%2015.3%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20%204%20L16.6%208.2%20L15.3%205.9%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M4%2020%20L7.4%2015.8%20L8.7%2018.1%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="pastel"] {
@@ -77,6 +81,8 @@
   --card-red: #c15b6b;
   --card-wild-bg: #fbe19a;
   --card-wild-text: #7a5210;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Ccircle%20fill%3D'%23000'%20cx%3D'12'%20cy%3D'12'%20r%3D'4'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 14px;
 }
 
 [data-theme="casino"] {
@@ -100,6 +106,8 @@
   --card-red: #9a1b1b;
   --card-wild-bg: #f3e0a8;
   --card-wild-text: #6b4a12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%203%20L21%2012%20L12%2021%20L3%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 18px;
 }
 
 [data-theme="arcade"] {
@@ -123,6 +131,8 @@
   --card-red: #e8386f;
   --card-wild-bg: #ffe9a6;
   --card-wild-text: #7a4a02;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M13%202%20L5%2014%20L11%2014%20L9%2022%20L19%209%20L12%209%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="noir"] {
@@ -150,6 +160,8 @@
   --card-red: #555555;
   --card-wild-bg: #d9d9d9;
   --card-wild-text: #1a1a1a;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2022%20L12%203%20A9%209%200%200%201%2021%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 16px;
 }
 
 [data-theme="sakura"] {
@@ -175,6 +187,8 @@
   --card-red: #b8264f;
   --card-wild-bg: #fde3ec;
   --card-wild-text: #8a2846;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(0%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(72%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(144%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(216%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(288%2012%2012)'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'2.2'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="ember"] {
@@ -200,6 +214,8 @@
   --card-red: #c23b1f;
   --card-wild-bg: #ffe1b3;
   --card-wild-text: #7a3a06;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20C8%208%204%2010%206%2016%20C7%2020%2012%2022%2012%2022%20C12%2022%2017%2020%2018%2016%20C20%2010%2016%208%2012%202%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="lagoon"] {
@@ -225,6 +241,8 @@
   --card-red: #d1476b;
   --card-wild-bg: #cdf3ec;
   --card-wild-text: #0a5c53;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M2%2011%20C6%205%2010%205%2014%2011%20C18%2017%2022%2017%2022%2011%20L22%2015%20C18%2021%2014%2021%2010%2015%20C6%209%202%209%202%2015%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 24px;
 }
 
 [data-theme="sahara"] {
@@ -250,6 +268,8 @@
   --card-red: #b8482f;
   --card-wild-bg: #f3ddb3;
   --card-wild-text: #6b3d0f;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20fill-rule%3D'evenodd'%20d%3D'M12%203%20A9%209%200%201%200%2012%2021%20A7%207%200%201%201%2012%203%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="aurora"] {
@@ -275,6 +295,8 @@
   --card-red: #be123c;
   --card-wild-bg: #d9f2e6;
   --card-wild-text: #065f46;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L14%209.5%20L21.5%208.5%20L15.8%2013.4%20L20%2020%20L12%2015.8%20L4%2020%20L8.2%2013.4%20L2.5%208.5%20L10%209.5%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 24px;
 }
 
 [data-theme="jade"] {
@@ -301,6 +323,8 @@
   --card-red: #a3272f;
   --card-wild-bg: #f5e6b8;
   --card-wild-text: #6b4a12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20fill-rule%3D'evenodd'%20d%3D'M12%202%20L22%2012%20L12%2022%20L2%2012%20Z%20M12%206.5%20L17.5%2012%20L12%2017.5%20L6.5%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 24px;
 }
 
 [data-theme="verdigris"] {
@@ -326,6 +350,8 @@
   --card-red: #a8452a;
   --card-wild-bg: #ecd9b8;
   --card-wild-text: #6b4318;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20fill-rule%3D'evenodd'%20d%3D'M12%202%20L20%207%20L20%2017%20L12%2022%20L4%2017%20L4%207%20Z%20M12%206%20L16.5%208.7%20L16.5%2015.3%20L12%2018%20L7.5%2015.3%20L7.5%208.7%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="alabaster"] {
@@ -353,6 +379,8 @@
   --card-red: #6b6b6b;
   --card-wild-bg: #ddd9d2;
   --card-wild-text: #2b2a27;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2022%20L12%203%20A9%209%200%200%201%2021%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 16px;
 }
 
 [data-theme="citrus"] {
@@ -379,6 +407,8 @@
   --card-red: #b8452f;
   --card-wild-bg: #fde5c2;
   --card-wild-text: #7a3b12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20C18%206%2018%2018%2012%2022%20C6%2018%206%206%2012%202%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="frost"] {
@@ -404,6 +434,8 @@
   --card-red: #b8342b;
   --card-wild-bg: #d7f0f8;
   --card-wild-text: #0c5271;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L20%207%20L20%2017%20L12%2022%20L4%2017%20L4%207%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="meadow"] {
@@ -429,6 +461,8 @@
   --card-red: #a8402b;
   --card-wild-bg: #f3e6ae;
   --card-wild-text: #6b4f0c;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'4'%20width%3D'1.4'%20height%3D'17'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'9'%20cy%3D'9'%20rx%3D'3'%20ry%3D'1.8'%20transform%3D'rotate(-30%209%209)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'15'%20cy%3D'9'%20rx%3D'3'%20ry%3D'1.8'%20transform%3D'rotate(30%2015%209)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'5.5'%20rx%3D'2.4'%20ry%3D'1.6'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="coralsand"] {
@@ -455,6 +489,8 @@
   --card-red: #b8452f;
   --card-wild-bg: #ffe0d0;
   --card-wild-text: #8a3a1e;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M4%2020%20Q12%204%2020%2020%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="lilac"] {
@@ -481,6 +517,8 @@
   --card-red: #a13c6b;
   --card-wild-bg: #e9d9f0;
   --card-wild-text: #5c3170;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'4.5'%20rx%3D'2'%20ry%3D'2.8'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'19.5'%20rx%3D'2'%20ry%3D'2.8'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'4.5'%20cy%3D'12'%20rx%3D'2.8'%20ry%3D'2'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'19.5'%20cy%3D'12'%20rx%3D'2.8'%20ry%3D'2'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'7'%20cy%3D'7'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(-45%207%207)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'17'%20cy%3D'17'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(-45%2017%2017)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'17'%20cy%3D'7'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(45%2017%207)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'7'%20cy%3D'17'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(45%207%2017)'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 24px;
 }
 
 [data-theme="champagne"] {
@@ -507,6 +545,8 @@
   --card-red: #a8452a;
   --card-wild-bg: #f3e0b3;
   --card-wild-text: #6b4f12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%203%20L21%2012%20L12%2021%20L3%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 18px;
 }
 
 /* Holiday themes, ordered by where they fall on the calendar — see
@@ -541,6 +581,8 @@
   --card-red: #c8194f;
   --card-wild-bg: #ffd6e5;
   --card-wild-text: #8a1f45;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2021%20C12%2021%203%2014%203%208%20C3%204.5%206%202%209%202%20C10.5%202%2011.5%203%2012%204%20C12.5%203%2013.5%202%2015%202%20C18%202%2021%204.5%2021%208%20C21%2014%2012%2021%2012%2021%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="stpatricks"] {
@@ -568,6 +610,8 @@
   --card-red: #b8452f;
   --card-wild-bg: #d0f0d8;
   --card-wild-text: #0c3f1f;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'8'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'7'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'17'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'11.2'%20y%3D'14'%20width%3D'1.6'%20height%3D'8'%20rx%3D'0.8'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="easter"] {
@@ -594,6 +638,8 @@
   --card-red: #c1607a;
   --card-wild-bg: #fbe9b0;
   --card-wild-text: #7a5a12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20C17%202%2020%209%2020%2014%20C20%2019%2016.5%2022%2012%2022%20C7.5%2022%204%2019%204%2014%20C4%209%207%202%2012%202%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="july4th"] {
@@ -619,6 +665,8 @@
   --card-red: #b8203a;
   --card-wild-bg: #d8e0ff;
   --card-wild-text: #0d1a44;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%201.5%20L14.7%209.3%20L23%209.3%20L16.3%2014.4%20L18.8%2022.5%20L12%2017.6%20L5.2%2022.5%20L7.7%2014.4%20L1%209.3%20L9.3%209.3%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="halloween"] {
@@ -646,6 +694,8 @@
   --card-red: #b8452f;
   --card-wild-bg: #e8d4ff;
   --card-wild-text: #4a1a7a;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2010%20C10.5%206.5%206.5%205%203%208%20C6%209%208%2011%209%2013%20C6%2013%203%2015.5%202%2019.5%20C6%2018.3%209%2016%2011%2014%20C11.2%2016.3%2011.4%2019%2012%2021%20C12.6%2019%2012.8%2016.3%2013%2014%20C15%2016%2018%2018.3%2022%2019.5%20C21%2015.5%2018%2013%2015%2013%20C16%2011%2018%209%2021%208%20C17.5%205%2013.5%206.5%2012%2010%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 26px;
 }
 
 [data-theme="thanksgiving"] {
@@ -672,6 +722,8 @@
   --card-red: #a8452a;
   --card-wild-bg: #f3d9a8;
   --card-wild-text: #6b4318;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L13.6%207.6%20L19%205%20L16.3%2010%20L21.5%2012%20L16%2013.6%20L19%2018.5%20L13.6%2016.3%20L12%2022%20L10.4%2016.3%20L5%2018.5%20L8%2013.6%20L2.5%2012%20L7.7%2010%20L5%205%20L10.4%207.6%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="hanukkah"] {
@@ -697,6 +749,8 @@
   --card-red: #a8324f;
   --card-wild-bg: #dbe4ff;
   --card-wild-text: #1a2a58;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'10.4'%20y%3D'13'%20width%3D'3.2'%20height%3D'9'%20rx%3D'1.2'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%202%20C13.8%205.6%2014.6%207.6%2013%2010.2%20C13.3%209%2012.7%208%2012%206.8%20C11.3%208%2010.7%209%2011%2010.2%20C9.4%207.6%2010.2%205.6%2012%202%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="christmas"] {
@@ -724,6 +778,8 @@
   --card-red: #b8102e;
   --card-wild-bg: #f4e0a8;
   --card-wild-text: #6b4a12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cg%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'2'%20width%3D'1.4'%20height%3D'20'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%209.3%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%2014.7%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'15.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%209.3%2017.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'15.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%2014.7%2017.5)'%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%20%20%3Cg%20transform%3D'rotate(60%2012%2012)'%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'2'%20width%3D'1.4'%20height%3D'20'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%209.3%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%2014.7%206.5)'%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%20%20%3Cg%20transform%3D'rotate(120%2012%2012)'%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'2'%20width%3D'1.4'%20height%3D'20'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%209.3%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%2014.7%206.5)'%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 24px;
 }
 
 [data-theme="newyears"] {
@@ -750,6 +806,8 @@
   --card-red: #a8324f;
   --card-wild-bg: #f3e0b3;
   --card-wild-text: #6b4f12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'1.6'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%200.5%20L13%206.5%20L11%206.5%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%2023.5%20L13%2017.5%20L11%2017.5%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M0.5%2012%20L6.5%2011%20L6.5%2013%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M23.5%2012%20L17.5%2013%20L17.5%2011%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M3.5%203.5%20L8%207.3%20L6.6%208.7%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20.5%2020.5%20L16%2016.7%20L17.4%2015.3%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20.5%203.5%20L16.7%208%20L15.3%206.6%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M3.5%2020.5%20L7.3%2016%20L8.7%2017.4%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 26px;
 }
 
 /* Light counterparts to the 8 dark holiday themes above, plus one dark
@@ -783,6 +841,8 @@
   --card-red: #c8194f;
   --card-wild-bg: #ffd6e5;
   --card-wild-text: #8a1f45;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2021%20C12%2021%203%2014%203%208%20C3%204.5%206%202%209%202%20C10.5%202%2011.5%203%2012%204%20C12.5%203%2013.5%202%2015%202%20C18%202%2021%204.5%2021%208%20C21%2014%2012%2021%2012%2021%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="cloverfield"] {
@@ -808,6 +868,8 @@
   --card-red: #a8452a;
   --card-wild-bg: #d0f0d8;
   --card-wild-text: #0c3f1f;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'8'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'7'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'17'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'11.2'%20y%3D'14'%20width%3D'1.6'%20height%3D'8'%20rx%3D'0.8'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="springdusk"] {
@@ -835,6 +897,8 @@
   --card-red: #a8456f;
   --card-wild-bg: #fbe9b0;
   --card-wild-text: #7a5a12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(0%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(72%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(144%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(216%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(288%2012%2012)'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'2.2'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="starsandstripes"] {
@@ -860,6 +924,8 @@
   --card-red: #b8102e;
   --card-wild-bg: #d6e0ff;
   --card-wild-text: #16255e;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%201.5%20L14.7%209.3%20L23%209.3%20L16.3%2014.4%20L18.8%2022.5%20L12%2017.6%20L5.2%2022.5%20L7.7%2014.4%20L1%209.3%20L9.3%209.3%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="candycorn"] {
@@ -886,6 +952,8 @@
   --card-red: #a8452a;
   --card-wild-bg: #ecd4ff;
   --card-wild-text: #5c1f9d;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L18%2014%20L18%2019%20Q18%2022%2015.5%2022%20L8.5%2022%20Q6%2022%206%2019%20L6%2014%20Z'%2F%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 [data-theme="pumpkinspice"] {
@@ -911,6 +979,8 @@
   --card-red: #a8452a;
   --card-wild-bg: #f3d9a8;
   --card-wild-text: #6b4318;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'10.6'%20y%3D'1.5'%20width%3D'2.8'%20height%3D'4.5'%20rx%3D'1.2'%20transform%3D'rotate(18%2012%203.5)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'14.5'%20rx%3D'9'%20ry%3D'7'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 24px;
 }
 
 [data-theme="festivaloflights"] {
@@ -937,6 +1007,8 @@
   --card-red: #a8324f;
   --card-wild-bg: #dbe4ff;
   --card-wild-text: #1a2a58;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'10.4'%20y%3D'13'%20width%3D'3.2'%20height%3D'9'%20rx%3D'1.2'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%202%20C13.8%205.6%2014.6%207.6%2013%2010.2%20C13.3%209%2012.7%208%2012%206.8%20C11.3%208%2010.7%209%2011%2010.2%20C9.4%207.6%2010.2%205.6%2012%202%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 22px;
 }
 
 [data-theme="candycane"] {
@@ -991,6 +1063,8 @@
   --card-red: #a8324f;
   --card-wild-bg: #f3e0b3;
   --card-wild-text: #6b4f12;
+  --card-back-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'4'%20y%3D'9'%20width%3D'5'%20height%3D'2.4'%20rx%3D'0.8'%20transform%3D'rotate(25%206.5%2010.2)'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4'%20width%3D'5'%20height%3D'2.4'%20rx%3D'0.8'%20transform%3D'rotate(-20%2016.5%205.2)'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'13'%20y%3D'16'%20width%3D'5'%20height%3D'2.4'%20rx%3D'0.8'%20transform%3D'rotate(50%2015.5%2017.2)'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --card-back-tile: 20px;
 }
 
 /*
@@ -1118,11 +1192,54 @@ a:active {
 }
 
 /* Face-down card back (draw pile) — same lift as a face-up card so the
-   draw pile doesn't read as visually flatter than the rest of the table. */
+   draw pile doesn't read as visually flatter than the rest of the table.
+   position/overflow here are what let the ::after motif below sit clipped
+   to the card's own rounded corners. */
 .card-back {
+  position: relative;
+  overflow: hidden;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
     0 4px 10px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Every theme's small motif (see --card-back-shape/--card-back-tile in the
+   theme blocks above), tiled across the card back via mask-image so it
+   picks up --accent as a flat fill through the shape's alpha silhouette —
+   one shared mechanism covering all 38 themes; only the shape/tile/color
+   actually differ per theme. Kept subtle (low opacity) so it reads as a
+   textured pattern rather than competing with the card's border/glow. */
+.card-back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--accent);
+  opacity: 0.55;
+  -webkit-mask-image: var(--card-back-shape);
+  mask-image: var(--card-back-shape);
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: var(--card-back-tile) var(--card-back-tile);
+  mask-size: var(--card-back-tile) var(--card-back-tile);
+}
+
+/* Candy Cane is the one theme that isn't an icon tile — its "motif" is the
+   diagonal peppermint stripe itself, so it replaces the mask entirely with
+   a striped gradient instead of layering a shape on top of it. */
+[data-theme="candycane"] .card-back::after {
+  -webkit-mask-image: none;
+  mask-image: none;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--card-red) 0,
+    var(--card-red) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  opacity: 0.6;
 }
 
 /* A --panel/--panel-soft surface on its own only differs from the page
