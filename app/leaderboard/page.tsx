@@ -16,11 +16,69 @@ function formatWinRate(entry: LeaderboardEntry): string {
   return `${Math.round((100 * entry.games_won) / entry.games_played)}%`;
 }
 
+type SortKey = "level" | "achievements" | "total_xp" | "win_rate" | "average_score" | "games_played" | "worst_score";
+
+// minWidth matches each column's own tuned width from before this was a
+// shared render loop (e.g. "Achievements" needs more room for "199/200"
+// than "Level" needs for a single number) — kept per-key rather than
+// flattened to one shared value so the table's layout doesn't regress.
+const SORT_OPTIONS: { key: SortKey; label: string; minWidth: string }[] = [
+  { key: "level", label: "Level", minWidth: "60px" },
+  { key: "achievements", label: "Achievements", minWidth: "80px" },
+  { key: "total_xp", label: "Total XP", minWidth: "80px" },
+  { key: "win_rate", label: "Win rate", minWidth: "70px" },
+  { key: "average_score", label: "Avg. score", minWidth: "90px" },
+  { key: "games_played", label: "Games", minWidth: "70px" },
+  { key: "worst_score", label: "Worst score", minWidth: "90px" },
+];
+
+/**
+ * A single number per sort key where *higher always means "ranks first"* —
+ * even for the two score stats where a lower number is actually the better
+ * result in Contract Rummy (lowest cumulative score wins), so those two are
+ * negated here rather than needing their own separate ascending/descending
+ * case in the comparator below. Win rate below the games-played threshold
+ * (shown as "—", not a real rate to rank by) and a missing score both sort
+ * to the very bottom, the same way "—" already reads as "not enough data"
+ * rather than as an actual value of zero.
+ */
+function sortValue(entry: LeaderboardEntry, key: SortKey): number {
+  switch (key) {
+    case "level":
+      return entry.level;
+    case "achievements":
+      return entry.achievements_unlocked;
+    case "total_xp":
+      return entry.total_xp;
+    case "games_played":
+      return entry.games_played;
+    case "win_rate":
+      return entry.games_played < WIN_RATE_MIN_GAMES ? -Infinity : entry.games_won / entry.games_played;
+    case "average_score":
+      return entry.average_score == null ? -Infinity : -entry.average_score;
+    case "worst_score":
+      return entry.worst_score == null ? -Infinity : -entry.worst_score;
+  }
+}
+
+/** Sorts by the chosen stat (best first); ties fall back to the board's
+ * original default order (level, then total XP) rather than an arbitrary
+ * one, so picking a different sort doesn't scramble equal-ranked players. */
+function sortEntries(entries: LeaderboardEntry[], key: SortKey): LeaderboardEntry[] {
+  return [...entries].sort((a, b) => {
+    const primary = sortValue(b, key) - sortValue(a, key);
+    if (primary !== 0) return primary;
+    if (key !== "level" && b.level !== a.level) return b.level - a.level;
+    return b.total_xp - a.total_xp;
+  });
+}
+
 export default function LeaderboardPage() {
   const { configured, loading: authLoading, user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("level");
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -109,7 +167,7 @@ export default function LeaderboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Leaderboard</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Every signed-in account, ranked by level. Set your own name on the{" "}
+          Every signed-in account, ranked by whichever stat you sort by below. Set your own name on the{" "}
           <Link href="/account" className="underline hover:text-[var(--heading)]">
             Account
           </Link>{" "}
@@ -127,48 +185,67 @@ export default function LeaderboardPage() {
       ) : entries.length === 0 ? (
         <p className="text-sm text-[var(--faint)]">Nobody&apos;s finished a tracked game yet — play one to be the first.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-          <table className="w-full border-collapse text-left text-sm">
-            <thead>
-              <tr className="bg-[var(--panel)] text-xs text-[var(--faint)]">
-                <th className="sticky left-0 bg-[var(--panel)] px-3 py-2 font-medium">Player</th>
-                <th className="min-w-[60px] px-2 py-2 text-center font-medium">Level</th>
-                <th className="min-w-[80px] px-2 py-2 text-center font-medium">Achievements</th>
-                <th className="min-w-[80px] px-2 py-2 text-center font-medium">Total XP</th>
-                <th className="min-w-[70px] px-2 py-2 text-center font-medium">Win rate</th>
-                <th className="min-w-[90px] px-2 py-2 text-center font-medium">Avg. score</th>
-                <th className="min-w-[70px] px-2 py-2 text-center font-medium">Games</th>
-                <th className="min-w-[90px] px-2 py-2 text-center font-medium">Worst score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry, i) => {
-                const isYou = entry.user_id === user?.id;
-                return (
-                  <tr
-                    key={entry.user_id}
-                    className={`border-t border-[var(--border)] ${isYou ? "bg-[var(--accent)]/10" : ""}`}
-                  >
-                    <td
-                      className={`sticky left-0 px-3 py-2 font-medium ${isYou ? "bg-[var(--panel)] text-[var(--accent)]" : "bg-[var(--bg)] text-[var(--heading)]"}`}
+        <>
+          <label className="flex items-center gap-2 self-start text-sm text-[var(--muted)]">
+            Sort by
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="bg-[var(--panel)] text-xs text-[var(--faint)]">
+                  <th className="sticky left-0 bg-[var(--panel)] px-3 py-2 font-medium">Player</th>
+                  {SORT_OPTIONS.map((opt) => (
+                    <th
+                      key={opt.key}
+                      style={{ minWidth: opt.minWidth }}
+                      className={`px-2 py-2 text-center font-medium ${sortKey === opt.key ? "text-[var(--accent)]" : ""}`}
                     >
-                      <span className="text-[var(--faint)]">{i + 1}.</span> {displayNameFor(entry)}
-                    </td>
-                    <td className="px-2 py-2 text-center font-semibold text-[var(--heading)]">{entry.level}</td>
-                    <td className="px-2 py-2 text-center text-[var(--muted)]">
-                      {entry.achievements_unlocked}/{TOTAL_ACHIEVEMENTS}
-                    </td>
-                    <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.total_xp}</td>
-                    <td className="px-2 py-2 text-center text-[var(--muted)]">{formatWinRate(entry)}</td>
-                    <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.average_score)}</td>
-                    <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.games_played}</td>
-                    <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.worst_score)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      {opt.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortEntries(entries, sortKey).map((entry, i) => {
+                  const isYou = entry.user_id === user?.id;
+                  return (
+                    <tr
+                      key={entry.user_id}
+                      className={`border-t border-[var(--border)] ${isYou ? "bg-[var(--accent)]/10" : ""}`}
+                    >
+                      <td
+                        className={`sticky left-0 px-3 py-2 font-medium ${isYou ? "bg-[var(--panel)] text-[var(--accent)]" : "bg-[var(--bg)] text-[var(--heading)]"}`}
+                      >
+                        <span className="text-[var(--faint)]">{i + 1}.</span> {displayNameFor(entry)}
+                      </td>
+                      <td className="px-2 py-2 text-center font-semibold text-[var(--heading)]">{entry.level}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">
+                        {entry.achievements_unlocked}/{TOTAL_ACHIEVEMENTS}
+                      </td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.total_xp}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{formatWinRate(entry)}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.average_score)}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.games_played}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.worst_score)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* entries.length > 0 guard: with an empty board, the message above
