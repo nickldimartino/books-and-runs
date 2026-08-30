@@ -684,26 +684,44 @@ export default function GamePage() {
                               key={meld.id}
                               onClick={() => handleMeldClick(meld)}
                               disabled={!isValidTarget}
-                              className={`flex max-w-full items-end gap-1 overflow-x-auto overflow-y-hidden rounded-lg p-1 transition ${
+                              className={`max-w-full rounded-lg p-1 transition ${
                                 isValidTarget ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""
                               }`}
                               title={meldLabel(meld)}
                             >
-                              {meld.cards.map((c, i) => {
-                                // A wild's badge shows what it's standing in
-                                // for. meld.wildCardIds is the ground truth
-                                // for which cards are actually acting as a
-                                // wild here — comparing a card's own rank to
-                                // its slot's rank instead would misfire for
-                                // a 2 standing in for a *different* suit's
-                                // own "2" slot, whose rank happens to match
-                                // its slot anyway despite genuinely being a
-                                // stand-in, not a natural fit.
-                                const isWildHere = meld.wildCardIds?.includes(c.id) ?? false;
-                                const standInRank =
-                                  isWildHere && meld.type === "run" ? runCardRank(meld, i) : undefined;
-                                return <PlayingCard key={c.id} card={c} small standInRank={standInRank} />;
-                              })}
+                              {/* overflow-x-auto lives on this inner div, not the
+                                  button itself — a button that's also its own
+                                  scroll container is a known rough edge on iOS
+                                  Safari: with the tap target and the scrollable
+                                  region being the exact same element, any real
+                                  finger touch (which almost never lands with zero
+                                  lateral drift the way a mouse click does) can get
+                                  claimed by the scroll-gesture recognizer instead
+                                  of firing the tap — worse the longer a run gets
+                                  and the more there actually is to scroll. Only
+                                  ever mattered on a real touchscreen, which is why
+                                  it never showed up testing with a mouse. Splitting
+                                  the two roles apart — the button stays a plain,
+                                  stable tap target; this div is what scrolls when
+                                  a meld is too long to fit — sidesteps that
+                                  ambiguity entirely instead of trying to tune it. */}
+                              <div className="flex items-end gap-1 overflow-x-auto overflow-y-hidden">
+                                {meld.cards.map((c, i) => {
+                                  // A wild's badge shows what it's standing in
+                                  // for. meld.wildCardIds is the ground truth
+                                  // for which cards are actually acting as a
+                                  // wild here — comparing a card's own rank to
+                                  // its slot's rank instead would misfire for
+                                  // a 2 standing in for a *different* suit's
+                                  // own "2" slot, whose rank happens to match
+                                  // its slot anyway despite genuinely being a
+                                  // stand-in, not a natural fit.
+                                  const isWildHere = meld.wildCardIds?.includes(c.id) ?? false;
+                                  const standInRank =
+                                    isWildHere && meld.type === "run" ? runCardRank(meld, i) : undefined;
+                                  return <PlayingCard key={c.id} card={c} small standInRank={standInRank} />;
+                                })}
+                              </div>
                             </button>
                           );
                         })}
