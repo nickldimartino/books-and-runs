@@ -706,24 +706,30 @@ export default function GamePage() {
                                   a meld is too long to fit — sidesteps that
                                   ambiguity entirely instead of trying to tune it.
 
-                                  py-2 matters here for a less obvious reason: CSS
+                                  p-2 matters here for a less obvious reason: CSS
                                   forces overflow-y to compute as "auto" the
                                   moment overflow-x isn't "visible" (a browser
                                   can't scroll one axis and not the other), so
-                                  this box clips vertically whether or not
-                                  overflow-y-hidden is written explicitly. A
-                                  wild card's "as <rank>" badge (PlayingCard's
-                                  standInRank) is absolutely positioned 6px
-                                  below its own card, on purpose, to read as a
-                                  separate label — with zero vertical padding
-                                  here that overhang landed right on this box's
-                                  clip edge and got sliced off (visible as a
-                                  thin mis-colored sliver instead of the actual
-                                  text, worse on macOS Safari's classic
-                                  scrollbar, which eats a little more of the
-                                  box's height). The padding just gives that
-                                  6px overhang somewhere to actually live. */}
-                              <div className="flex items-end gap-1 overflow-x-auto overflow-y-hidden py-2">
+                                  this box clips on BOTH axes whether or not
+                                  overflow-y-hidden is written explicitly. Two
+                                  things stick out past a card's own border box
+                                  by design and need room inside that clip
+                                  region or they get sliced off: a wild card's
+                                  "as <rank>" badge (PlayingCard's standInRank)
+                                  sits 6px below its own card, and every card's
+                                  own box-shadow/glow (.card-face) reaches a
+                                  few px past its edges on every side. With no
+                                  padding here, the badge's overhang landed
+                                  right on the box's bottom clip edge (a thin
+                                  mis-colored sliver instead of real text), and
+                                  the first/last card in a run had its glow
+                                  clipped flat at the row's left/right edge —
+                                  visually distinct from every other card here,
+                                  which still has a neighbor's glow overlapping
+                                  its own to hide the same clipping. p-2 just
+                                  gives both kinds of overhang somewhere to
+                                  actually live, on every edge. */}
+                              <div className="flex items-end gap-1 overflow-x-auto overflow-y-hidden p-2">
                                 {meld.cards.map((c, i) => {
                                   // A wild's badge shows what it's standing in
                                   // for. meld.wildCardIds is the ground truth
