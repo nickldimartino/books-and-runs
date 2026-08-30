@@ -153,7 +153,6 @@ export default function LeaderboardPage() {
                       className={`sticky left-0 px-3 py-2 font-medium ${isYou ? "bg-[var(--panel)] text-[var(--accent)]" : "bg-[var(--bg)] text-[var(--heading)]"}`}
                     >
                       <span className="text-[var(--faint)]">{i + 1}.</span> {displayNameFor(entry)}
-                      {isYou && <span className="ml-1.5 text-xs font-normal text-[var(--faint)]">(you)</span>}
                     </td>
                     <td className="px-2 py-2 text-center font-semibold text-[var(--heading)]">{entry.level}</td>
                     <td className="px-2 py-2 text-center text-[var(--muted)]">
