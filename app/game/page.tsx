@@ -944,7 +944,19 @@ export default function GamePage() {
                 </button>
               </div>
             </div>
+            {/* Keying on round + whose hand this is forces a full remount —
+                not just a data update — exactly at the two moments a hand
+                is genuinely "freshly dealt": a new round starting, or (in
+                pass-and-play) control passing to a different player. A
+                remount guarantees every card is a real new DOM node, so
+                card-enter's staggered delay (see DraggableHand.tsx) plays
+                for the whole hand together instead of only for whichever
+                cards don't coincidentally share an id with what the same
+                seat happened to hold last round (deck reshuffles reuse ids
+                like "h-6-0" every round, so without this, some cards would
+                silently skip the animation as if they'd already been there). */}
             <DraggableHand
+              key={`${state.round}-${player.id}`}
               cards={visibleHand}
               selectedCardIds={selectedCardIds}
               lastDrawnCardId={lastDrawnCardId}

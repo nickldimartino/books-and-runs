@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { AchievementIcon } from "../components/AchievementIcons";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
@@ -175,7 +176,7 @@ export default function AchievementsPage() {
       </div>
 
       {authLoading || loading ? (
-        <p className="text-sm text-[var(--faint)]">Loading…</p>
+        <LoadingSpinner />
       ) : (
         <>
           <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-3">

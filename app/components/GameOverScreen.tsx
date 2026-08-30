@@ -236,7 +236,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
         {!isTutorial && wentOut && (
           <p className="mt-1 text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
         )}
-        <h1 className="mt-1 text-3xl font-bold text-[var(--heading)]">
+        <h1 className="win-announce mt-1 text-3xl font-bold text-[var(--heading)]">
           {isTutorial
             ? "Nice work!"
             : isTie

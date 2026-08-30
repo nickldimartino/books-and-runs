@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Card } from "@/types";
 import { cardLabel, PlayingCard } from "./PlayingCard";
 
@@ -231,7 +231,7 @@ export function DraggableHand({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {orderedCards.map((card) => {
+      {orderedCards.map((card, index) => {
         const isDragging = dragId === card.id;
         return (
           <div
@@ -251,14 +251,32 @@ export function DraggableHand({
                 onCardClick(card);
               }
             }}
-            style={{
-              touchAction: "none",
-              WebkitTouchCallout: "none",
-              // Keep the dragged card's slot in the flow (so the gap it left
-              // doesn't collapse and neighbors don't jump) but hide it —
-              // the ghost below is what's actually visible while dragging.
-              visibility: isDragging ? "hidden" : undefined,
-            }}
+            style={
+              {
+                touchAction: "none",
+                WebkitTouchCallout: "none",
+                // Keep the dragged card's slot in the flow (so the gap it left
+                // doesn't collapse and neighbors don't jump) but hide it —
+                // the ghost below is what's actually visible while dragging.
+                visibility: isDragging ? "hidden" : undefined,
+                // Read by .card-enter's own animation-delay (see globals.css)
+                // — harmless for a card that isn't actually undergoing a
+                // fresh mount right now (a CSS animation-delay does nothing
+                // to an element that isn't (re)starting that animation), so
+                // this can be set unconditionally by position rather than
+                // needing to first detect "is this a full hand being dealt
+                // versus one card being drawn." A single mid-round draw
+                // still only has one genuinely new node, so only that one
+                // card's card-enter actually plays — this delay just rides
+                // along inertly on every other, already-mounted card. Only
+                // when the *whole* hand mounts fresh at once (a new round,
+                // or a pass-and-play reveal — see the key game/page.tsx puts
+                // on this component) does every card become a real new
+                // mount together, which is exactly when the per-index delay
+                // turns into a visible "dealt one after another" cascade.
+                "--card-enter-delay": `${index * 40}ms`,
+              } as CSSProperties
+            }
             className="select-none cursor-grab"
           >
             <PlayingCard

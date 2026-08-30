@@ -1161,7 +1161,18 @@ a:active {
 }
 
 .card-enter {
-  animation: card-enter 0.22s ease-out;
+  /* --card-enter-delay lets a caller stagger several cards entering at once
+     (see DraggableHand.tsx) — set as a custom property on an ancestor so it
+     inherits down to whichever of that ancestor's cards are genuinely new
+     mounts, rather than needing a prop threaded through PlayingCard itself.
+     Defaults to 0ms, so any caller that never sets it (every other use of
+     this class) behaves exactly as before. "both" is load-bearing once a
+     delay is in play, for the same reason line-enter's own comment gives:
+     without it, a delayed card would render at its normal, fully-visible
+     styles for the whole delay and only jump to the "from" keyframe once
+     its turn starts — flashing visible, then invisible, then back in. */
+  animation: card-enter 0.22s ease-out both;
+  animation-delay: var(--card-enter-delay, 0ms);
 }
 
 /* "Level up!" on the game-over screen — same "no JS state" reasoning as
@@ -1188,6 +1199,34 @@ a:active {
 
 .level-up-pulse {
   animation: level-up-pulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* The "X won!"/"X & Y tied!" headline on the game-over screen — the actual
+   payoff line the whole game builds to, previously just static text with no
+   more visual weight than any other heading in the app. Same "no JS state"
+   reasoning as level-up-pulse above: this text is set exactly once per
+   GameOverScreen mount, so the element carrying this class is only ever
+   inserted once and the animation plays automatically on that insertion.
+   Same "pop into place" family as level-up-pulse (a related, not identical,
+   overshoot curve), but slower and a touch more understated — this is a
+   full headline, not a small inline number next to running text. */
+@keyframes win-announce {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-4px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.win-announce {
+  animation: win-announce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Each line of the game-over XP breakdown (GameOverScreen.tsx) fades/slides
@@ -1246,6 +1285,15 @@ a:active {
   }
 
   .line-enter {
+    animation: none;
+  }
+
+  .win-announce {
+    animation: none;
+  }
+
+  /* Tailwind's own utility, used by LoadingSpinner.tsx */
+  .animate-spin {
     animation: none;
   }
 }

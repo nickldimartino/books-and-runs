@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, WIN_RATE_MIN_GAMES } from "@/achievements";
 import { useAuth } from "../AuthContext";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
 import { displayNameFor, LeaderboardEntry, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
@@ -117,7 +118,7 @@ export default function LeaderboardPage() {
       </div>
 
       {authLoading || loading ? (
-        <p className="text-sm text-[var(--faint)]">Loading…</p>
+        <LoadingSpinner />
       ) : loadError ? (
         <p className="text-sm text-[var(--danger)]">
           Couldn&apos;t load the leaderboard — check your connection, or that this Supabase project has

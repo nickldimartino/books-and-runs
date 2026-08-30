@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
@@ -167,7 +168,7 @@ export default function StatsPage() {
       )}
 
       {authLoading || loading ? (
-        <p className="text-sm text-[var(--faint)]">Loading…</p>
+        <LoadingSpinner />
       ) : statsError ? (
         <p className="text-sm text-[var(--danger)]">
           Couldn&apos;t load your stats — check your connection, or that this Supabase project has

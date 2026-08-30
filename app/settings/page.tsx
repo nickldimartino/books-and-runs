@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import {
   applyTheme,
@@ -380,7 +381,7 @@ export default function SettingsPage() {
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Settings</h1>
 
       {loading ? (
-        <p className="text-sm text-[var(--faint)]">Loading…</p>
+        <LoadingSpinner />
       ) : (
         <>
           <section className="flex flex-col gap-3">

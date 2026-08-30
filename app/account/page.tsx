@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { displayNameFor, syncLeaderboardStats, updateLeaderboardDisplayName } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
@@ -166,7 +167,7 @@ export default function AccountPage() {
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Account</h1>
 
       {authLoading || loading ? (
-        <p className="text-sm text-[var(--faint)]">Loading…</p>
+        <LoadingSpinner />
       ) : (
         <>
           <section className="flex flex-col gap-2">
