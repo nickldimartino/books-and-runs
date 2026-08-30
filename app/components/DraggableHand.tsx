@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Card } from "@/types";
 import { cardLabel, PlayingCard } from "./PlayingCard";
 
@@ -77,6 +77,11 @@ export function DraggableHand({
 }: DraggableHandProps) {
   const cardElRefs = useRef(new Map<string, HTMLDivElement>());
   const enterDelaysRef = useRef(new Map<string, number>());
+  const handRootRef = useRef<HTMLDivElement | null>(null);
+  // null until the first measurement — distinguishes "the hand just mounted
+  // for the first time" (nothing to slide from yet) from "the order changed
+  // again" (see the FLIP effect below).
+  const prevRectsRef = useRef<Map<string, DOMRect> | null>(null);
   const dragRef = useRef<DragTracker | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
@@ -128,6 +133,64 @@ export function DraggableHand({
       freshCount++;
     }
   }
+
+  // Uniform reorder animation: whenever the visual order actually changes —
+  // a sort button, a drag-drop, or the two combined — every card still in
+  // the hand slides smoothly from its old spot to its new one via one
+  // shared FLIP transition, entirely separate from card-enter (that's a
+  // *mount* animation for a genuinely new card; reusing/disturbing it for a
+  // plain reorder was the actual cause of two related bugs users reported:
+  //   - some cards visibly "blinking" on sort: a dealt hand's cards fade in
+  //     staggered by up to ~500ms+, so a sort fired quickly after dealing
+  //     could catch a later card's card-enter still genuinely mid-fade —
+  //     reordering just teleported its DOM node with nothing settling that
+  //     fade first, so it kept fading in at its *new* spot, reading as a
+  //     flash rather than a slide.
+  //   - the very first card never blinking: it's the one card guaranteed
+  //     (0ms delay) to have already finished fading by any plausible
+  //     reaction time — safe by luck, not by any real handling.
+  // Forcibly finishing every still-running card-enter before measuring for
+  // FLIP (below) means every card starts this slide from the exact same
+  // fully-settled state — first card or last, sorted seconds after dealing
+  // or minutes later.
+  useLayoutEffect(() => {
+    const prevRects = prevRectsRef.current;
+    const newRects = new Map<string, DOMRect>();
+    cardElRefs.current.forEach((el, id) => newRects.set(id, el.getBoundingClientRect()));
+
+    if (prevRects) {
+      handRootRef.current?.querySelectorAll<HTMLElement>(".card-enter").forEach((el) => {
+        el.getAnimations().forEach((anim) => {
+          if (anim.playState === "running") anim.finish();
+        });
+      });
+
+      newRects.forEach((newRect, id) => {
+        const oldRect = prevRects.get(id);
+        if (!oldRect) return; // genuinely new this render — card-enter handles it, not this
+        const dx = oldRect.left - newRect.left;
+        const dy = oldRect.top - newRect.top;
+        if (!dx && !dy) return;
+        const el = cardElRefs.current.get(id);
+        if (!el) return;
+        el.style.transition = "none";
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        void el.offsetHeight; // force layout so the "invert" above is actually committed before the next frame clears it
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 0.22s ease-out";
+          el.style.transform = "";
+        });
+      });
+    }
+
+    prevRectsRef.current = newRects;
+    // Deliberately keyed on `order` alone (not `cards`/`byId`, which change
+    // reference on every render) — this should only run when the hand's
+    // visual position actually changes, not on every unrelated re-render
+    // (selecting a card, a badge toggling, etc). Everything else this effect
+    // reads is a ref, which react-hooks/exhaustive-deps already excludes.
+  }, [order]);
+
   const draggedCard = dragId ? byId.get(dragId) ?? null : null;
 
   // Includes the dragged card's own (still-laid-out, merely hidden) slot as
@@ -265,7 +328,7 @@ export function DraggableHand({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div ref={handRootRef} className="flex flex-wrap gap-2">
       {orderedCards.map((card) => {
         const isDragging = dragId === card.id;
         return (
