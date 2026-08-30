@@ -1,5 +1,16 @@
 import { Card, GameState, Player } from "../types";
-import { AIStrategy, deadCards, greedyLayOffPlan, highestPenaltyCard, minRunDistance, WILD_DISCARD_RISK } from "./strategy";
+import {
+  AIStrategy,
+  deadCards,
+  greedyLayOffPlan,
+  highestPenaltyCard,
+  maybeMistakeBool,
+  maybeMistakeDiscard,
+  minRunDistance,
+  MISTAKE_CHANCE,
+  Rng,
+  WILD_DISCARD_RISK,
+} from "./strategy";
 
 /**
  * Estimates how much each opponent likely wants this card, using both their
@@ -66,9 +77,11 @@ function scoreBestDiscard(state: GameState, player: Player, candidates: Card[]):
 }
 
 export const expertStrategy: AIStrategy = {
-  wantsDiscardPileDraw(state: GameState, player: Player) {
+  wantsDiscardPileDraw(state: GameState, player: Player, rng: Rng = Math.random) {
     const top = state.discardPile[state.discardPile.length - 1];
     if (!top) return false;
+    const mistake = maybeMistakeBool(MISTAKE_CHANCE.expert, rng);
+    if (mistake !== null) return mistake;
     const demand = opponentDemand(state, player.id, top);
     if (top.isWild) {
       // Same "don't reveal need" principle as hard — but a flexible card
@@ -82,7 +95,9 @@ export const expertStrategy: AIStrategy = {
     );
     return rankMatch || runAdjacent || demand >= DENY_OPPONENT_THRESHOLD;
   },
-  chooseDiscard(state: GameState, player: Player): Card {
+  chooseDiscard(state: GameState, player: Player, rng: Rng = Math.random): Card {
+    const mistake = maybeMistakeDiscard(player.hand, MISTAKE_CHANCE.expert, rng);
+    if (mistake) return mistake;
     const dead = deadCards(player, state);
     const pool = dead.length > 0 ? dead : player.hand;
     return scoreBestDiscard(state, player, pool.length > 0 ? pool : [highestPenaltyCard(player.hand)]);

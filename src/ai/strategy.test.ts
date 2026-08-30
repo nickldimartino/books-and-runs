@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { deadCards, minRunDistance, selfWildLayOffPlan } from "./strategy";
+import { deadCards, maybeMistakeBool, maybeMistakeDiscard, minRunDistance, selfWildLayOffPlan } from "./strategy";
 import { easyStrategy } from "./easy";
 import { beginnerStrategy } from "./beginner";
 import { mediumStrategy } from "./medium";
@@ -7,6 +7,12 @@ import { hardStrategy } from "./hard";
 import { expertStrategy } from "./expert";
 import { CONTRACTS, Meld } from "../types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "../testHelpers";
+
+// Every mistake roll in strategy.ts checks `rng() < chance` — 1 is never
+// less than any chance in (0, 1), so this rng guarantees a mistake never
+// fires. Existing exact-outcome tests below pass this explicitly so they
+// stay deterministic regardless of the tier's real mistake chance.
+const NEVER_MISTAKE = () => 1;
 
 // Regression coverage for the contract-aware discard fix: deadCards() used to
 // judge "dead" purely by duplicate-rank count, with zero concept of runs, so
@@ -83,7 +89,7 @@ describe("easyStrategy.chooseDiscard (integration with contract-aware deadCards)
     const player = makePlayer({ hand: [runBuilder, makeCard("6", "hearts"), makeCard("7", "hearts"), isolated] });
     const state = makeGameState({ round: 3, currentPlayerIndex: 0, players: [player] });
 
-    const discard = easyStrategy.chooseDiscard(state, player);
+    const discard = easyStrategy.chooseDiscard(state, player, NEVER_MISTAKE);
 
     expect(discard.id).toBe("isolated");
   });
@@ -192,7 +198,7 @@ describe("hardStrategy — ace-high run adjacency", () => {
       discardPile: [aceOfSpades],
     });
 
-    expect(hardStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+    expect(hardStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
   });
 });
 
@@ -200,7 +206,7 @@ describe("mediumStrategy.wantsDiscardPileDraw", () => {
   it("always wants a wild off the discard pile", () => {
     const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
     const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "clubs")] });
-    expect(mediumStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+    expect(mediumStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
   });
 });
 
@@ -208,13 +214,13 @@ describe("easyStrategy.wantsDiscardPileDraw", () => {
   it("takes a wild off the discard pile — doesn't hold back to hide need, unlike hard/expert", () => {
     const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
     const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "clubs")] });
-    expect(easyStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+    expect(easyStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
   });
 
   it("recognizes run-adjacency, not just an exact rank match", () => {
     const player = makePlayer({ hand: [makeCard("4", "hearts"), makeCard("5", "hearts")] });
     const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("6", "hearts")] });
-    expect(easyStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+    expect(easyStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
   });
 });
 
@@ -230,7 +236,7 @@ describe("mediumStrategy.chooseDiscard — light opponent awareness", () => {
       pickupHistory: [{ playerId: "opponent", card: makeCard("3", "clubs") }],
     });
 
-    const discard = mediumStrategy.chooseDiscard(state, player);
+    const discard = mediumStrategy.chooseDiscard(state, player, NEVER_MISTAKE);
 
     expect(discard.id).toBe("king"); // higher penalty, and not the rank the opponent just showed interest in
   });
@@ -245,7 +251,7 @@ describe("mediumStrategy.chooseDiscard — light opponent awareness", () => {
       pickupHistory: [{ playerId: "opponent", card: makeCard("3", "clubs") }],
     });
 
-    const discard = mediumStrategy.chooseDiscard(state, player);
+    const discard = mediumStrategy.chooseDiscard(state, player, NEVER_MISTAKE);
 
     expect(discard.id).toBe("three");
   });
@@ -262,7 +268,7 @@ describe("hardStrategy.chooseDiscard — treats a wild as extra risky in the all
     // forces the fallback pool to be the whole hand, wild included.
     const state = makeGameState({ round: 1, players: [player] });
 
-    const discard = hardStrategy.chooseDiscard(state, player);
+    const discard = hardStrategy.chooseDiscard(state, player, NEVER_MISTAKE);
 
     expect(discard.id).not.toBe("joker");
   });
@@ -276,7 +282,7 @@ describe("expertStrategy.wantsDiscardPileDraw — holds wilds back like hard, wi
       players: [player, makePlayer({ id: "opponent" })],
       discardPile: [makeCard("2", "clubs")],
     });
-    expect(expertStrategy.wantsDiscardPileDraw(state, player)).toBe(false);
+    expect(expertStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(false);
   });
 
   it("takes a wild anyway once opponent demand is high enough to be worth denying", () => {
@@ -293,7 +299,7 @@ describe("expertStrategy.wantsDiscardPileDraw — holds wilds back like hard, wi
         { playerId: "opponent", card: makeCard("3", "diamonds") },
       ],
     });
-    expect(expertStrategy.wantsDiscardPileDraw(state, player)).toBe(true);
+    expect(expertStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
   });
 });
 
@@ -305,8 +311,55 @@ describe("expertStrategy.chooseDiscard — treats a wild as extra costly in the 
     const player = makePlayer({ id: "self", hand: [king1, king2, joker] });
     const state = makeGameState({ round: 1, players: [player, makePlayer({ id: "opponent" })] });
 
-    const discard = expertStrategy.chooseDiscard(state, player);
+    const discard = expertStrategy.chooseDiscard(state, player, NEVER_MISTAKE);
 
     expect(discard.id).not.toBe("joker");
+  });
+});
+
+describe("mistake chance (maybeMistakeDiscard / maybeMistakeBool)", () => {
+  it("maybeMistakeDiscard returns null (no mistake) when the roll doesn't clear the chance", () => {
+    const hand = makeHand(["5", "9", "K"]);
+    const rng = () => 0.5; // 0.5 >= chance for every tier, so this never fires
+    expect(maybeMistakeDiscard(hand, 0.2, rng)).toBeNull();
+  });
+
+  it("maybeMistakeDiscard returns a hand card, ignoring heuristics, when the roll clears the chance", () => {
+    const hand = makeHand(["5", "9", "K"]);
+    const rng = () => 0; // 0 < any nonzero chance, and picks index 0
+    expect(maybeMistakeDiscard(hand, 0.2, rng)).toBe(hand[0]);
+  });
+
+  it("maybeMistakeBool returns null (no mistake) when the roll doesn't clear the chance", () => {
+    expect(maybeMistakeBool(0.2, () => 0.5)).toBeNull();
+  });
+
+  it("maybeMistakeBool flips a coin when the roll clears the chance", () => {
+    // Two rng calls: the first (0) clears the mistake-chance roll, the
+    // second (0.9) decides the coin flip itself.
+    const rng = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0.9);
+    expect(maybeMistakeBool(0.2, rng)).toBe(false); // 0.9 is not < 0.5
+  });
+
+  it("easyStrategy.chooseDiscard takes the mistake path — a random hand card, not the heuristic pick", () => {
+    const runBuilder = makeCard("5", "hearts", { id: "run-builder" });
+    const isolated = makeCard("K", "diamonds", { id: "isolated" }); // what the heuristic would normally pick
+    const player = makePlayer({ hand: [runBuilder, makeCard("6", "hearts"), makeCard("7", "hearts"), isolated] });
+    const state = makeGameState({ round: 3, currentPlayerIndex: 0, players: [player] });
+
+    const alwaysMistake = () => 0; // clears the mistake roll, then picks index 0 of the hand
+    const discard = easyStrategy.chooseDiscard(state, player, alwaysMistake);
+
+    expect(discard.id).toBe("run-builder"); // not "isolated" — the heuristic never ran
+  });
+
+  it("mediumStrategy.wantsDiscardPileDraw takes the mistake path — a coin flip, not real judgment", () => {
+    const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
+    // A plain natural the strategy's own judgment would decline (no rank/run
+    // match), so a `true` result can only have come from the mistake path.
+    const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("Q", "diamonds")] });
+
+    const forceTrue = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0); // clears roll, coin flip < 0.5
+    expect(mediumStrategy.wantsDiscardPileDraw(state, player, forceTrue)).toBe(true);
   });
 });

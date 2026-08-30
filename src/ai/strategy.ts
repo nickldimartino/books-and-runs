@@ -11,13 +11,52 @@ export interface LayOffMove {
   position?: "low" | "high";
 }
 
+/** Injectable randomness source — defaults to Math.random at every call site,
+ * but lets tests pin down exactly when (and how) a tier's mistake chance
+ * fires instead of depending on real randomness. */
+export type Rng = () => number;
+
 export interface AIStrategy {
   /** Should this AI draw from the discard pile, if possible? */
-  wantsDiscardPileDraw(state: GameState, player: Player): boolean;
+  wantsDiscardPileDraw(state: GameState, player: Player, rng?: Rng): boolean;
   /** Which card should this AI discard to end its turn? */
-  chooseDiscard(state: GameState, player: Player): Card;
+  chooseDiscard(state: GameState, player: Player, rng?: Rng): Card;
   /** Which cards (if any) should this AI lay off onto table melds this turn? */
   planLayOffs(state: GameState, player: Player): LayOffMove[];
+}
+
+/**
+ * Tapering "occasional lapse in judgment" chance for every tier above
+ * Beginner (which is already 100% random and needs no help feeling human).
+ * Without this, Beginner's total randomness gives way to a fully rational —
+ * if simplistic — Easy with zero ramp in between, and every tier from Easy
+ * to Expert is otherwise 100% deterministic once its heuristic is known.
+ * Each harder tier still slips up less often than the one before it, so the
+ * curve feels gradual rather than "solved" the instant you're not Beginner.
+ */
+export const MISTAKE_CHANCE: Record<"easy" | "medium" | "hard" | "expert", number> = {
+  easy: 0.2,
+  medium: 0.12,
+  hard: 0.05,
+  expert: 0.02,
+};
+
+/** Rolls a tier's mistake chance for its discard choice; when it fires,
+ * returns a uniformly random card from the whole hand — the exact same
+ * "no judgment at all" pick Beginner always makes — instead of letting the
+ * caller apply its usual heuristic. Returns null when no mistake fires. */
+export function maybeMistakeDiscard(hand: Card[], chance: number, rng: Rng): Card | null {
+  if (hand.length === 0 || rng() >= chance) return null;
+  return hand[Math.floor(rng() * hand.length)];
+}
+
+/** Rolls a tier's mistake chance for a yes/no call (wantsDiscardPileDraw);
+ * when it fires, flips a coin instead of applying real judgment — mirroring
+ * Beginner's actual 50/50 for the same decision. Returns null when no
+ * mistake fires. */
+export function maybeMistakeBool(chance: number, rng: Rng): boolean | null {
+  if (rng() >= chance) return null;
+  return rng() < 0.5;
 }
 
 /** Shared lay-off search: for each hand card, in hand order, offload it onto

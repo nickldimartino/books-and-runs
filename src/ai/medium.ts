@@ -1,5 +1,15 @@
 import { Card, GameState, Player } from "../types";
-import { AIStrategy, deadCards, highestPenaltyCard, minRunDistance, selfWildLayOffPlan } from "./strategy";
+import {
+  AIStrategy,
+  deadCards,
+  highestPenaltyCard,
+  maybeMistakeBool,
+  maybeMistakeDiscard,
+  minRunDistance,
+  MISTAKE_CHANCE,
+  Rng,
+  selfWildLayOffPlan,
+} from "./strategy";
 
 function discardHelpsHand(top: Card, player: Player): boolean {
   if (top.isWild) return true; // wilds always help
@@ -24,11 +34,16 @@ function opponentJustPickedUpThisRank(state: GameState, player: Player, card: Ca
 }
 
 export const mediumStrategy: AIStrategy = {
-  wantsDiscardPileDraw(state: GameState, player: Player) {
+  wantsDiscardPileDraw(state: GameState, player: Player, rng: Rng = Math.random) {
     const top = state.discardPile[state.discardPile.length - 1];
-    return !!top && discardHelpsHand(top, player);
+    if (!top) return false;
+    const mistake = maybeMistakeBool(MISTAKE_CHANCE.medium, rng);
+    if (mistake !== null) return mistake;
+    return discardHelpsHand(top, player);
   },
-  chooseDiscard(state: GameState, player: Player): Card {
+  chooseDiscard(state: GameState, player: Player, rng: Rng = Math.random): Card {
+    const mistake = maybeMistakeDiscard(player.hand, MISTAKE_CHANCE.medium, rng);
+    if (mistake) return mistake;
     const dead = deadCards(player, state);
     const pool = dead.length > 0 ? dead : player.hand;
     const notObviouslyWanted = pool.filter((c) => !opponentJustPickedUpThisRank(state, player, c));
