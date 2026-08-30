@@ -18,7 +18,7 @@ import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
-import { playCardSlide, playCardTap, playMeld, setTutorialSoundOverride } from "./lib/sound";
+import { playCardSlide, playCardTap, playMeld, playUndo, setTutorialSoundOverride } from "./lib/sound";
 import { hapticLight, hapticMedium } from "./lib/haptics";
 import {
   createContext,
@@ -325,6 +325,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     stateRef.current = snapshot.state;
     sessionCountersRef.current = { ...snapshot.sessionCounters };
     clearUndoState();
+    playUndo();
     commit();
   }, [clearUndoState, commit]);
 

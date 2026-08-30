@@ -8,6 +8,7 @@ import { AchievementIcon } from "./AchievementIcons";
 import { useGame } from "../GameContext";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
+import { playAchievementUnlock } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
 interface RoundSummaryProps {
@@ -83,7 +84,10 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
         const newly = allAchievements(after).filter(
           (a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`)
         );
-        if (newly.length > 0) setNewlyUnlocked(newly);
+        if (newly.length > 0) {
+          setNewlyUnlocked(newly);
+          playAchievementUnlock();
+        }
       } catch (err) {
         console.error("Failed to determine which achievements this round unlocked:", err);
       }

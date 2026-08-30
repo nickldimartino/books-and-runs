@@ -136,3 +136,44 @@ export function playGameWin(): void {
   tone(c, 987.77, 0.22, 0.14, 0.2, "triangle"); // B5
   tone(c, 1046.5, 0.33, 0.45, 0.28, "triangle"); // C6
 }
+
+/** Reverting a meld or lay-off via the Undo grace window — two quick
+ * ascending taps, built from the exact same noise-burst "cards landing"
+ * timbre as playMeld (matched Q/duration/peak), but rising instead of
+ * falling — the reverse motion reads as literally undoing that action
+ * rather than being an unrelated new sound. */
+export function playUndo(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  noiseBurst(c, 0, 0.04, 1800, 6, 0.3);
+  noiseBurst(c, 0.045, 0.05, 2400, 6, 0.3);
+}
+
+/** An achievement tier unlocks (see RoundSummary/GameOverScreen) — a short,
+ * bright two-note ping. Deliberately smaller than playRoundWin/playGameWin
+ * (an achievement is a nice bonus, not the main event of a round or game
+ * ending), and just one ding regardless of how many tiers unlocked at
+ * once, rather than layering a chime per achievement. */
+export function playAchievementUnlock(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  tone(c, 1046.5, 0, 0.12, 0.18, "sine"); // C6
+  tone(c, 1318.51, 0.08, 0.22, 0.2, "sine"); // E6
+}
+
+/** Leveling up (see GameOverScreen) — a short triumphant ascending run.
+ * Same triangle-wave family as playGameWin (both are "big meta-progression
+ * moment" sounds), but its own shorter, three-note shape rather than
+ * reusing that exact flourish — a level-up can happen independently of
+ * winning the game, so it needed to be distinguishable from it, not just
+ * a quieter copy. */
+export function playLevelUp(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  tone(c, 659.25, 0, 0.14, 0.2, "triangle"); // E5
+  tone(c, 830.61, 0.09, 0.14, 0.22, "triangle"); // G#5
+  tone(c, 1046.5, 0.18, 0.3, 0.26, "triangle"); // C6
+}

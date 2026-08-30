@@ -14,6 +14,7 @@ import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
+import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
 interface XpLineItem {
@@ -200,7 +201,18 @@ export function GameOverScreen({ state }: { state: GameState }) {
             ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
             : breakdown
       );
-      if (after.level > beforeLevel) setLeveledUpTo(after.level);
+      const didLevelUp = after.level > beforeLevel;
+      if (didLevelUp) setLeveledUpTo(after.level);
+      // Same "don't layer two chimes at once" priority the round/game-win
+      // effect in game/page.tsx already uses for its own overlapping case —
+      // a level up already means real progress happened this game, so it
+      // takes priority over the smaller achievement ping rather than both
+      // firing together and clashing.
+      if (didLevelUp) {
+        playLevelUp();
+      } else if (achievementLines.length > 0 || achievementBonus > 0) {
+        playAchievementUnlock();
+      }
     }
     // `level` is only read for the before/after diff — it must not retrigger
     // a fresh save as PlayerLevelProvider's own state updates after refresh().
