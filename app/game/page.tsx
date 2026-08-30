@@ -704,8 +704,26 @@ export default function GamePage() {
                                   the two roles apart — the button stays a plain,
                                   stable tap target; this div is what scrolls when
                                   a meld is too long to fit — sidesteps that
-                                  ambiguity entirely instead of trying to tune it. */}
-                              <div className="flex items-end gap-1 overflow-x-auto overflow-y-hidden">
+                                  ambiguity entirely instead of trying to tune it.
+
+                                  py-2 matters here for a less obvious reason: CSS
+                                  forces overflow-y to compute as "auto" the
+                                  moment overflow-x isn't "visible" (a browser
+                                  can't scroll one axis and not the other), so
+                                  this box clips vertically whether or not
+                                  overflow-y-hidden is written explicitly. A
+                                  wild card's "as <rank>" badge (PlayingCard's
+                                  standInRank) is absolutely positioned 6px
+                                  below its own card, on purpose, to read as a
+                                  separate label — with zero vertical padding
+                                  here that overhang landed right on this box's
+                                  clip edge and got sliced off (visible as a
+                                  thin mis-colored sliver instead of the actual
+                                  text, worse on macOS Safari's classic
+                                  scrollbar, which eats a little more of the
+                                  box's height). The padding just gives that
+                                  6px overhang somewhere to actually live. */}
+                              <div className="flex items-end gap-1 overflow-x-auto overflow-y-hidden py-2">
                                 {meld.cards.map((c, i) => {
                                   // A wild's badge shows what it's standing in
                                   // for. meld.wildCardIds is the ground truth
