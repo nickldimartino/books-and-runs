@@ -76,6 +76,7 @@ export function DraggableHand({
   layoffEligibleIds,
 }: DraggableHandProps) {
   const cardElRefs = useRef(new Map<string, HTMLDivElement>());
+  const enterDelaysRef = useRef(new Map<string, number>());
   const dragRef = useRef<DragTracker | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
@@ -93,6 +94,40 @@ export function DraggableHand({
 
   const byId = new Map(cards.map((c) => [c.id, c]));
   const orderedCards = order.map((id) => byId.get(id)).filter((c): c is Card => !!c);
+
+  // Each card's card-enter stagger delay is assigned once, the moment its id
+  // is first seen, and reused for as long as it stays in the hand — NOT
+  // recomputed from its current index on every render. It used to be
+  // `index * 40ms` recalculated fresh every time (see git history), which
+  // seemed harmless (a CSS animation-delay does nothing to an element that
+  // isn't (re)starting the animation) but that assumption breaks the moment
+  // the *value* changes on an element whose card-enter animation is already
+  // playing or has already finished: mutating animation-delay via this
+  // custom property can make the browser un-finish and replay it. Since a
+  // sort/reorder changes almost every card's index, it was recomputing this
+  // delay for almost every card on every reorder — and any card whose old
+  // vs. new delay happened to straddle "now" would visibly pop back out and
+  // re-enter, unrelated to whether it actually changed position. Caching by
+  // id sidesteps that entirely: an already-mounted card's delay never
+  // changes again, so reordering can never retrigger it. A genuinely new id
+  // (dealt, drawn) still gets a fresh delay, staggered against only the
+  // *other* new ids arriving in this same render — the normal case is one
+  // drawn card with nothing else new, which resolves to 0ms (fade in right
+  // away); a whole fresh hand (new round, pass-and-play reveal) has every id
+  // new together, since that scenario remounts this whole component (see
+  // the key game/page.tsx puts on it) with a blank cache, reproducing the
+  // original "dealt one after another" cascade.
+  const enterDelays = enterDelaysRef.current;
+  for (const id of enterDelays.keys()) {
+    if (!byId.has(id)) enterDelays.delete(id);
+  }
+  let freshCount = 0;
+  for (const card of cards) {
+    if (!enterDelays.has(card.id)) {
+      enterDelays.set(card.id, freshCount * 40);
+      freshCount++;
+    }
+  }
   const draggedCard = dragId ? byId.get(dragId) ?? null : null;
 
   // Includes the dragged card's own (still-laid-out, merely hidden) slot as
@@ -231,7 +266,7 @@ export function DraggableHand({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {orderedCards.map((card, index) => {
+      {orderedCards.map((card) => {
         const isDragging = dragId === card.id;
         return (
           <div
@@ -259,22 +294,10 @@ export function DraggableHand({
                 // doesn't collapse and neighbors don't jump) but hide it —
                 // the ghost below is what's actually visible while dragging.
                 visibility: isDragging ? "hidden" : undefined,
-                // Read by .card-enter's own animation-delay (see globals.css)
-                // — harmless for a card that isn't actually undergoing a
-                // fresh mount right now (a CSS animation-delay does nothing
-                // to an element that isn't (re)starting that animation), so
-                // this can be set unconditionally by position rather than
-                // needing to first detect "is this a full hand being dealt
-                // versus one card being drawn." A single mid-round draw
-                // still only has one genuinely new node, so only that one
-                // card's card-enter actually plays — this delay just rides
-                // along inertly on every other, already-mounted card. Only
-                // when the *whole* hand mounts fresh at once (a new round,
-                // or a pass-and-play reveal — see the key game/page.tsx puts
-                // on this component) does every card become a real new
-                // mount together, which is exactly when the per-index delay
-                // turns into a visible "dealt one after another" cascade.
-                "--card-enter-delay": `${index * 40}ms`,
+                // Read by .card-enter's own animation-delay (see globals.css
+                // and enterDelaysRef above) — cached per card id rather than
+                // derived from `index` so a later reorder can't change it.
+                "--card-enter-delay": `${enterDelays.get(card.id) ?? 0}ms`,
               } as CSSProperties
             }
             className="select-none cursor-grab"

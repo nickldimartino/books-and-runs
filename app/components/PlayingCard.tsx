@@ -69,8 +69,14 @@ export function PlayingCard({
 
   return (
     <div className="relative shrink-0">
+      {/* These three badges all get card-enter too (inheriting the exact
+          same --card-enter-delay as the card face below, set on this
+          shared wrapper) — without it they rendered instantly at full
+          opacity while the card face they're attached to was still 0.22s
+          into fading/scaling in, so the badge visibly appeared *before*
+          the card it's describing did. */}
       {isNew && (
-        <span className="absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
+        <span className="card-enter absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
           NEW
         </span>
       )}
@@ -81,13 +87,13 @@ export function PlayingCard({
           // the badge needs a light ring around it to stay visible there —
           // --card-bg is a near-white constant across every theme, unlike
           // --panel/--bg which flip dark/light per theme.
-          className="absolute -top-1.5 -left-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[9px] font-bold leading-none text-[var(--on-accent)] shadow ring-2 ring-[var(--card-bg)]"
+          className="card-enter absolute -top-1.5 -left-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[9px] font-bold leading-none text-[var(--on-accent)] shadow ring-2 ring-[var(--card-bg)]"
         >
           ↓
         </span>
       )}
       {standInRank && (
-        <span className="absolute -bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--highlight)] px-1.5 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
+        <span className="card-enter absolute -bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--highlight)] px-1.5 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
           as {standInRank}
         </span>
       )}
