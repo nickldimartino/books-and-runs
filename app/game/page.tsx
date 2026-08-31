@@ -250,7 +250,19 @@ export default function GamePage() {
     setPendingLayOff(null);
     setConfirmingDiscard(null);
     setHandDrawerOpen(false);
-  }, [state?.currentPlayerIndex, state?.round]);
+    // roundOver/gameOver added specifically for handDrawerOpen: melding out
+    // on a whole-hand-meld round (e.g. 3 Runs) ends the round *and* the game
+    // in the same action, with no discard step, and neither
+    // currentPlayerIndex nor round necessarily changes when that happens —
+    // so without watching these too, a game that ended while the hand
+    // drawer was open left handDrawerOpen stuck true forever after. That in
+    // turn left the drawer's own body-scroll-lock effect (keyed on
+    // handDrawerOpen, above) with no reason to ever clean up — even though
+    // GamePage had already switched to rendering GameOverScreen instead of
+    // the drawer, that screen's own content inherited a permanently
+    // scroll-locked <body>, which on a phone meant Back to Home (below the
+    // fold) became genuinely unreachable.
+  }, [state?.currentPlayerIndex, state?.round, state?.roundOver, state?.gameOver]);
 
   // If the selection changes out from under a pending confirmation (the
   // only way that can happen here is the defensive card-not-found guard in

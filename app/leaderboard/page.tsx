@@ -33,14 +33,18 @@ const SORT_OPTIONS: { key: SortKey; label: string; minWidth: string }[] = [
 ];
 
 /**
- * A single number per sort key where *higher always means "ranks first"* —
- * even for the two score stats where a lower number is actually the better
- * result in Contract Rummy (lowest cumulative score wins), so those two are
- * negated here rather than needing their own separate ascending/descending
- * case in the comparator below. Win rate below the games-played threshold
+ * A single number per sort key where *higher always means "ranks first"*.
+ * Average score is negated — a lower average is the better result in
+ * Contract Rummy (lowest cumulative score wins), so this ranks the best
+ * performers first rather than needing its own separate ascending case in
+ * the comparator below. Worst score is deliberately the opposite: sorting
+ * by it ranks the literal highest (i.e. worst) number first, the way
+ * sorting a spreadsheet column by its own value would — showing "how bad
+ * can it get" rather than re-explaining "best" for a column that's already
+ * named for someone's low point. Win rate below the games-played threshold
  * (shown as "—", not a real rate to rank by) and a missing score both sort
- * to the very bottom, the same way "—" already reads as "not enough data"
- * rather than as an actual value of zero.
+ * to the very bottom regardless of direction, the same way "—" already
+ * reads as "not enough data" rather than as an actual value of zero.
  */
 function sortValue(entry: LeaderboardEntry, key: SortKey): number {
   switch (key) {
@@ -57,7 +61,7 @@ function sortValue(entry: LeaderboardEntry, key: SortKey): number {
     case "average_score":
       return entry.average_score == null ? -Infinity : -entry.average_score;
     case "worst_score":
-      return entry.worst_score == null ? -Infinity : -entry.worst_score;
+      return entry.worst_score == null ? -Infinity : entry.worst_score;
   }
 }
 

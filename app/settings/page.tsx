@@ -428,44 +428,6 @@ export default function SettingsPage() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <InfoDetails label="Colorblind-friendly cards">
-              Shifts red and/or wild card colors to be easier to tell apart, for the color blindness
-              type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
-            </InfoDetails>
-            <div className="grid grid-cols-2 gap-2">
-              {COLORBLIND_MODES.map((m) => {
-                const swatch = COLORBLIND_SWATCHES[m.id];
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => handleColorblindModeChange(m.id)}
-                    title={m.description}
-                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
-                      colorblindMode === m.id
-                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
-                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                    }`}
-                  >
-                    <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
-                      <span
-                        className="h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ background: swatch.red }}
-                        title="Red card color"
-                      />
-                      <span
-                        className="h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ background: swatch.wildBg }}
-                        title="Wild card color"
-                      />
-                    </span>
-                    {m.name}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-2">
             <InfoDetails label="Default AI difficulty">
               Used as the starting difficulty when you add an AI opponent on the New Game screen.
             </InfoDetails>
@@ -521,6 +483,13 @@ export default function SettingsPage() {
           />
 
           <BoolToggle
+            label="Expandable hand drawer"
+            value={settings.expandableHand}
+            onChange={(v) => updateSettings({ expandableHand: v })}
+            description="Instead of scrolling down to your hand, tap the compact preview pinned to the bottom of the screen to open it — sorting, dragging, grouping a meld, laying off, and discarding all happen right there, without scrolling. Off by default; the tutorial always uses the regular scrolling layout regardless of this."
+          />
+
+          <BoolToggle
             label="Group melds by type"
             value={settings.groupMeldsByType}
             onChange={(v) => updateSettings({ groupMeldsByType: v })}
@@ -548,12 +517,43 @@ export default function SettingsPage() {
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
           />
 
-          <BoolToggle
-            label="Expandable hand drawer"
-            value={settings.expandableHand}
-            onChange={(v) => updateSettings({ expandableHand: v })}
-            description="Instead of scrolling down to your hand, tap the compact preview pinned to the bottom of the screen to open it — sorting, dragging, grouping a meld, laying off, and discarding all happen right there, without scrolling. Off by default; the tutorial always uses the regular scrolling layout regardless of this."
-          />
+          <section className="flex flex-col gap-2">
+            <InfoDetails label="Colorblind-friendly cards">
+              Shifts red and/or wild card colors to be easier to tell apart, for the color blindness
+              type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
+            </InfoDetails>
+            <div className="grid grid-cols-2 gap-2">
+              {COLORBLIND_MODES.map((m) => {
+                const swatch = COLORBLIND_SWATCHES[m.id];
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleColorblindModeChange(m.id)}
+                    title={m.description}
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                      colorblindMode === m.id
+                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: swatch.red }}
+                        title="Red card color"
+                      />
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: swatch.wildBg }}
+                        title="Wild card color"
+                      />
+                    </span>
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
