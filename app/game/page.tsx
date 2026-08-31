@@ -126,6 +126,10 @@ export default function GamePage() {
   // Only meaningful when the "expandable hand drawer" setting is on — see
   // useDrawerLayout below. Reset alongside every other per-turn UI state.
   const [handDrawerOpen, setHandDrawerOpen] = useState(false);
+  // Plain ref (no observer needed, unlike handSectionElRef below) — just an
+  // imperative handle for the drawer layout's "Lay off card" button to
+  // scroll Table melds into view once it closes the drawer.
+  const tableMeldsElRef = useRef<HTMLElement | null>(null);
   // Whether the real "Your hand" section is at least partly scrolled into
   // view — drives HandPreviewBar's visibility (see handSectionRefCallback
   // and its render near the bottom of this component). Starts true (bar
@@ -453,6 +457,13 @@ export default function GamePage() {
     }
     discardTopCanLayOff = !!discardTop && state.melds.some((m) => layOffOptions(discardTop, m).length > 0);
   }
+  // Drives the drawer layout's "Lay off card" button (see discardSection) —
+  // deliberately independent of the highlightLayoffs setting above, which
+  // only controls a hint/badge someone might turn off; this is a real
+  // "would tapping a meld right now actually do anything" check, needed
+  // regardless of whether the badges are on.
+  const selectedCardCanLayOff =
+    player.hasMeldedContract && !!selectedCard && state.melds.some((m) => layOffOptions(selectedCard, m).length > 0);
 
   function handleCardClick(card: Card) {
     setGroupError(null);
@@ -487,6 +498,17 @@ export default function GamePage() {
     layOff(pendingLayOff.card.id, pendingLayOff.meld.id, direction);
     setPendingLayOff(null);
     setSelectedCardIds([]);
+  }
+
+  // The drawer layout's "Lay off card" button (see discardSection) — the
+  // card stays selected, so Table melds' own existing isValidTarget styling
+  // picks it up as soon as the drawer's gone; this just closes the drawer
+  // (its backdrop otherwise blocks every tap to the page behind it) and
+  // scrolls to bring Table melds into view, since it can be well below the
+  // fold with several players' melds on the table.
+  function handleLayOffFromDrawer() {
+    setHandDrawerOpen(false);
+    tableMeldsElRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // A confirmation step before the one action that actually ends a turn —
@@ -696,13 +718,31 @@ export default function GamePage() {
           </button>
         </div>
       ) : (
-        <button
-          onClick={handleDiscardSelected}
-          disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
-          className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Discard selected card
-        </button>
+        <>
+          {/* Drawer layout only — laying off otherwise means tapping a card
+              here, then a meld on the page behind the drawer's own backdrop,
+              which blocks that tap outright while the drawer's open. This
+              closes it (see handleLayOffFromDrawer) instead of requiring a
+              separate, unrelated tap (Done/backdrop/Escape) to do the same
+              thing first. Not needed in the scroll layout — the hand and
+              Table melds already share the same page there. */}
+          {useDrawerLayout && (
+            <button
+              onClick={handleLayOffFromDrawer}
+              disabled={!selectedCardCanLayOff || !!pendingLayOff}
+              className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Lay off card
+            </button>
+          )}
+          <button
+            onClick={handleDiscardSelected}
+            disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
+            className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Discard selected card
+          </button>
+        </>
       )}
     </section>
   );
@@ -956,7 +996,11 @@ export default function GamePage() {
             </div>
           )}
 
-          <section data-tutorial="table-melds" className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4">
+          <section
+            data-tutorial="table-melds"
+            ref={tableMeldsElRef}
+            className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4"
+          >
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
             </h2>
