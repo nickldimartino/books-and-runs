@@ -70,13 +70,17 @@ export const THEMES: ThemeOption[] = [
   { id: "alabaster", name: "Alabaster", description: "Strictly stone and charcoal — Film Noir's light-toned twin.", category: "classic" },
 
   // Holiday themes, ordered by where they fall on the calendar — each
-  // holiday's dark and light versions sit next to each other.
+  // holiday's dark version comes first, then its light version, same
+  // convention as every other pair here. Spring Dusk (dark) and Easter
+  // (light) used to be listed in the opposite order — the one pair that
+  // broke the pattern once Settings' theme picker started laying every
+  // pair out left-to-right in a grid.
   { id: "valentines", name: "Valentine's Day", description: "Romantic rose-red and deep burgundy.", category: "holiday" },
   { id: "sweetheart", name: "Sweetheart", description: "Blush pink and white, like a valentine card.", category: "holiday" },
   { id: "stpatricks", name: "St. Patrick's Day", description: "Shamrock green and gold, with a touch of Irish orange.", category: "holiday" },
   { id: "cloverfield", name: "Clover Field", description: "Pale mint and cream, with a bright shamrock-green accent.", category: "holiday" },
-  { id: "easter", name: "Easter", description: "Pastel lavender, spring mint, and jellybean yellow.", category: "holiday" },
   { id: "springdusk", name: "Spring Dusk", description: "Twilight plum with pastel mint and lavender popping through.", category: "holiday" },
+  { id: "easter", name: "Easter", description: "Pastel lavender, spring mint, and jellybean yellow.", category: "holiday" },
   { id: "july4th", name: "4th of July", description: "Fireworks over a midnight-blue sky, red, white, and blue.", category: "holiday" },
   { id: "starsandstripes", name: "Stars & Stripes", description: "Crisp daytime red, white, and blue — a backyard cookout.", category: "holiday" },
   { id: "halloween", name: "Halloween", description: "Witchy purple and jack-o'-lantern orange after dark.", category: "holiday" },

@@ -53,13 +53,15 @@ export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
   ],
 };
 
-/** The fixed rivals for Daily Deal (see dailyDealStore.ts) — deliberately
- * NOT randomized like a normal game's opponents (see pickAiPersonas): the
- * whole point of a daily challenge is comparing today's result against your
- * own history, so the table needs to stay the exact same every day rather
- * than reshuffling like a regular New Game would. Two, not one — Daily Deal
- * is never a 2-player game (see dailyDealStore.ts's own doc). */
-export const DAILY_DEAL_PERSONAS: AiPersona[] = [AI_PERSONAS.medium[0], AI_PERSONAS.medium[1]];
+/** The fixed roster Daily Deal draws its opponents from (see
+ * dailyDealStore.ts) — deliberately NOT randomized like a normal game's
+ * opponents (see pickAiPersonas): the whole point of a daily challenge is
+ * comparing today's result against your own history, so the same table
+ * needs to reappear rather than reshuffling like a regular New Game would.
+ * All 3 of Medium's personas — dailyDealStore.ts picks a *prefix* of this
+ * list (2 or 3 of them) per day, never fewer, so Daily Deal is never a
+ * 2-player game but does vary between 3 and 4 players day to day. */
+export const DAILY_DEAL_PERSONAS: AiPersona[] = AI_PERSONAS.medium;
 
 /**
  * A cosmetic "power level" per difficulty — pure flavor, not derived from

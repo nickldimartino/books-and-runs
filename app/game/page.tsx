@@ -913,61 +913,74 @@ export default function GamePage() {
 
       <header
         data-tutorial="round-header"
-        // grid, not the previous flex justify-between — a 3-way split needs
-        // its middle piece to sit at the header's own true center regardless
-        // of how wide the round-info block or the score list happen to be,
-        // which justify-between can't guarantee (it only equalizes the gaps
-        // *between* items, not their position relative to the whole row).
-        className="panel-elevated grid grid-cols-3 items-center rounded-xl bg-[var(--panel)] px-4 py-3"
+        className="panel-elevated flex flex-col gap-2 rounded-xl bg-[var(--panel)] px-4 py-3"
       >
-        <div>
-          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-            Round {state.round} of {state.selectedContracts.length}
-          </p>
-          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-            {contractLabelLines(contract.label).map((line, i) => (
-              <span key={i} className="block">
-                {line}
-              </span>
-            ))}
-          </p>
+        {/* grid, not flex justify-between — a 2-way split needs its own
+            column widths fixed regardless of how much text either side
+            holds, which justify-between can't guarantee (it only equalizes
+            the gap *between* items, not each one's own width). */}
+        <div className="grid grid-cols-2 items-center">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+              Round {state.round} of {state.selectedContracts.length}
+            </p>
+            <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+              {contractLabelLines(contract.label).map((line, i) => (
+                <span key={i} className="block">
+                  {line}
+                </span>
+              ))}
+            </p>
+          </div>
+          {/* This grid cell itself is never conditional, even though its
+              content is — only for the active human's own turn, since an
+              AI's turn already skips straight to its own "is playing…"
+              placeholder below (a pass-and-play human only ever sees this
+              screen during their own revealed turn, same as the rest of the
+              board, so this never shows anyone a hand that isn't already
+              fully visible on screen). Omitting the whole grid item on an
+              AI's turn — instead of just leaving it empty like this — was
+              a real bug once already: with only 1 real child left in the
+              DOM, a 2-column grid still has 2 columns, but auto-placement
+              of a *second*, unrelated element later in this header (the
+              score list, before it moved to its own full-width row below)
+              could slide into whichever slot this one left empty. Kept
+              defensively even now that the score list lives outside this
+              grid entirely. */}
+          <div className="text-center">
+            {!player.isAI && (
+              // Two lines (label, then value) rather than one "Your hand
+              // (125 pts)" line — mirrors the round-info column's own
+              // label/value shape on the left, and matters more than just
+              // consistency: a one-liner here was wide enough to wrap
+              // mid-phrase on a phone, splitting "125" from "pts" across two
+              // lines. Each line alone is short enough not to.
+              <>
+                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+                  {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+                </p>
+                <p className="text-lg font-bold text-[var(--heading)]">{handPenalty(player.hand)} pts</p>
+              </>
+            )}
+          </div>
         </div>
-        {/* This grid cell itself is never conditional, even though its
-            content is — only for the active human's own turn, since an
-            AI's turn already skips straight to its own "is playing…"
-            placeholder below (a pass-and-play human only ever sees this
-            screen during their own revealed turn, same as the rest of the
-            board, so this never shows anyone a hand that isn't already
-            fully visible on screen). Omitting the whole grid item on an
-            AI's turn — instead of just leaving it empty like this — was
-            the actual bug reported here: with grid-cols-3 and only 2 real
-            children left in the DOM, auto-placement filled columns 1 and 2
-            in document order, so the score list on the right slid into
-            the middle column instead of *staying* on the right. Always
-            rendering this cell (empty or not) keeps exactly 3 items in the
-            grid at all times, so column 3 is always the score list's,
-            whether or not the middle one has anything in it. */}
-        <div className="text-center">
-          {!player.isAI && (
-            // Two lines (label, then value) rather than one "Your hand
-            // (125 pts)" line — mirrors the round-info column's own
-            // label/value shape on the left, and matters more than just
-            // consistency: a one-liner here was wide enough to wrap
-            // mid-phrase on a phone, splitting "125" from "pts" across two
-            // lines. Each line alone is short enough not to.
-            <>
-              <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-                {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
-              </p>
-              <p className="text-lg font-bold text-[var(--heading)]">{handPenalty(player.hand)} pts</p>
-            </>
-          )}
-        </div>
-        <ul className="text-right text-xs text-[var(--muted)]">
+
+        {/* Its own full-width, flex-wrapping row rather than a third grid
+            column — a fixed-width column here is exactly what made this
+            wrap badly once AI names started carrying a Lv badge too (see
+            AI_THEORETICAL_LEVEL): a 3-6 player game squeezed every player's
+            "Lv15 🦉 Hedda: 0" into a column maybe a third of the header's
+            width on a phone, wide enough to wrap mid-entry — sometimes
+            right between the badge and the name. flex-wrap here lets the
+            row grow to the header's full width first, and only wraps once
+            it's genuinely out of room; whitespace-nowrap on each entry
+            below means a wrap always moves a whole player to the next
+            line, never splits one badge/name/score apart from itself. */}
+        <ul className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="whitespace-nowrap">
                 {p.id === YOU_PLAYER_ID && level && (
                   <span className="mr-1 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
                     Lv{level.level}

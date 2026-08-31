@@ -56,25 +56,40 @@ export function dateSeed(dateKey: string): number {
   return hash >>> 0;
 }
 
+// Never fewer than 2 opponents (3 players total) — a 2-player game is over
+// the instant either side melds their contract, which made a "quick daily
+// round" feel more like a coin flip than a real hand of Contract Rummy.
+// Anywhere from 2 opponents up through the whole roster is fair game, so
+// the table itself varies day to day instead of being permanently fixed at
+// the floor. Derived from the same date seed as the shuffle (not a
+// separate random pick) so every player sees the same head count today,
+// the same way everyone sees the same deal.
+const MIN_DAILY_DEAL_OPPONENTS = 2;
+
+function dailyDealOpponentCount(seed: number): number {
+  const span = DAILY_DEAL_PERSONAS.length - MIN_DAILY_DEAL_OPPONENTS + 1;
+  return MIN_DAILY_DEAL_OPPONENTS + (seed % span);
+}
+
 /**
- * Today's fixed challenge: you vs. two Medium AIs, single round (the
+ * Today's fixed challenge: you vs. 2+ Medium AIs (see
+ * dailyDealOpponentCount — never fewer than 2, so this is never a 2-player
+ * game, but the exact head count varies day to day), single round (the
  * simplest contract, "2 Books" — CONTRACTS[0] — so a Daily Deal is a
  * genuinely quick, few-minutes play), dealt from a shuffle seeded by
- * today's date. Never just one opponent — a 2-player game is over the
- * instant either side melds their contract, which made a "quick daily
- * round" feel more like a coin flip than a real hand of Contract Rummy; 3
- * players gives the round actual shape without taking meaningfully longer
- * to seed or play out. Both opponents are deliberately the fixed personas
- * from aiPersonas.ts rather than a randomized pick like a normal game's AIs
- * (see pickAiPersonas) — the whole point of a daily challenge is comparing
- * today's result against your own history of playing the same "table,"
- * not a fresh face every day.
+ * today's date. The opponents seated are deliberately a fixed *prefix* of
+ * DAILY_DEAL_PERSONAS rather than a randomized pick like a normal game's
+ * AIs (see pickAiPersonas) — the whole point of a daily challenge is
+ * comparing today's result against your own history of playing the same
+ * table, not a fresh face every day.
  */
 export function createDailyDealGame(): GameState {
-  const rng = seededRng(dateSeed(localDateKey()));
+  const seed = dateSeed(localDateKey());
+  const rng = seededRng(seed);
+  const opponents = DAILY_DEAL_PERSONAS.slice(0, dailyDealOpponentCount(seed));
   const configs: PlayerConfig[] = [
     { id: YOU_PLAYER_ID, name: "You", isAI: false },
-    ...DAILY_DEAL_PERSONAS.map((persona, i) => ({
+    ...opponents.map((persona, i) => ({
       id: `daily-deal-ai-${i}`,
       name: `${persona.avatar} ${persona.name}`,
       isAI: true,

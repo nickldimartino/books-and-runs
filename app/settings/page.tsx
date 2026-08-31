@@ -227,6 +227,45 @@ function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActi
   );
 }
 
+// The Card back picker's own tile — a card back's identity is its motif
+// (diamonds, lightning bolts, peppermint stripes…), not a table felt color,
+// so this shows the real thing rather than SwatchTile's flat color block.
+// `data-cardback` on the preview's own wrapper scopes globals.css's
+// [data-cardback="X"] custom properties locally to just this element and
+// its children — the same mechanism the real draw pile uses, just applied
+// to a tiny detached preview instead of the live game — so the `.card-back`
+// span below picks up option.id's own frozen shape/tile/color regardless of
+// whatever card back is actually active on <html> right now. No separate
+// hand-maintained shape data needed the way THEME_SWATCHES' colors are.
+function CardBackTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={isActive}
+      title={option.description}
+      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
+        isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
+      }`}
+    >
+      <span
+        data-cardback={option.id}
+        className="flex h-11 items-center justify-center bg-[var(--panel-soft)]"
+        aria-hidden="true"
+      >
+        <span className="card-back h-8 w-6 shrink-0 rounded-md border-2 border-[var(--accent)]/30 bg-[var(--elevated)]" />
+      </span>
+      <span className="px-2 py-1.5 bg-[var(--panel)]">
+        <span className="block truncate text-xs font-medium text-[var(--heading)]">{option.name}</span>
+      </span>
+      {isActive && (
+        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow">
+          <CheckBadge className="h-2.5 w-2.5" />
+        </span>
+      )}
+    </button>
+  );
+}
+
 // The Card back picker's one non-color option — sized and styled to sit
 // naturally above the same tile grid rather than looking like a stray extra
 // row, since "always match whatever theme is active" isn't a preview-able
@@ -328,10 +367,19 @@ function SwatchPicker({
 
       <CategoryTabs tab={tab} onChange={setTab} />
 
+      {/* matchOption doubles as "this is the Card back picker, not Theme" —
+          the only two SwatchPicker callers happen to line up exactly that
+          way (Theme never shows a Match tile; Card back always does), so a
+          separate flag just for tile choice would be tracking the same
+          thing twice. */}
       <div className="grid grid-cols-2 gap-2">
-        {visible.map((t) => (
-          <SwatchTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
-        ))}
+        {visible.map((t) =>
+          matchOption ? (
+            <CardBackTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
+          ) : (
+            <SwatchTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
+          )
+        )}
       </div>
     </div>
   );
