@@ -71,7 +71,13 @@ export function HandPreviewBar({ cards, hidden, onTap, selectedCardIds, showOnAl
 
   if (cards.length === 0) return null;
 
-  const available = Math.max(0, width - 32); // the bar's own px-4 (16px) on each side
+  // `width` is containerRef's own clientWidth, which already excludes the
+  // button's px-4 padding (that padding belongs to an ancestor, not this
+  // element) — no further subtraction needed; verified directly against a
+  // real measured layout rather than assumed, since an earlier version of
+  // this line subtracted an extra 32px here that wasn't actually there,
+  // needlessly over-compressing the fan by that much.
+  const available = width;
   const naturalStep = CARD_W + GAP;
   const step =
     cards.length <= 1 ? naturalStep : Math.max(MIN_STEP, Math.min(naturalStep, (available - CARD_W) / (cards.length - 1)));
@@ -84,7 +90,25 @@ export function HandPreviewBar({ cards, hidden, onTap, selectedCardIds, showOnAl
         showOnAllScreens ? "" : "sm:hidden"
       } ${hidden ? "translate-y-full" : "translate-y-0"}`}
     >
-      <div ref={containerRef} className="flex items-center overflow-hidden" style={{ height: CARD_H }}>
+      {/* max-w-2xl mx-auto matches game/page.tsx's <main> exactly — this bar
+          itself spans the full viewport edge-to-edge (fixed inset-x-0,
+          above) like a toolbar, but without this the fan inside it was
+          anchored to the *viewport's* left edge, not the page's own
+          centered content column. Barely visible on a phone (the column
+          already fills the screen) but glaringly left-anchored on a wide
+          laptop window, where the fan sat noticeably left of everything
+          else on screen instead of lining up under it. */}
+      <div
+        ref={containerRef}
+        // justify-center matters on top of mx-auto for a *small* hand — the
+        // fan is only ever compressed enough to fill the available width
+        // (see `step` above), never stretched past its natural size to fill
+        // it, so a hand with just a couple of cards left is narrower than
+        // this column and would otherwise still sit flush against its left
+        // edge instead of genuinely centered as a group.
+        className="mx-auto flex max-w-2xl items-center justify-center overflow-hidden"
+        style={{ height: CARD_H }}
+      >
         {cards.map((card, i) => (
           <MiniCard
             key={card.id}
