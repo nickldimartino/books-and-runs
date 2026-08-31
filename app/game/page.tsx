@@ -803,7 +803,12 @@ export default function GamePage() {
 
       <header
         data-tutorial="round-header"
-        className="panel-elevated flex items-center justify-between rounded-xl bg-[var(--panel)] px-4 py-3"
+        // grid, not the previous flex justify-between — a 3-way split needs
+        // its middle piece to sit at the header's own true center regardless
+        // of how wide the round-info block or the score list happen to be,
+        // which justify-between can't guarantee (it only equalizes the gaps
+        // *between* items, not their position relative to the whole row).
+        className="panel-elevated grid grid-cols-3 items-center rounded-xl bg-[var(--panel)] px-4 py-3"
       >
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
@@ -811,6 +816,26 @@ export default function GamePage() {
           </p>
           <p className="text-lg font-bold text-[var(--heading)]">{contract.label}</p>
         </div>
+        {/* Only for the active human's own turn — an AI's turn already skips
+            straight to its own "is playing…" placeholder below, and a
+            pass-and-play human only ever sees this screen during their own
+            revealed turn (same as the rest of the board), so this is never
+            showing anyone a hand that isn't the one already fully visible
+            on screen. */}
+        {!player.isAI && (
+          // Two lines (label, then value) rather than one "Your hand (125
+          // pts)" line — mirrors the round-info column's own label/value
+          // shape on the left, and matters more than just consistency: a
+          // one-liner here was wide enough to wrap mid-phrase on a phone,
+          // splitting "125" from "pts" across two lines. Each line alone is
+          // short enough not to.
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+              {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+            </p>
+            <p className="text-lg font-bold text-[var(--heading)]">{handPenalty(player.hand)} pts</p>
+          </div>
+        )}
         <ul className="text-right text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
