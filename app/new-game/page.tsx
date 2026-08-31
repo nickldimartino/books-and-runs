@@ -37,9 +37,7 @@ export default function NewGamePage() {
     () => new Set(CONTRACTS.map((c) => c.round))
   );
   // Only meaningful once there's a second human at the table — see the note
-  // and toggle rendered below the name inputs. Only ever actually applied
-  // (in handleStart) once there are 3+ humans; with exactly 2, tracking
-  // stays on by default rather than surfacing a toggle for it, too.
+  // and toggle rendered below the name inputs, both gated on humanCount >= 2.
   const [trackStatsOn, setTrackStatsOn] = useState(true);
 
   // Pick up the house-rule default from Settings once mounted (before the
@@ -142,10 +140,10 @@ export default function NewGamePage() {
       }),
     ];
     // The toggle only ever renders (and so can only ever have been touched)
-    // once there are 3+ human players — below that, tracking always stays
+    // once there are 2+ human players — below that, tracking always stays
     // on, regardless of whatever trackStatsOn happens to still hold from a
     // player count that was previously higher and has since been reduced.
-    startNewGame(configs, selectedContracts, humanCount > 2 ? trackStatsOn : true);
+    startNewGame(configs, selectedContracts, humanCount >= 2 ? trackStatsOn : true);
     router.push("/game");
   }
 
@@ -219,7 +217,7 @@ export default function NewGamePage() {
           </p>
         )}
 
-        {configured && user && humanCount > 2 && (
+        {configured && user && humanCount >= 2 && (
           <div className="flex flex-col gap-2">
             <label className="text-xs font-medium text-[var(--muted)]">Track stats for this game</label>
             <div className="flex gap-2">
@@ -244,7 +242,7 @@ export default function NewGamePage() {
             </div>
             <p className="text-xs text-[var(--faint)]">
               With a bigger table, {humanNames[0]?.trim() || "the first player"} isn&apos;t always the
-              same person game to game — turn this off if tonight&apos;s results shouldn&apos;t count
+              same person game to game — turn this off if this game&apos;s results shouldn&apos;t count
               toward their stats.
             </p>
           </div>
