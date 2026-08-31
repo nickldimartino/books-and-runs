@@ -86,6 +86,16 @@ function contractNeedLabel(books: number, runs: number): string {
   return parts.join(" + ");
 }
 
+/** contract.label split into one line per part for a compound contract
+ * ("1 Book + 1 Run" -> ["1 Book", "1 Run"]), dropping the "+" itself; a
+ * plain single-type label ("2 Books") comes back as its own one-element
+ * array, unchanged. Needed once the round header's middle column (the
+ * hand's live point total) narrowed the left column enough that a compound
+ * label started wrapping mid-phrase right around the "+". */
+function contractLabelLines(label: string): string[] {
+  return label.split(" + ");
+}
+
 export default function GamePage() {
   const router = useRouter();
   const {
@@ -882,7 +892,13 @@ export default function GamePage() {
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
             Round {state.round} of {state.selectedContracts.length}
           </p>
-          <p className="text-lg font-bold text-[var(--heading)]">{contract.label}</p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+            {contractLabelLines(contract.label).map((line, i) => (
+              <span key={i} className="block">
+                {line}
+              </span>
+            ))}
+          </p>
         </div>
         {/* This grid cell itself is never conditional, even though its
             content is — only for the active human's own turn, since an
@@ -1206,7 +1222,6 @@ export default function GamePage() {
             <>
               <HandPreviewBar
                 cards={visibleHand}
-                selectedCardIds={selectedCardIds}
                 hidden={false}
                 showOnAllScreens
                 onTap={() => setHandDrawerOpen(true)}
