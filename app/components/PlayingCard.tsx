@@ -2,7 +2,10 @@
 
 import { Card } from "@/types";
 
-const SUIT_SYMBOL: Record<string, string> = {
+// Exported so HandPreviewBar.tsx's mini fanned cards can reuse the exact
+// same suit glyphs / red-suit rule as the real card face, rather than a
+// second copy that could quietly drift out of sync with this one.
+export const SUIT_SYMBOL: Record<string, string> = {
   hearts: "♥",
   diamonds: "♦",
   clubs: "♣",
@@ -10,7 +13,7 @@ const SUIT_SYMBOL: Record<string, string> = {
   joker: "★",
 };
 
-const RED_SUITS = new Set(["hearts", "diamonds"]);
+export const RED_SUITS = new Set(["hearts", "diamonds"]);
 
 const RANK_NAME: Record<string, string> = { A: "Ace", K: "King", Q: "Queen", J: "Jack", JOKER: "Joker" };
 

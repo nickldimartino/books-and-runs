@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { cardLabel, PlayingCard } from "../components/PlayingCard";
 import { DraggableHand } from "../components/DraggableHand";
+import { HandPreviewBar } from "../components/HandPreviewBar";
 import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
@@ -122,6 +123,34 @@ export default function GamePage() {
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
   const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState<Card | null>(null);
+  // Whether the real "Your hand" section is at least partly scrolled into
+  // view — drives HandPreviewBar's visibility (see handSectionRefCallback
+  // and its render near the bottom of this component). Starts true (bar
+  // hidden) so it can't flash into view for an instant before the observer
+  // below has had a chance to actually measure anything.
+  const [handSectionVisible, setHandSectionVisible] = useState(true);
+  const handSectionElRef = useRef<HTMLElement | null>(null);
+  const handSectionObserverRef = useRef<IntersectionObserver | null>(null);
+  // A callback ref rather than a plain one — the hand section's own DOM
+  // node changes across turns (DraggableHand's key forces a remount on a
+  // new round or when control passes to a different pass-and-play player,
+  // see its own comment below), and a plain ref's .current changing
+  // wouldn't by itself re-run an effect to re-observe the new node. A
+  // callback ref fires exactly when the attached element changes, so the
+  // observer always tracks whichever hand section is actually on screen.
+  const handSectionRefCallback = useCallback((el: HTMLElement | null) => {
+    handSectionObserverRef.current?.disconnect();
+    handSectionElRef.current = el;
+    if (!el) {
+      setHandSectionVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => setHandSectionVisible(entry.isIntersecting), {
+      threshold: 0.1,
+    });
+    observer.observe(el);
+    handSectionObserverRef.current = observer;
+  }, []);
   const prevHasDrawnRef = useRef(hasDrawn);
   const whoseTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -958,7 +987,7 @@ export default function GamePage() {
             )}
           </section>
 
-          <section data-tutorial="hand">
+          <section data-tutorial="hand" ref={handSectionRefCallback}>
             <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                 {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
@@ -1008,6 +1037,12 @@ export default function GamePage() {
             />
             <p className="mt-1 text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
           </section>
+
+          <HandPreviewBar
+            cards={visibleHand}
+            hidden={handSectionVisible}
+            onTap={() => handSectionElRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          />
         </>
       )}
 
