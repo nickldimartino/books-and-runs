@@ -25,6 +25,11 @@ export interface LeaderboardEntry {
   games_won: number;
   average_score: number | null;
   worst_score: number | null;
+  // Broadcast by syncDailyDealStreak below, not syncLeaderboardStats — see
+  // its own doc for why these two are the one pair of columns here that
+  // don't come from player_stats/achievement_counters.
+  daily_deal_streak: number;
+  daily_deal_best_streak: number;
   updated_at: string;
 }
 
@@ -103,6 +108,35 @@ export async function updateLeaderboardDisplayName(
   const { error } = await supabase.from("leaderboard_entries").upsert({
     user_id: userId,
     display_name: displayName,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/**
+ * Broadcasts the signed-in user's current Daily Deal streak (see
+ * dailyDealStore.ts) to their leaderboard row — called right after
+ * GameOverScreen records a Daily Deal result locally, not from
+ * syncLeaderboardStats above: unlike every other column on this table,
+ * these two don't come from player_stats/achievement_counters, they come
+ * straight from localStorage, so there's nothing in Supabase for
+ * syncLeaderboardStats to recompute them from. Only ever writes these two
+ * columns (plus display_name's own untouched-by-this precedent), so it
+ * can't clobber a sync still in flight the same way updateLeaderboardDisplayName
+ * can't. Safe to call even for an account that's never played a single
+ * real tracked game — upsert fills in every other column's own default
+ * (0/null) for a first-ever partial insert.
+ */
+export async function syncDailyDealStreak(
+  supabase: SupabaseClient,
+  userId: string,
+  streak: number,
+  bestStreak: number
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    daily_deal_streak: streak,
+    daily_deal_best_streak: bestStreak,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

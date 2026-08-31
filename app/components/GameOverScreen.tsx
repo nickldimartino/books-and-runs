@@ -11,7 +11,7 @@ import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { DailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
 import { joinNames } from "../lib/formatNames";
-import { syncLeaderboardStats } from "../lib/leaderboardStore";
+import { syncDailyDealStreak, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
@@ -244,8 +244,20 @@ export function GameOverScreen({ state }: { state: GameState }) {
   useEffect(() => {
     if (!isDailyDeal || dailyDealRecordedRef.current) return;
     dailyDealRecordedRef.current = true;
-    setDailyDealState(recordDailyDealResult(state));
-  }, [isDailyDeal, state]);
+    const result = recordDailyDealResult(state);
+    setDailyDealState(result);
+    // Best-effort, signed-in-only broadcast of the streak this just computed
+    // locally — see syncDailyDealStreak's own doc for why this is the one
+    // place Daily Deal ever reaches Supabase. A guest playing without an
+    // account simply never runs this; their streak still works, it just
+    // stays on this device (matches how every other local-only setting in
+    // this app already behaves without an account).
+    if (supabase && user) {
+      syncDailyDealStreak(supabase, user.id, result.streak, result.bestStreak).catch((err) => {
+        console.error("Failed to sync Daily Deal streak:", err);
+      });
+    }
+  }, [isDailyDeal, state, user]);
 
   // Without live multiplayer, a shared result is this game's only social
   // loop — the sole way one player's game becomes someone else's reason to

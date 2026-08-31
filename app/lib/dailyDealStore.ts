@@ -1,6 +1,6 @@
 import { seededRng } from "@/deck";
 import { createGame, PlayerConfig } from "@/gameEngine";
-import { CONTRACTS, GameState } from "@/types";
+import { CONTRACTS, ContractRequirement, GameState } from "@/types";
 import { DAILY_DEAL_PERSONAS } from "./aiPersonas";
 import { YOU_PLAYER_ID } from "./recordGameResult";
 
@@ -71,21 +71,44 @@ function dailyDealOpponentCount(seed: number): number {
   return MIN_DAILY_DEAL_OPPONENTS + (seed % span);
 }
 
+/** Which of the 7 standard contracts today's single round uses — drawn from
+ * the same seeded RNG as the shuffle (one extra call, consumed before the
+ * deck is dealt with the same generator) rather than a plain
+ * seed-mod-CONTRACTS.length: dates are short strings that differ from their
+ * neighbors by only a character or two, and djb2's own bit pattern turned
+ * out to distribute unevenly across a modulus that small (checked over a
+ * year of consecutive dates — one contract came up ~40% of the time). The
+ * seeded RNG's own output is much better mixed, and reusing it here doesn't
+ * cost a second seed — dailyDealOpponentCount below still reads the plain
+ * seed directly, since a 2-way split doesn't have the same problem. Any of
+ * the 7 is fair game, including round 7's "3 Runs" (wholeHandMeld) — the
+ * engine treats a contract as just data regardless of which position it's
+ * normally dealt in (the tutorial and Short Game already reuse arbitrary
+ * single/subset contracts the same way), so nothing here needs to
+ * special-case it. */
+function dailyDealContract(rng: () => number): ContractRequirement {
+  return CONTRACTS[Math.floor(rng() * CONTRACTS.length)];
+}
+
 /**
  * Today's fixed challenge: you vs. 2+ Medium AIs (see
  * dailyDealOpponentCount — never fewer than 2, so this is never a 2-player
- * game, but the exact head count varies day to day), single round (the
- * simplest contract, "2 Books" — CONTRACTS[0] — so a Daily Deal is a
- * genuinely quick, few-minutes play), dealt from a shuffle seeded by
- * today's date. The opponents seated are deliberately a fixed *prefix* of
- * DAILY_DEAL_PERSONAS rather than a randomized pick like a normal game's
- * AIs (see pickAiPersonas) — the whole point of a daily challenge is
- * comparing today's result against your own history of playing the same
- * table, not a fresh face every day.
+ * game, but the exact head count varies day to day), a single round whose
+ * contract also varies day to day (see dailyDealContract) so a Daily Deal
+ * stays a genuinely quick, few-minutes play without ever being *only*
+ * "2 Books," dealt from a shuffle seeded by today's date. The opponents
+ * seated are deliberately a fixed *prefix* of DAILY_DEAL_PERSONAS rather
+ * than a randomized pick like a normal game's AIs (see pickAiPersonas) —
+ * the whole point of a daily challenge is comparing today's result against
+ * your own history of playing the same table, not a fresh face every day.
  */
 export function createDailyDealGame(): GameState {
   const seed = dateSeed(localDateKey());
   const rng = seededRng(seed);
+  // Contract pulled from `rng` before it's handed to createGame — see
+  // dailyDealContract's own doc for why this one extra call, consumed here,
+  // is what actually gives the contract choice a good spread across dates.
+  const contract = dailyDealContract(rng);
   const opponents = DAILY_DEAL_PERSONAS.slice(0, dailyDealOpponentCount(seed));
   const configs: PlayerConfig[] = [
     { id: YOU_PLAYER_ID, name: "You", isAI: false },
@@ -96,7 +119,7 @@ export function createDailyDealGame(): GameState {
       difficulty: "medium" as const,
     })),
   ];
-  return createGame(configs, [CONTRACTS[0]], rng);
+  return createGame(configs, [contract], rng);
 }
 
 export function loadDailyDealState(): DailyDealState {
@@ -131,10 +154,14 @@ export function playedToday(state: DailyDealState = loadDailyDealState()): boole
  * Records today's Daily Deal result and advances the streak — a no-op
  * (returns the state unchanged) if today was already recorded, so replaying
  * a finished deal for fun never re-counts it or lets the streak be gamed by
- * repeated finishes in one day. Entirely local — see the New Game "own
- * streak only" scoping this was built to: it never touches Supabase, never
- * calls recordGameResult, and never appears in real stats, achievements, or
- * the leaderboard.
+ * repeated finishes in one day. The computation itself stays entirely
+ * local and self-contained — this function never touches Supabase, never
+ * calls recordGameResult, and never affects real games_played or
+ * achievement progress. Callers (GameOverScreen) separately broadcast the
+ * streak numbers this returns to the signed-in account's leaderboard row
+ * (see leaderboardStore.ts's syncDailyDealStreak) — that's the one place
+ * Daily Deal is visible outside this device, and it's a report of this
+ * function's own output, not a second source of truth it reads from.
  */
 export function recordDailyDealResult(state: GameState): DailyDealState {
   const current = loadDailyDealState();

@@ -16,7 +16,16 @@ function formatWinRate(entry: LeaderboardEntry): string {
   return `${Math.round((100 * entry.games_won) / entry.games_played)}%`;
 }
 
-type SortKey = "level" | "achievements" | "total_xp" | "win_rate" | "average_score" | "games_played" | "worst_score";
+type SortKey =
+  | "level"
+  | "achievements"
+  | "total_xp"
+  | "win_rate"
+  | "average_score"
+  | "games_played"
+  | "worst_score"
+  | "daily_deal_streak"
+  | "daily_deal_best_streak";
 
 // minWidth matches each column's own tuned width from before this was a
 // shared render loop (e.g. "Achievements" needs more room for "199/200"
@@ -30,6 +39,8 @@ const SORT_OPTIONS: { key: SortKey; label: string; minWidth: string }[] = [
   { key: "average_score", label: "Avg. score", minWidth: "90px" },
   { key: "games_played", label: "Games", minWidth: "70px" },
   { key: "worst_score", label: "Worst score", minWidth: "90px" },
+  { key: "daily_deal_streak", label: "Daily streak", minWidth: "90px" },
+  { key: "daily_deal_best_streak", label: "Best streak", minWidth: "90px" },
 ];
 
 /**
@@ -62,6 +73,10 @@ function sortValue(entry: LeaderboardEntry, key: SortKey): number {
       return entry.average_score == null ? -Infinity : -entry.average_score;
     case "worst_score":
       return entry.worst_score == null ? -Infinity : entry.worst_score;
+    case "daily_deal_streak":
+      return entry.daily_deal_streak;
+    case "daily_deal_best_streak":
+      return entry.daily_deal_best_streak;
   }
 }
 
@@ -101,15 +116,18 @@ export default function LeaderboardPage() {
         return supabase
           .from("leaderboard_entries")
           .select(
-            "user_id, display_name, level, total_xp, achievements_unlocked, games_played, games_won, average_score, worst_score, updated_at"
+            "user_id, display_name, level, total_xp, achievements_unlocked, games_played, games_won, average_score, worst_score, daily_deal_streak, daily_deal_best_streak, updated_at"
           )
           // Every signed-in visit to Account/Leaderboard self-heals a row for
           // that account (see the sync above) — without this filter, an
           // account that only ever opened one of those pages once, and never
           // actually finished a tracked game, would sit on the board
           // permanently at 0/0/0. A leaderboard should only ever rank real
-          // activity.
-          .gt("games_played", 0)
+          // activity — which now includes a Daily Deal streak on its own:
+          // someone who's only ever played Daily Deal (never a full tracked
+          // game) still has a real streak worth ranking, so the "real
+          // activity" bar here is either kind of activity, not just games_played.
+          .or("games_played.gt.0,daily_deal_best_streak.gt.0")
           .order("level", { ascending: false })
           .order("total_xp", { ascending: false })
           .then(({ data, error }) => {
@@ -187,7 +205,9 @@ export default function LeaderboardPage() {
           every migration in <code>supabase/migrations/</code> applied.
         </p>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-[var(--faint)]">Nobody&apos;s finished a tracked game yet — play one to be the first.</p>
+        <p className="text-sm text-[var(--faint)]">
+          Nobody&apos;s finished a tracked game or a Daily Deal yet — play one to be the first.
+        </p>
       ) : (
         <>
           <label className="flex items-center gap-2 self-start text-sm text-[var(--muted)]">
@@ -243,6 +263,8 @@ export default function LeaderboardPage() {
                       <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.average_score)}</td>
                       <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.games_played}</td>
                       <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.worst_score)}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.daily_deal_streak}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.daily_deal_best_streak}</td>
                     </tr>
                   );
                 })}
@@ -257,7 +279,7 @@ export default function LeaderboardPage() {
           showing both would just repeat it. */}
       {!authLoading && !loading && !loadError && user && entries.length > 0 && !entries.some((e) => e.user_id === user.id) && (
         <p className="text-center text-xs text-[var(--faint)]">
-          You haven&apos;t finished a tracked game yet — play one to show up here.
+          You haven&apos;t finished a tracked game or a Daily Deal yet — play one to show up here.
         </p>
       )}
 

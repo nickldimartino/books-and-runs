@@ -74,6 +74,11 @@ export default function StatsPage() {
   // against this Supabase project) also leaves stats null, and silently
   // showing "no games recorded" for that case is actively misleading.
   const [statsError, setStatsError] = useState(false);
+  // Best-effort and independent of the player_stats query above — someone
+  // who's only ever played Daily Deal (never a real tracked game) has no
+  // player_stats row at all, but still has a real streak worth showing.
+  // null distinguishes "haven't fetched yet" from "fetched, no streak" (0).
+  const [dailyDealBestStreak, setDailyDealBestStreak] = useState<number | null>(null);
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -94,13 +99,24 @@ export default function StatsPage() {
         .eq("user_id", user.id)
         .order("played_at", { ascending: false })
         .limit(PAST_GAMES_LIMIT),
-    ]).then(([statsRes, historyRes]) => {
+      supabase
+        .from("leaderboard_entries")
+        .select("daily_deal_best_streak")
+        .eq("user_id", user.id)
+        .maybeSingle<{ daily_deal_best_streak: number }>(),
+    ]).then(([statsRes, historyRes, dailyDealRes]) => {
       if (statsRes.error) {
         setStatsError(true);
       } else {
         setStats(statsRes.data);
       }
       setHistory((historyRes.data as GameHistoryRow[]) ?? []);
+      if (dailyDealRes.error) {
+        console.error("Failed to load Daily Deal streak:", dailyDealRes.error.message);
+        setDailyDealBestStreak(0);
+      } else {
+        setDailyDealBestStreak(dailyDealRes.data?.daily_deal_best_streak ?? 0);
+      }
       setLoading(false);
     });
   }, [user]);
@@ -165,6 +181,14 @@ export default function StatsPage() {
             />
           </div>
         </section>
+      )}
+
+      {/* Independent of the player_stats-driven section below — someone who's
+          only ever played Daily Deal (never a real tracked game) has no
+          player_stats row at all, but still has a real streak worth
+          showing, so this can't live inside the `!stats` gate down there. */}
+      {dailyDealBestStreak !== null && (
+        <StatTile label="Best Daily Deal streak" value={dailyDealBestStreak} sub="days in a row" />
       )}
 
       {authLoading || loading ? (
