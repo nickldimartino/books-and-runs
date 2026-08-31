@@ -856,26 +856,37 @@ export default function GamePage() {
           </p>
           <p className="text-lg font-bold text-[var(--heading)]">{contract.label}</p>
         </div>
-        {/* Only for the active human's own turn — an AI's turn already skips
-            straight to its own "is playing…" placeholder below, and a
-            pass-and-play human only ever sees this screen during their own
-            revealed turn (same as the rest of the board), so this is never
-            showing anyone a hand that isn't the one already fully visible
-            on screen. */}
-        {!player.isAI && (
-          // Two lines (label, then value) rather than one "Your hand (125
-          // pts)" line — mirrors the round-info column's own label/value
-          // shape on the left, and matters more than just consistency: a
-          // one-liner here was wide enough to wrap mid-phrase on a phone,
-          // splitting "125" from "pts" across two lines. Each line alone is
-          // short enough not to.
-          <div className="text-center">
-            <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-              {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
-            </p>
-            <p className="text-lg font-bold text-[var(--heading)]">{handPenalty(player.hand)} pts</p>
-          </div>
-        )}
+        {/* This grid cell itself is never conditional, even though its
+            content is — only for the active human's own turn, since an
+            AI's turn already skips straight to its own "is playing…"
+            placeholder below (a pass-and-play human only ever sees this
+            screen during their own revealed turn, same as the rest of the
+            board, so this never shows anyone a hand that isn't already
+            fully visible on screen). Omitting the whole grid item on an
+            AI's turn — instead of just leaving it empty like this — was
+            the actual bug reported here: with grid-cols-3 and only 2 real
+            children left in the DOM, auto-placement filled columns 1 and 2
+            in document order, so the score list on the right slid into
+            the middle column instead of *staying* on the right. Always
+            rendering this cell (empty or not) keeps exactly 3 items in the
+            grid at all times, so column 3 is always the score list's,
+            whether or not the middle one has anything in it. */}
+        <div className="text-center">
+          {!player.isAI && (
+            // Two lines (label, then value) rather than one "Your hand
+            // (125 pts)" line — mirrors the round-info column's own
+            // label/value shape on the left, and matters more than just
+            // consistency: a one-liner here was wide enough to wrap
+            // mid-phrase on a phone, splitting "125" from "pts" across two
+            // lines. Each line alone is short enough not to.
+            <>
+              <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+                {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+              </p>
+              <p className="text-lg font-bold text-[var(--heading)]">{handPenalty(player.hand)} pts</p>
+            </>
+          )}
+        </div>
         <ul className="text-right text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
