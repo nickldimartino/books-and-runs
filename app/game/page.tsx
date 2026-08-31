@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
-import { personaBlurbFor } from "../lib/aiPersonas";
+import { AI_THEORETICAL_LEVEL, personaBlurbFor } from "../lib/aiPersonas";
 import { cardLabel, PlayingCard } from "../components/PlayingCard";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
@@ -135,9 +135,16 @@ export default function GamePage() {
   // succeeded; if it silently failed for any reason, the card would still
   // visually deselect and the meld's highlight would still disappear,
   // reading exactly like a successful lay-off even though nothing happened
-  // and the card never left the hand. Neither reproduces on any scenario
-  // tried so far, but checking the return value here is correct regardless
-  // of whether that specific failure mode is ever hit again.
+  // and the card never left the hand. One real, confirmed way this fired:
+  // GameContext's own layOff() silently refuses before hasDrawn is true,
+  // but the meld buttons' own isValidTarget/selectedCardCanLayOff checks
+  // didn't account for that — a card selected before drawing made every
+  // eligible meld light up as tappable regardless, so tapping one hit
+  // exactly this silent-failure path. Both of those now also check
+  // hasDrawn, so the message here (see layOffFailureReason) is mostly a
+  // safety net for whatever narrower race is still possible — a
+  // pass-and-play device passed mid-tap, a card laid off elsewhere a beat
+  // earlier — rather than the primary way a player would ever see it.
   const [layOffError, setLayOffError] = useState<string | null>(null);
   const [pendingGroupChoice, setPendingGroupChoice] = useState<PendingGroupChoice | null>(null);
   const [activityOpen, setActivityOpen] = useState(() => isTutorial);
@@ -484,9 +491,16 @@ export default function GamePage() {
   // deliberately independent of the highlightLayoffs setting above, which
   // only controls a hint/badge someone might turn off; this is a real
   // "would tapping a meld right now actually do anything" check, needed
-  // regardless of whether the badges are on.
+  // regardless of whether the badges are on. hasDrawn matters here for the
+  // same reason it matters for isValidTarget below: a card can be selected
+  // before drawing (nothing stops planning ahead), and without this check
+  // the button read as available even though the lay-off itself — gated on
+  // hasDrawn inside GameContext's own layOff — would silently fail.
   const selectedCardCanLayOff =
-    player.hasMeldedContract && !!selectedCard && state.melds.some((m) => layOffOptions(selectedCard, m).length > 0);
+    hasDrawn &&
+    player.hasMeldedContract &&
+    !!selectedCard &&
+    state.melds.some((m) => layOffOptions(selectedCard, m).length > 0);
 
   function handleCardClick(card: Card) {
     setGroupError(null);
@@ -501,6 +515,21 @@ export default function GamePage() {
         prev.includes(card.id) ? prev.filter((id) => id !== card.id) : [...prev, card.id]
       );
     }
+  }
+
+  // The specific reason a lay-off attempt just failed — checked in the same
+  // order GameContext's own layOff() and gameEngine's layOffCard() actually
+  // gate on, so this always names the *first* real blocker rather than a
+  // generic catch-all. isValidTarget/selectedCardCanLayOff above already
+  // keep the meld buttons themselves from inviting a click in the first two
+  // cases — this is what still explains it on the rarer paths that can slip
+  // past those (a pass-and-play device passed mid-tap, a card laid off
+  // elsewhere a beat earlier) rather than leaving a still-confusing generic
+  // message as the only thing left once a real reason was findable.
+  function layOffFailureReason(): string {
+    if (!hasDrawn) return "Draw a card before laying off.";
+    if (!player.hasMeldedContract) return "Meld your own contract before laying off.";
+    return "That card can't be laid off there anymore — try selecting it again.";
   }
 
   function handleMeldClick(meld: Meld) {
@@ -519,7 +548,7 @@ export default function GamePage() {
         setSelectedCardIds([]);
         setLayOffError(null);
       } else {
-        setLayOffError("Couldn't lay that off — the card may no longer be valid there. Try selecting it again.");
+        setLayOffError(layOffFailureReason());
       }
       return;
     }
@@ -536,7 +565,7 @@ export default function GamePage() {
       setSelectedCardIds([]);
       setLayOffError(null);
     } else {
-      setLayOffError("Couldn't lay that off — the card may no longer be valid there. Try selecting it again.");
+      setLayOffError(layOffFailureReason());
     }
   }
 
@@ -944,6 +973,17 @@ export default function GamePage() {
                     Lv{level.level}
                   </span>
                 )}
+                {/* A cosmetic "power level" per difficulty, not a real
+                    account level — see AI_THEORETICAL_LEVEL's own doc.
+                    Muted/panel-toned rather than the accent-colored badge
+                    above, so the two read as different kinds of thing at a
+                    glance: one is this account's real, earned progress, the
+                    other is flavor. */}
+                {p.isAI && p.difficulty && (
+                  <span className="mr-1 rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
+                    Lv{AI_THEORETICAL_LEVEL[p.difficulty]}
+                  </span>
+                )}
                 {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
               </li>
             ))}
@@ -1092,7 +1132,15 @@ export default function GamePage() {
                       </p>
                       <div className="flex flex-wrap gap-3">
                         {melds.map((meld) => {
+                          // hasDrawn matters here for the same reason as
+                          // selectedCardCanLayOff above: without it, a card
+                          // selected before drawing made every eligible meld
+                          // light up as tappable even though the lay-off
+                          // itself — gated on hasDrawn inside GameContext's
+                          // own layOff — would silently fail the instant you
+                          // actually tapped one.
                           const isValidTarget =
+                            hasDrawn &&
                             !pendingLayOff &&
                             !!selectedCard &&
                             player.hasMeldedContract &&

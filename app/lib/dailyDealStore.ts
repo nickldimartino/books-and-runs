@@ -1,7 +1,7 @@
 import { seededRng } from "@/deck";
 import { createGame, PlayerConfig } from "@/gameEngine";
 import { CONTRACTS, GameState } from "@/types";
-import { DAILY_DEAL_PERSONA } from "./aiPersonas";
+import { DAILY_DEAL_PERSONAS } from "./aiPersonas";
 import { YOU_PLAYER_ID } from "./recordGameResult";
 
 const KEY = "booksAndRuns:dailyDeal";
@@ -57,20 +57,29 @@ export function dateSeed(dateKey: string): number {
 }
 
 /**
- * Today's fixed challenge: you vs. one Medium AI, single round (the
+ * Today's fixed challenge: you vs. two Medium AIs, single round (the
  * simplest contract, "2 Books" — CONTRACTS[0] — so a Daily Deal is a
  * genuinely quick, few-minutes play), dealt from a shuffle seeded by
- * today's date. The opponent is deliberately the one fixed persona from
- * aiPersonas.ts rather than a randomized pick like a normal game's AIs
+ * today's date. Never just one opponent — a 2-player game is over the
+ * instant either side melds their contract, which made a "quick daily
+ * round" feel more like a coin flip than a real hand of Contract Rummy; 3
+ * players gives the round actual shape without taking meaningfully longer
+ * to seed or play out. Both opponents are deliberately the fixed personas
+ * from aiPersonas.ts rather than a randomized pick like a normal game's AIs
  * (see pickAiPersonas) — the whole point of a daily challenge is comparing
- * today's result against your own history of playing the same "character,"
+ * today's result against your own history of playing the same "table,"
  * not a fresh face every day.
  */
 export function createDailyDealGame(): GameState {
   const rng = seededRng(dateSeed(localDateKey()));
   const configs: PlayerConfig[] = [
     { id: YOU_PLAYER_ID, name: "You", isAI: false },
-    { id: "daily-deal-ai", name: `${DAILY_DEAL_PERSONA.avatar} ${DAILY_DEAL_PERSONA.name}`, isAI: true, difficulty: "medium" },
+    ...DAILY_DEAL_PERSONAS.map((persona, i) => ({
+      id: `daily-deal-ai-${i}`,
+      name: `${persona.avatar} ${persona.name}`,
+      isAI: true,
+      difficulty: "medium" as const,
+    })),
   ];
   return createGame(configs, [CONTRACTS[0]], rng);
 }

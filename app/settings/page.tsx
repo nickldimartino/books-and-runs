@@ -18,6 +18,7 @@ import {
   loadLocalTheme,
   saveLocalTheme,
   THEMES,
+  ThemeCategory,
   ThemeId,
   ThemeOption,
 } from "../lib/themeStore";
@@ -178,113 +179,160 @@ const COLORBLIND_SWATCHES: Record<ColorblindMode, { red: string; wildBg: string;
   tritanopia: { red: "#b91c1c", wildBg: "#f3d0ec", wildText: "#7a1f6b" },
 };
 
-// A row per theme (swatch + full name, never truncated) instead of the
-// small-grid-cell-with-a-caption layout this replaced — that grid packed 5
-// swatches per row on a phone-width screen, leaving each theme's name maybe
-// 55px to render in, which clipped anything longer than ~8-9 characters
-// ("St. Patrick's Day", "Festival of Lights", etc.). A single-column list
-// gives every name the full row width, so nothing needs truncating; the
-// swatch itself already carries most of the "which one is this" signal at a
-// glance, with the name as the reliable, always-fully-readable identifier.
-function ThemeList({
-  themes,
-  active,
-  onSelect,
-}: {
-  themes: ThemeOption[];
-  // Widened beyond ThemeId so these two can be reused verbatim for the Card
-  // back picker below (see CardBackSection), whose "active" value can also
-  // be "match" — a value no real theme's id equals, so it just never
-  // highlights anything, exactly the right rendering for that state.
-  active: ThemeId | "match";
-  onSelect: (id: ThemeId) => void;
-}) {
+function CheckBadge({ className }: { className: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      {themes.map((t) => {
-        const swatch = THEME_SWATCHES[t.id];
-        const isActive = active === t.id;
-        return (
-          <button
-            key={t.id}
-            onClick={() => onSelect(t.id)}
-            aria-current={isActive}
-            className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
-              isActive ? "bg-[var(--accent)]/15" : "hover:bg-[var(--panel)]"
-            }`}
-          >
-            <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition ${
-                isActive ? "border-[var(--accent)]" : "border-transparent"
-              }`}
-              style={{ background: swatch.bg }}
-            >
-              <span
-                className="h-4 w-4 rounded-full border"
-                style={{ background: swatch.panel, borderColor: swatch.accent }}
-              />
-            </span>
-            <span className="min-w-0 flex-1 text-sm font-medium text-[var(--heading)]">{t.name}</span>
-            {isActive && (
-              <svg
-                viewBox="0 0 20 20"
-                className="h-4 w-4 shrink-0 text-[var(--accent)]"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </button>
-        );
-      })}
+    <svg viewBox="0 0 20 20" className={className} fill="currentColor" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+// A skin-picker tile — a color block up top (the actual preview, since a
+// theme's page background is the one thing every other choice below it
+// tints), a name label on its own strip in that theme's own panel/heading
+// colors, and a corner checkmark badge when selected. Replaces the old
+// single-column list of tiny circular swatches: this reads at a glance the
+// way a cosmetic grid in most modern games already does, and a genuine
+// color block (not a 32px dot) is a far more honest preview of what a theme
+// actually looks like once applied.
+function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
+  const swatch = THEME_SWATCHES[option.id];
+  return (
+    <button
+      onClick={onClick}
+      aria-current={isActive}
+      title={option.description}
+      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
+        isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
+      }`}
+    >
+      <span className="flex h-11 items-end justify-end p-1.5" style={{ background: swatch.bg }} aria-hidden="true">
+        <span className="h-3.5 w-3.5 rounded-full shadow" style={{ background: swatch.accent }} />
+      </span>
+      <span className="px-2 py-1.5" style={{ background: swatch.panel }}>
+        <span className="block truncate text-xs font-medium" style={{ color: swatch.heading }}>
+          {option.name}
+        </span>
+      </span>
+      {isActive && (
+        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow">
+          <CheckBadge className="h-2.5 w-2.5" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+// The Card back picker's one non-color option — sized and styled to sit
+// naturally above the same tile grid rather than looking like a stray extra
+// row, since "always match whatever theme is active" isn't a preview-able
+// color the way every other card back option is.
+function MatchThemeTile({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={isActive}
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ring-2 transition ${
+        isActive ? "bg-[var(--accent)]/10 ring-[var(--accent)]" : "bg-[var(--panel)] ring-transparent hover:ring-[var(--border)]"
+      }`}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--panel-soft)]" aria-hidden="true">
+        <svg viewBox="0 0 20 20" className="h-4 w-4 text-[var(--accent)]" fill="none">
+          <rect x="2.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
+          <rect x="8.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
+        </svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-[var(--heading)]">Match table theme</span>
+        <span className="block text-xs text-[var(--faint)]">Always follows whichever theme is active above.</span>
+      </span>
+      {isActive && <CheckBadge className="h-4 w-4 shrink-0 text-[var(--accent)]" />}
+    </button>
+  );
+}
+
+const CATEGORIES: ThemeCategory[] = ["classic", "holiday"];
+
+// A segmented Classic/Holiday switch instead of two independently
+// expand/collapse sections — only one category's grid is ever on screen at
+// once, which is what actually keeps ~38 options from turning into a long
+// scroll: a "Show ▼" disclosure still leaves the *other* category's rows
+// sitting there once opened, where a tab just replaces the grid outright.
+function CategoryTabs({ tab, onChange }: { tab: ThemeCategory; onChange: (t: ThemeCategory) => void }) {
+  return (
+    <div className="flex gap-1 rounded-lg bg-[var(--panel-soft)] p-1" role="tablist">
+      {CATEGORIES.map((c) => (
+        <button
+          key={c}
+          role="tab"
+          aria-selected={tab === c}
+          onClick={() => onChange(c)}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium capitalize transition ${
+            tab === c
+              ? "bg-[var(--accent)] text-[var(--on-accent)]"
+              : "text-[var(--muted)] hover:bg-[var(--panel)]"
+          }`}
+        >
+          {c}
+        </button>
+      ))}
     </div>
   );
 }
 
-// Collapsed by default (except whichever category holds the currently
-// active theme) so the settings page doesn't open with ~38 rows' worth of
-// theme list already unfurled — same collapse-by-default reasoning as the
-// "Player activity this round" table on the game board. Plain useState
-// rather than the native <details> InfoDetails uses elsewhere: this needs a
-// visible open row-count and an explicit Show/Hide affordance bigger than a
-// bare disclosure triangle, since tapping into a ~20-row list is a more
-// deliberate action than glancing at a one-line setting description.
-function ThemeCategorySection({
-  title,
-  themes,
+/**
+ * Shared by Theme and Card back below — both are "pick one of the same 38
+ * looks" pickers, just applied to a different part of the page. Opens on
+ * whichever tab the current selection belongs to (so the first thing you
+ * see is never a grid with nothing highlighted in it), and keeps a compact
+ * "Currently: X" line visible above the tabs regardless of which one you're
+ * browsing — the one piece of the old layout the redesign deliberately kept:
+ * a quick answer to "what's active right now" that doesn't depend on being
+ * on the right tab to see it.
+ */
+function SwatchPicker({
   active,
   onSelect,
-  defaultOpen,
+  matchOption,
 }: {
-  title: string;
-  themes: ThemeOption[];
-  // Widened beyond ThemeId so these two can be reused verbatim for the Card
-  // back picker below (see CardBackSection), whose "active" value can also
-  // be "match" — a value no real theme's id equals, so it just never
-  // highlights anything, exactly the right rendering for that state.
   active: ThemeId | "match";
-  onSelect: (id: ThemeId) => void;
-  defaultOpen: boolean;
+  onSelect: (id: ThemeId | "match") => void;
+  matchOption?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const activeOption = active === "match" ? undefined : THEMES.find((t) => t.id === active);
+  const [tab, setTab] = useState<ThemeCategory>(activeOption?.category ?? "classic");
+  const visible = THEMES.filter((t) => t.category === tab);
+  const currentSwatch = activeOption ? THEME_SWATCHES[activeOption.id] : undefined;
+
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-left"
-        aria-expanded={open}
-      >
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-          {title} <span className="normal-case text-[var(--faint)]">({themes.length})</span>
-        </h3>
-        <span className="text-xs text-[var(--faint)]">{open ? "Hide ▲" : "Show ▼"}</span>
-      </button>
-      {open && <ThemeList themes={themes} active={active} onSelect={onSelect} />}
+    <div className="flex flex-col gap-2.5">
+      <p className="flex items-center gap-2 text-xs text-[var(--faint)]">
+        {currentSwatch && (
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: currentSwatch.accent }}
+            aria-hidden="true"
+          />
+        )}
+        Currently:{" "}
+        <span className="font-semibold text-[var(--muted)]">
+          {activeOption ? activeOption.name : "Match table theme"}
+        </span>
+      </p>
+
+      {matchOption && <MatchThemeTile isActive={active === "match"} onClick={() => onSelect("match")} />}
+
+      <CategoryTabs tab={tab} onChange={setTab} />
+
+      <div className="grid grid-cols-2 gap-2">
+        {visible.map((t) => (
+          <SwatchTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -422,45 +470,7 @@ export default function SettingsPage() {
         <>
           <section className="flex flex-col gap-3">
             <label className="text-sm font-medium text-[var(--muted)]">Theme</label>
-
-            {(() => {
-              const active = THEMES.find((t) => t.id === theme);
-              const swatch = THEME_SWATCHES[theme];
-              if (!active) return null;
-              return (
-                <div className="flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5">
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent)]"
-                    style={{ background: swatch.bg }}
-                  >
-                    <span
-                      className="h-5 w-5 rounded-full border"
-                      style={{ background: swatch.panel, borderColor: swatch.accent }}
-                    />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--heading)]">{active.name}</p>
-                    <p className="text-xs text-[var(--faint)]">{active.description}</p>
-                  </div>
-                </div>
-              );
-            })()}
-
-            <ThemeCategorySection
-              title="Classic"
-              themes={THEMES.filter((t) => t.category === "classic")}
-              active={theme}
-              onSelect={handleThemeChange}
-              defaultOpen={THEMES.find((t) => t.id === theme)?.category === "classic"}
-            />
-
-            <ThemeCategorySection
-              title="Holiday"
-              themes={THEMES.filter((t) => t.category === "holiday")}
-              active={theme}
-              onSelect={handleThemeChange}
-              defaultOpen={THEMES.find((t) => t.id === theme)?.category === "holiday"}
-            />
+            <SwatchPicker active={theme} onSelect={(id) => id !== "match" && handleThemeChange(id)} />
           </section>
 
           <section className="flex flex-col gap-3">
@@ -469,61 +479,7 @@ export default function SettingsPage() {
               player&apos;s hand while it&apos;s face down. Separate from Theme above, so any
               table look can be paired with any card back.
             </InfoDetails>
-
-            <button
-              onClick={() => handleCardBackChange("match")}
-              aria-current={cardBack === "match"}
-              className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
-                cardBack === "match" ? "bg-[var(--accent)]/15" : "hover:bg-[var(--panel)]"
-              }`}
-            >
-              <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-soft)] transition ${
-                  cardBack === "match" ? "border-[var(--accent)]" : "border-transparent"
-                }`}
-              >
-                <svg viewBox="0 0 20 20" className="h-4 w-4 text-[var(--accent)]" fill="none" aria-hidden="true">
-                  <rect x="2.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
-                  <rect x="8.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
-                </svg>
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-[var(--heading)]">Match table theme</span>
-                <span className="block text-xs text-[var(--faint)]">
-                  Always follows whichever theme is active above.
-                </span>
-              </span>
-              {cardBack === "match" && (
-                <svg
-                  viewBox="0 0 20 20"
-                  className="h-4 w-4 shrink-0 text-[var(--accent)]"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </button>
-
-            <ThemeCategorySection
-              title="Classic"
-              themes={THEMES.filter((t) => t.category === "classic")}
-              active={cardBack}
-              onSelect={handleCardBackChange}
-              defaultOpen={THEMES.find((t) => t.id === cardBack)?.category === "classic"}
-            />
-
-            <ThemeCategorySection
-              title="Holiday"
-              themes={THEMES.filter((t) => t.category === "holiday")}
-              active={cardBack}
-              onSelect={handleCardBackChange}
-              defaultOpen={THEMES.find((t) => t.id === cardBack)?.category === "holiday"}
-            />
+            <SwatchPicker active={cardBack} onSelect={handleCardBackChange} matchOption />
           </section>
 
           <section className="flex flex-col gap-2">

@@ -53,12 +53,31 @@ export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
   ],
 };
 
-/** The fixed rival for Daily Deal (see dailyDealStore.ts) — deliberately
+/** The fixed rivals for Daily Deal (see dailyDealStore.ts) — deliberately
  * NOT randomized like a normal game's opponents (see pickAiPersonas): the
  * whole point of a daily challenge is comparing today's result against your
- * own history, so the opponent needs to stay the exact same "character"
- * every day rather than reshuffling like a regular New Game would. */
-export const DAILY_DEAL_PERSONA: AiPersona = AI_PERSONAS.medium[0];
+ * own history, so the table needs to stay the exact same every day rather
+ * than reshuffling like a regular New Game would. Two, not one — Daily Deal
+ * is never a 2-player game (see dailyDealStore.ts's own doc). */
+export const DAILY_DEAL_PERSONAS: AiPersona[] = [AI_PERSONAS.medium[0], AI_PERSONAS.medium[1]];
+
+/**
+ * A cosmetic "power level" per difficulty — pure flavor, not derived from
+ * any AI's actual play the way a real account's level is (see
+ * leveling.ts's xpForLevel/levelForXp) — but deliberately chosen to sit
+ * plausibly on that same curve: Level 50 there means roughly 125,000
+ * lifetime XP, the kind of total only a genuinely dedicated player would
+ * ever reach, which is exactly the read an Expert opponent should give at a
+ * glance. Shown next to an AI's name the same place a signed-in account's
+ * own real level already shows (see game/page.tsx's score list).
+ */
+export const AI_THEORETICAL_LEVEL: Record<Difficulty, number> = {
+  beginner: 1,
+  easy: 5,
+  medium: 15,
+  hard: 30,
+  expert: 50,
+};
 
 function personaKey(p: AiPersona): string {
   return `${p.avatar} ${p.name}`;
