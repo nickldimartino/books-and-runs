@@ -43,10 +43,15 @@ const MIN_STEP = 14;
  * A compact, read-only preview of the active player's whole hand, pinned to
  * the bottom of the viewport on phones (sm:hidden — laptops/tablets already
  * have room to see the piles, table, and hand without much scrolling, so
- * this would just be redundant chrome there). Cards fan out — each one
+ * this would just be redundant chrome there). Cards only fan out — each one
  * overlapping the last, corner rank/suit only, the way a hand of real cards
- * held in a fan still reads at a glance — rather than shrinking to fit,
- * which would make a full 13-card hand illegibly tiny. It exists purely so
+ * held in a fan still reads at a glance — once the hand's too big to fit at
+ * its natural spacing (see `fanned` below); shrinking every hand to fit,
+ * even a small one with room to spare, would make a full 13-card hand
+ * illegibly tiny for no benefit to a 3-card one. A small enough hand just
+ * sits at its natural spacing instead, each card centered like every other
+ * card in the app, since nothing's actually overlapping to hide behind a
+ * corner. It exists purely so
  * a player can see their whole hand without hunting for it while scrolling
  * a long Table melds section; tapping it jumps to the real, full-size,
  * interactive hand section below (see onTap) rather than trying to make
@@ -81,6 +86,15 @@ export function HandPreviewBar({ cards, hidden, onTap, selectedCardIds, showOnAl
   const naturalStep = CARD_W + GAP;
   const step =
     cards.length <= 1 ? naturalStep : Math.max(MIN_STEP, Math.min(naturalStep, (available - CARD_W) / (cards.length - 1)));
+  // step only ever gets compressed *down from* naturalStep when the hand
+  // doesn't fit at its natural spacing — so step === naturalStep is exactly
+  // "nothing needed shrinking," i.e. no card is actually overlapping its
+  // neighbor. Corner-aligned rank/suit only matters once that's no longer
+  // true: it's what keeps a card's identifying text out from under whatever
+  // overlaps it. A hand small enough to sit at its natural spacing has
+  // nothing overlapping anything, so it reads the same centered way every
+  // other card in the app does instead.
+  const fanned = step < naturalStep;
 
   return (
     <button
@@ -115,6 +129,7 @@ export function HandPreviewBar({ cards, hidden, onTap, selectedCardIds, showOnAl
             card={card}
             marginLeft={i === 0 ? 0 : step - CARD_W}
             selected={!!selectedCardIds?.includes(card.id)}
+            fanned={fanned}
           />
         ))}
       </div>
@@ -122,7 +137,17 @@ export function HandPreviewBar({ cards, hidden, onTap, selectedCardIds, showOnAl
   );
 }
 
-function MiniCard({ card, marginLeft, selected }: { card: Card; marginLeft: number; selected: boolean }) {
+function MiniCard({
+  card,
+  marginLeft,
+  selected,
+  fanned,
+}: {
+  card: Card;
+  marginLeft: number;
+  selected: boolean;
+  fanned: boolean;
+}) {
   const isRed = RED_SUITS.has(card.suit);
   const colorClass = card.isWild ? "wild" : isRed ? "red" : "";
   const label = card.rank === "JOKER" ? "JKR" : card.rank;
@@ -132,19 +157,21 @@ function MiniCard({ card, marginLeft, selected }: { card: Card; marginLeft: numb
     <div
       style={style}
       // Reuses .card-face (and its red/wild modifiers) from globals.css —
-      // same theme-aware background/text colors as every real card, just a
-      // smaller box with the rank/suit left-aligned in the corner instead of
-      // centered, so an overlapped card's identifying text stays visible in
-      // front of whatever's stacked on top of it. The selected ring uses a
+      // same theme-aware background/text colors as every real card. Layout
+      // depends on whether anything's actually overlapping (see `fanned`
+      // above): corner-aligned rank/suit only while fanned, so an
+      // overlapped card's identifying text stays visible in front of
+      // whatever's stacked on top of it; otherwise centered, the same way
+      // every other card in the app reads. The selected ring uses a
       // relative z-index bump too — otherwise a later (overlapping) card's
       // own box would paint over this one's ring on the shared edge between
       // them, since normal DOM/paint order alone doesn't account for it.
-      className={`card-face ${colorClass} shrink-0 rounded-md p-1 text-left text-[11px] font-bold leading-none ${
-        selected ? "relative z-10 ring-2 ring-[var(--accent)]" : ""
-      }`}
+      className={`card-face ${colorClass} shrink-0 rounded-md text-[11px] font-bold leading-none ${
+        fanned ? "p-1 text-left" : "flex flex-col items-center justify-center gap-0.5"
+      } ${selected ? "relative z-10 ring-2 ring-[var(--accent)]" : ""}`}
     >
       <div>{label}</div>
-      <div className="mt-0.5">{SUIT_SYMBOL[card.suit]}</div>
+      <div className={fanned ? "mt-0.5" : undefined}>{SUIT_SYMBOL[card.suit]}</div>
     </div>
   );
 }
