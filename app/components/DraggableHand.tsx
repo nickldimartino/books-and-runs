@@ -153,12 +153,29 @@ export function DraggableHand({
   // FLIP (below) means every card starts this slide from the exact same
   // fully-settled state — first card or last, sorted seconds after dealing
   // or minutes later.
+  //
+  // Deliberately skipped entirely while a drag is actively in progress
+  // (dragRef.current set): moveTo() below calls setOrder on essentially
+  // every pointermove as cards swap live under the finger, which is many
+  // times more often than a single sort click — this same FLIP math applied
+  // that often measures cards mid-transition from the *previous* swap and
+  // inverts from there, and each successive swap compounds on the last,
+  // visibly launching cards to wildly wrong positions well before they'd
+  // ever finish easing into place. A live drag already gives its own
+  // real-time feedback (the swapped cards' new flex slots track the pointer
+  // immediately, same as before this animation existed) — actually easing
+  // that would just add lag against a finger that's still moving. Still
+  // updating prevRectsRef below either way, so the moment the drag ends
+  // (dragRef.current cleared) this has an accurate baseline again — the
+  // *next* reorder (a sort click, or the drop's own final settle, which by
+  // then already matches the live preview so has nothing left to animate)
+  // still gets the real slide.
   useLayoutEffect(() => {
     const prevRects = prevRectsRef.current;
     const newRects = new Map<string, DOMRect>();
     cardElRefs.current.forEach((el, id) => newRects.set(id, el.getBoundingClientRect()));
 
-    if (prevRects) {
+    if (prevRects && !dragRef.current) {
       handRootRef.current?.querySelectorAll<HTMLElement>(".card-enter").forEach((el) => {
         el.getAnimations().forEach((anim) => {
           if (anim.playState === "running") anim.finish();
@@ -222,6 +239,15 @@ export function DraggableHand({
     drag.dragging = true;
     setDragId(card.id);
     setPointerPos({ x: drag.lastX, y: drag.lastY });
+    // A card grabbed right after a sort/reorder could still be mid-slide
+    // from the FLIP transition above — snap any leftover transform/transition
+    // off every card right now, so the live drag (which deliberately skips
+    // that animation entirely, see the effect above) starts from a clean,
+    // untransformed layout rather than inheriting some in-flight offset.
+    cardElRefs.current.forEach((el) => {
+      el.style.transition = "none";
+      el.style.transform = "";
+    });
   }
 
   function moveTo(card: Card, x: number, y: number) {
