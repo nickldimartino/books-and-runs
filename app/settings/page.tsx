@@ -486,7 +486,7 @@ export default function SettingsPage() {
             label="Expandable hand drawer"
             value={settings.expandableHand}
             onChange={(v) => updateSettings({ expandableHand: v })}
-            description="Instead of scrolling down to your hand, tap the compact preview pinned to the bottom of the screen to open it — sorting, dragging, grouping a meld, laying off, and discarding all happen right there, without scrolling. Off by default; the tutorial always uses the regular scrolling layout regardless of this."
+            description="Instead of scrolling down to your hand, tap the compact preview pinned to the bottom of the screen to open it — sorting, dragging, grouping a meld, laying off, and discarding all happen right there, without scrolling. On by default; the tutorial always uses the regular scrolling layout regardless of this."
           />
 
           <BoolToggle

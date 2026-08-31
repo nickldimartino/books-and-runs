@@ -583,9 +583,9 @@ export default function GamePage() {
   }
 
   // Extracted so the exact same JSX can render either inline in the normal
-  // page flow (the default layout) or inside the hand drawer (see
-  // useDrawerLayout and its render further down) — one definition, two
-  // possible places to mount it, never both at once.
+  // page flow (the scroll layout — expandableHand off) or inside the hand
+  // drawer (see useDrawerLayout and its render further down) — one
+  // definition, two possible places to mount it, never both at once.
   const buildMeldSection = !player.hasMeldedContract && (
     <section data-tutorial="build-meld" className="panel-elevated flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
@@ -1186,8 +1186,8 @@ export default function GamePage() {
               melds pushing the page's true end past the viewport, its
               bottom few players' cards stayed hidden behind the bar no
               matter how far down the page was scrolled) — but harmless
-              even in the default layout, where the bar does eventually
-              hide once you reach the real hand section; this just leaves a
+              even in the scroll layout, where the bar does eventually hide
+              once you reach the real hand section; this just leaves a
               little empty space below it until then. */}
           <div aria-hidden="true" className="h-20" />
         </>
