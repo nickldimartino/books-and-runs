@@ -945,25 +945,21 @@ export default function GamePage() {
         </div>
         <div className="min-w-0 px-1 text-center">
           {!player.isAI && (
-            // Just "Hand" rather than "Your hand"/"{name}'s hand" — whose
-            // turn is revealed is already obvious from the rest of the
-            // screen, and the shorter label leaves more of this naturally-
-            // sized flex row for the score list on the right, which is the
-            // one column that actually needs the room (see its own
-            // comment). Single line at a smaller size than before for the
-            // same reason — this cell is deliberately the one allowed to
-            // shrink first if the row is ever genuinely tight.
-            <p className="text-sm text-[var(--muted)]">
-              <span className="uppercase tracking-wide text-[var(--faint)]">Hand</span>{" "}
-              {/* whitespace-nowrap keeps "175 pts" together as one unit if
-                  this cell ever does need to wrap (see its own comment
-                  above) — a wrap landing between "Hand" and the number
-                  reads fine; one landing between the number and "pts"
-                  doesn't. */}
-              <span className="whitespace-nowrap font-bold text-[var(--heading)]">
+            // Label-then-value, same two classes as the round-info cell's
+            // own pair — reads as the same kind of thing at a glance
+            // instead of a differently-shaped one-liner squeezed in between
+            // them. Splitting across two lines also means each line's own
+            // width is whichever of "Your hand"/"{name}'s hand" or "N pts"
+            // is wider, not their combined width — narrower, if anything,
+            // than the single-line version this replaces.
+            <>
+              <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+                {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+              </p>
+              <p className="text-lg font-bold leading-tight text-[var(--heading)]">
                 {handPenalty(player.hand)} pts
-              </span>
-            </p>
+              </p>
+            </>
           )}
         </div>
         {/* One player per line — the original layout, restored. A vertical
