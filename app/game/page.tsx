@@ -925,9 +925,13 @@ export default function GamePage() {
         // content was conditionally empty. The middle cell is still always
         // rendered (content conditional, not the cell itself) purely for a
         // steady row height — not load-bearing for the slide bug anymore.
-        className="panel-elevated flex items-start justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3"
+        // items-center (not items-start) vertically centers all three
+        // against each other — the score list is taller than "Hand" in
+        // every game with 2+ players, and top-aligning left "Hand" looking
+        // stranded near the top with empty space below it.
+        className="panel-elevated flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3"
       >
-        <div className="shrink-0">
+        <div className="shrink-0 text-center">
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
             Round {state.round} of {state.selectedContracts.length}
           </p>
@@ -970,8 +974,11 @@ export default function GamePage() {
             carrying a Lv badge too (see AI_THEORETICAL_LEVEL). shrink-0
             keeps flex from ever shrinking this one to make room for its
             neighbors — the "Hand" cell above is the one meant to give way
-            first if the row is ever genuinely tight. */}
-        <ul className="shrink-0 text-right text-xs text-[var(--muted)]">
+            first if the row is ever genuinely tight. text-center (not
+            text-right) matches the other two cells, now that all three are
+            meant to read as centered blocks rather than each pinned to a
+            different edge. */}
+        <ul className="shrink-0 text-center text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
