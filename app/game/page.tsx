@@ -632,31 +632,49 @@ export default function GamePage() {
           )}
 
           {pendingLayOff && (
-            <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent)]/60 bg-[var(--panel)] p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Which card is this wild standing in for?
-              </h2>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => chooseLayOffDirection("low")}
-                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
-                >
-                  {directionRank(pendingLayOff.meld, "low")}
-                </button>
-                <button
-                  onClick={() => chooseLayOffDirection("high")}
-                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
-                >
-                  {directionRank(pendingLayOff.meld, "high")}
-                </button>
-                <button
-                  onClick={() => setPendingLayOff(null)}
-                  className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
-                >
-                  Cancel
-                </button>
-              </div>
-            </section>
+            // Fixed + viewport-centered, the same idea as the "It's ___'s
+            // turn!" banner above (position: fixed so scrolling can never
+            // carry it out of view) — but centered rather than top-anchored,
+            // and with a heavier shadow, because this one isn't a passing
+            // notice: it's a decision the game is actually blocked on (see
+            // the Discard button's disabled check below), so it needs to
+            // read as "waiting on you," not just "FYI." On a tall Table
+            // melds section on a phone, this used to render inline right
+            // after the draw piles — exactly the kind of "answered near the
+            // top of a page you've already scrolled past" spot most likely
+            // to go unnoticed, since laying a wild off is something you do
+            // by tapping a meld that can be far down the page.
+            <div
+              role="alertdialog"
+              aria-label="Which card is this wild standing in for?"
+              className="fixed inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center px-4"
+            >
+              <section className="flex w-full max-w-xs flex-col gap-3 rounded-xl border border-[var(--accent)]/60 bg-[var(--panel)] p-4 shadow-xl">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                  Which card is this wild standing in for?
+                </h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => chooseLayOffDirection("low")}
+                    className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                  >
+                    {directionRank(pendingLayOff.meld, "low")}
+                  </button>
+                  <button
+                    onClick={() => chooseLayOffDirection("high")}
+                    className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                  >
+                    {directionRank(pendingLayOff.meld, "high")}
+                  </button>
+                  <button
+                    onClick={() => setPendingLayOff(null)}
+                    className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </section>
+            </div>
           )}
 
           <section data-tutorial="table-melds" className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4">
