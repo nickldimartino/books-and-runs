@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode, useEffect, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
@@ -228,16 +228,23 @@ function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActi
 }
 
 // The Card back picker's own tile — a card back's identity is its motif
-// (diamonds, lightning bolts, peppermint stripes…), not a table felt color,
-// so this shows the real thing rather than SwatchTile's flat color block.
-// `data-cardback` on the preview's own wrapper scopes globals.css's
-// [data-cardback="X"] custom properties locally to just this element and
-// its children — the same mechanism the real draw pile uses, just applied
-// to a tiny detached preview instead of the live game — so the `.card-back`
-// span below picks up option.id's own frozen shape/tile/color regardless of
-// whatever card back is actually active on <html> right now. No separate
-// hand-maintained shape data needed the way THEME_SWATCHES' colors are.
+// (diamonds, lightning bolts, peppermint stripes…) *and* the background it
+// sits on (several of the dark themes' card backs are themselves dark), not
+// a table felt color, so this shows the real thing rather than SwatchTile's
+// flat color block. The `.card-back` class goes directly on the swatch
+// area itself — full tile width, not a small floating icon — with
+// `data-cardback` scoping globals.css's [data-cardback="X"] custom
+// properties locally to just this element and its children (the same
+// mechanism the real draw pile uses, just applied to a detached preview
+// instead of the live game), and an inline `--accent` override so even its
+// box-shadow glow matches this option's own frozen color instead of
+// whatever theme happens to be active on <html> right now. The background
+// itself is that option's own literal bg (from THEME_SWATCHES, the same
+// source SwatchTile's felt-color preview already uses) rather than the
+// live --elevated var, which is what actually makes a dark card back read
+// as dark here regardless of the currently active table theme.
 function CardBackTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
+  const swatch = THEME_SWATCHES[option.id];
   return (
     <button
       onClick={onClick}
@@ -249,13 +256,14 @@ function CardBackTile({ option, isActive, onClick }: { option: ThemeOption; isAc
     >
       <span
         data-cardback={option.id}
-        className="flex h-11 items-center justify-center bg-[var(--panel-soft)]"
+        className="card-back flex h-11 items-center justify-center"
+        style={{ background: swatch.bg, "--accent": swatch.accent } as CSSProperties}
         aria-hidden="true"
-      >
-        <span className="card-back h-8 w-6 shrink-0 rounded-md border-2 border-[var(--accent)]/30 bg-[var(--elevated)]" />
-      </span>
-      <span className="px-2 py-1.5 bg-[var(--panel)]">
-        <span className="block truncate text-xs font-medium text-[var(--heading)]">{option.name}</span>
+      />
+      <span className="px-2 py-1.5" style={{ background: swatch.panel }}>
+        <span className="block truncate text-xs font-medium" style={{ color: swatch.heading }}>
+          {option.name}
+        </span>
       </span>
       {isActive && (
         <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow">
