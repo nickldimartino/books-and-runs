@@ -913,74 +913,69 @@ export default function GamePage() {
 
       <header
         data-tutorial="round-header"
-        className="panel-elevated flex flex-col gap-2 rounded-xl bg-[var(--panel)] px-4 py-3"
+        // flex justify-between, not grid — the score list below goes back
+        // to one player per line (see its own comment), so its column no
+        // longer needs a fixed width to stay wrap-free; flex just gives
+        // each of these three its own natural width and spaces them apart,
+        // which also happens to sidestep the old grid-auto-placement bug
+        // outright: with justify-between, the *last* flex child always
+        // stays pinned to the row's right edge regardless of how many
+        // children exist, so there's no way for the score list to "slide
+        // left" the way it once did in a grid when the middle cell's
+        // content was conditionally empty. The middle cell is still always
+        // rendered (content conditional, not the cell itself) purely for a
+        // steady row height — not load-bearing for the slide bug anymore.
+        className="panel-elevated flex items-start justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3"
       >
-        {/* grid, not flex justify-between — a 2-way split needs its own
-            column widths fixed regardless of how much text either side
-            holds, which justify-between can't guarantee (it only equalizes
-            the gap *between* items, not each one's own width). */}
-        <div className="grid grid-cols-2 items-center">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-              Round {state.round} of {state.selectedContracts.length}
-            </p>
-            <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-              {contractLabelLines(contract.label).map((line, i) => (
-                <span key={i} className="block">
-                  {line}
-                </span>
-              ))}
-            </p>
-          </div>
-          {/* This grid cell itself is never conditional, even though its
-              content is — only for the active human's own turn, since an
-              AI's turn already skips straight to its own "is playing…"
-              placeholder below (a pass-and-play human only ever sees this
-              screen during their own revealed turn, same as the rest of the
-              board, so this never shows anyone a hand that isn't already
-              fully visible on screen). Omitting the whole grid item on an
-              AI's turn — instead of just leaving it empty like this — was
-              a real bug once already: with only 1 real child left in the
-              DOM, a 2-column grid still has 2 columns, but auto-placement
-              of a *second*, unrelated element later in this header (the
-              score list, before it moved to its own full-width row below)
-              could slide into whichever slot this one left empty. Kept
-              defensively even now that the score list lives outside this
-              grid entirely. */}
-          <div className="text-center">
-            {!player.isAI && (
-              // Two lines (label, then value) rather than one "Your hand
-              // (125 pts)" line — mirrors the round-info column's own
-              // label/value shape on the left, and matters more than just
-              // consistency: a one-liner here was wide enough to wrap
-              // mid-phrase on a phone, splitting "125" from "pts" across two
-              // lines. Each line alone is short enough not to.
-              <>
-                <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-                  {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
-                </p>
-                <p className="text-lg font-bold text-[var(--heading)]">{handPenalty(player.hand)} pts</p>
-              </>
-            )}
-          </div>
+        <div className="shrink-0">
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+            Round {state.round} of {state.selectedContracts.length}
+          </p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+            {contractLabelLines(contract.label).map((line, i) => (
+              <span key={i} className="block">
+                {line}
+              </span>
+            ))}
+          </p>
         </div>
-
-        {/* Its own full-width, flex-wrapping row rather than a third grid
-            column — a fixed-width column here is exactly what made this
-            wrap badly once AI names started carrying a Lv badge too (see
-            AI_THEORETICAL_LEVEL): a 3-6 player game squeezed every player's
-            "Lv15 🦉 Hedda: 0" into a column maybe a third of the header's
-            width on a phone, wide enough to wrap mid-entry — sometimes
-            right between the badge and the name. flex-wrap here lets the
-            row grow to the header's full width first, and only wraps once
-            it's genuinely out of room; whitespace-nowrap on each entry
-            below means a wrap always moves a whole player to the next
-            line, never splits one badge/name/score apart from itself. */}
-        <ul className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs text-[var(--muted)]">
+        <div className="min-w-0 px-1 text-center">
+          {!player.isAI && (
+            // Just "Hand" rather than "Your hand"/"{name}'s hand" — whose
+            // turn is revealed is already obvious from the rest of the
+            // screen, and the shorter label leaves more of this naturally-
+            // sized flex row for the score list on the right, which is the
+            // one column that actually needs the room (see its own
+            // comment). Single line at a smaller size than before for the
+            // same reason — this cell is deliberately the one allowed to
+            // shrink first if the row is ever genuinely tight.
+            <p className="text-sm text-[var(--muted)]">
+              <span className="uppercase tracking-wide text-[var(--faint)]">Hand</span>{" "}
+              {/* whitespace-nowrap keeps "175 pts" together as one unit if
+                  this cell ever does need to wrap (see its own comment
+                  above) — a wrap landing between "Hand" and the number
+                  reads fine; one landing between the number and "pts"
+                  doesn't. */}
+              <span className="whitespace-nowrap font-bold text-[var(--heading)]">
+                {handPenalty(player.hand)} pts
+              </span>
+            </p>
+          )}
+        </div>
+        {/* One player per line — the original layout, restored. A vertical
+            list's width is set by its single widest line, not by how many
+            players there are, so a bigger table just makes this column
+            taller, never wider — unlike the horizontal, wrapping row this
+            replaces, which got visibly cramped the moment AI names started
+            carrying a Lv badge too (see AI_THEORETICAL_LEVEL). shrink-0
+            keeps flex from ever shrinking this one to make room for its
+            neighbors — the "Hand" cell above is the one meant to give way
+            first if the row is ever genuinely tight. */}
+        <ul className="shrink-0 text-right text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
-              <li key={p.id} className="whitespace-nowrap">
+              <li key={p.id}>
                 {p.id === YOU_PLAYER_ID && level && (
                   <span className="mr-1 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
                     Lv{level.level}
