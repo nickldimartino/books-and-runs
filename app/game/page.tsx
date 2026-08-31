@@ -1174,6 +1174,22 @@ export default function GamePage() {
               />
             </>
           )}
+
+          {/* Reserves room at the very bottom of the scrollable page for
+              HandPreviewBar's own fixed height (~67px — CARD_H plus its
+              vertical padding/border) — without it, whatever ends up being
+              the last real content on the page can be permanently covered
+              with no way to scroll further and reveal it: the *page's own*
+              scroll extent has no idea a fixed element is sitting on top of
+              its end. Matters most for the drawer layout, where the bar
+              never hides at all (reported: with several players' Table
+              melds pushing the page's true end past the viewport, its
+              bottom few players' cards stayed hidden behind the bar no
+              matter how far down the page was scrolled) — but harmless
+              even in the default layout, where the bar does eventually
+              hide once you reach the real hand section; this just leaves a
+              little empty space below it until then. */}
+          <div aria-hidden="true" className="h-20" />
         </>
       )}
 
