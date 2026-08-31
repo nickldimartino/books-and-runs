@@ -4,6 +4,13 @@ import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import {
+  applyCardBack,
+  CardBackId,
+  DEFAULT_CARD_BACK,
+  loadLocalCardBack,
+  saveLocalCardBack,
+} from "../lib/cardBackStore";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import {
   applyTheme,
@@ -185,7 +192,11 @@ function ThemeList({
   onSelect,
 }: {
   themes: ThemeOption[];
-  active: ThemeId;
+  // Widened beyond ThemeId so these two can be reused verbatim for the Card
+  // back picker below (see CardBackSection), whose "active" value can also
+  // be "match" — a value no real theme's id equals, so it just never
+  // highlights anything, exactly the right rendering for that state.
+  active: ThemeId | "match";
   onSelect: (id: ThemeId) => void;
 }) {
   return (
@@ -252,7 +263,11 @@ function ThemeCategorySection({
 }: {
   title: string;
   themes: ThemeOption[];
-  active: ThemeId;
+  // Widened beyond ThemeId so these two can be reused verbatim for the Card
+  // back picker below (see CardBackSection), whose "active" value can also
+  // be "match" — a value no real theme's id equals, so it just never
+  // highlights anything, exactly the right rendering for that state.
+  active: ThemeId | "match";
   onSelect: (id: ThemeId) => void;
   defaultOpen: boolean;
 }) {
@@ -278,6 +293,7 @@ export default function SettingsPage() {
   const { configured, user } = useAuth();
   const [settings, setSettings] = useState<HouseSettings>(DEFAULT_SETTINGS);
   const [theme, setTheme] = useState<ThemeId>("midnight");
+  const [cardBack, setCardBack] = useState<CardBackId>(DEFAULT_CARD_BACK);
   const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -286,6 +302,7 @@ export default function SettingsPage() {
   useEffect(() => {
     setSettings(loadLocalSettings());
     setTheme(loadLocalTheme());
+    setCardBack(loadLocalCardBack());
     setColorblindMode(loadLocalColorblindMode());
     if (!supabase || !user) {
       setLoading(false);
@@ -316,6 +333,19 @@ export default function SettingsPage() {
     setTheme(id);
     saveLocalTheme(id);
     applyTheme(id);
+    // Card back mirrors the table theme by default (cardBack === "match") —
+    // re-apply it here too so a "match" card back visibly follows the new
+    // theme immediately, the same instant-apply behavior every other choice
+    // on this page already has. A no-op (applyCardBack just re-sets the
+    // same explicit id back to itself) whenever an explicit card back is
+    // already chosen — changing the table theme must never disturb that.
+    applyCardBack(cardBack, id);
+  }
+
+  function handleCardBackChange(id: CardBackId) {
+    setCardBack(id);
+    saveLocalCardBack(id);
+    applyCardBack(id, theme);
   }
 
   function handleColorblindModeChange(mode: ColorblindMode) {
@@ -339,6 +369,9 @@ export default function SettingsPage() {
     setTheme(DEFAULT_THEME);
     saveLocalTheme(DEFAULT_THEME);
     applyTheme(DEFAULT_THEME);
+    setCardBack(DEFAULT_CARD_BACK);
+    saveLocalCardBack(DEFAULT_CARD_BACK);
+    applyCardBack(DEFAULT_CARD_BACK, DEFAULT_THEME);
     setColorblindMode(DEFAULT_COLORBLIND_MODE);
     saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
     applyColorblindMode(DEFAULT_COLORBLIND_MODE);
@@ -427,6 +460,69 @@ export default function SettingsPage() {
               active={theme}
               onSelect={handleThemeChange}
               defaultOpen={THEMES.find((t) => t.id === theme)?.category === "holiday"}
+            />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <InfoDetails label="Card back">
+              The pattern and color on the back of your cards — the draw pile, and another
+              player&apos;s hand while it&apos;s face down. Separate from Theme above, so any
+              table look can be paired with any card back.
+            </InfoDetails>
+
+            <button
+              onClick={() => handleCardBackChange("match")}
+              aria-current={cardBack === "match"}
+              className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
+                cardBack === "match" ? "bg-[var(--accent)]/15" : "hover:bg-[var(--panel)]"
+              }`}
+            >
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-soft)] transition ${
+                  cardBack === "match" ? "border-[var(--accent)]" : "border-transparent"
+                }`}
+              >
+                <svg viewBox="0 0 20 20" className="h-4 w-4 text-[var(--accent)]" fill="none" aria-hidden="true">
+                  <rect x="2.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
+                  <rect x="8.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-[var(--heading)]">Match table theme</span>
+                <span className="block text-xs text-[var(--faint)]">
+                  Always follows whichever theme is active above.
+                </span>
+              </span>
+              {cardBack === "match" && (
+                <svg
+                  viewBox="0 0 20 20"
+                  className="h-4 w-4 shrink-0 text-[var(--accent)]"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </button>
+
+            <ThemeCategorySection
+              title="Classic"
+              themes={THEMES.filter((t) => t.category === "classic")}
+              active={cardBack}
+              onSelect={handleCardBackChange}
+              defaultOpen={THEMES.find((t) => t.id === cardBack)?.category === "classic"}
+            />
+
+            <ThemeCategorySection
+              title="Holiday"
+              themes={THEMES.filter((t) => t.category === "holiday")}
+              active={cardBack}
+              onSelect={handleCardBackChange}
+              defaultOpen={THEMES.find((t) => t.id === cardBack)?.category === "holiday"}
             />
           </section>
 
@@ -561,7 +657,8 @@ export default function SettingsPage() {
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
               <p className="text-sm text-[var(--muted)]">
-                Reset theme, colorblind mode, and every toggle on this page back to their defaults?
+                Reset theme, card back, colorblind mode, and every toggle on this page back to their
+                defaults?
               </p>
               <div className="flex gap-3">
                 <button

@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { allAchievements, tierNumber } from "@/achievements";
+import { Confetti } from "./Confetti";
 import { Difficulty, GameState } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { DailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
 import { joinNames } from "../lib/formatNames";
 import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
@@ -24,7 +26,8 @@ interface XpLineItem {
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial, trackStats } = useGame();
+  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial, isDailyDeal, trackStats } =
+    useGame();
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
@@ -65,6 +68,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [xpBreakdown, setXpBreakdown] = useState<XpLineItem[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
 
   // While this screen is up, it owns retrying its own save — see
   // pendingSaveQueue.ts for why the background sync must not also touch it.
@@ -220,14 +224,66 @@ export function GameOverScreen({ state }: { state: GameState }) {
   }, [state, roundHistory, user, getSessionCounters, clearSessionCounters, refreshLevel, gameId]);
 
   useEffect(() => {
-    // Tutorial games are scripted practice — never touch Supabase, so they
-    // can't inflate stats/achievements or count toward "games played."
-    // trackStats is New Game's own opt-out (offered for 3+ pass-and-play
-    // human players) — same rule, skip the write outright.
-    if (recordedRef.current || !supabase || !user || isTutorial || !trackStats) return;
+    // Tutorial games are scripted practice, and Daily Deal is its own
+    // separate local streak (see the effect below) — neither ever touches
+    // Supabase, so neither can inflate stats/achievements or count toward
+    // "games played." trackStats is New Game's own opt-out (offered for 2+
+    // pass-and-play human players) — same rule, skip the write outright.
+    if (recordedRef.current || !supabase || !user || isTutorial || isDailyDeal || !trackStats) return;
     recordedRef.current = true;
     attemptSave();
-  }, [user, isTutorial, trackStats, attemptSave]);
+  }, [user, isTutorial, isDailyDeal, trackStats, attemptSave]);
+
+  // Local-only, and deliberately separate from the Supabase save above —
+  // see dailyDealStore.ts's own doc for why this needs no sign-in and never
+  // touches real stats. recordDailyDealResult is itself idempotent (a no-op
+  // once today's already recorded), so the ref here is just to avoid a
+  // redundant localStorage read/write on every re-render, not correctness.
+  const dailyDealRecordedRef = useRef(false);
+  const [dailyDealState, setDailyDealState] = useState<DailyDealState | null>(null);
+  useEffect(() => {
+    if (!isDailyDeal || dailyDealRecordedRef.current) return;
+    dailyDealRecordedRef.current = true;
+    setDailyDealState(recordDailyDealResult(state));
+  }, [isDailyDeal, state]);
+
+  // Without live multiplayer, a shared result is this game's only social
+  // loop — the sole way one player's game becomes someone else's reason to
+  // open the app. Built from the exact standings/isTie/winners this screen
+  // already computes above, so it can never drift from what's actually on
+  // screen. Never called during a tutorial — see the button's own !isTutorial
+  // guard below (a scripted practice round isn't a result worth sharing).
+  function shareText(): string {
+    const headline = isTie
+      ? `${joinNames(winners.map((w) => w.name))} tied in Books & Runs!`
+      : `${winners[0].name} won Books & Runs!`;
+    const scores = standings.map((p) => `${p.name} ${p.cumulativeScore}`).join(" · ");
+    return `🃏 ${headline}\n${scores}`;
+  }
+
+  async function handleShare() {
+    const text = shareText();
+    // navigator.share (where available — mainly mobile browsers and
+    // Capacitor's iOS wrapper) hands the OS's own native share sheet a
+    // separate url field rather than one it has to parse back out of the
+    // text itself.
+    if (navigator.share) {
+      try {
+        await navigator.share({ text, url: window.location.origin });
+      } catch {
+        // The share sheet itself throws if the player just cancels it —
+        // not a real failure worth surfacing as one.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${window.location.origin}`);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
+    } catch {
+      setShareState("error");
+    }
+  }
 
   function playAgain() {
     quitToHome();
@@ -241,9 +297,14 @@ export function GameOverScreen({ state }: { state: GameState }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">
+      {/* Fires once on mount — every path to this screen (a real win, a
+          tie, or finishing the tutorial) is the one moment the whole game
+          actually builds to, so this doesn't gate on `winners`/`isTie` at
+          all. Purely decorative and non-blocking (see Confetti's own doc). */}
+      <Confetti />
       <div className="text-center">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">
-          {isTutorial ? "Tutorial complete" : "Game over"}
+          {isTutorial ? "Tutorial complete" : isDailyDeal ? "Daily Deal" : "Game over"}
         </p>
         {!isTutorial && wentOut && (
           <p className="mt-1 text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
@@ -284,6 +345,17 @@ export function GameOverScreen({ state }: { state: GameState }) {
         })}
       </ol>
 
+      {!isTutorial && (
+        <div className="text-center">
+          <button
+            onClick={handleShare}
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            {shareState === "copied" ? "Copied to clipboard ✓" : shareState === "error" ? "Couldn't copy — try again" : "Share result"}
+          </button>
+        </div>
+      )}
+
       {isTutorial && (
         <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-sm text-[var(--muted)]">
           <p className="font-semibold text-[var(--heading)]">How scoring works</p>
@@ -302,13 +374,30 @@ export function GameOverScreen({ state }: { state: GameState }) {
         </div>
       )}
 
-      {!isTutorial && user && !trackStats && (
+      {/* Its own local streak, not the Supabase saved-to-your-stats status
+          below (isDailyDeal is excluded from that block entirely — see
+          dailyDealStore.ts's own doc for why this never touches Supabase). */}
+      {isDailyDeal && dailyDealState && (
+        <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-center">
+          <p className="text-3xl" aria-hidden="true">
+            🔥
+          </p>
+          <p className="mt-1 text-2xl font-bold text-[var(--heading)]">
+            {dailyDealState.streak}-day streak
+          </p>
+          <p className="mt-1 text-xs text-[var(--faint)]">
+            Best streak: {dailyDealState.bestStreak}. Come back tomorrow for the next one.
+          </p>
+        </div>
+      )}
+
+      {!isTutorial && !isDailyDeal && user && !trackStats && (
         <p className="text-center text-xs text-[var(--faint)]">
           Stats weren&apos;t tracked for this game — you turned that off on the New Game screen.
         </p>
       )}
 
-      {!isTutorial && user && trackStats && (
+      {!isTutorial && !isDailyDeal && user && trackStats && (
         <div className="text-center text-xs text-[var(--faint)]">
           <p>
             {saved === "saving" && "Saving to your stats…"}
@@ -348,15 +437,25 @@ export function GameOverScreen({ state }: { state: GameState }) {
       )}
 
       <div className="mt-4 flex flex-col gap-3">
-        <button
-          onClick={playAgain}
-          className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
-        >
-          {isTutorial ? "Play a real game" : "Play again"}
-        </button>
+        {/* Daily Deal skips "Play again" entirely — replaying today's deal
+            from here wouldn't do anything the streak above hasn't already
+            settled (see recordDailyDealResult's own idempotency), so a
+            second button offering to redo it would just be a dead end. */}
+        {!isDailyDeal && (
+          <button
+            onClick={playAgain}
+            className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
+          >
+            {isTutorial ? "Play a real game" : "Play again"}
+          </button>
+        )}
         <button
           onClick={goHome}
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          className={
+            isDailyDeal
+              ? "rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
+              : "rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          }
         >
           Home
         </button>

@@ -22,11 +22,18 @@ export interface PlayerConfig {
  * play — defaults to the full standard 7-round sequence. Pass a filtered or
  * reordered subset (see SHORT_GAME_CONTRACTS, or a custom selection) to play
  * a shorter or custom-picked game; `state.round` always just counts 1..N
- * through whatever was selected, not the original round numbers.
+ * through whatever was selected, not the original round numbers. `rng`
+ * defaults to Math.random for every normal game — Daily Deal is the one
+ * caller that passes a seeded one (see deck.ts's seededRng), so the same
+ * calendar date always deals the same shuffle.
  */
-export function createGame(playerConfigs: PlayerConfig[], contracts: ContractRequirement[] = CONTRACTS): GameState {
+export function createGame(
+  playerConfigs: PlayerConfig[],
+  contracts: ContractRequirement[] = CONTRACTS,
+  rng: () => number = Math.random
+): GameState {
   const numDecks = decksForPlayerCount(playerConfigs.length);
-  const deck = buildDeck(numDecks);
+  const deck = buildDeck(numDecks, rng);
   const { hands, drawPile, discardPile } = deal(deck, playerConfigs.length);
 
   const players: Player[] = playerConfigs.map((cfg, i) => ({

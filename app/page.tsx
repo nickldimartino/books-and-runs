@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useGame } from "./GameContext";
+import { DailyDealState, loadDailyDealState, playedToday } from "./lib/dailyDealStore";
 import { loadSavedGame } from "./lib/localSave";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { GameState } from "@/types";
@@ -31,13 +32,129 @@ function summarizeSavedGame(state: GameState): string {
   return `Round ${state.round} of ${state.selectedContracts.length}${parts.length ? " · " + parts.join(" ") : ""}`;
 }
 
+function StatsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5" aria-hidden="true">
+      <rect x="2.5" y="11" width="3.5" height="6.5" rx="0.8" fill="currentColor" />
+      <rect x="8.25" y="6.5" width="3.5" height="11" rx="0.8" fill="currentColor" />
+      <rect x="14" y="2.5" width="3.5" height="15" rx="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function AchievementsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5" aria-hidden="true">
+      <path
+        d="M10 1.7l2.57 5.22 5.76.84-4.17 4.06.98 5.74L10 14.8l-5.14 2.7.98-5.74-4.17-4.06 5.76-.84L10 1.7z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function LeaderboardIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5" aria-hidden="true">
+      <rect x="2" y="10.5" width="4.5" height="7" rx="0.8" fill="currentColor" />
+      <rect x="7.75" y="6" width="4.5" height="11.5" rx="0.8" fill="currentColor" />
+      <rect x="13.5" y="12.5" width="4.5" height="5" rx="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ProgressTile({ href, label, children }: { href: string; label: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-3.5 text-center transition hover:bg-[var(--panel-soft)]"
+    >
+      <span className="text-[var(--accent)]">{children}</span>
+      <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
+    </Link>
+  );
+}
+
+// Same "text link, not a bordered button" treatment for every row here —
+// this whole section is deliberately the lowest tier of the page's visual
+// hierarchy (see MoreSection's own doc), so nothing inside it should read
+// as loudly as New Game, Continue, or the Daily Deal card above it.
+function MoreLink({ href, onClick, children }: { href?: string; onClick?: () => void; children: ReactNode }) {
+  const className = "rounded-md px-3 py-2.5 text-left text-sm text-[var(--muted)] hover:bg-[var(--panel-soft)]";
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button onClick={onClick} className={`w-full ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Everything that isn't a primary action or part of "your progress" —
+ * How to Play, Settings, Account, Scorekeeper, History, and signing in/out.
+ * Collapsed by default (native <details>, same disclosure pattern Settings
+ * already uses for its own InfoDetails) rather than six more full-width
+ * bordered buttons stacked under Stats/Achievements/Leaderboard: at that
+ * visual weight, New Game — the one thing every visit to this page is
+ * actually *for* — read as no more important than "Sign out."
+ */
+function MoreSection({
+  configured,
+  user,
+  onSignOut,
+}: {
+  configured: boolean;
+  user: boolean;
+  onSignOut: () => void;
+}) {
+  return (
+    <details className="group rounded-lg border border-[var(--border)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+        More
+        <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
+      </summary>
+      <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
+        <MoreLink href="/how-to-play">How to Play</MoreLink>
+        <MoreLink href="/settings">Settings</MoreLink>
+        {configured && user && <MoreLink href="/account">Account</MoreLink>}
+        <MoreLink href="/scorecard">Scorekeeper</MoreLink>
+        <MoreLink href="/history">History of Books &amp; Runs</MoreLink>
+        {configured && user ? (
+          <MoreLink onClick={onSignOut}>Sign out</MoreLink>
+        ) : (
+          <MoreLink href="/sign-in">Sign in</MoreLink>
+        )}
+      </div>
+    </details>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
-  const { hasSavedGame, continueGame, state } = useGame();
+  const { hasSavedGame, continueGame, startDailyDeal, state } = useGame();
   const { level } = usePlayerLevel();
-  const [continuing, setContinuing] = useState(false);
+  // Covers both Continue and Daily Deal — either one commits GameContext's
+  // state synchronously, but navigating to /game immediately afterward isn't
+  // guaranteed to see that update yet (see the effect below), so both wait
+  // for `state` to actually show up here before navigating.
+  const [navigatingToGame, setNavigatingToGame] = useState(false);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
+  const [dailyDeal, setDailyDeal] = useState<DailyDealState | null>(null);
 
   // Re-reads on every hasSavedGame flip (a game starting, finishing, or
   // being quit) rather than once on mount, so this stays in sync with the
@@ -46,6 +163,13 @@ export default function HomePage() {
     const saved = loadSavedGame();
     setSavedSummary(saved ? summarizeSavedGame(saved.state) : null);
   }, [hasSavedGame]);
+
+  // Loaded once per visit to Home — this page fully remounts every time you
+  // navigate back to it (including right after finishing a Daily Deal), so
+  // a mount-only read is enough to pick up a just-recorded streak.
+  useEffect(() => {
+    setDailyDeal(loadDailyDealState());
+  }, []);
 
   // A first-time nudge toward the Tutorial, shown only when there's nothing
   // else already pulling that role: no game in progress to resume, and (for
@@ -58,24 +182,31 @@ export default function HomePage() {
   const isNewAccount = !configured || !user || (level !== null && level.totalXp === 0);
   const showTutorialPrompt = !hasSavedGame && isNewAccount;
 
-  // continueGame() sets GameContext's state synchronously, but navigating
-  // to /game immediately afterward isn't guaranteed to see that update —
-  // /game bounces straight back here the instant it renders with no state
-  // (see its own guard effect), so a real gap between the state actually
-  // committing and the route's first render reads as "the page flashed and
-  // stayed on Home." Waiting for `state` to actually show up here before
-  // navigating closes that gap regardless of its exact cause.
+  // continueGame()/startDailyDeal() set GameContext's state synchronously,
+  // but navigating to /game immediately afterward isn't guaranteed to see
+  // that update — /game bounces straight back here the instant it renders
+  // with no state (see its own guard effect), so a real gap between the
+  // state actually committing and the route's first render reads as "the
+  // page flashed and stayed on Home." Waiting for `state` to actually show
+  // up here before navigating closes that gap regardless of its exact cause.
   useEffect(() => {
-    if (continuing && state) router.push("/game");
-  }, [continuing, state, router]);
+    if (navigatingToGame && state) router.push("/game");
+  }, [navigatingToGame, state, router]);
 
   function handleContinue() {
     continueGame();
-    setContinuing(true);
+    setNavigatingToGame(true);
   }
 
+  function handleDailyDeal() {
+    startDailyDeal();
+    setNavigatingToGame(true);
+  }
+
+  const dailyDealPlayedToday = dailyDeal ? playedToday(dailyDeal) : false;
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-10 px-6 text-center">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
       <div>
         {configured && user && level && (
           <Link
@@ -101,7 +232,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full flex-col gap-5">
         {showTutorialPrompt && (
           <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-left text-xs text-[var(--heading)]">
             <strong className="font-semibold">New here?</strong> On the New Game screen, pick{" "}
@@ -110,101 +241,62 @@ export default function HomePage() {
           </p>
         )}
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Play</h2>
+        <div className="flex flex-col gap-2">
           <Link
             href="/new-game"
-            className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
+            className="rounded-lg bg-[var(--accent)] px-6 py-3.5 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
           >
             New Game
           </Link>
-          <div className="flex flex-col gap-1">
-            <button
-              onClick={handleContinue}
-              disabled={!hasSavedGame}
-              className="w-full rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
-              title={hasSavedGame ? undefined : "No game in progress"}
-            >
-              Continue Local Game
-            </button>
-            {savedSummary && <p className="text-center text-xs text-[var(--faint)]">{savedSummary}</p>}
+          <button
+            onClick={handleContinue}
+            disabled={!hasSavedGame}
+            className="w-full rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
+            title={hasSavedGame ? undefined : "No game in progress"}
+          >
+            Continue Local Game
+          </button>
+          {savedSummary && <p className="text-center text-xs text-[var(--faint)]">{savedSummary}</p>}
+        </div>
+
+        {/* Tinted rather than plain-bordered like the rest of the page — a
+            visual notch below New Game's solid fill, but a clear notch above
+            the plain nav buttons below it, matching how much attention a
+            once-a-day hook actually deserves: more than "here's a settings
+            page," less than the primary CTA. */}
+        <section className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-[var(--heading)]">Daily Deal</h2>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              {dailyDeal && dailyDeal.streak > 0
+                ? `🔥 ${dailyDeal.streak}-day streak`
+                : "One seeded round — the same deal for everyone today."}
+            </p>
+            {dailyDealPlayedToday && (
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">Streak protected for today.</p>
+            )}
           </div>
+          <button
+            onClick={handleDailyDeal}
+            className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+          >
+            {dailyDealPlayedToday ? "Play again" : "Play today's deal"}
+          </button>
         </section>
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-            Your progress
-          </h2>
-          <Link
-            href="/stats"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Stats
-          </Link>
-          <Link
-            href="/achievements"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Achievements
-          </Link>
-          <Link
-            href="/leaderboard"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Leaderboard
-          </Link>
+        <section className="grid grid-cols-3 gap-2">
+          <ProgressTile href="/stats" label="Stats">
+            <StatsIcon />
+          </ProgressTile>
+          <ProgressTile href="/achievements" label="Achievements">
+            <AchievementsIcon />
+          </ProgressTile>
+          <ProgressTile href="/leaderboard" label="Leaderboard">
+            <LeaderboardIcon />
+          </ProgressTile>
         </section>
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">More</h2>
-          <Link
-            href="/how-to-play"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            How to Play
-          </Link>
-          <Link
-            href="/settings"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Settings
-          </Link>
-          {configured && user && (
-            <Link
-              href="/account"
-              className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-            >
-              Account
-            </Link>
-          )}
-          <Link
-            href="/scorecard"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Scorekeeper
-          </Link>
-          <Link
-            href="/history"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            History of Books &amp; Runs
-          </Link>
-          {configured && user ? (
-            <button
-              onClick={() => signOut()}
-              className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-            >
-              Sign out
-            </button>
-          ) : (
-            <Link
-              href="/sign-in"
-              className="rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-            >
-              Sign in
-            </Link>
-          )}
-        </section>
+        <MoreSection configured={configured} user={!!user} onSignOut={signOut} />
       </div>
 
       <p className="text-xs text-[var(--faint)]">

@@ -1112,8 +1112,22 @@
   --card-wild-text: #7a1f6b;
 }
 
+/* A slight vignette + a warm glow from the top, layered under the flat
+   --bg fill every theme already had — every surface in this app used to be
+   a genuinely flat color, which read as "interface" rather than "table."
+   Both layers are deliberately subtle (the point is ambient depth, not a
+   visible gradient) and generic across all 38 themes: color-mix() with
+   --accent/black rather than a per-theme value, so this needed writing
+   exactly once instead of 38 times. background-attachment: fixed keeps the
+   glow anchored to the viewport rather than scrolling with the page, the
+   way a room's actual overhead lighting wouldn't move as you leaned over
+   different parts of a real table. */
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 65%),
+    radial-gradient(ellipse 140% 90% at 50% 115%, color-mix(in srgb, black 22%, transparent), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -1203,44 +1217,246 @@ a:active {
     0 4px 10px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
-/* Every theme's small motif (see --card-back-shape/--card-back-tile in the
-   theme blocks above), tiled across the card back via mask-image so it
-   picks up --accent as a flat fill through the shape's alpha silhouette —
-   one shared mechanism covering all 38 themes; only the shape/tile/color
-   actually differ per theme. Kept subtle (low opacity) so it reads as a
-   textured pattern rather than competing with the card's border/glow. */
+/* Every card back's small motif, tiled across the card via mask-image —
+   one shared mechanism covering all 38 possible card backs; only the
+   shape/tile/color actually differ between them. Kept subtle (low opacity)
+   so it reads as a textured pattern rather than competing with the card's
+   border/glow.
+
+   Reads exclusively from --cardback-* — set by whichever [data-cardback="X"]
+   block below is active on <html> — NOT from the table theme's own
+   --card-back-shape/--card-back-tile/--accent directly, which is exactly
+   what makes a card back choosable independently of the table felt (see
+   cardBackStore.ts): [data-cardback] mirrors [data-theme] by default (so
+   nothing changes for anyone who's never opened the Card back picker in
+   Settings), but can be set to any *other* theme's identity instead, and
+   this rule has no idea which case it's in — it just paints whatever
+   --cardback-* currently says. The var()-fallbacks below (to --accent and
+   the plain generic-theme --card-back-shape/tile custom properties) are
+   pure defensive belt-and-braces for the moment before the init script in
+   layout.tsx has set data-cardback at all (e.g. JS disabled) — in normal
+   use that script runs before first paint, same as the theme/colorblind
+   ones already do, so this fallback path is never actually the common case. */
 .card-back::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-color: var(--accent);
-  opacity: 0.55;
-  -webkit-mask-image: var(--card-back-shape);
-  mask-image: var(--card-back-shape);
+  background-color: var(--cardback-color, var(--accent));
+  background-image: var(--cardback-bgimage, none);
+  opacity: var(--cardback-opacity, 0.55);
+  -webkit-mask-image: var(--cardback-shape, var(--card-back-shape));
+  mask-image: var(--cardback-shape, var(--card-back-shape));
   -webkit-mask-repeat: repeat;
   mask-repeat: repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  -webkit-mask-size: var(--card-back-tile) var(--card-back-tile);
-  mask-size: var(--card-back-tile) var(--card-back-tile);
+  -webkit-mask-size: var(--cardback-tile, var(--card-back-tile)) var(--cardback-tile, var(--card-back-tile));
+  mask-size: var(--cardback-tile, var(--card-back-tile)) var(--cardback-tile, var(--card-back-tile));
 }
 
-/* Candy Cane is the one theme that isn't an icon tile — its "motif" is the
-   diagonal peppermint stripe itself, so it replaces the mask entirely with
-   a striped gradient instead of layering a shape on top of it. */
-[data-theme="candycane"] .card-back::after {
-  -webkit-mask-image: none;
-  mask-image: none;
-  background-color: transparent;
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--card-red) 0,
-    var(--card-red) 6px,
-    transparent 6px,
-    transparent 12px
-  );
-  opacity: 0.6;
+/* One [data-cardback="X"] block per theme identity, generated from that
+   theme's own --card-back-shape/--card-back-tile (see
+   the theme blocks above) plus its own accent color, frozen here as a
+   literal rather than read live via var(--accent) — the whole point is that
+   picking, say, Arcade's card back while the table theme is Midnight must
+   show Arcade's own neon color, not whatever Midnight's --accent happens to
+   be. Hand-maintained in parallel with THEME_SWATCHES in settings/page.tsx,
+   same tradeoff that file's own comment already accepts for its preview
+   swatches: these render outside the theme they describe, so they can't
+   just read live CSS variables the way an actual active theme does. */
+[data-cardback="midnight"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L14%2010%20L22%2012%20L14%2014%20L12%2022%20L10%2014%20L2%2012%20L10%2010%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #fbbf24;
 }
+[data-cardback="candycane"] {
+  --cardback-shape: none;
+  --cardback-bgimage: repeating-linear-gradient(45deg, #b8102e 0, #b8102e 6px, transparent 6px, transparent 12px);
+  --cardback-color: transparent;
+  --cardback-opacity: 0.6;
+}
+[data-cardback="daylight"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'3.4'%2F%3E%3Cg%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%201%20L13.4%206%20L10.6%206%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%2023%20L13.4%2018%20L10.6%2018%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M1%2012%20L6%2010.6%20L6%2013.4%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M23%2012%20L18%2010.6%20L18%2013.4%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M4%204%20L8.2%207.4%20L5.9%208.7%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20%2020%20L15.8%2016.6%20L18.1%2015.3%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20%204%20L16.6%208.2%20L15.3%205.9%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M4%2020%20L7.4%2015.8%20L8.7%2018.1%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #d97706;
+}
+[data-cardback="pastel"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Ccircle%20fill%3D'%23000'%20cx%3D'12'%20cy%3D'12'%20r%3D'4'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 14px;
+  --cardback-color: #ef8b6b;
+}
+[data-cardback="casino"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%203%20L21%2012%20L12%2021%20L3%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 18px;
+  --cardback-color: #d4af37;
+}
+[data-cardback="arcade"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M13%202%20L5%2014%20L11%2014%20L9%2022%20L19%209%20L12%209%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #33e6c9;
+}
+[data-cardback="noir"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2022%20L12%203%20A9%209%200%200%201%2021%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 16px;
+  --cardback-color: #e8e8e8;
+}
+[data-cardback="sakura"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(0%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(72%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(144%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(216%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(288%2012%2012)'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'2.2'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #d63868;
+}
+[data-cardback="ember"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20C8%208%204%2010%206%2016%20C7%2020%2012%2022%2012%2022%20C12%2022%2017%2020%2018%2016%20C20%2010%2016%208%2012%202%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #ff5a1f;
+}
+[data-cardback="lagoon"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M2%2011%20C6%205%2010%205%2014%2011%20C18%2017%2022%2017%2022%2011%20L22%2015%20C18%2021%2014%2021%2010%2015%20C6%209%202%209%202%2015%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 24px;
+  --cardback-color: #ff6f91;
+}
+[data-cardback="sahara"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20fill-rule%3D'evenodd'%20d%3D'M12%203%20A9%209%200%201%200%2012%2021%20A7%207%200%201%201%2012%203%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #2fb6a8;
+}
+[data-cardback="aurora"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L14%209.5%20L21.5%208.5%20L15.8%2013.4%20L20%2020%20L12%2015.8%20L4%2020%20L8.2%2013.4%20L2.5%208.5%20L10%209.5%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 24px;
+  --cardback-color: #c084fc;
+}
+[data-cardback="jade"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20fill-rule%3D'evenodd'%20d%3D'M12%202%20L22%2012%20L12%2022%20L2%2012%20Z%20M12%206.5%20L17.5%2012%20L12%2017.5%20L6.5%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 24px;
+  --cardback-color: #2fae72;
+}
+[data-cardback="verdigris"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20fill-rule%3D'evenodd'%20d%3D'M12%202%20L20%207%20L20%2017%20L12%2022%20L4%2017%20L4%207%20Z%20M12%206%20L16.5%208.7%20L16.5%2015.3%20L12%2018%20L7.5%2015.3%20L7.5%208.7%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #d97b45;
+}
+[data-cardback="alabaster"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2022%20L12%203%20A9%209%200%200%201%2021%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 16px;
+  --cardback-color: #2b2a27;
+}
+[data-cardback="citrus"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20C18%206%2018%2018%2012%2022%20C6%2018%206%206%2012%202%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #f2711d;
+}
+[data-cardback="frost"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L20%207%20L20%2017%20L12%2022%20L4%2017%20L4%207%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #2ba7d9;
+}
+[data-cardback="meadow"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'4'%20width%3D'1.4'%20height%3D'17'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'9'%20cy%3D'9'%20rx%3D'3'%20ry%3D'1.8'%20transform%3D'rotate(-30%209%209)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'15'%20cy%3D'9'%20rx%3D'3'%20ry%3D'1.8'%20transform%3D'rotate(30%2015%209)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'5.5'%20rx%3D'2.4'%20ry%3D'1.6'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #d6a419;
+}
+[data-cardback="coralsand"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M4%2020%20Q12%204%2020%2020%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #ff7a5c;
+}
+[data-cardback="lilac"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'4.5'%20rx%3D'2'%20ry%3D'2.8'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'19.5'%20rx%3D'2'%20ry%3D'2.8'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'4.5'%20cy%3D'12'%20rx%3D'2.8'%20ry%3D'2'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'19.5'%20cy%3D'12'%20rx%3D'2.8'%20ry%3D'2'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'7'%20cy%3D'7'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(-45%207%207)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'17'%20cy%3D'17'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(-45%2017%2017)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'17'%20cy%3D'7'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(45%2017%207)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'7'%20cy%3D'17'%20rx%3D'2'%20ry%3D'2.4'%20transform%3D'rotate(45%207%2017)'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 24px;
+  --cardback-color: #8654a3;
+}
+[data-cardback="champagne"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%203%20L21%2012%20L12%2021%20L3%2012%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 18px;
+  --cardback-color: #c9972f;
+}
+[data-cardback="valentines"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2021%20C12%2021%203%2014%203%208%20C3%204.5%206%202%209%202%20C10.5%202%2011.5%203%2012%204%20C12.5%203%2013.5%202%2015%202%20C18%202%2021%204.5%2021%208%20C21%2014%2012%2021%2012%2021%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #e0245e;
+}
+[data-cardback="stpatricks"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'8'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'7'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'17'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'11.2'%20y%3D'14'%20width%3D'1.6'%20height%3D'8'%20rx%3D'0.8'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #2fbf6f;
+}
+[data-cardback="easter"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20C17%202%2020%209%2020%2014%20C20%2019%2016.5%2022%2012%2022%20C7.5%2022%204%2019%204%2014%20C4%209%207%202%2012%202%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #6fb88a;
+}
+[data-cardback="july4th"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%201.5%20L14.7%209.3%20L23%209.3%20L16.3%2014.4%20L18.8%2022.5%20L12%2017.6%20L5.2%2022.5%20L7.7%2014.4%20L1%209.3%20L9.3%209.3%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #d9263a;
+}
+[data-cardback="halloween"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2010%20C10.5%206.5%206.5%205%203%208%20C6%209%208%2011%209%2013%20C6%2013%203%2015.5%202%2019.5%20C6%2018.3%209%2016%2011%2014%20C11.2%2016.3%2011.4%2019%2012%2021%20C12.6%2019%2012.8%2016.3%2013%2014%20C15%2016%2018%2018.3%2022%2019.5%20C21%2015.5%2018%2013%2015%2013%20C16%2011%2018%209%2021%208%20C17.5%205%2013.5%206.5%2012%2010%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 26px;
+  --cardback-color: #9d5cff;
+}
+[data-cardback="thanksgiving"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L13.6%207.6%20L19%205%20L16.3%2010%20L21.5%2012%20L16%2013.6%20L19%2018.5%20L13.6%2016.3%20L12%2022%20L10.4%2016.3%20L5%2018.5%20L8%2013.6%20L2.5%2012%20L7.7%2010%20L5%205%20L10.4%207.6%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #c1541f;
+}
+[data-cardback="hanukkah"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'10.4'%20y%3D'13'%20width%3D'3.2'%20height%3D'9'%20rx%3D'1.2'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%202%20C13.8%205.6%2014.6%207.6%2013%2010.2%20C13.3%209%2012.7%208%2012%206.8%20C11.3%208%2010.7%209%2011%2010.2%20C9.4%207.6%2010.2%205.6%2012%202%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #d4af37;
+}
+[data-cardback="christmas"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cg%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'2'%20width%3D'1.4'%20height%3D'20'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%209.3%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%2014.7%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'15.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%209.3%2017.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'15.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%2014.7%2017.5)'%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%20%20%3Cg%20transform%3D'rotate(60%2012%2012)'%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'2'%20width%3D'1.4'%20height%3D'20'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%209.3%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%2014.7%206.5)'%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%20%20%3Cg%20transform%3D'rotate(120%2012%2012)'%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'11.3'%20y%3D'2'%20width%3D'1.4'%20height%3D'20'%20rx%3D'0.7'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'8.6'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(-35%209.3%206.5)'%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4.5'%20width%3D'1.4'%20height%3D'4'%20rx%3D'0.7'%20transform%3D'rotate(35%2014.7%206.5)'%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 24px;
+  --cardback-color: #c8102e;
+}
+[data-cardback="newyears"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'1.6'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%200.5%20L13%206.5%20L11%206.5%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%2023.5%20L13%2017.5%20L11%2017.5%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M0.5%2012%20L6.5%2011%20L6.5%2013%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M23.5%2012%20L17.5%2013%20L17.5%2011%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M3.5%203.5%20L8%207.3%20L6.6%208.7%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20.5%2020.5%20L16%2016.7%20L17.4%2015.3%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M20.5%203.5%20L16.7%208%20L15.3%206.6%20Z'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M3.5%2020.5%20L7.3%2016%20L8.7%2017.4%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 26px;
+  --cardback-color: #d4af37;
+}
+[data-cardback="sweetheart"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%2021%20C12%2021%203%2014%203%208%20C3%204.5%206%202%209%202%20C10.5%202%2011.5%203%2012%204%20C12.5%203%2013.5%202%2015%202%20C18%202%2021%204.5%2021%208%20C21%2014%2012%2021%2012%2021%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #e0245e;
+}
+[data-cardback="cloverfield"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'8'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'7'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'17'%20cy%3D'13.5'%20r%3D'4.2'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'11.2'%20y%3D'14'%20width%3D'1.6'%20height%3D'8'%20rx%3D'0.8'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #2fa864;
+}
+[data-cardback="springdusk"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(0%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(72%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(144%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(216%2012%2012)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'6.5'%20rx%3D'3.4'%20ry%3D'5'%20transform%3D'rotate(288%2012%2012)'%2F%3E%0A%20%20%20%20%3Ccircle%20cx%3D'12'%20cy%3D'12'%20r%3D'2.2'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #7fd9a8;
+}
+[data-cardback="starsandstripes"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%201.5%20L14.7%209.3%20L23%209.3%20L16.3%2014.4%20L18.8%2022.5%20L12%2017.6%20L5.2%2022.5%20L7.7%2014.4%20L1%209.3%20L9.3%209.3%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #c8102e;
+}
+[data-cardback="candycorn"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cpath%20fill%3D'%23000'%20d%3D'M12%202%20L18%2014%20L18%2019%20Q18%2022%2015.5%2022%20L8.5%2022%20Q6%2022%206%2019%20L6%2014%20Z'%2F%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #8b3fd9;
+}
+[data-cardback="pumpkinspice"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'10.6'%20y%3D'1.5'%20width%3D'2.8'%20height%3D'4.5'%20rx%3D'1.2'%20transform%3D'rotate(18%2012%203.5)'%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D'12'%20cy%3D'14.5'%20rx%3D'9'%20ry%3D'7'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 24px;
+  --cardback-color: #d2691e;
+}
+[data-cardback="festivaloflights"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'10.4'%20y%3D'13'%20width%3D'3.2'%20height%3D'9'%20rx%3D'1.2'%2F%3E%0A%20%20%20%20%3Cpath%20d%3D'M12%202%20C13.8%205.6%2014.6%207.6%2013%2010.2%20C13.3%209%2012.7%208%2012%206.8%20C11.3%208%2010.7%209%2011%2010.2%20C9.4%207.6%2010.2%205.6%2012%202%20Z'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 22px;
+  --cardback-color: #c9972f;
+}
+[data-cardback="confetti"] {
+  --cardback-shape: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%3E%3Cg%20fill%3D'%23000'%3E%0A%20%20%20%20%3Crect%20x%3D'4'%20y%3D'9'%20width%3D'5'%20height%3D'2.4'%20rx%3D'0.8'%20transform%3D'rotate(25%206.5%2010.2)'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'14'%20y%3D'4'%20width%3D'5'%20height%3D'2.4'%20rx%3D'0.8'%20transform%3D'rotate(-20%2016.5%205.2)'%2F%3E%0A%20%20%20%20%3Crect%20x%3D'13'%20y%3D'16'%20width%3D'5'%20height%3D'2.4'%20rx%3D'0.8'%20transform%3D'rotate(50%2015.5%2017.2)'%2F%3E%0A%20%20%3C%2Fg%3E%3C%2Fsvg%3E");
+  --cardback-tile: 20px;
+  --cardback-color: #d94f9e;
+}
+
+
 
 /* A --panel/--panel-soft surface on its own only differs from the page
    background by color, which reads as flat in themes where that contrast is
@@ -1248,9 +1464,31 @@ a:active {
    against a page background that's already close to black. Same accent-
    tinted color-mix() approach as the cards above, at a lower opacity since
    this sits under much bigger surfaces than a card — a glow this size at
-   card-strength opacity would read as gaudy rather than a subtle lift. */
+   card-strength opacity would read as gaudy rather than a subtle lift.
+   The crosshatch background-image is the actual "table" cue: a faint woven
+   texture rather than one more flat color fill, at an opacity low enough
+   (3%) to read as fabric grain, not as a visible pattern competing with
+   whatever's sitting on top of it. Built from --text rather than --accent,
+   so it stays neutral against every theme's own panel color instead of
+   tinting it — the glow above already carries this surface's one dose of
+   theme color. */
 .panel-elevated {
   box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 20%, transparent);
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--text) 5%, transparent) 0px,
+      color-mix(in srgb, var(--text) 5%, transparent) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--text) 5%, transparent) 0px,
+      color-mix(in srgb, var(--text) 5%, transparent) 1px,
+      transparent 1px,
+      transparent 7px
+    );
 }
 
 /* A card fading/rising in on its own — no JS state, no orchestration. This
@@ -1373,6 +1611,31 @@ a:active {
   animation: line-enter 0.3s ease-out both;
 }
 
+/* The "Meld or lay-off confirmed." banner (game/page.tsx) — a small
+   overshoot pop, same overshoot-then-settle family as level-up-pulse, but
+   lighter/faster since this fires on every single confirmed meld or lay-off
+   in a game, not once at the very end of it. No JS orchestration needed for
+   the same reason as card-enter above: the banner only exists in the DOM
+   while canUndo is true, so this plays automatically on every fresh mount. */
+@keyframes confirm-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-3px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.confirm-pop {
+  animation: confirm-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
 @keyframes tutorial-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--accent); }
@@ -1406,6 +1669,10 @@ a:active {
   }
 
   .win-announce {
+    animation: none;
+  }
+
+  .confirm-pop {
     animation: none;
   }
 

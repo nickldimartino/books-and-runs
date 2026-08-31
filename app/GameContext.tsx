@@ -16,6 +16,7 @@ import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
 import { layOffOptions } from "@/meld";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
+import { createDailyDealGame } from "./lib/dailyDealStore";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
 import { playCardSlide, playCardTap, playMeld, playUndo, setTutorialSoundOverride } from "./lib/sound";
@@ -55,6 +56,12 @@ interface GameContextValue {
    * touches the real saved-game slot, Supabase stats, or achievements. */
   startTutorialGame: () => void;
   isTutorial: boolean;
+  /** Today's single-round, date-seeded challenge (see dailyDealStore.ts) —
+   * same "never touches the real saved-game slot, Supabase stats, or
+   * achievements" treatment as the tutorial; its own local streak is
+   * recorded separately, from GameOverScreen. */
+  startDailyDeal: () => void;
+  isDailyDeal: boolean;
   /** Whether this game's results are being recorded to the signed-in
    * account — see startNewGame's own doc. Always true during a tutorial
    * (moot either way; isTutorial already gates every write on its own). */
@@ -193,6 +200,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // Mirrors isTutorial for use inside stable callbacks (persist, quitToHome)
   // that can't take a reactive dependency on it without breaking memoization.
   const isTutorialRef = useRef(false);
+  // Same pattern, same reason, for Daily Deal (see startDailyDeal below) —
+  // gates persist() exactly like isTutorialRef does, so playing today's
+  // deal can never clobber (or get resumed as) a real in-progress game.
+  const [isDailyDeal, setIsDailyDeal] = useState(false);
+  const isDailyDealRef = useRef(false);
   // Whether this game's results should be recorded to the signed-in account
   // at all — set once at New Game (see its own "Track stats for this game"
   // toggle, offered for 3+ pass-and-play human players) and carried through
@@ -256,8 +268,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const persist = useCallback(() => {
     // Tutorial games are scripted practice, not a real game — never touch
     // the real saved-game slot, in either direction. Whatever real save
-    // existed before the tutorial started is left completely alone.
-    if (isTutorialRef.current) return;
+    // existed before the tutorial started is left completely alone. Daily
+    // Deal gets the exact same treatment: it's a fixed, once-a-day
+    // challenge, not something "Continue Local Game" should ever surface or
+    // silently replace a real in-progress game with.
+    if (isTutorialRef.current || isDailyDealRef.current) return;
     const s = stateRef.current;
     if (!s || s.gameOver) {
       clearSavedGame();
@@ -366,6 +381,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (configs: PlayerConfig[], contracts?: ContractRequirement[], trackStats: boolean = true) => {
       isTutorialRef.current = false;
       setIsTutorial(false);
+      isDailyDealRef.current = false;
+      setIsDailyDeal(false);
       setTutorialSoundOverride(false);
       clearUndoState();
       setTrackStatsBoth(trackStats);
@@ -405,6 +422,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const startTutorialGame = useCallback(() => {
     isTutorialRef.current = true;
     setIsTutorial(true);
+    isDailyDealRef.current = false;
+    setIsDailyDeal(false);
     setTutorialSoundOverride(true);
     clearUndoState();
     // Irrelevant either way — isTutorialRef alone already fully gates every
@@ -429,15 +448,49 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // No persist() — see the isTutorialRef guard at the top of persist().
   }, [setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
+  const startDailyDeal = useCallback(() => {
+    isTutorialRef.current = false;
+    setIsTutorial(false);
+    isDailyDealRef.current = true;
+    setIsDailyDeal(true);
+    setTutorialSoundOverride(false);
+    clearUndoState();
+    // Irrelevant either way — isDailyDealRef alone already fully gates every
+    // Supabase write RoundSummary/GameOverScreen make, same as isTutorialRef
+    // — but reset to the default so nothing looks inconsistent if this were
+    // ever inspected mid-game.
+    setTrackStatsBoth(true);
+    const state = createDailyDealGame();
+    stateRef.current = state;
+    setSnapshot({ ...state });
+    setHasDrawnBoth(false);
+    setAwaitingReveal(!state.players[state.currentPlayerIndex].isAI);
+    setAiThinking(false);
+    setRoundStartScoresBoth(Object.fromEntries(state.players.map((p) => [p.id, p.cumulativeScore])));
+    recordedRoundsRef.current = new Set();
+    roundHistoryRef.current = [];
+    setRoundHistory([]);
+    setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
+    sessionCountersRef.current = {};
+    // No persist() — see the isDailyDealRef guard at the top of persist().
+    if (state.players[state.currentPlayerIndex].isAI) {
+      runAiLoop();
+    }
+  }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
+
   const continueGame = useCallback(() => {
     const saved = loadSavedGame();
     if (!saved) return;
     // Defensive: a saved game is always real (persist() never runs during a
-    // tutorial), so make sure no stale tutorial flag survives from an
-    // earlier tutorial that got abandoned without going through
+    // tutorial or a Daily Deal), so make sure no stale flag survives from an
+    // earlier tutorial/Daily Deal that got abandoned without going through
     // quitToHome/startNewGame.
     isTutorialRef.current = false;
     setIsTutorial(false);
+    isDailyDealRef.current = false;
+    setIsDailyDeal(false);
     setTutorialSoundOverride(false);
     clearUndoState();
     setTrackStatsBoth(saved.trackStats ?? true);
@@ -756,6 +809,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const quitToHome = useCallback(() => {
     clearUndoState();
     const wasTutorial = isTutorialRef.current;
+    const wasDailyDeal = isDailyDealRef.current;
     stateRef.current = null;
     setSnapshot(null);
     setHasDrawnBoth(false);
@@ -765,11 +819,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     buyQueueRef.current = [];
     isTutorialRef.current = false;
     setIsTutorial(false);
+    isDailyDealRef.current = false;
+    setIsDailyDeal(false);
     setTutorialSoundOverride(false);
     setTrackStatsBoth(true);
-    if (wasTutorial) {
-      // The tutorial never touched the real saved-game slot (persist() no-ops
-      // during it) — restore whatever was really there instead of wiping it.
+    if (wasTutorial || wasDailyDeal) {
+      // Neither the tutorial nor a Daily Deal ever touched the real
+      // saved-game slot (persist() no-ops during both) — restore whatever
+      // was really there instead of wiping it.
       setHasSavedGame(loadSavedGame() !== null);
     } else {
       clearSavedGame();
@@ -791,6 +848,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startNewGame,
       startTutorialGame,
       isTutorial,
+      startDailyDeal,
+      isDailyDeal,
       trackStats,
       continueGame,
       revealHand,
@@ -821,6 +880,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startNewGame,
       startTutorialGame,
       isTutorial,
+      startDailyDeal,
+      isDailyDeal,
       trackStats,
       continueGame,
       revealHand,

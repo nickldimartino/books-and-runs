@@ -17,9 +17,12 @@ export function decksForPlayerCount(playerCount: number): number {
 
 /**
  * One standard 52-card deck per numDecks, plus jokers, all shuffled
- * together — see decksForPlayerCount for how numDecks is chosen.
+ * together — see decksForPlayerCount for how numDecks is chosen. `rng`
+ * defaults to Math.random for every normal game; Daily Deal (see
+ * dailyDealStore.ts) is the one caller that passes a seeded one instead, so
+ * the same calendar date always deals the same shuffle.
  */
-export function buildDeck(numDecks: number): Card[] {
+export function buildDeck(numDecks: number, rng: () => number = Math.random): Card[] {
   const cards: Card[] = [];
   for (let d = 0; d < numDecks; d++) {
     for (const suit of SUITS) {
@@ -36,16 +39,33 @@ export function buildDeck(numDecks: number): Card[] {
     cards.push({ id: `joker-a-${d}`, suit: "joker", rank: "JOKER", isWild: true });
     cards.push({ id: `joker-b-${d}`, suit: "joker", rank: "JOKER", isWild: true });
   }
-  return shuffle(cards);
+  return shuffle(cards, rng);
 }
 
-export function shuffle<T>(input: T[]): T[] {
+export function shuffle<T>(input: T[], rng: () => number = Math.random): T[] {
   const arr = [...input];
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+/**
+ * A small, fast, deterministic PRNG (mulberry32) — Math.random can't be
+ * seeded at all, which is the one property Daily Deal actually needs: the
+ * same date must always produce the same shuffle, for every player, every
+ * time they load it. Not cryptographic, and doesn't need to be — this is
+ * shuffling a card game, not securing anything.
+ */
+export function seededRng(seed: number): () => number {
+  let t = seed >>> 0;
+  return function rng() {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 export function deal(deck: Card[], playerCount: number, handSize = 13) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { personaBlurbFor } from "../lib/aiPersonas";
 import { cardLabel, PlayingCard } from "../components/PlayingCard";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
@@ -107,6 +108,7 @@ export default function GamePage() {
     lastDrawnCardId,
     buyOffer,
     isTutorial,
+    isDailyDeal,
     revealHand,
     draw,
     confirmMeld,
@@ -843,9 +845,10 @@ export default function GamePage() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => {
-            // Unlike a real game, a tutorial can't be resumed later — clear
-            // it outright instead of leaving it dangling in memory.
-            if (isTutorial) quitToHome();
+            // Unlike a real game, neither a tutorial nor a Daily Deal can be
+            // resumed later — clear it outright instead of leaving it
+            // dangling in memory.
+            if (isTutorial || isDailyDeal) quitToHome();
             router.push("/");
           }}
           className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
@@ -950,7 +953,13 @@ export default function GamePage() {
       {canUndo && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 rounded-lg bg-[var(--accent)]/15 px-4 py-2 text-sm"
+          // confirm-pop: this banner mounts fresh exactly once per successful
+          // confirmMeld/layOff (canUndo flips false->true), same "no JS
+          // state, just a fresh mount" trick as card-enter/level-up-pulse in
+          // globals.css — completing your own meld is the actual "aha"
+          // moment of Contract Rummy, and before this it got the exact same
+          // plain-text banner as everything else on the board.
+          className="confirm-pop flex items-center justify-between gap-3 rounded-lg bg-[var(--accent)]/15 px-4 py-2 text-sm"
         >
           <span className="text-[var(--muted)]">Meld or lay-off confirmed.</span>
           <button
@@ -965,6 +974,13 @@ export default function GamePage() {
       {player.isAI ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <p className="text-lg font-semibold text-[var(--heading)]">{player.name} is playing…</p>
+          {/* Only ever set for a persona-named AI (see personaBlurbFor's own
+              doc) — undefined, and so silently omitted, for anything else:
+              a human name, or an AI from before personas existed whose name
+              got carried over by a resumed saved game. */}
+          {personaBlurbFor(player.name) && (
+            <p className="text-xs text-[var(--faint)]">{personaBlurbFor(player.name)}</p>
+          )}
           {aiThinking && <p className="text-sm text-[var(--faint)]">thinking…</p>}
         </div>
       ) : (
@@ -1068,7 +1084,12 @@ export default function GamePage() {
                   const owner = state.players.find((p) => p.id === ownerId);
                   return (
                     <div key={ownerId}>
-                      <p className="mb-1 text-xs text-[var(--faint)]">{owner?.name ?? ownerId}</p>
+                      <p
+                        className="mb-1 text-xs text-[var(--faint)]"
+                        title={owner ? personaBlurbFor(owner.name) : undefined}
+                      >
+                        {owner?.name ?? ownerId}
+                      </p>
                       <div className="flex flex-wrap gap-3">
                         {melds.map((meld) => {
                           const isValidTarget =

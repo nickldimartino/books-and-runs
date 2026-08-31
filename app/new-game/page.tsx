@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
+import { pickAiPersonas } from "../lib/aiPersonas";
 import { markTutorialStarting } from "../lib/localSave";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { PlayerConfig } from "@/gameEngine";
@@ -117,27 +118,24 @@ export default function NewGamePage() {
       router.push("/game");
       return;
     }
-    // Only number AI names when there's more than one AI total — with a
-    // single AI, plain "Medium AI" reads better than "Medium AI 1". Numbers
-    // are per-difficulty (two Easy AIs are "Easy AI 1"/"Easy AI 2" even
-    // alongside a "Medium AI 1"), not a single running count across all AIs.
-    const seenByDifficulty: Partial<Record<Difficulty, number>> = {};
+    // A persona (name + avatar, e.g. "🦉 Hedda") per AI, picked fresh each
+    // game — see pickAiPersonas' own doc for why this beats a plain
+    // "Medium AI 1"/"Medium AI 2" label: with no live opponents, the AI is
+    // the only "other player" this game has, and a face is worth more than
+    // a difficulty count.
+    const personas = pickAiPersonas(aiDifficulties);
     const configs: PlayerConfig[] = [
       ...humanNames.map((name, i) => ({
         id: `human-${i}`,
         name: name.trim() || (i === 0 ? "You" : `Player ${i + 1}`),
         isAI: false,
       })),
-      ...aiDifficulties.map((difficulty, i) => {
-        seenByDifficulty[difficulty] = (seenByDifficulty[difficulty] ?? 0) + 1;
-        const label = `${capitalize(difficulty)} AI`;
-        return {
-          id: `ai-${i}`,
-          name: aiDifficulties.length > 1 ? `${label} ${seenByDifficulty[difficulty]}` : label,
-          isAI: true,
-          difficulty,
-        };
-      }),
+      ...aiDifficulties.map((difficulty, i) => ({
+        id: `ai-${i}`,
+        name: personas[i].displayName,
+        isAI: true,
+        difficulty,
+      })),
     ];
     // The toggle only ever renders (and so can only ever have been touched)
     // once there are 2+ human players — below that, tracking always stays

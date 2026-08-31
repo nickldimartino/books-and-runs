@@ -46,12 +46,24 @@ const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("booksAndR
 const COLORBLIND_IDS_JSON = JSON.stringify(COLORBLIND_MODES.map((m) => m.id).filter((id) => id !== "off"));
 const COLORBLIND_INIT_SCRIPT = `(function(){try{var c=localStorage.getItem("booksAndRuns:colorblindMode");if(${COLORBLIND_IDS_JSON}.indexOf(c)!==-1){document.documentElement.setAttribute("data-colorblind",c);}}catch(e){}})();`;
 
+// Same reasoning again, for the card back (see cardBackStore.ts) — computed
+// rather than just copied from data-theme, since the saved choice might be
+// "match" (mirror whatever the table theme is, the default) or a real theme
+// id of its own; reuses THEME_IDS_JSON's own allow-list and "midnight"
+// fallback so this can never drift out of step with loadLocalTheme's own
+// default. Runs after THEME_INIT_SCRIPT sets data-theme, but computes its
+// own `theme` value independently rather than reading the attribute back
+// off <html> — cheaper, and avoids any ordering assumption between the two
+// script tags.
+const CARDBACK_INIT_SCRIPT = `(function(){try{var ids=${THEME_IDS_JSON};var t=localStorage.getItem("booksAndRuns:theme");var theme=ids.indexOf(t)!==-1?t:"midnight";var cb=localStorage.getItem("booksAndRuns:cardBack");var effective=cb==="match"?theme:(ids.indexOf(cb)!==-1?cb:theme);document.documentElement.setAttribute("data-cardback",effective);}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: COLORBLIND_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: CARDBACK_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
         <AuthProvider>
