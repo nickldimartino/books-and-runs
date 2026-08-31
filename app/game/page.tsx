@@ -117,6 +117,16 @@ export default function GamePage() {
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [pendingLayOff, setPendingLayOff] = useState<PendingLayOff | null>(null);
+  // Set only if layOff() itself reports failure — see handleMeldClick and
+  // chooseLayOffDirection. Both used to call layOff() and then unconditionally
+  // clear the selection right after, regardless of whether it actually
+  // succeeded; if it silently failed for any reason, the card would still
+  // visually deselect and the meld's highlight would still disappear,
+  // reading exactly like a successful lay-off even though nothing happened
+  // and the card never left the hand. Neither reproduces on any scenario
+  // tried so far, but checking the return value here is correct regardless
+  // of whether that specific failure mode is ever hit again.
+  const [layOffError, setLayOffError] = useState<string | null>(null);
   const [pendingGroupChoice, setPendingGroupChoice] = useState<PendingGroupChoice | null>(null);
   const [activityOpen, setActivityOpen] = useState(() => isTutorial);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
@@ -252,6 +262,7 @@ export default function GamePage() {
     setPendingGroups([]);
     setGroupError(null);
     setPendingLayOff(null);
+    setLayOffError(null);
     setConfirmingDiscard(null);
     setHandDrawerOpen(false);
     // roundOver/gameOver added specifically for handDrawerOpen: melding out
@@ -468,6 +479,7 @@ export default function GamePage() {
   function handleCardClick(card: Card) {
     setGroupError(null);
     setPendingLayOff(null);
+    setLayOffError(null);
     if (player.hasMeldedContract) {
       // Post-meld: single-select, for laying off or discarding one card.
       setSelectedCardIds((prev) => (prev[0] === card.id ? [] : [card.id]));
@@ -484,8 +496,19 @@ export default function GamePage() {
     const options = layOffOptions(selectedCard, meld);
     if (options.length === 0) return;
     if (options.length === 1) {
-      layOff(selectedCard.id, meld.id, options[0]);
-      setSelectedCardIds([]);
+      // Checking the result matters here, not just for correctness in the
+      // abstract: clearing the selection unconditionally afterward — the
+      // previous behavior — would make a silent failure look exactly like
+      // a success (the card deselects, the meld's highlight goes away),
+      // with nothing to say the card is actually still sitting in the
+      // hand. See layOffError's own comment above.
+      const ok = layOff(selectedCard.id, meld.id, options[0]);
+      if (ok) {
+        setSelectedCardIds([]);
+        setLayOffError(null);
+      } else {
+        setLayOffError("Couldn't lay that off — the card may no longer be valid there. Try selecting it again.");
+      }
       return;
     }
     // A wild with room on both ends of a run — genuinely ambiguous which
@@ -495,9 +518,14 @@ export default function GamePage() {
 
   function chooseLayOffDirection(direction: "low" | "high") {
     if (!pendingLayOff) return;
-    layOff(pendingLayOff.card.id, pendingLayOff.meld.id, direction);
+    const ok = layOff(pendingLayOff.card.id, pendingLayOff.meld.id, direction);
     setPendingLayOff(null);
-    setSelectedCardIds([]);
+    if (ok) {
+      setSelectedCardIds([]);
+      setLayOffError(null);
+    } else {
+      setLayOffError("Couldn't lay that off — the card may no longer be valid there. Try selecting it again.");
+    }
   }
 
   // The drawer layout's "Lay off card" button (see discardSection) — the
@@ -1015,6 +1043,7 @@ export default function GamePage() {
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               Table melds
             </h2>
+            {layOffError && <p className="mb-2 text-xs text-[var(--danger)]">{layOffError}</p>}
             {state.melds.length === 0 ? (
               <p className="text-sm text-[var(--faint)]">No melds on the table yet.</p>
             ) : (
