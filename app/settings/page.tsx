@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CSSProperties, ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
@@ -12,16 +12,7 @@ import {
   saveLocalCardBack,
 } from "../lib/cardBackStore";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
-import {
-  applyTheme,
-  DEFAULT_THEME,
-  loadLocalTheme,
-  saveLocalTheme,
-  THEMES,
-  ThemeCategory,
-  ThemeId,
-  ThemeOption,
-} from "../lib/themeStore";
+import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
 import {
   applyColorblindMode,
   ColorblindMode,
@@ -31,6 +22,7 @@ import {
   saveLocalColorblindMode,
 } from "../lib/colorblindStore";
 import { supabase } from "../lib/supabaseClient";
+import { THEME_SWATCHES } from "./themeSwatches";
 import { Difficulty } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
@@ -118,57 +110,12 @@ function BoolToggle({
   );
 }
 
-// Small static preview swatches per theme — kept in sync by hand with
-// globals.css's [data-theme] blocks since these render outside the current
-// page's own theme context (so the picker can show every option at once,
-// not just whichever one happens to be active right now).
-const THEME_SWATCHES: Record<ThemeId, { bg: string; panel: string; accent: string; heading: string }> = {
-  midnight: { bg: "#0a2b20", panel: "#123c2c", accent: "#fbbf24", heading: "#fef3c7" },
-  daylight: { bg: "#f4f1ea", panel: "#ffffff", accent: "#d97706", heading: "#1f3d2e" },
-  pastel: { bg: "#eef1fb", panel: "#ffffff", accent: "#ef8b6b", heading: "#3c5e82" },
-  casino: { bg: "#170a0a", panel: "#2b1010", accent: "#d4af37", heading: "#e9c46a" },
-  arcade: { bg: "#14092b", panel: "#1f1147", accent: "#33e6c9", heading: "#ff5fb0" },
-  noir: { bg: "#0d0d0d", panel: "#1c1c1c", accent: "#e8e8e8", heading: "#f5f5f5" },
-  sakura: { bg: "#fdf1f5", panel: "#ffffff", accent: "#d63868", heading: "#7a2142" },
-  ember: { bg: "#0f0906", panel: "#1e120a", accent: "#ff5a1f", heading: "#ff9552" },
-  lagoon: { bg: "#04211f", panel: "#0a3634", accent: "#ff6f91", heading: "#ffe3ec" },
-  sahara: { bg: "#2a1810", panel: "#3d2517", accent: "#2fb6a8", heading: "#f4c78a" },
-  aurora: { bg: "#060b14", panel: "#0f1d2e", accent: "#c084fc", heading: "#86efac" },
-  jade: { bg: "#0b1210", panel: "#132019", accent: "#2fae72", heading: "#f0d78c" },
-  verdigris: { bg: "#0c1613", panel: "#16241f", accent: "#d97b45", heading: "#8fd4bd" },
-  alabaster: { bg: "#f2f1ef", panel: "#ffffff", accent: "#2b2a27", heading: "#2b2a27" },
-  citrus: { bg: "#fff8ee", panel: "#ffffff", accent: "#f2711d", heading: "#7a3b12" },
-  frost: { bg: "#f4f9fc", panel: "#ffffff", accent: "#2ba7d9", heading: "#0f3a5f" },
-  meadow: { bg: "#f9f8ec", panel: "#ffffff", accent: "#d6a419", heading: "#2f4a1e" },
-  coralsand: { bg: "#fdf3e7", panel: "#ffffff", accent: "#ff7a5c", heading: "#8a4a1e" },
-  lilac: { bg: "#f4f1f6", panel: "#ffffff", accent: "#8654a3", heading: "#4a2c5e" },
-  champagne: { bg: "#faf3e4", panel: "#ffffff", accent: "#c9972f", heading: "#6b4f12" },
-  valentines: { bg: "#2b0a14", panel: "#3d1220", accent: "#e0245e", heading: "#ff8fab" },
-  stpatricks: { bg: "#052e16", panel: "#0c3f1f", accent: "#2fbf6f", heading: "#ffd93d" },
-  easter: { bg: "#fdf6fb", panel: "#ffffff", accent: "#6fb88a", heading: "#7a3d70" },
-  july4th: { bg: "#050e2e", panel: "#0d1a44", accent: "#d9263a", heading: "#ffffff" },
-  halloween: { bg: "#0d0710", panel: "#1c1020", accent: "#9d5cff", heading: "#ff8c1a" },
-  thanksgiving: { bg: "#2a1608", panel: "#3d2410", accent: "#c1541f", heading: "#e08a2e" },
-  hanukkah: { bg: "#0a1230", panel: "#121c42", accent: "#d4af37", heading: "#e8ecff" },
-  christmas: { bg: "#0a2818", panel: "#123821", accent: "#c8102e", heading: "#f4c95d" },
-  newyears: { bg: "#0a0a0c", panel: "#18161c", accent: "#d4af37", heading: "#f0d78c" },
-  sweetheart: { bg: "#fff0f4", panel: "#ffffff", accent: "#e0245e", heading: "#a8154a" },
-  cloverfield: { bg: "#f3fbf3", panel: "#ffffff", accent: "#2fa864", heading: "#0d5c30" },
-  springdusk: { bg: "#1c1030", panel: "#281848", accent: "#7fd9a8", heading: "#d8b8f0" },
-  starsandstripes: { bg: "#f7f9fd", panel: "#ffffff", accent: "#c8102e", heading: "#16255e" },
-  candycorn: { bg: "#fff8ec", panel: "#ffffff", accent: "#8b3fd9", heading: "#7a3d0f" },
-  pumpkinspice: { bg: "#fbf0e0", panel: "#ffffff", accent: "#d2691e", heading: "#7a3d0f" },
-  festivaloflights: { bg: "#f2f6ff", panel: "#ffffff", accent: "#c9972f", heading: "#1a3a7a" },
-  candycane: { bg: "#fef7f5", panel: "#ffffff", accent: "#d2122e", heading: "#0d5c34" },
-  confetti: { bg: "#fffaf0", panel: "#ffffff", accent: "#d94f9e", heading: "#8a6510" },
-};
-
 // Representative preview colors per colorblind mode, so the Settings page
 // can show what each mode actually does without needing a real card on
 // screen (a wild card especially — Tritanopia's only visible change is on
 // those, so without this preview, checking it meant hunting for a 2 or
 // Joker in an active game). Hand-maintained against globals.css's
-// [data-colorblind] blocks, same as THEME_SWATCHES above/below — these
+// [data-colorblind] blocks, same reasoning as THEME_SWATCHES — these
 // render outside the current [data-colorblind] context (so every option can
 // be compared side by side at once), so they can't just read the live CSS
 // variables the way an actual card does.
@@ -179,217 +126,51 @@ const COLORBLIND_SWATCHES: Record<ColorblindMode, { red: string; wildBg: string;
   tritanopia: { red: "#b91c1c", wildBg: "#f3d0ec", wildText: "#7a1f6b" },
 };
 
-function CheckBadge({ className }: { className: string }) {
+function ChevronRightIcon() {
   return (
-    <svg viewBox="0 0 20 20" className={className} fill="currentColor" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0l-3.5-3.5a1 1 0 111.4-1.4l2.8 2.8 6.8-6.8a1 1 0 011.4 0z"
-        clipRule="evenodd"
-      />
+    <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[var(--faint)]" fill="none" aria-hidden="true">
+      <path d="M7.5 5l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// A skin-picker tile — a color block up top (the actual preview, since a
-// theme's page background is the one thing every other choice below it
-// tints), a name label on its own strip in that theme's own panel/heading
-// colors, and a corner checkmark badge when selected. Replaces the old
-// single-column list of tiny circular swatches: this reads at a glance the
-// way a cosmetic grid in most modern games already does, and a genuine
-// color block (not a 32px dot) is a far more honest preview of what a theme
-// actually looks like once applied.
-function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
-  const swatch = THEME_SWATCHES[option.id];
-  return (
-    <button
-      onClick={onClick}
-      aria-current={isActive}
-      title={option.description}
-      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
-        isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
-      }`}
-    >
-      <span className="flex h-11 items-end justify-end p-1.5" style={{ background: swatch.bg }} aria-hidden="true">
-        <span className="h-3.5 w-3.5 rounded-full shadow" style={{ background: swatch.accent }} />
-      </span>
-      <span className="px-2 py-1.5" style={{ background: swatch.panel }}>
-        <span className="block truncate text-xs font-medium" style={{ color: swatch.heading }}>
-          {option.name}
-        </span>
-      </span>
-      {isActive && (
-        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow">
-          <CheckBadge className="h-2.5 w-2.5" />
-        </span>
-      )}
-    </button>
-  );
-}
-
-// The Card back picker's own tile — a card back's identity is its motif
-// (diamonds, lightning bolts, peppermint stripes…) *and* the background it
-// sits on (several of the dark themes' card backs are themselves dark), not
-// a table felt color, so this shows the real thing rather than SwatchTile's
-// flat color block. The `.card-back` class goes directly on the swatch
-// area itself — full tile width, not a small floating icon — with
-// `data-cardback` scoping globals.css's [data-cardback="X"] custom
-// properties locally to just this element and its children (the same
-// mechanism the real draw pile uses, just applied to a detached preview
-// instead of the live game), and an inline `--accent` override so even its
-// box-shadow glow matches this option's own frozen color instead of
-// whatever theme happens to be active on <html> right now. The background
-// itself is that option's own literal bg (from THEME_SWATCHES, the same
-// source SwatchTile's felt-color preview already uses) rather than the
-// live --elevated var, which is what actually makes a dark card back read
-// as dark here regardless of the currently active table theme.
-function CardBackTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
-  const swatch = THEME_SWATCHES[option.id];
-  return (
-    <button
-      onClick={onClick}
-      aria-current={isActive}
-      title={option.description}
-      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
-        isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
-      }`}
-    >
-      <span
-        data-cardback={option.id}
-        className="card-back flex h-11 items-center justify-center"
-        style={{ background: swatch.bg, "--accent": swatch.accent } as CSSProperties}
-        aria-hidden="true"
-      />
-      <span className="px-2 py-1.5" style={{ background: swatch.panel }}>
-        <span className="block truncate text-xs font-medium" style={{ color: swatch.heading }}>
-          {option.name}
-        </span>
-      </span>
-      {isActive && (
-        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow">
-          <CheckBadge className="h-2.5 w-2.5" />
-        </span>
-      )}
-    </button>
-  );
-}
-
-// The Card back picker's one non-color option — sized and styled to sit
-// naturally above the same tile grid rather than looking like a stray extra
-// row, since "always match whatever theme is active" isn't a preview-able
-// color the way every other card back option is.
-function MatchThemeTile({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-current={isActive}
-      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ring-2 transition ${
-        isActive ? "bg-[var(--accent)]/10 ring-[var(--accent)]" : "bg-[var(--panel)] ring-transparent hover:ring-[var(--border)]"
-      }`}
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--panel-soft)]" aria-hidden="true">
-        <svg viewBox="0 0 20 20" className="h-4 w-4 text-[var(--accent)]" fill="none">
-          <rect x="2.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
-          <rect x="8.5" y="7" width="9" height="6" rx="3" stroke="currentColor" strokeWidth="1.4" />
-        </svg>
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-[var(--heading)]">Match table theme</span>
-        <span className="block text-xs text-[var(--faint)]">Always follows whichever theme is active above.</span>
-      </span>
-      {isActive && <CheckBadge className="h-4 w-4 shrink-0 text-[var(--accent)]" />}
-    </button>
-  );
-}
-
-const CATEGORIES: ThemeCategory[] = ["classic", "holiday"];
-
-// A segmented Classic/Holiday switch instead of two independently
-// expand/collapse sections — only one category's grid is ever on screen at
-// once, which is what actually keeps ~38 options from turning into a long
-// scroll: a "Show ▼" disclosure still leaves the *other* category's rows
-// sitting there once opened, where a tab just replaces the grid outright.
-function CategoryTabs({ tab, onChange }: { tab: ThemeCategory; onChange: (t: ThemeCategory) => void }) {
-  return (
-    <div className="flex gap-1 rounded-lg bg-[var(--panel-soft)] p-1" role="tablist">
-      {CATEGORIES.map((c) => (
-        <button
-          key={c}
-          role="tab"
-          aria-selected={tab === c}
-          onClick={() => onChange(c)}
-          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium capitalize transition ${
-            tab === c
-              ? "bg-[var(--accent)] text-[var(--on-accent)]"
-              : "text-[var(--muted)] hover:bg-[var(--panel)]"
-          }`}
-        >
-          {c}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Shared by Theme and Card back below — both are "pick one of the same 38
- * looks" pickers, just applied to a different part of the page. Opens on
- * whichever tab the current selection belongs to (so the first thing you
- * see is never a grid with nothing highlighted in it), and keeps a compact
- * "Currently: X" line visible above the tabs regardless of which one you're
- * browsing — the one piece of the old layout the redesign deliberately kept:
- * a quick answer to "what's active right now" that doesn't depend on being
- * on the right tab to see it.
- */
-function SwatchPicker({
-  active,
-  onSelect,
-  matchOption,
+// A compact "current selection, tap to change" row — Theme and Card back
+// both used to be a full picker grid inline on this page; together they
+// were pushing Settings to roughly 4 phone-screens of scrolling before
+// reaching a single toggle, so both now live on their own dedicated pages
+// (see SwatchPicker's own doc) and this is all that's left of them here.
+function SwatchLinkRow({
+  href,
+  label,
+  name,
+  swatch,
 }: {
-  active: ThemeId | "match";
-  onSelect: (id: ThemeId | "match") => void;
-  matchOption?: boolean;
+  href: string;
+  label: string;
+  name: string;
+  swatch: { bg: string; panel: string; accent: string };
 }) {
-  const activeOption = active === "match" ? undefined : THEMES.find((t) => t.id === active);
-  const [tab, setTab] = useState<ThemeCategory>(activeOption?.category ?? "classic");
-  const visible = THEMES.filter((t) => t.category === tab);
-  const currentSwatch = activeOption ? THEME_SWATCHES[activeOption.id] : undefined;
-
   return (
-    <div className="flex flex-col gap-2.5">
-      <p className="flex items-center gap-2 text-xs text-[var(--faint)]">
-        {currentSwatch && (
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full"
-            style={{ background: currentSwatch.accent }}
-            aria-hidden="true"
-          />
-        )}
-        Currently:{" "}
-        <span className="font-semibold text-[var(--muted)]">
-          {activeOption ? activeOption.name : "Match table theme"}
+    <section className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[var(--muted)]">{label}</label>
+      <Link
+        href={href}
+        className="flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition hover:bg-[var(--panel-soft)]"
+      >
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent)]"
+          style={{ background: swatch.bg }}
+          aria-hidden="true"
+        >
+          <span className="h-5 w-5 rounded-full border" style={{ background: swatch.panel, borderColor: swatch.accent }} />
         </span>
-      </p>
-
-      {matchOption && <MatchThemeTile isActive={active === "match"} onClick={() => onSelect("match")} />}
-
-      <CategoryTabs tab={tab} onChange={setTab} />
-
-      {/* matchOption doubles as "this is the Card back picker, not Theme" —
-          the only two SwatchPicker callers happen to line up exactly that
-          way (Theme never shows a Match tile; Card back always does), so a
-          separate flag just for tile choice would be tracking the same
-          thing twice. */}
-      <div className="grid grid-cols-2 gap-2">
-        {visible.map((t) =>
-          matchOption ? (
-            <CardBackTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
-          ) : (
-            <SwatchTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
-          )
-        )}
-      </div>
-    </div>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
+          <span className="block text-xs text-[var(--faint)]">Tap to change</span>
+        </span>
+        <ChevronRightIcon />
+      </Link>
+    </section>
   );
 }
 
@@ -433,25 +214,6 @@ export default function SettingsPage() {
       });
   }, [user]);
 
-  function handleThemeChange(id: ThemeId) {
-    setTheme(id);
-    saveLocalTheme(id);
-    applyTheme(id);
-    // Card back mirrors the table theme by default (cardBack === "match") —
-    // re-apply it here too so a "match" card back visibly follows the new
-    // theme immediately, the same instant-apply behavior every other choice
-    // on this page already has. A no-op (applyCardBack just re-sets the
-    // same explicit id back to itself) whenever an explicit card back is
-    // already chosen — changing the table theme must never disturb that.
-    applyCardBack(cardBack, id);
-  }
-
-  function handleCardBackChange(id: CardBackId) {
-    setCardBack(id);
-    saveLocalCardBack(id);
-    applyCardBack(id, theme);
-  }
-
   function handleColorblindModeChange(mode: ColorblindMode) {
     setColorblindMode(mode);
     saveLocalColorblindMode(mode);
@@ -463,10 +225,11 @@ export default function SettingsPage() {
   // own handlers above), not HouseSettings, so a plain updateSettings(
   // DEFAULT_SETTINGS) alone wouldn't touch them; this calls all three
   // reset paths together so "Reset to defaults" really means the whole
-  // page, not just the toggles. Doesn't touch the signed-in account's
-  // synced AI difficulty by itself — that only ever changes via the
-  // separate, explicit "Sync to your account" action, same as any other
-  // local change here.
+  // page, not just the toggles, even though Theme/Card back's own pickers
+  // no longer live on this page directly. Doesn't touch the signed-in
+  // account's synced AI difficulty by itself — that only ever changes via
+  // the separate, explicit "Sync to your account" action, same as any
+  // other local change here.
   function handleResetToDefaults() {
     setSettings(DEFAULT_SETTINGS);
     saveLocalSettings(DEFAULT_SETTINGS);
@@ -510,6 +273,9 @@ export default function SettingsPage() {
     setSaveState(error ? "error" : "saved");
   }
 
+  const activeThemeOption = THEMES.find((t) => t.id === theme);
+  const activeCardBackOption = cardBack === "match" ? undefined : THEMES.find((t) => t.id === cardBack);
+
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
       <Link
@@ -524,19 +290,24 @@ export default function SettingsPage() {
         <LoadingSpinner />
       ) : (
         <>
-          <section className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-[var(--muted)]">Theme</label>
-            <SwatchPicker active={theme} onSelect={(id) => id !== "match" && handleThemeChange(id)} />
-          </section>
+          {activeThemeOption && (
+            <SwatchLinkRow
+              href="/settings/theme"
+              label="Theme"
+              name={activeThemeOption.name}
+              swatch={THEME_SWATCHES[activeThemeOption.id]}
+            />
+          )}
 
-          <section className="flex flex-col gap-3">
-            <InfoDetails label="Card back">
-              The pattern and color on the back of your cards — the draw pile, and another
-              player&apos;s hand while it&apos;s face down. Separate from Theme above, so any
-              table look can be paired with any card back.
-            </InfoDetails>
-            <SwatchPicker active={cardBack} onSelect={handleCardBackChange} matchOption />
-          </section>
+          {/* "Match table theme" has no swatch of its own — it resolves to
+              whichever theme is currently active, so that's exactly what
+              this row shows. */}
+          <SwatchLinkRow
+            href="/settings/card-back"
+            label="Card back"
+            name={activeCardBackOption ? activeCardBackOption.name : "Match table theme"}
+            swatch={THEME_SWATCHES[activeCardBackOption ? activeCardBackOption.id : theme]}
+          />
 
           <section className="flex flex-col gap-2">
             <InfoDetails label="Default AI difficulty">
