@@ -8,8 +8,24 @@ interface HandPreviewBarProps {
   cards: Card[];
   // True once the real "Your hand" section is at least partly in view (or
   // there's nothing to preview) — see game/page.tsx's IntersectionObserver.
+  // Only meaningful in the default (scroll-to-hand) layout; the expandable-
+  // hand-drawer layout always passes false, since this bar is the permanent
+  // entry point there rather than something that hides once you've scrolled
+  // to a separate full-size section.
   hidden: boolean;
   onTap: () => void;
+  // Rings the matching mini-card(s) in the fan — lets a player who selected
+  // a card inside the (now-closed) hand drawer still see what's selected
+  // while they go tap a meld on the table to lay it off. Omitted entirely
+  // in the default scroll layout, where selection is only ever made in the
+  // real, visible hand right below this bar, so nothing here needs echoing.
+  selectedCardIds?: string[];
+  // Off by default: sm:hidden, since on the default scroll layout a laptop/
+  // tablet already has enough room that this bar would be redundant chrome.
+  // The expandable-hand-drawer layout sets this true — there, the bar isn't
+  // a "just on phones" fallback, it's the permanent way to reach your hand
+  // at every screen size.
+  showOnAllScreens?: boolean;
 }
 
 const CARD_W = 34;
@@ -37,7 +53,7 @@ const MIN_STEP = 14;
  * individual mini-cards themselves tappable — deliberately not a second
  * interactive hand to keep in sync with the real one, just a shortcut to it.
  */
-export function HandPreviewBar({ cards, hidden, onTap }: HandPreviewBarProps) {
+export function HandPreviewBar({ cards, hidden, onTap, selectedCardIds, showOnAllScreens }: HandPreviewBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -64,20 +80,25 @@ export function HandPreviewBar({ cards, hidden, onTap }: HandPreviewBarProps) {
     <button
       onClick={onTap}
       aria-label="Jump to your hand"
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)] transition-transform duration-200 sm:hidden ${
-        hidden ? "translate-y-full" : "translate-y-0"
-      }`}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)] transition-transform duration-200 ${
+        showOnAllScreens ? "" : "sm:hidden"
+      } ${hidden ? "translate-y-full" : "translate-y-0"}`}
     >
       <div ref={containerRef} className="flex items-center overflow-hidden" style={{ height: CARD_H }}>
         {cards.map((card, i) => (
-          <MiniCard key={card.id} card={card} marginLeft={i === 0 ? 0 : step - CARD_W} />
+          <MiniCard
+            key={card.id}
+            card={card}
+            marginLeft={i === 0 ? 0 : step - CARD_W}
+            selected={!!selectedCardIds?.includes(card.id)}
+          />
         ))}
       </div>
     </button>
   );
 }
 
-function MiniCard({ card, marginLeft }: { card: Card; marginLeft: number }) {
+function MiniCard({ card, marginLeft, selected }: { card: Card; marginLeft: number; selected: boolean }) {
   const isRed = RED_SUITS.has(card.suit);
   const colorClass = card.isWild ? "wild" : isRed ? "red" : "";
   const label = card.rank === "JOKER" ? "JKR" : card.rank;
@@ -90,8 +111,13 @@ function MiniCard({ card, marginLeft }: { card: Card; marginLeft: number }) {
       // same theme-aware background/text colors as every real card, just a
       // smaller box with the rank/suit left-aligned in the corner instead of
       // centered, so an overlapped card's identifying text stays visible in
-      // front of whatever's stacked on top of it.
-      className={`card-face ${colorClass} shrink-0 rounded-md p-1 text-left text-[11px] font-bold leading-none`}
+      // front of whatever's stacked on top of it. The selected ring uses a
+      // relative z-index bump too — otherwise a later (overlapping) card's
+      // own box would paint over this one's ring on the shared edge between
+      // them, since normal DOM/paint order alone doesn't account for it.
+      className={`card-face ${colorClass} shrink-0 rounded-md p-1 text-left text-[11px] font-bold leading-none ${
+        selected ? "relative z-10 ring-2 ring-[var(--accent)]" : ""
+      }`}
     >
       <div>{label}</div>
       <div className="mt-0.5">{SUIT_SYMBOL[card.suit]}</div>

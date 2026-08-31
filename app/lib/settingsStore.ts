@@ -19,6 +19,17 @@ export interface HouseSettings {
   // Show the "Who's turn is it?" button on the game board, which pops up a
   // brief on-screen reminder of whose turn it currently is.
   showWhoseTurn: boolean;
+  // Off (default): "Your hand" is its own section on the game board, in the
+  // normal page flow, with a compact read-only preview pinned to the bottom
+  // of the screen that scrolls you there on tap (see HandPreviewBar). On:
+  // that same compact preview stays put, but tapping it opens your hand —
+  // sorting, dragging, grouping a meld, laying off, discarding, all of it —
+  // as a bottom sheet instead, so managing your hand never requires
+  // scrolling at all. Ignored during the tutorial, which always uses the
+  // off/scroll layout regardless of this — its scripted steps target
+  // specific on-page sections directly (see game/page.tsx's TUTORIAL_STEPS
+  // handling), not whatever's currently inside a collapsed drawer.
+  expandableHand: boolean;
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
@@ -28,6 +39,7 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   highlightLayoffs: true,
   showPlayerActivity: true,
   showWhoseTurn: true,
+  expandableHand: false,
 };
 
 export function loadLocalSettings(): HouseSettings {

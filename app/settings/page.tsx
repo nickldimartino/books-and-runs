@@ -548,6 +548,13 @@ export default function SettingsPage() {
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
           />
 
+          <BoolToggle
+            label="Expandable hand drawer"
+            value={settings.expandableHand}
+            onChange={(v) => updateSettings({ expandableHand: v })}
+            description="Instead of scrolling down to your hand, tap the compact preview pinned to the bottom of the screen to open it — sorting, dragging, grouping a meld, laying off, and discarding all happen right there, without scrolling. Off by default; the tutorial always uses the regular scrolling layout regardless of this."
+          />
+
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
               <p className="text-sm text-[var(--muted)]">

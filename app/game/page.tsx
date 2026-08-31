@@ -123,6 +123,9 @@ export default function GamePage() {
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
   const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState<Card | null>(null);
+  // Only meaningful when the "expandable hand drawer" setting is on — see
+  // useDrawerLayout below. Reset alongside every other per-turn UI state.
+  const [handDrawerOpen, setHandDrawerOpen] = useState(false);
   // Whether the real "Your hand" section is at least partly scrolled into
   // view — drives HandPreviewBar's visibility (see handSectionRefCallback
   // and its render near the bottom of this component). Starts true (bar
@@ -159,6 +162,29 @@ export default function GamePage() {
       if (whoseTurnTimeoutRef.current) clearTimeout(whoseTurnTimeoutRef.current);
     };
   }, []);
+
+  // The hand drawer (expandable-hand-drawer setting) is this codebase's
+  // first real modal — the wild lay-off/turn-banner overlays are both
+  // fixed-position but never block the page behind them the way this one's
+  // backdrop does, so unlike those, this needs the two things a genuine
+  // modal is expected to do: stop the page behind it from scrolling, and
+  // close on Escape. No focus trap, deliberately — there's no established
+  // pattern for one anywhere in this codebase yet, and this drawer's own
+  // content (the hand, its sort buttons, meld-builder controls) is already
+  // reachable by tab order without one.
+  useEffect(() => {
+    if (!handDrawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setHandDrawerOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [handDrawerOpen]);
 
   function handleShowWhoseTurn() {
     setWhoseTurnVisible(true);
@@ -223,6 +249,7 @@ export default function GamePage() {
     setGroupError(null);
     setPendingLayOff(null);
     setConfirmingDiscard(null);
+    setHandDrawerOpen(false);
   }, [state?.currentPlayerIndex, state?.round]);
 
   // If the selection changes out from under a pending confirmation (the
@@ -380,6 +407,14 @@ export default function GamePage() {
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showPlayerActivity = isTutorial || savedSettings.showPlayerActivity;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
+  // Unlike every setting above, this one is *never* forced on for the
+  // tutorial — the opposite of the usual "show off every optional feature"
+  // rule. TUTORIAL_STEPS gates on specific on-page sections (data-tutorial=
+  // "build-meld", "hand", etc.) being actually visible in the page; those
+  // same sections still exist when this is on, just relocated inside a
+  // drawer that's normally closed, which the tutorial has no concept of
+  // opening for you.
+  const useDrawerLayout = !isTutorial && savedSettings.expandableHand;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -534,6 +569,184 @@ export default function GamePage() {
       setGroupError("Couldn't meld those groups — check they still match this round's contract.");
     }
   }
+
+  // Extracted so the exact same JSX can render either inline in the normal
+  // page flow (the default layout) or inside the hand drawer (see
+  // useDrawerLayout and its render further down) — one definition, two
+  // possible places to mount it, never both at once.
+  const buildMeldSection = !player.hasMeldedContract && (
+    <section data-tutorial="build-meld" className="panel-elevated flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+        Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
+      </h2>
+
+      {contract.wholeHandMeld && (
+        <p className="text-xs text-[var(--muted)]">
+          This is the final round — there&apos;s no discard once you meld, so every card in
+          your hand has to go into these runs.
+          {cardsNotYetGrouped > 0 &&
+            ` ${cardsNotYetGrouped} card${cardsNotYetGrouped > 1 ? "s" : ""} not yet grouped.`}
+        </p>
+      )}
+
+      {pendingGroups.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {pendingGroups.map((group) => (
+            <div
+              key={group.id}
+              className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] p-2"
+            >
+              <span className="w-12 shrink-0 text-xs font-semibold capitalize text-[var(--accent)]">
+                {group.type}
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {group.cardIds.map((id) => {
+                  const card = player.hand.find((c) => c.id === id);
+                  return card ? <PlayingCard key={id} card={card} small /> : null;
+                })}
+              </div>
+              <button
+                onClick={() => removePendingGroup(group.id)}
+                className="ml-auto text-xs text-[var(--danger)] hover:opacity-80"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {pendingGroupChoice && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+            Which card is the wild standing in for?
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            {pendingGroupChoice.options.map((start) => (
+              <button
+                key={start}
+                onClick={() => chooseGroupRunStart(start)}
+                className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+              >
+                {wildStandInLabel(pendingGroupChoice.cards, contract, start)}
+              </button>
+            ))}
+            <button
+              onClick={() => setPendingGroupChoice(null)}
+              className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={handleGroupSelected}
+          disabled={!hasDrawn || selectedCardIds.length === 0 || !!pendingGroupChoice}
+          className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Group selected cards
+        </button>
+        <button
+          data-tutorial="confirm-meld"
+          onClick={handleConfirmMeld}
+          disabled={!hasDrawn || !meldReady || !!pendingGroupChoice}
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Confirm Meld
+        </button>
+      </div>
+    </section>
+  );
+
+  const discardSection = (
+    <section data-tutorial="discard-btn" className="flex flex-wrap items-center justify-center gap-3">
+      {confirmingDiscard ? (
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
+          <span className="text-sm text-[var(--muted)]">
+            Discard the {cardLabel(confirmingDiscard)} and end your turn?
+          </span>
+          <button
+            onClick={confirmDiscard}
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow"
+          >
+            Confirm
+          </button>
+          <button
+            onClick={cancelDiscard}
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleDiscardSelected}
+          disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
+          className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Discard selected card
+        </button>
+      )}
+    </section>
+  );
+
+  const handSection = (
+    <section data-tutorial="hand" ref={handSectionRefCallback}>
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+          {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+          <span className="ml-2 font-normal normal-case text-[var(--muted)]">
+            ({handPenalty(player.hand)} pts)
+          </span>
+          {player.hasMeldedContract && (
+            <span className="ml-2 text-[var(--accent)]">— contract melded</span>
+          )}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => sortHand("suit")}
+            title="Group same-suit cards together — good for spotting runs"
+            className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Sort by suit
+          </button>
+          <button
+            onClick={() => sortHand("rank")}
+            title="Group same-rank cards together — good for spotting books"
+            className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Sort by rank
+          </button>
+        </div>
+      </div>
+      {/* Keying on round + whose hand this is forces a full remount —
+          not just a data update — exactly at the two moments a hand
+          is genuinely "freshly dealt": a new round starting, or (in
+          pass-and-play) control passing to a different player. A
+          remount guarantees every card is a real new DOM node, so
+          card-enter's staggered delay (see DraggableHand.tsx) plays
+          for the whole hand together instead of only for whichever
+          cards don't coincidentally share an id with what the same
+          seat happened to hold last round (deck reshuffles reuse ids
+          like "h-6-0" every round, so without this, some cards would
+          silently skip the animation as if they'd already been there). */}
+      <DraggableHand
+        key={`${state.round}-${player.id}`}
+        cards={visibleHand}
+        selectedCardIds={selectedCardIds}
+        lastDrawnCardId={lastDrawnCardId}
+        onCardClick={handleCardClick}
+        onReorder={reorderHand}
+        layoffEligibleIds={layoffEligibleHandIds}
+      />
+      <p className="mt-1 text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
+    </section>
+  );
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
@@ -868,181 +1081,62 @@ export default function GamePage() {
             </section>
           )}
 
-          {!player.hasMeldedContract && (
-            <section data-tutorial="build-meld" className="panel-elevated flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
-              </h2>
-
-              {contract.wholeHandMeld && (
-                <p className="text-xs text-[var(--muted)]">
-                  This is the final round — there&apos;s no discard once you meld, so every card in
-                  your hand has to go into these runs.
-                  {cardsNotYetGrouped > 0 &&
-                    ` ${cardsNotYetGrouped} card${cardsNotYetGrouped > 1 ? "s" : ""} not yet grouped.`}
-                </p>
-              )}
-
-              {pendingGroups.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  {pendingGroups.map((group) => (
-                    <div
-                      key={group.id}
-                      className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] p-2"
-                    >
-                      <span className="w-12 shrink-0 text-xs font-semibold capitalize text-[var(--accent)]">
-                        {group.type}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {group.cardIds.map((id) => {
-                          const card = player.hand.find((c) => c.id === id);
-                          return card ? <PlayingCard key={id} card={card} small /> : null;
-                        })}
-                      </div>
+          {useDrawerLayout ? (
+            <>
+              <HandPreviewBar
+                cards={visibleHand}
+                selectedCardIds={selectedCardIds}
+                hidden={false}
+                showOnAllScreens
+                onTap={() => setHandDrawerOpen(true)}
+              />
+              {handDrawerOpen && (
+                <>
+                  {/* Backdrop: this drawer is the one genuine modal in the
+                      codebase (see the scroll-lock/Escape effect above) — the
+                      wild lay-off/turn-banner overlays are fixed-position too
+                      but never block the page behind them the way this does.
+                      Tapping it closes the drawer, same as the Done button. */}
+                  <div
+                    aria-hidden="true"
+                    onClick={() => setHandDrawerOpen(false)}
+                    className="fixed inset-0 z-[45] bg-black/50"
+                  />
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Manage your hand"
+                    className="fixed inset-x-0 bottom-0 z-[46] flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>
                       <button
-                        onClick={() => removePendingGroup(group.id)}
-                        className="ml-auto text-xs text-[var(--danger)] hover:opacity-80"
+                        onClick={() => setHandDrawerOpen(false)}
+                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                       >
-                        Remove
+                        Done
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {pendingGroupChoice && (
-                <div className="flex flex-col gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                    Which card is the wild standing in for?
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {pendingGroupChoice.options.map((start) => (
-                      <button
-                        key={start}
-                        onClick={() => chooseGroupRunStart(start)}
-                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
-                      >
-                        {wildStandInLabel(pendingGroupChoice.cards, contract, start)}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => setPendingGroupChoice(null)}
-                      className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
-                    >
-                      Cancel
-                    </button>
+                    {buildMeldSection}
+                    {discardSection}
+                    {handSection}
                   </div>
-                </div>
+                </>
               )}
+            </>
+          ) : (
+            <>
+              {buildMeldSection}
+              {discardSection}
+              {handSection}
 
-              {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={handleGroupSelected}
-                  disabled={!hasDrawn || selectedCardIds.length === 0 || !!pendingGroupChoice}
-                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Group selected cards
-                </button>
-                <button
-                  data-tutorial="confirm-meld"
-                  onClick={handleConfirmMeld}
-                  disabled={!hasDrawn || !meldReady || !!pendingGroupChoice}
-                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Confirm Meld
-                </button>
-              </div>
-            </section>
+              <HandPreviewBar
+                cards={visibleHand}
+                hidden={handSectionVisible}
+                onTap={() => handSectionElRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              />
+            </>
           )}
-
-          <section data-tutorial="discard-btn" className="flex flex-wrap items-center justify-center gap-3">
-            {confirmingDiscard ? (
-              <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
-                <span className="text-sm text-[var(--muted)]">
-                  Discard the {cardLabel(confirmingDiscard)} and end your turn?
-                </span>
-                <button
-                  onClick={confirmDiscard}
-                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow"
-                >
-                  Confirm
-                </button>
-                <button
-                  onClick={cancelDiscard}
-                  className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleDiscardSelected}
-                disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
-                className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Discard selected card
-              </button>
-            )}
-          </section>
-
-          <section data-tutorial="hand" ref={handSectionRefCallback}>
-            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
-                <span className="ml-2 font-normal normal-case text-[var(--muted)]">
-                  ({handPenalty(player.hand)} pts)
-                </span>
-                {player.hasMeldedContract && (
-                  <span className="ml-2 text-[var(--accent)]">— contract melded</span>
-                )}
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => sortHand("suit")}
-                  title="Group same-suit cards together — good for spotting runs"
-                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                >
-                  Sort by suit
-                </button>
-                <button
-                  onClick={() => sortHand("rank")}
-                  title="Group same-rank cards together — good for spotting books"
-                  className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                >
-                  Sort by rank
-                </button>
-              </div>
-            </div>
-            {/* Keying on round + whose hand this is forces a full remount —
-                not just a data update — exactly at the two moments a hand
-                is genuinely "freshly dealt": a new round starting, or (in
-                pass-and-play) control passing to a different player. A
-                remount guarantees every card is a real new DOM node, so
-                card-enter's staggered delay (see DraggableHand.tsx) plays
-                for the whole hand together instead of only for whichever
-                cards don't coincidentally share an id with what the same
-                seat happened to hold last round (deck reshuffles reuse ids
-                like "h-6-0" every round, so without this, some cards would
-                silently skip the animation as if they'd already been there). */}
-            <DraggableHand
-              key={`${state.round}-${player.id}`}
-              cards={visibleHand}
-              selectedCardIds={selectedCardIds}
-              lastDrawnCardId={lastDrawnCardId}
-              onCardClick={handleCardClick}
-              onReorder={reorderHand}
-              layoffEligibleIds={layoffEligibleHandIds}
-            />
-            <p className="mt-1 text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
-          </section>
-
-          <HandPreviewBar
-            cards={visibleHand}
-            hidden={handSectionVisible}
-            onTap={() => handSectionElRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          />
         </>
       )}
 
