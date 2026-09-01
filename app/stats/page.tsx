@@ -183,14 +183,6 @@ export default function StatsPage() {
         </section>
       )}
 
-      {/* Independent of the player_stats-driven section below — someone who's
-          only ever played Daily Deal (never a real tracked game) has no
-          player_stats row at all, but still has a real streak worth
-          showing, so this can't live inside the `!stats` gate down there. */}
-      {dailyDealBestStreak !== null && (
-        <StatTile label="Best Daily Deal streak" value={dailyDealBestStreak} sub="days in a row" />
-      )}
-
       {authLoading || loading ? (
         <LoadingSpinner />
       ) : statsError ? (
@@ -210,6 +202,14 @@ export default function StatsPage() {
             <StatTile label="Average score" value={formatScore(stats.average_score)} />
             <StatTile label="Win rate" value={winRate !== null ? `${winRate}%` : "—"} />
             <StatTile label="Games tied" value={stats.games_tied} sub="a rare result" />
+            {/* Placed here specifically so the grid lands on an even 8
+                tiles (2 columns × 4 rows) instead of an odd 7 with a
+                half-empty last row. Ties this tile's visibility to
+                `stats` existing (same as every other tile here) — a
+                player who's only ever played Daily Deal and never a real
+                tracked game sees "No games recorded yet" below instead,
+                same as they would have before this stat existed. */}
+            <StatTile label="Best Daily Deal streak" value={dailyDealBestStreak ?? 0} sub="days in a row" />
           </section>
 
           <section>
