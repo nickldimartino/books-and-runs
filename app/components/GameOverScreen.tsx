@@ -299,19 +299,22 @@ export function GameOverScreen({ state }: { state: GameState }) {
   }
 
   async function handleShare() {
-    // The URL lives inside `text` itself (not a separate `url` field) for
-    // both paths below — navigator.share included. That field looks like
-    // the "correct" place to put it, but plenty of real share targets (iOS
-    // Messages chief among them) treat `url` as the entire shareable object
-    // once it's present and silently drop `text` altogether, which is
-    // exactly the "Share only has the URL" bug this replaced: the
-    // scoreboard-formatted result never even reached the share sheet.
-    // Folding everything into one `text` field sidesteps that per-target
-    // guessing game entirely.
-    const text = `${shareText()}\n${window.location.origin}`;
+    // navigator.share gets the scoreboard text with NO url in the payload
+    // at all — not in a separate `url` field, and not appended into `text`
+    // either. Both of those were tried already and both lost the multi-line
+    // formatting this exists to produce: a separate `url` field made real
+    // share targets (iOS Messages chief among them) drop `text` altogether
+    // and share only the link, and folding the url into `text` still got
+    // the whole thing collapsed onto one line — the OS's own link-detector
+    // finds the bare URL inside the text and demotes everything around it
+    // to a single-line caption on a link-preview card. A share sheet result
+    // with no link at all, but real line breaks, beats one with a link and
+    // none. The clipboard fallback below has no such detector in the way,
+    // so it keeps the url appended — useful there, since pasting it
+    // somewhere is the only way this path's copy is ever "sent" at all.
     if (navigator.share) {
       try {
-        await navigator.share({ text });
+        await navigator.share({ text: shareText() });
       } catch {
         // The share sheet itself throws if the player just cancels it —
         // not a real failure worth surfacing as one.
@@ -319,7 +322,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(`${shareText()}\n${window.location.origin}`);
       setShareState("copied");
       setTimeout(() => setShareState("idle"), 2000);
     } catch {
