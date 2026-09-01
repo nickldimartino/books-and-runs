@@ -299,14 +299,19 @@ export function GameOverScreen({ state }: { state: GameState }) {
   }
 
   async function handleShare() {
-    const text = shareText();
-    // navigator.share (where available — mainly mobile browsers and
-    // Capacitor's iOS wrapper) hands the OS's own native share sheet a
-    // separate url field rather than one it has to parse back out of the
-    // text itself.
+    // The URL lives inside `text` itself (not a separate `url` field) for
+    // both paths below — navigator.share included. That field looks like
+    // the "correct" place to put it, but plenty of real share targets (iOS
+    // Messages chief among them) treat `url` as the entire shareable object
+    // once it's present and silently drop `text` altogether, which is
+    // exactly the "Share only has the URL" bug this replaced: the
+    // scoreboard-formatted result never even reached the share sheet.
+    // Folding everything into one `text` field sidesteps that per-target
+    // guessing game entirely.
+    const text = `${shareText()}\n${window.location.origin}`;
     if (navigator.share) {
       try {
-        await navigator.share({ text, url: window.location.origin });
+        await navigator.share({ text });
       } catch {
         // The share sheet itself throws if the player just cancels it —
         // not a real failure worth surfacing as one.
@@ -314,7 +319,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(`${text}\n${window.location.origin}`);
+      await navigator.clipboard.writeText(text);
       setShareState("copied");
       setTimeout(() => setShareState("idle"), 2000);
     } catch {
