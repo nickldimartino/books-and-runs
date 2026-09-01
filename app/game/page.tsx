@@ -931,7 +931,7 @@ export default function GamePage() {
         // stranded near the top with empty space below it.
         className="panel-elevated flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3"
       >
-        <div className="shrink-0 text-center">
+        <div className="shrink-0 text-left">
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
             Round {state.round} of {state.selectedContracts.length}
           </p>
@@ -970,11 +970,13 @@ export default function GamePage() {
             carrying a Lv badge too (see AI_THEORETICAL_LEVEL). shrink-0
             keeps flex from ever shrinking this one to make room for its
             neighbors — the "Hand" cell above is the one meant to give way
-            first if the row is ever genuinely tight. text-center (not
-            text-right) matches the other two cells, now that all three are
-            meant to read as centered blocks rather than each pinned to a
-            different edge. */}
-        <ul className="shrink-0 text-center text-xs text-[var(--muted)]">
+            first if the row is ever genuinely tight. text-right (not
+            text-center) so every line's score digit lands in the same
+            spot instead of drifting left/right with each name's own
+            length — only "Hand" in the middle is meant to read as a
+            centered block; round info and this list are each pinned to
+            their own edge of the header. */}
+        <ul className="shrink-0 text-right text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
