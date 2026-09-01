@@ -10,11 +10,10 @@ interface HandPreviewBarProps {
 }
 
 // Below this width, cards render at their normal (phone) size. At or above
-// it — roughly iPad-portrait and up — they render larger (see WIDE_* below)
-// and the fan is given a much wider column to spread out in, since on a
-// laptop/iPad the game board itself (<main>, capped at max-w-2xl) already
-// leaves most of the viewport's width empty on either side; this bar is
-// the one thing on the page allowed to actually use it.
+// it — roughly iPad-portrait and up — they render larger (see WIDE_* below),
+// since the bar itself has plenty of room to spare there (the game board
+// underneath, <main>, is capped at max-w-2xl) — bigger cards, not wider
+// spacing between them; see the `step` comment further down.
 const WIDE_BREAKPOINT = "(min-width: 768px)";
 
 const CARD_W = 34;
@@ -31,15 +30,6 @@ const WIDE_GAP = 6;
 // which is the exact thing this bar exists to avoid.
 const MIN_STEP = 14;
 const WIDE_MIN_STEP = 22;
-// On a laptop/iPad, <main> itself only ever uses max-w-2xl of the viewport —
-// this bar is the one thing on the page allowed to spread into the rest of
-// it. Rather than just centering the fan at its natural (un-stretched)
-// spacing — which left a big hand looking like a small huddle in the middle
-// of a mostly empty bar — isWide actively stretches the gaps between cards
-// to fill most of the available width, capped by WIDE_MAX_STEP so a small
-// hand (down to just 1-2 cards) doesn't end up scattered edge to edge.
-const WIDE_FILL_FRACTION = 0.92;
-const WIDE_MAX_STEP = 100;
 
 /**
  * A compact, read-only preview of the active player's whole hand, pinned to
@@ -109,25 +99,25 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
   // needlessly over-compressing the fan by that much.
   const available = width;
   const naturalStep = cardW + gap;
-  let step: number;
-  if (isWide) {
-    // Stretches outward instead of just centering at naturalStep — see
-    // WIDE_FILL_FRACTION/WIDE_MAX_STEP above.
-    const target =
-      cards.length <= 1 ? naturalStep : (available * WIDE_FILL_FRACTION - cardW) / (cards.length - 1);
-    step = Math.max(minStep, Math.min(WIDE_MAX_STEP, target));
-  } else {
-    step =
-      cards.length <= 1 ? naturalStep : Math.max(minStep, Math.min(naturalStep, (available - cardW) / (cards.length - 1)));
-  }
-  // Fanned (corner-aligned rank/suit, so an overlapped card's identifying
-  // text stays visible in front of whatever's stacked on top of it) exactly
-  // when neighboring cards actually overlap — step < cardW. Above that
-  // threshold nothing overlaps, whether because the hand fit at its natural
-  // spacing (the non-wide path) or because isWide stretched the gaps out
-  // past it, so each card reads the same centered way every other card in
-  // the app does.
-  const fanned = step < cardW;
+  // Same rule at every width: sit at natural spacing (cards close together,
+  // centered as a group — see justify-center below) and only compress below
+  // that if the hand doesn't fit. isWide used to stretch this outward to
+  // fill the bar's now-much-wider column, but that just left visible gaps
+  // between cards that read as sloppy, not "bigger" — the win from a wider
+  // container is that a natural-spacing hand doesn't need to compress at
+  // all here nearly as often, not that it gets stretched out to prove the
+  // room exists.
+  const step =
+    cards.length <= 1 ? naturalStep : Math.max(minStep, Math.min(naturalStep, (available - cardW) / (cards.length - 1)));
+  // step only ever gets compressed *down from* naturalStep when the hand
+  // doesn't fit at its natural spacing — so step === naturalStep is exactly
+  // "nothing needed shrinking," i.e. no card is actually overlapping its
+  // neighbor. Corner-aligned rank/suit only matters once that's no longer
+  // true: it's what keeps a card's identifying text out from under whatever
+  // overlaps it. A hand small enough to sit at its natural spacing has
+  // nothing overlapping anything, so it reads the same centered way every
+  // other card in the app does instead.
+  const fanned = step < naturalStep;
 
   return (
     <button
@@ -138,11 +128,12 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
       {/* max-w-2xl matches game/page.tsx's <main> exactly on a phone, so the
           fan lines up under the page's own centered content column instead
           of the viewport's raw edges (this bar itself spans full-bleed —
-          fixed inset-x-0, above — like a toolbar). Once there's real room to
-          spare (isWide), the column widens well past that to let the fan
-          actually use the space a laptop/iPad leaves empty on either side
-          of <main> — capped short of the true viewport edge so it still
-          reads as a distinct bar, not a blocking full-width wall. */}
+          fixed inset-x-0, above — like a toolbar). isWide widens this well
+          past that — not so the fan stretches out to match (see `step`
+          below, which never does), but so a full hand at its larger, more
+          spaced-out natural size almost never needs to compress at all: the
+          extra room goes toward not touching `step`, not toward touching it
+          more. */}
       <div
         ref={containerRef}
         // justify-center matters on top of mx-auto for a *small* hand — the
