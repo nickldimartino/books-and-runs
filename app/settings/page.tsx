@@ -365,20 +365,6 @@ export default function SettingsPage() {
           />
 
           <BoolToggle
-            label="Expandable hand drawer"
-            value={settings.expandableHand}
-            onChange={(v) => updateSettings({ expandableHand: v })}
-            description="Instead of scrolling down to your hand, tap the compact preview pinned to the bottom of the screen to open it — sorting, dragging, grouping a meld, laying off, and discarding all happen right there, without scrolling. On by default; the tutorial always uses the regular scrolling layout regardless of this."
-          />
-
-          <BoolToggle
-            label="Group melds by type"
-            value={settings.groupMeldsByType}
-            onChange={(v) => updateSettings({ groupMeldsByType: v })}
-            description="In Table melds, show each player's books before their runs, instead of the order they were confirmed in."
-          />
-
-          <BoolToggle
             label="Highlight possible lay-offs"
             value={settings.highlightLayoffs}
             onChange={(v) => updateSettings({ highlightLayoffs: v })}

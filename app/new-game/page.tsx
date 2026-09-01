@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
-import { pickAiPersonas } from "../lib/aiPersonas";
+import { AI_PERSONAS, AI_THEORETICAL_LEVEL, pickAiPersonas } from "../lib/aiPersonas";
 import { markTutorialStarting } from "../lib/localSave";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { PlayerConfig } from "@/gameEngine";
@@ -21,6 +21,59 @@ const MAX_PLAYERS = 8;
 // page itself, which does honor the CSS — showed "Easy".
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * Every persona a New Game could possibly hand you, grouped by difficulty —
+ * collapsed by default (same native-<details> disclosure Home's "More"
+ * section and Settings' InfoDetails already use) since this is pure flavor
+ * text, not something in the way of actually starting a game. Shows every
+ * persona in AI_PERSONAS regardless of what's configured above: the point
+ * is previewing who you *might* face, not just today's picks, since
+ * pickAiPersonas reshuffles a fresh face in every game anyway.
+ */
+function AiBiosSection() {
+  return (
+    <details className="group rounded-lg border border-[var(--border)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+        Meet the AI opponents
+        <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
+      </summary>
+      <div className="flex flex-col gap-4 border-t border-[var(--border)] p-4">
+        {DIFFICULTIES.map((difficulty) => (
+          <div key={difficulty} className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+              {capitalize(difficulty)} · Lv{AI_THEORETICAL_LEVEL[difficulty]}
+            </h3>
+            <div className="flex flex-col gap-2">
+              {AI_PERSONAS[difficulty].map((p) => (
+                <div
+                  key={p.name}
+                  className="flex items-start gap-3 rounded-lg bg-[var(--panel)] px-3 py-2"
+                >
+                  <span className="text-xl leading-none" aria-hidden="true">
+                    {p.avatar}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-[var(--heading)]">{p.name}</span>
+                    <span className="text-xs text-[var(--muted)]">{p.blurb}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
 }
 
 type RoundMode = "all" | "short" | "custom" | "tutorial";
@@ -394,6 +447,8 @@ export default function NewGamePage() {
       >
         {roundMode === "tutorial" ? "Start Tutorial" : "Start Game"}
       </button>
+
+      <AiBiosSection />
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home

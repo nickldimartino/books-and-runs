@@ -151,6 +151,44 @@ export function playedToday(state: DailyDealState = loadDailyDealState()): boole
 }
 
 /**
+ * Reconciles this device's local streak with the signed-in account's cloud
+ * record (see leaderboardStore.ts's pullDailyDealStreak) — the actual fix
+ * for Daily Deal not syncing across devices. Local storage alone only ever
+ * knew about days *this* device played; an iPhone and an iPad each kept
+ * their own separate streak, and whichever device finished a deal last
+ * simply overwrote the cloud numbers with its own, out-of-sync ones.
+ *
+ * Cloud is trusted as the account's own aggregate truth *except* when this
+ * device's own last-played date is more recent than what the cloud has on
+ * record — that means a previous push from this device never landed (a
+ * failed sync, or genuinely offline), so the local copy is the newer one
+ * and shouldn't be clobbered by stale cloud data. bestStreak always takes
+ * the max of the two either way — it's monotonic (never decreases), so
+ * that's never wrong regardless of which side is "newer." `history` is
+ * never round-tripped through the cloud at all (see this file's own
+ * DailyDealState doc) — it stays whatever this device already had.
+ */
+export function mergeCloudDailyDealState(cloud: {
+  streak: number;
+  bestStreak: number;
+  lastPlayedDate: string | null;
+}): DailyDealState {
+  const local = loadDailyDealState();
+  const localIsNewer =
+    local.lastPlayedDate !== null && (cloud.lastPlayedDate === null || local.lastPlayedDate > cloud.lastPlayedDate);
+  const next: DailyDealState = localIsNewer
+    ? { ...local, bestStreak: Math.max(local.bestStreak, cloud.bestStreak) }
+    : {
+        streak: cloud.streak,
+        bestStreak: Math.max(cloud.bestStreak, local.bestStreak),
+        lastPlayedDate: cloud.lastPlayedDate,
+        history: local.history,
+      };
+  saveDailyDealState(next);
+  return next;
+}
+
+/**
  * Records today's Daily Deal result and advances the streak — a no-op
  * (returns the state unchanged) if today was already recorded, so replaying
  * a finished deal for fun never re-counts it or lets the streak be gamed by

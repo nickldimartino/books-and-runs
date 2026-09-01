@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGame } from "../GameContext";
@@ -30,6 +30,11 @@ interface PendingLayOff {
   meld: Meld;
   options: ("low" | "high")[];
 }
+
+// data-tutorial targets that only ever render inside the hand drawer. A
+// tutorial step spotlighting one of these needs the drawer forced open
+// first, or TutorialOverlay has nothing in the DOM to find.
+const DRAWER_TUTORIAL_TARGETS = new Set(["hand", "build-meld", "confirm-meld", "discard-btn"]);
 
 /** The rank a lay-off in this direction would represent, for labeling the choice. */
 function directionRank(meld: Meld, direction: "low" | "high"): string {
@@ -152,41 +157,11 @@ export default function GamePage() {
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
   const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState<Card | null>(null);
-  // Only meaningful when the "expandable hand drawer" setting is on — see
-  // useDrawerLayout below. Reset alongside every other per-turn UI state.
+  // Reset alongside every other per-turn UI state.
   const [handDrawerOpen, setHandDrawerOpen] = useState(false);
-  // Plain ref (no observer needed, unlike handSectionElRef below) — just an
-  // imperative handle for the drawer layout's "Lay off card" button to
-  // scroll Table melds into view once it closes the drawer.
+  // Plain ref — an imperative handle for the drawer layout's "Lay off card"
+  // button to scroll Table melds into view once it closes the drawer.
   const tableMeldsElRef = useRef<HTMLElement | null>(null);
-  // Whether the real "Your hand" section is at least partly scrolled into
-  // view — drives HandPreviewBar's visibility (see handSectionRefCallback
-  // and its render near the bottom of this component). Starts true (bar
-  // hidden) so it can't flash into view for an instant before the observer
-  // below has had a chance to actually measure anything.
-  const [handSectionVisible, setHandSectionVisible] = useState(true);
-  const handSectionElRef = useRef<HTMLElement | null>(null);
-  const handSectionObserverRef = useRef<IntersectionObserver | null>(null);
-  // A callback ref rather than a plain one — the hand section's own DOM
-  // node changes across turns (DraggableHand's key forces a remount on a
-  // new round or when control passes to a different pass-and-play player,
-  // see its own comment below), and a plain ref's .current changing
-  // wouldn't by itself re-run an effect to re-observe the new node. A
-  // callback ref fires exactly when the attached element changes, so the
-  // observer always tracks whichever hand section is actually on screen.
-  const handSectionRefCallback = useCallback((el: HTMLElement | null) => {
-    handSectionObserverRef.current?.disconnect();
-    handSectionElRef.current = el;
-    if (!el) {
-      setHandSectionVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => setHandSectionVisible(entry.isIntersecting), {
-      threshold: 0.1,
-    });
-    observer.observe(el);
-    handSectionObserverRef.current = observer;
-  }, []);
   const prevHasDrawnRef = useRef(hasDrawn);
   const whoseTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -196,7 +171,7 @@ export default function GamePage() {
     };
   }, []);
 
-  // The hand drawer (expandable-hand-drawer setting) is this codebase's
+  // The hand drawer is this codebase's
   // first real modal — the wild lay-off/turn-banner overlays are both
   // fixed-position but never block the page behind them the way this one's
   // backdrop does, so unlike those, this needs the two things a genuine
@@ -321,6 +296,22 @@ export default function GamePage() {
       hapticSuccess();
     }
   }, [state?.roundOver, state?.gameOver]);
+
+  // The hand drawer replaced what used to be a separate always-visible
+  // scroll layout, so the tutorial now has to manage it itself: every step
+  // whose target lives inside the drawer (see DRAWER_TUTORIAL_TARGETS)
+  // forces it open, every other non-modal step forces it closed, so
+  // whichever section a step spotlights is actually in the DOM for
+  // TutorialOverlay to find. Modal steps (target: null — welcome,
+  // wildcards, wrapup) are left alone: they render full-screen above
+  // everything regardless of drawer state, so there's nothing to decide.
+  useEffect(() => {
+    if (!isTutorial || !tutorialOverlayVisible) return;
+    const step = TUTORIAL_STEPS[tutorialStepIndex];
+    if (!step || step.target === null) return;
+    const targets = Array.isArray(step.target) ? step.target : [step.target];
+    setHandDrawerOpen(targets.some((t) => DRAWER_TUTORIAL_TARGETS.has(t)));
+  }, [isTutorial, tutorialStepIndex, tutorialOverlayVisible]);
 
   // Auto-advances gated tutorial steps once their underlying action actually
   // happens — draw, meld a book, meld a run, confirm the meld, or discard.
@@ -449,18 +440,9 @@ export default function GamePage() {
   // actually saved in Settings — it never writes back to it, so your real
   // preferences are exactly as you left them once the tutorial ends.
   const savedSettings = loadLocalSettings();
-  const groupMeldsByType = isTutorial || savedSettings.groupMeldsByType;
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showPlayerActivity = isTutorial || savedSettings.showPlayerActivity;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
-  // Unlike every setting above, this one is *never* forced on for the
-  // tutorial — the opposite of the usual "show off every optional feature"
-  // rule. TUTORIAL_STEPS gates on specific on-page sections (data-tutorial=
-  // "build-meld", "hand", etc.) being actually visible in the page; those
-  // same sections still exist when this is on, just relocated inside a
-  // drawer that's normally closed, which the tutorial has no concept of
-  // opening for you.
-  const useDrawerLayout = !isTutorial && savedSettings.expandableHand;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -468,12 +450,13 @@ export default function GamePage() {
     list.push(meld);
     meldsByOwner.set(meld.ownerId, list);
   }
-  if (groupMeldsByType) {
-    // A stable sort, so within "all books, then all runs" each type's melds
-    // keep the order they were originally confirmed/laid off in.
-    for (const list of meldsByOwner.values()) {
-      list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
-    }
+  // Grouping books before runs (a stable sort, so within "all books, then
+  // all runs" each type's melds keep the order they were originally
+  // confirmed/laid off in) is just how Table melds always renders now —
+  // it used to be its own toggle, but there was never a good reason to
+  // turn it off.
+  for (const list of meldsByOwner.values()) {
+    list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
   }
 
   // Shown even before you've melded your own contract (when a lay-off isn't
@@ -673,10 +656,9 @@ export default function GamePage() {
     }
   }
 
-  // Extracted so the exact same JSX can render either inline in the normal
-  // page flow (the scroll layout — expandableHand off) or inside the hand
-  // drawer (see useDrawerLayout and its render further down) — one
-  // definition, two possible places to mount it, never both at once.
+  // Extracted as its own const purely for readability — this, discardSection,
+  // and handSection all mount inside the hand drawer (see its render further
+  // down).
   const buildMeldSection = !player.hasMeldedContract && (
     <section data-tutorial="build-meld" className="panel-elevated flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
@@ -788,22 +770,19 @@ export default function GamePage() {
         </div>
       ) : (
         <>
-          {/* Drawer layout only — laying off otherwise means tapping a card
-              here, then a meld on the page behind the drawer's own backdrop,
-              which blocks that tap outright while the drawer's open. This
-              closes it (see handleLayOffFromDrawer) instead of requiring a
+          {/* Laying off from inside the drawer means tapping a card here,
+              then a meld on the page behind the drawer's own backdrop, which
+              blocks that tap outright while the drawer's open. This closes
+              it (see handleLayOffFromDrawer) instead of requiring a
               separate, unrelated tap (Done/backdrop/Escape) to do the same
-              thing first. Not needed in the scroll layout — the hand and
-              Table melds already share the same page there. */}
-          {useDrawerLayout && (
-            <button
-              onClick={handleLayOffFromDrawer}
-              disabled={!selectedCardCanLayOff || !!pendingLayOff}
-              className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Lay off card
-            </button>
-          )}
+              thing first. */}
+          <button
+            onClick={handleLayOffFromDrawer}
+            disabled={!selectedCardCanLayOff || !!pendingLayOff}
+            className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Lay off card
+          </button>
           <button
             onClick={handleDiscardSelected}
             disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
@@ -817,7 +796,7 @@ export default function GamePage() {
   );
 
   const handSection = (
-    <section data-tutorial="hand" ref={handSectionRefCallback}>
+    <section data-tutorial="hand">
       <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
           {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
@@ -1300,77 +1279,50 @@ export default function GamePage() {
             </section>
           )}
 
-          {useDrawerLayout ? (
+          <HandPreviewBar cards={visibleHand} onTap={() => setHandDrawerOpen(true)} />
+          {handDrawerOpen && (
             <>
-              <HandPreviewBar
-                cards={visibleHand}
-                hidden={false}
-                showOnAllScreens
-                onTap={() => setHandDrawerOpen(true)}
+              {/* Backdrop: this drawer is the one genuine modal in the
+                  codebase (see the scroll-lock/Escape effect above) — the
+                  wild lay-off/turn-banner overlays are fixed-position too
+                  but never block the page behind them the way this does.
+                  Tapping it closes the drawer, same as the Done button. */}
+              <div
+                aria-hidden="true"
+                onClick={() => setHandDrawerOpen(false)}
+                className="fixed inset-0 z-[45] bg-black/50"
               />
-              {handDrawerOpen && (
-                <>
-                  {/* Backdrop: this drawer is the one genuine modal in the
-                      codebase (see the scroll-lock/Escape effect above) — the
-                      wild lay-off/turn-banner overlays are fixed-position too
-                      but never block the page behind them the way this does.
-                      Tapping it closes the drawer, same as the Done button. */}
-                  <div
-                    aria-hidden="true"
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Manage your hand"
+                className="fixed inset-x-0 bottom-0 z-[46] flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>
+                  <button
                     onClick={() => setHandDrawerOpen(false)}
-                    className="fixed inset-0 z-[45] bg-black/50"
-                  />
-                  <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Manage your hand"
-                    className="fixed inset-x-0 bottom-0 z-[46] flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl"
+                    className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                   >
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>
-                      <button
-                        onClick={() => setHandDrawerOpen(false)}
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                      >
-                        Done
-                      </button>
-                    </div>
-                    {buildMeldSection}
-                    {discardSection}
-                    {handSection}
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {buildMeldSection}
-              {discardSection}
-              {handSection}
-
-              <HandPreviewBar
-                cards={visibleHand}
-                hidden={handSectionVisible}
-                onTap={() => handSectionElRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              />
+                    Done
+                  </button>
+                </div>
+                {buildMeldSection}
+                {discardSection}
+                {handSection}
+              </div>
             </>
           )}
 
           {/* Reserves room at the very bottom of the scrollable page for
-              HandPreviewBar's own fixed height (~67px — CARD_H plus its
-              vertical padding/border) — without it, whatever ends up being
-              the last real content on the page can be permanently covered
-              with no way to scroll further and reveal it: the *page's own*
-              scroll extent has no idea a fixed element is sitting on top of
-              its end. Matters most for the drawer layout, where the bar
-              never hides at all (reported: with several players' Table
-              melds pushing the page's true end past the viewport, its
-              bottom few players' cards stayed hidden behind the bar no
-              matter how far down the page was scrolled) — but harmless
-              even in the scroll layout, where the bar does eventually hide
-              once you reach the real hand section; this just leaves a
-              little empty space below it until then. */}
-          <div aria-hidden="true" className="h-20" />
+              HandPreviewBar's own fixed height — without it, whatever ends
+              up being the last real content on the page (Table melds, most
+              likely, with several players' melds pushing the page's true
+              end past the viewport) can be permanently covered with no way
+              to scroll further and reveal it: the bar never hides in this
+              layout, and the *page's own* scroll extent has no idea a fixed
+              element is sitting on top of its end. */}
+          <div aria-hidden="true" className="h-20 md:h-28" />
         </>
       )}
 

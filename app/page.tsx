@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useGame } from "./GameContext";
-import { DailyDealState, loadDailyDealState, playedToday } from "./lib/dailyDealStore";
+import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
+import { pullDailyDealStreak } from "./lib/leaderboardStore";
 import { loadSavedGame } from "./lib/localSave";
+import { supabase } from "./lib/supabaseClient";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { GameState } from "@/types";
 
@@ -166,10 +168,21 @@ export default function HomePage() {
 
   // Loaded once per visit to Home — this page fully remounts every time you
   // navigate back to it (including right after finishing a Daily Deal), so
-  // a mount-only read is enough to pick up a just-recorded streak.
+  // a mount-only read is enough to pick up a just-recorded streak. The local
+  // read shows immediately (no flash of "no streak" while signed in); the
+  // cloud pull that follows is what actually makes this reflect every
+  // device the account has played on, not just this one — see
+  // dailyDealStore.ts's mergeCloudDailyDealState for why this is the fix
+  // for Daily Deal not syncing across an iPhone/laptop/iPad.
   useEffect(() => {
     setDailyDeal(loadDailyDealState());
-  }, []);
+    if (!supabase || !user) return;
+    pullDailyDealStreak(supabase, user.id)
+      .then((cloud) => {
+        if (cloud) setDailyDeal(mergeCloudDailyDealState(cloud));
+      })
+      .catch((err) => console.error("Failed to pull Daily Deal streak from cloud:", err));
+  }, [user]);
 
   // A first-time nudge toward the Tutorial, shown only when there's nothing
   // else already pulling that role: no game in progress to resume, and (for

@@ -118,26 +118,67 @@ export async function updateLeaderboardDisplayName(
  * dailyDealStore.ts) to their leaderboard row — called right after
  * GameOverScreen records a Daily Deal result locally, not from
  * syncLeaderboardStats above: unlike every other column on this table,
- * these two don't come from player_stats/achievement_counters, they come
+ * these don't come from player_stats/achievement_counters, they come
  * straight from localStorage, so there's nothing in Supabase for
- * syncLeaderboardStats to recompute them from. Only ever writes these two
+ * syncLeaderboardStats to recompute them from. Only ever writes these three
  * columns (plus display_name's own untouched-by-this precedent), so it
  * can't clobber a sync still in flight the same way updateLeaderboardDisplayName
  * can't. Safe to call even for an account that's never played a single
  * real tracked game — upsert fills in every other column's own default
- * (0/null) for a first-ever partial insert.
+ * (0/null) for a first-ever partial insert. `lastPlayedDate` is what makes
+ * pullDailyDealStreak below (and dailyDealStore.ts's mergeCloudDailyDealState)
+ * actually work across devices — without it, a second device has no way to
+ * tell whether the cloud's streak already accounts for today.
  */
 export async function syncDailyDealStreak(
   supabase: SupabaseClient,
   userId: string,
   streak: number,
-  bestStreak: number
+  bestStreak: number,
+  lastPlayedDate: string
 ): Promise<void> {
   const { error } = await supabase.from("leaderboard_entries").upsert({
     user_id: userId,
     daily_deal_streak: streak,
     daily_deal_best_streak: bestStreak,
+    daily_deal_last_played: lastPlayedDate,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
+}
+
+interface DailyDealCloudRow {
+  daily_deal_streak: number;
+  daily_deal_best_streak: number;
+  daily_deal_last_played: string | null;
+}
+
+/**
+ * Reads back the signed-in account's cloud Daily Deal record — the other
+ * half of what actually fixes cross-device sync (see
+ * dailyDealStore.ts's mergeCloudDailyDealState, which this is meant to feed
+ * into). Called before computing/showing a streak on any device: Home (so
+ * the displayed streak/played-today state reflects every device, not just
+ * this one) and GameOverScreen (so a fresh result is computed against the
+ * account's true last-played date, not just this device's own history).
+ * Returns null for an account with no leaderboard row at all yet (never
+ * played a Daily Deal or finished a real game on any device) — callers
+ * treat that as "nothing to merge," not an error.
+ */
+export async function pullDailyDealStreak(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ streak: number; bestStreak: number; lastPlayedDate: string | null } | null> {
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("daily_deal_streak, daily_deal_best_streak, daily_deal_last_played")
+    .eq("user_id", userId)
+    .maybeSingle<DailyDealCloudRow>();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    streak: data.daily_deal_streak,
+    bestStreak: data.daily_deal_best_streak,
+    lastPlayedDate: data.daily_deal_last_played,
+  };
 }

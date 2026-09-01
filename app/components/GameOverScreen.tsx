@@ -9,9 +9,10 @@ import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } f
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
-import { DailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
+import { DailyDealState, mergeCloudDailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
 import { joinNames } from "../lib/formatNames";
-import { syncDailyDealStreak, syncLeaderboardStats } from "../lib/leaderboardStore";
+import { pullDailyDealStreak, syncDailyDealStreak, syncLeaderboardStats } from "../lib/leaderboardStore";
+import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
@@ -234,29 +235,42 @@ export function GameOverScreen({ state }: { state: GameState }) {
     attemptSave();
   }, [user, isTutorial, isDailyDeal, trackStats, attemptSave]);
 
-  // Local-only, and deliberately separate from the Supabase save above —
-  // see dailyDealStore.ts's own doc for why this needs no sign-in and never
-  // touches real stats. recordDailyDealResult is itself idempotent (a no-op
-  // once today's already recorded), so the ref here is just to avoid a
-  // redundant localStorage read/write on every re-render, not correctness.
+  // Deliberately separate from the Supabase save above — see
+  // dailyDealStore.ts's own doc for why the streak computation itself needs
+  // no sign-in and never touches real stats. recordDailyDealResult is
+  // itself idempotent (a no-op once today's already recorded), so the ref
+  // here is just to avoid a redundant localStorage read/write (and, now, a
+  // redundant cloud round trip) on every re-render, not correctness.
   const dailyDealRecordedRef = useRef(false);
   const [dailyDealState, setDailyDealState] = useState<DailyDealState | null>(null);
   useEffect(() => {
     if (!isDailyDeal || dailyDealRecordedRef.current) return;
     dailyDealRecordedRef.current = true;
-    const result = recordDailyDealResult(state);
-    setDailyDealState(result);
-    // Best-effort, signed-in-only broadcast of the streak this just computed
-    // locally — see syncDailyDealStreak's own doc for why this is the one
-    // place Daily Deal ever reaches Supabase. A guest playing without an
-    // account simply never runs this; their streak still works, it just
-    // stays on this device (matches how every other local-only setting in
-    // this app already behaves without an account).
-    if (supabase && user) {
-      syncDailyDealStreak(supabase, user.id, result.streak, result.bestStreak).catch((err) => {
-        console.error("Failed to sync Daily Deal streak:", err);
-      });
-    }
+    (async () => {
+      // Pull the account's cloud record *before* computing today's result —
+      // this is the actual cross-device fix: without it, this device would
+      // only ever know about days *it* played, the exact bug where an
+      // iPhone/laptop/iPad each kept their own separate streak. Best-effort
+      // and signed-in-only; a guest (or a failed pull) just falls back to
+      // whatever this device already has locally, same as before.
+      if (supabase && user) {
+        try {
+          const cloud = await pullDailyDealStreak(supabase, user.id);
+          if (cloud) mergeCloudDailyDealState(cloud);
+        } catch (err) {
+          console.error("Failed to pull Daily Deal streak from cloud:", err);
+        }
+      }
+      const result = recordDailyDealResult(state);
+      setDailyDealState(result);
+      if (supabase && user && result.lastPlayedDate) {
+        syncDailyDealStreak(supabase, user.id, result.streak, result.bestStreak, result.lastPlayedDate).catch(
+          (err) => {
+            console.error("Failed to sync Daily Deal streak:", err);
+          }
+        );
+      }
+    })();
   }, [isDailyDeal, state, user]);
 
   // Without live multiplayer, a shared result is this game's only social
@@ -269,8 +283,19 @@ export function GameOverScreen({ state }: { state: GameState }) {
     const headline = isTie
       ? `${joinNames(winners.map((w) => w.name))} tied in Books & Runs!`
       : `${winners[0].name} won Books & Runs!`;
-    const scores = standings.map((p) => `${p.name} ${p.cumulativeScore}`).join(" · ");
-    return `🃏 ${headline}\n${scores}`;
+    // One player per line, same shape as the in-game header's own score
+    // list (Lv badge, name, score) — the single-line "A 12 · B 34 · C 56"
+    // this replaces read fine as a sentence but not as a scoreboard.
+    const lines = standings.map((p) => {
+      const lv =
+        p.id === YOU_PLAYER_ID && level
+          ? `Lv${level.level} `
+          : p.isAI && p.difficulty
+            ? `Lv${AI_THEORETICAL_LEVEL[p.difficulty]} `
+            : "";
+      return `${lv}${p.name}: ${p.cumulativeScore}`;
+    });
+    return `🃏 ${headline}\n${lines.join("\n")}`;
   }
 
   async function handleShare() {
