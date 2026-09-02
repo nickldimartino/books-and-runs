@@ -6,6 +6,7 @@ import { useAuth } from "../AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { formatAchievementProgress } from "../lib/achievementFormat";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
@@ -38,21 +39,6 @@ const TIER_LABEL: Record<AchievementTier, string> = {
   hard: "Hard",
   expert: "Expert",
 };
-
-function formatValue(value: number | null): string {
-  if (value === null) return "—";
-  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
-}
-
-/** "42 / 75 books melded" for a normal climbing counter, but "Best: 12
- * (goal: 15 or lower)" for a lower-is-better one — "12 / 15" would read
- * backwards there, like barely-started progress instead of already cleared. */
-function formatProgress(a: AchievementInstance): string {
-  if (a.lowerIsBetter) {
-    return `Best: ${formatValue(a.value)} (goal: ${a.threshold} or lower ${a.unit})`;
-  }
-  return `${formatValue(a.value)} / ${a.threshold} ${a.unit}`;
-}
 
 export default function AchievementsPage() {
   const { configured, loading: authLoading, user } = useAuth();
@@ -309,7 +295,7 @@ function AchievementCardContent({ achievement, compact }: { achievement: Achieve
           </>
         )}
       </div>
-      <p className="mt-1 text-xs text-[var(--faint)]">{formatProgress(achievement)}</p>
+      <p className="mt-1 text-xs text-[var(--faint)]">{formatAchievementProgress(achievement)}</p>
       {!achievement.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
           <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
@@ -418,7 +404,7 @@ function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
       <p className="mt-1 text-xs text-[var(--faint)]">
         {isMastered ? "All 5 tiers unlocked" : `${TIER_LABEL[headline.tier]}${headline.unlocked ? " unlocked" : ""}`}
         {" — "}
-        {formatProgress(headline)}
+        {formatAchievementProgress(headline)}
       </p>
       {!headline.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">

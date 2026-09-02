@@ -6,6 +6,7 @@ import { GameState } from "@/types";
 import { useAuth } from "../AuthContext";
 import { AchievementIcon } from "./AchievementIcons";
 import { useGame } from "../GameContext";
+import { formatAchievementProgress } from "../lib/achievementFormat";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { playAchievementUnlock } from "../lib/sound";
@@ -116,9 +117,29 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
           </h2>
           <ul className="mt-2 flex flex-col gap-1.5">
             {newlyUnlocked.map((a) => (
-              <li key={`${a.familyId}-${a.tier}`} className="flex items-center gap-2 text-sm text-[var(--heading)]">
-                <AchievementIcon category={a.category} className="h-5 w-5 shrink-0 text-[var(--accent)]" />
-                {a.familyTitle} {tierNumber(a.tier)}
+              // A native <details> per achievement — same tap-to-expand
+              // disclosure pattern used everywhere else in this app (Home's
+              // "More" section, Settings' InfoDetails) — so tapping one
+              // reveals what it actually took to unlock it (the same
+              // "X / threshold unit" phrasing the Achievements page itself
+              // uses — see formatAchievementProgress) without navigating
+              // away from this screen.
+              <li key={`${a.familyId}-${a.tier}`}>
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-[var(--heading)] [&::-webkit-details-marker]:hidden">
+                    <AchievementIcon category={a.category} className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+                    <span className="flex-1">
+                      {a.familyTitle} {tierNumber(a.tier)}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 text-xs text-[var(--faint)] transition group-open:rotate-180"
+                    >
+                      ▼
+                    </span>
+                  </summary>
+                  <p className="mt-1 pl-7 text-xs text-[var(--faint)]">{formatAchievementProgress(a)}</p>
+                </details>
               </li>
             ))}
           </ul>
