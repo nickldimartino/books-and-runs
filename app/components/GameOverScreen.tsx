@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { allAchievements, tierNumber } from "@/achievements";
+import { allAchievements } from "@/achievements";
+import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { Confetti } from "./Confetti";
 import { Difficulty, GameState } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
@@ -68,6 +69,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [xpBreakdown, setXpBreakdown] = useState<XpLineItem[]>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
   const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
 
@@ -179,7 +181,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
       const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
       const achievementBonus = Math.max(0, gained - knownTotal);
 
-      let achievementLines: XpLineItem[] = [];
+      // Named individually (icon, tier, tap-to-expand requirement — the
+      // same AchievementUnlockCard RoundSummary renders after every earlier
+      // round) whenever the lookup below succeeds; achievementBonus is only
+      // ever shown as its own generic line if that lookup fails, so the XP
+      // is never just silently unaccounted for.
+      let unlockedItems: AchievementUnlockItem[] = [];
       if (achievementBonus > 0 && beforeAchievementsRef.current) {
         try {
           const afterProgress = await loadAchievementProgressState(supabase, user.id);
@@ -188,23 +195,19 @@ export function GameOverScreen({ state }: { state: GameState }) {
               .filter((a) => a.unlocked)
               .map((a) => `${a.familyId}:${a.tier}`)
           );
-          achievementLines = allAchievements(afterProgress)
+          unlockedItems = allAchievements(afterProgress)
             .filter((a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`))
-            .map((a) => ({
-              label: `${a.familyTitle} ${tierNumber(a.tier)}`,
-              amount: ACHIEVEMENT_TIER_XP[a.tier],
-            }));
+            .map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] }));
         } catch (err) {
           console.error("Failed to determine which achievements this game unlocked:", err);
         }
       }
 
+      setUnlockedAchievements(unlockedItems);
       setXpBreakdown(
-        achievementLines.length > 0
-          ? [...breakdown, ...achievementLines]
-          : achievementBonus > 0
-            ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
-            : breakdown
+        unlockedItems.length === 0 && achievementBonus > 0
+          ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
+          : breakdown
       );
       const didLevelUp = after.level > beforeLevel;
       if (didLevelUp) setLeveledUpTo(after.level);
@@ -215,7 +218,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       // firing together and clashing.
       if (didLevelUp) {
         playLevelUp();
-      } else if (achievementLines.length > 0 || achievementBonus > 0) {
+      } else if (unlockedItems.length > 0 || achievementBonus > 0) {
         playAchievementUnlock();
       }
     }
@@ -479,6 +482,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
             </div>
           )}
         </div>
+      )}
+
+      {saved === "saved" && (
+        <AchievementUnlockCard
+          items={unlockedAchievements}
+          heading={`Achievement${unlockedAchievements.length > 1 ? "s" : ""} unlocked`}
+        />
       )}
 
       <div className="mt-4 flex flex-col gap-3">

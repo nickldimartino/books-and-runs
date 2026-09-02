@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AchievementInstance, AchievementProgressState, allAchievements, tierNumber } from "@/achievements";
+import { AchievementProgressState, allAchievements } from "@/achievements";
+import { ACHIEVEMENT_TIER_XP } from "@/leveling";
 import { GameState } from "@/types";
 import { useAuth } from "../AuthContext";
-import { AchievementIcon } from "./AchievementIcons";
+import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { useGame } from "../GameContext";
-import { formatAchievementProgress } from "../lib/achievementFormat";
+import { usePlayerLevel } from "../PlayerLevelContext";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
-import { playAchievementUnlock } from "../lib/sound";
+import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
 interface RoundSummaryProps {
@@ -21,12 +22,20 @@ interface RoundSummaryProps {
 export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSummaryProps) {
   const { getSessionCounters, clearSessionCounters, isTutorial, trackStats } = useGame();
   const { user } = useAuth();
+  const { level, refresh: refreshLevel } = usePlayerLevel();
   const flushedRef = useRef<number | null>(null);
-  const [newlyUnlocked, setNewlyUnlocked] = useState<AchievementInstance[]>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
+  const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const lowestTotal = Math.min(...state.players.map((p) => p.cumulativeScore));
   const roundLabel = `Round ${state.round}`;
+  // Sum of this round's own newly-unlocked achievement tiers — the only XP
+  // source that can possibly change mid-round (games played/won and
+  // difficulty-win bonuses only ever move at a whole game's end, so there's
+  // no separate "unaccounted for" bucket to fall back on the way
+  // GameOverScreen needs one for its own, larger set of XP sources).
+  const roundXpGained = unlockedAchievements.reduce((sum, item) => sum + item.xp, 0);
 
   // Flush this round's meld/discard/turn/etc. progress now rather than
   // waiting for the whole game to finish — the game-ending final round never
@@ -34,13 +43,18 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   // only ever covers rounds 1..N-1, and GameOverScreen's own flush at the
   // end picks up whatever's left from the last round.
   //
-  // Also snapshots achievement progress immediately before and after the
-  // flush (same technique GameOverScreen already uses for its own XP
-  // breakdown) so any newly-unlocked tier can be shown right here — a
-  // player used to only finding out what they'd unlocked at the very end of
-  // a whole game now sees it after every round instead. Best-effort: these
-  // two extra reads are purely for this on-screen reveal, so a failure here
-  // never blocks or retries the actual counter flush above it.
+  // Also snapshots achievement progress (and account level) immediately
+  // before and after the flush (same technique GameOverScreen already uses
+  // for its own XP breakdown and level-up banner) so any newly-unlocked
+  // tier — and any level-up it happens to cross — shows up right here
+  // instead of waiting for a whole game to finish. That matters beyond just
+  // "sooner is nicer": the level change is already real in the account the
+  // instant this flush lands, so without this, a level crossed mid-game
+  // would sit uncelebrated until GameOverScreen finally ran — or, for
+  // anyone who quits partway through instead of finishing all the way to
+  // GameOverScreen, never celebrated at all. Best-effort: these extra reads
+  // are purely for this on-screen reveal, so a failure here never blocks or
+  // retries the actual counter flush above it.
   useEffect(() => {
     // Tutorial games never touch Supabase — this shouldn't be reachable for
     // the current single-round tutorial (game/page.tsx checks gameOver
@@ -54,6 +68,13 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
     const client = supabase;
     const userId = user.id;
     const counters = { ...getSessionCounters() };
+    // Read from render scope rather than added as an effect dependency —
+    // same reasoning GameOverScreen's own attemptSave uses for its
+    // beforeLevel snapshot: this must reflect the level as of the instant
+    // this round's flush started, not re-run every time PlayerLevelProvider
+    // updates state later (including from this very effect's own refresh()
+    // call below).
+    const beforeLevel = level?.level ?? 0;
 
     (async () => {
       let before: AchievementProgressState | null = null;
@@ -74,6 +95,15 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
         return;
       }
 
+      // Refreshes the shared level context too (not just this component's
+      // own local comparison) — otherwise a level crossed here left the
+      // header's level badge showing the stale pre-level-up number for the
+      // rest of the game, only catching up once GameOverScreen ran its own
+      // refresh at the very end.
+      const afterLevel = await refreshLevel();
+      const didLevelUp = !!afterLevel && afterLevel.level > beforeLevel;
+      if (didLevelUp) setLeveledUpTo(afterLevel!.level);
+
       if (!before) return;
       try {
         const after = await loadAchievementProgressState(client, userId);
@@ -86,7 +116,15 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
           (a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`)
         );
         if (newly.length > 0) {
-          setNewlyUnlocked(newly);
+          setUnlockedAchievements(newly.map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] })));
+        }
+        // Same "don't layer two chimes at once" priority GameOverScreen
+        // uses for its own overlapping case — a level up already means real
+        // progress happened this round, so it takes priority over the
+        // smaller achievement ping rather than both firing together.
+        if (didLevelUp) {
+          playLevelUp();
+        } else if (newly.length > 0) {
           playAchievementUnlock();
         }
       } catch (err) {
@@ -96,8 +134,8 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
     // The flushedRef guard (keyed on the round number, not just a boolean)
     // is the real idempotency check — it's what stops a double-flush if
     // this effect re-runs for unrelated reasons while still showing the
-    // same round, so getSessionCounters/clearSessionCounters don't need to
-    // be in the dep array for correctness.
+    // same round, so getSessionCounters/clearSessionCounters/refreshLevel
+    // don't need to be in the dep array for correctness.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.round, user, isTutorial, trackStats]);
 
@@ -110,41 +148,21 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
         )}
       </div>
 
-      {newlyUnlocked.length > 0 && (
-        <div className="rounded-xl bg-[var(--accent)]/10 p-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
-            Achievement{newlyUnlocked.length > 1 ? "s" : ""} unlocked this round
-          </h2>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {newlyUnlocked.map((a) => (
-              // A native <details> per achievement — same tap-to-expand
-              // disclosure pattern used everywhere else in this app (Home's
-              // "More" section, Settings' InfoDetails) — so tapping one
-              // reveals what it actually took to unlock it (the same
-              // "X / threshold unit" phrasing the Achievements page itself
-              // uses — see formatAchievementProgress) without navigating
-              // away from this screen.
-              <li key={`${a.familyId}-${a.tier}`}>
-                <details className="group">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-[var(--heading)] [&::-webkit-details-marker]:hidden">
-                    <AchievementIcon category={a.category} className="h-5 w-5 shrink-0 text-[var(--accent)]" />
-                    <span className="flex-1">
-                      {a.familyTitle} {tierNumber(a.tier)}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 text-xs text-[var(--faint)] transition group-open:rotate-180"
-                    >
-                      ▼
-                    </span>
-                  </summary>
-                  <p className="mt-1 pl-7 text-xs text-[var(--faint)]">{formatAchievementProgress(a)}</p>
-                </details>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {roundXpGained > 0 && (
+        <p className="text-center text-sm font-semibold text-[var(--accent)]">
+          +{roundXpGained} XP
+          {leveledUpTo !== null && (
+            <span className="level-up-pulse ml-1 inline-block font-bold">
+              — Level up! Now level {leveledUpTo}
+            </span>
+          )}
+        </p>
       )}
+
+      <AchievementUnlockCard
+        items={unlockedAchievements}
+        heading={`Achievement${unlockedAchievements.length > 1 ? "s" : ""} unlocked this round`}
+      />
 
       <div className="overflow-hidden rounded-xl border border-[var(--border)]">
         <table className="w-full text-left text-sm">
