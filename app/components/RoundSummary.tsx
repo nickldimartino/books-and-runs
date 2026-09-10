@@ -1,5 +1,12 @@
 "use client";
 
+// The panel shown between rounds (dismissable): each player's round score
+// and running total. It's also where per-round achievement progress is
+// flushed to Supabase (recordAchievementProgress) and where mid-game
+// achievement/level unlocks are surfaced — it snapshots progress before the
+// flush and diffs after, the same pattern GameOverScreen uses at end of
+// game. Used by both the solo and MP game screens.
+
 import { useEffect, useRef, useState } from "react";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { ACHIEVEMENT_TIER_XP } from "@/leveling";

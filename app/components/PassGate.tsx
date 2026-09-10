@@ -1,5 +1,8 @@
 "use client";
 
+// "Pass the device to X" interstitial shown before a pass-and-play player's
+// turn is revealed, so the previous player doesn't see the next hand.
+
 interface PassGateProps {
   name: string;
   onReveal: () => void;

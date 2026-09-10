@@ -1,5 +1,15 @@
 "use client";
 
+// The end-of-game screen for a solo/pass-and-play game, and the place where
+// a finished game is actually *recorded*. On mount (once, guarded) it:
+// snapshots pre-game achievement progress, then writes the result through
+// recordGameResult + recordAchievementProgress + syncLeaderboardStats,
+// refreshes the level, merges/streaks the Daily Deal if this was one, and
+// diffs the snapshot to show which achievements unlocked. Any Supabase
+// write that fails is queued to pendingSaveQueue for PendingSaveSync to
+// retry. Also renders standings, the Confetti burst, and the share image.
+// (Multiplayer's equivalent recording path is in useMpGame.)
+
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { allAchievements } from "@/achievements";

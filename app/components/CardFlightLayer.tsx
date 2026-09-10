@@ -1,5 +1,13 @@
 "use client";
 
+// A fixed-position overlay that animates a card "flying" from one spot on
+// the board to another — hand → table when you meld, discard pile → hand
+// when someone draws, and so on. The game screen holds a ref to it and
+// calls `fly([{ card, from, to, delay }])` with screen rects; this layer
+// renders throwaway `PlayingCard` clones that tween across and clean
+// themselves up. Purely cosmetic: it carries no game state, and it no-ops
+// entirely under `prefers-reduced-motion`.
+
 import {
   forwardRef,
   useCallback,

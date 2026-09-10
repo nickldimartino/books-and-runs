@@ -1,5 +1,11 @@
 "use client";
 
+// The player's hand in the game screen's hand drawer: a wrapping row of
+// cards you can drag to reorder (pointer events, with a hold-still / move
+// threshold so a drag never eats a tap) and tap to select for melding or
+// laying off. Reorder is reported up via `onReorder`; this component keeps
+// no card state of its own beyond the in-flight drag.
+
 import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Card } from "@/types";
 import { cardLabel, PlayingCard } from "./PlayingCard";

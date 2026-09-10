@@ -1,5 +1,13 @@
 "use client";
 
+// The app's single source of truth for "who is signed in". Wraps Supabase
+// Auth (email + password only) and exposes it as a context. Everything
+// account-related is optional: when no Supabase project is configured
+// (`isSupabaseConfigured` false) this provider still mounts, `user` stays
+// null forever, and the game plays fine — only stats, the leaderboard, and
+// multiplayer are unavailable. Consumers that need an account gate on
+// `configured` and `user`.
+
 import { Session, User } from "@supabase/supabase-js";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { isSupabaseConfigured, supabase } from "./lib/supabaseClient";

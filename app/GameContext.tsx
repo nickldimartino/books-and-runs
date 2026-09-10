@@ -1,5 +1,20 @@
 "use client";
 
+// The live local game. This context owns the one in-progress solo /
+// pass-and-play / tutorial / Daily Deal game: it holds the `GameState`,
+// wraps every engine mutation as an action the game screen can call
+// (draw, meld, lay off, discard, next round, undo), drives the AI loop
+// (`runAiLoop` — steps AI seats with pauses so a human can follow along),
+// auto-saves to localStorage after every change (see localSave.ts), and
+// publishes `flightEvent` hints so the board can animate card movement
+// (see CardFlightLayer). Multiplayer games do NOT go through here — they
+// have their own hook (`useMpGame`) talking to the Edge Function.
+//
+// `BUY_DISCARD_ENABLED` is the switch for the "buy the discard" house rule:
+// the engine supports it (`eligibleBuyers` / `buyDiscard`) but it's off,
+// because it needs a player watching for a discard worth buying, which
+// doesn't work on one shared pass-and-play screen.
+
 import {
   buyDiscard,
   createGame,

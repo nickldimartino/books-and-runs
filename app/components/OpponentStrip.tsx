@@ -1,5 +1,12 @@
 "use client";
 
+// The sticky strip of opponent chips across the top of the game and MP
+// screens. Each chip shows a player's name and hand count; the active
+// player is highlighted and the last AI action scrolls past as a status
+// line. Tapping a chip opens a header-style popover for that player —
+// three columns: who they are + bio, their last discard, their last pickup
+// — which closes on the ✕, another tap, or a tap anywhere outside.
+
 import { useEffect, useRef, useState } from "react";
 import { DiscardEvent, Player } from "@/types";
 import { PlayingCard } from "./PlayingCard";

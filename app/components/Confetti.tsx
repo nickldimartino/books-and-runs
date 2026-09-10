@@ -1,5 +1,9 @@
 "use client";
 
+// A one-shot canvas confetti burst for the win celebration on the game-over
+// screen. Self-contained: spawns particles, animates them under gravity for
+// DURATION_MS, then stops and clears. Respects `prefers-reduced-motion`.
+
 import { useEffect, useRef } from "react";
 
 interface Particle {
