@@ -1,3 +1,14 @@
+// The AIStrategy interface every tier implements, plus the shared building
+// blocks the tiers compose differently:
+//   - MISTAKE_CHANCE + maybeMistake* — the tapering "human lapse" roll that
+//     keeps Easy→Expert from playing perfectly once their heuristic is known.
+//   - deadCards / highestPenaltyCard / minRunDistance — reading a hand.
+//   - dangerScore / WILD_DISCARD_RISK — reading what opponents want, from
+//     discard and pickup history.
+//   - greedyLayOffPlan / selfWildLayOffPlan — choosing lay-offs.
+// The per-tier files decide which of these to use and how cautiously; this
+// file holds no strategy of its own.
+
 import { bookCandidates, layOffOptions, rankPositions, runCandidates, splitWildsAndNaturals } from "../meld";
 import { cardPenalty } from "../scorer";
 import { Card, GameState, Meld, Player, Rank } from "../types";

@@ -1,3 +1,23 @@
+// The pure core of async multiplayer. The Supabase `mp` Edge Function is a
+// thin shell that reads the sealed game row, calls one function here, writes
+// the result back, and returns each player their redacted view — all the
+// rules, AI resolution, and secrecy live here, and are unit-tested in
+// adapter.test.ts (the Edge Function itself can't be).
+//
+// An MpEngine wraps a plain GameState with the little extra bookkeeping a
+// networked game needs (turn-drawn flag, resigned seats, finished-round
+// results). Operations:
+//   - dealGame        — build the initial engine from an MpConfig.
+//   - applyDraw       — the first half of a turn; returns the drawn card.
+//   - applyCommit     — the second half: melds + lay-offs + discard, atomic,
+//                       then advanceThroughAi runs any AI seats that follow.
+//   - applyResign     — drop a seat (RESIGN_PENALTY); force-finish if <2 humans.
+//   - redactFor(seat) — strip the state down to what one seat may see: own
+//                       hand, everyone's counts, public melds/discard — never
+//                       another hand or the draw pile.
+// Every mutating op works on a structuredClone and only commits on success,
+// so a rejected move leaves the stored game untouched.
+
 import { playAITurn } from "../ai/index";
 import {
   createGame,

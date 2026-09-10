@@ -1,3 +1,9 @@
+// Hard: scores every candidate discard by dangerScore — accumulated
+// evidence across the whole round of what each opponent wants (their pickup
+// history and which ranks/suits they've stopped discarding) — and keeps its
+// wilds well back (WILD_DISCARD_RISK). Only ~5% mistake rate, so its
+// heuristic is on show almost every turn.
+
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,

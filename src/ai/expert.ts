@@ -1,3 +1,11 @@
+// Expert: weighs each discard as (opponent demand) vs (residual usefulness
+// to its own hand) and takes the cheapest, will grab a card purely to deny
+// it when multiple opponents clearly want it (DENY_OPPONENT_THRESHOLD), and
+// only spends a wild on a lay-off when no natural could do the job instead.
+// ~2% mistake rate. opponentDemand is the sharpest read of the table any
+// tier does. (An earlier version wrapped the deterministic scoring in a
+// pointless 5-iteration "Monte Carlo" average — since removed.)
+
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,

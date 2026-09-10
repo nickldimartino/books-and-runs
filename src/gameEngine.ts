@@ -1,3 +1,15 @@
+// The turn-by-turn state machine. Every function here takes a GameState and
+// mutates it in place (returning a small result — a drawn card, a bool, the
+// melds laid), which is what lets the same code drive local play, the
+// tutorial, the AI loop, and the multiplayer adapter. A turn is: draw
+// (drawFromPile / drawFromDiscard) → optionally meld the contract
+// (meldChosenGroups / attemptMeldContract) and lay off cards (layOffCard) →
+// discardAndAdvance, which also detects going out and ends the round.
+// endRound scores every non-winner's hand; startNextRound re-deals.
+//
+// All rule validation lives here or in meld.ts — callers (including the
+// multiplayer server) are never trusted to have checked a move themselves.
+
 import { buildDeck, deal, decksForPlayerCount, shuffle } from "./deck";
 import {
   layOffOptions,

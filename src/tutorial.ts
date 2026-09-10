@@ -1,3 +1,10 @@
+// Builds the scripted game the interactive tutorial runs on. Instead of a
+// random deal, the human's opening hand is hand-picked so every taught step
+// has exactly one obviously-correct move (one clean book, one clean run,
+// filler that can't accidentally form a second meld). The step copy and the
+// gating logic that watches for the player to actually do each step live in
+// app/lib/tutorialSteps.ts.
+
 import { buildDeck, shuffle } from "./deck";
 import { CONTRACTS, Card, GameState, Player } from "./types";
 

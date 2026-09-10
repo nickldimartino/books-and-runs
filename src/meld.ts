@@ -1,3 +1,18 @@
+// All the "is this a legal book / run?" logic, plus the solvers that decide
+// whether a hand can complete a round's contract at all. This is the
+// hardest part of the engine, because wild cards (2s and jokers) can stand
+// in for almost anything and the rules constrain how many wilds a meld may
+// hold and where they can sit.
+//
+// Roughly three layers, low to high:
+//   - rankPositions / RUN_ORDER — where a given rank may sit in a run.
+//   - bookCandidates / runCandidates / validateManualGroup — validate one
+//     group of cards the player explicitly chose.
+//   - solveContract / solveWholeHandContract — search a whole hand for a
+//     set of groups satisfying { books, runs, sizes } for the round.
+// layOffOptions / leftoverAfterMelds support extending existing melds and
+// working out what's left in hand afterwards.
+
 import { Card, ContractRequirement, Meld, Rank } from "./types";
 
 // Order used for runs. A 2 is dual-purpose (see validateManualGroup) so its

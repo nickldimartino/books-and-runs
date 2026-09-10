@@ -1,3 +1,14 @@
+// The shared vocabulary for the whole game engine: cards, melds, players,
+// the round contracts, and the single GameState object that every engine
+// function reads and mutates. Everything in src/ (and, through the redacted
+// views, the multiplayer server and the React app) is built on these types.
+//
+// GameState is deliberately a plain, JSON-serializable object with no
+// classes, Maps, or Sets at the top level — it round-trips through
+// localStorage for the local saved game and through Postgres for a
+// multiplayer game, so anything that wouldn't survive JSON.stringify /
+// JSON.parse can't live on it (see the note on Meld.wildCardIds).
+
 export type Suit = "hearts" | "diamonds" | "clubs" | "spades" | "joker";
 export type Rank =
   | "A" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10"

@@ -1,3 +1,9 @@
+// Easy: the first tier that actually thinks, but only about its own hand —
+// takes the discard if it obviously pairs or extends something, dumps its
+// highest-penalty dead card, lays off greedily whenever it can. No notion
+// of what opponents are collecting. 20% of decisions still fall back to a
+// Beginner-style random pick (MISTAKE_CHANCE.easy).
+
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,

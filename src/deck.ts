@@ -1,3 +1,8 @@
+// Deck construction, shuffling, and the initial deal. Pure and
+// side-effect-free apart from the default Math.random — every function takes
+// an optional `rng` so Daily Deal can pass a seeded generator (seededRng)
+// and get the same shuffle for a given calendar date on every device.
+
 import { Card, Rank, Suit } from "./types";
 
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];

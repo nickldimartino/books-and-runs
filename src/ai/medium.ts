@@ -1,3 +1,8 @@
+// Medium: like Easy, plus a single-step read of the table — it won't hand
+// over a card an opponent visibly grabbed one of last turn
+// (opponentJustPickedUpThisRank), but keeps no running history the way Hard
+// does. Lays off its own wilds too, not just naturals. ~12% mistake rate.
+
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,

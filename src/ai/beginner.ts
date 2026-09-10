@@ -1,3 +1,9 @@
+// Beginner: no judgment at all. Coin-flips on taking the discard, discards a
+// uniformly random card from the whole hand (wilds included — a real novice
+// doesn't reliably notice a wild's value), and never lays off. Every other
+// tier is defined as "this, but with a shrinking chance of a real
+// heuristic" — see MISTAKE_CHANCE in strategy.ts.
+
 import { Card, GameState, Player } from "../types";
 import { AIStrategy } from "./strategy";
 

@@ -1,3 +1,13 @@
+// The AI entry point. playAITurn runs one complete turn through the same
+// engine functions a human's UI calls — draw, always attempt the contract,
+// lay off, discard — so an AI can never make a move a human couldn't.
+//
+// Everything difficulty-specific is a strategy object (one per file in this
+// folder, all implementing AIStrategy from strategy.ts) that only answers
+// three questions: take the discard?, which card to discard?, and which
+// lay-offs to make?. STRATEGIES maps a Difficulty to its object; a missing
+// difficulty falls back to "medium".
+
 import { attemptMeldContract, discardAndAdvance, drawFromDiscard, drawFromPile, layOffCard } from "../gameEngine";
 import { Difficulty, GameState, Player } from "../types";
 import { beginnerStrategy } from "./beginner";

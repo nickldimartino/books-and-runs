@@ -1,3 +1,9 @@
+// A headless sanity harness: seats five AIs (one per difficulty) and plays
+// a whole game to completion, printing round scores and the winner. Run
+// with `npm run demo` (compiles src/ via tsconfig.engine.json, then node).
+// Its real job is the MAX_TURNS guard — if a rules or AI change ever makes
+// a round unwinnable, this stops and says so instead of hanging.
+
 import { playAITurn } from "./ai/index";
 import { createGame, startNextRound } from "./gameEngine";
 import { CONTRACTS, Difficulty } from "./types";

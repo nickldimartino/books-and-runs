@@ -1,3 +1,8 @@
+// Builders used only by the *.test.ts files to construct cards, hands,
+// players, and whole game states tersely. Not shipped in the app bundle
+// (the bundle-mp-engine script skips it too). If a test reads awkwardly,
+// the fix usually belongs here rather than in the test.
+
 import { Card, CONTRACTS, GameState, Player, Rank, Suit } from "./types";
 
 let idCounter = 0;
