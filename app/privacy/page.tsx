@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       </Link>
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Privacy Policy</h1>
-        <p className="mt-1 text-sm text-[var(--faint)]">Last updated August 13, 2026</p>
+        <p className="mt-1 text-sm text-[var(--faint)]">Last updated September 10, 2026</p>
       </div>
 
       <div className="flex flex-col gap-5 text-sm leading-relaxed text-[var(--muted)]">
@@ -40,9 +40,9 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">If you create an account</h2>
           <p className="mb-2">
-            Signing in is optional and unlocks Stats, Achievements, and your account level — win
-            and progress history tied to your account instead of just one device. If you sign in
-            with email, we store:
+            Signing in is optional and unlocks Stats, Achievements, your account level, the
+            Leaderboard, Friends, and turn-based multiplayer games. If you sign in with email, we
+            store:
           </p>
           <ul className="ml-5 list-disc space-y-1">
             <li>Your email address, via our authentication provider (Supabase Auth).</li>
@@ -51,8 +51,8 @@ export default function PrivacyPage() {
               score, and wins broken down by AI difficulty faced.
             </li>
             <li>
-              A history of your completed games: the AI opponents you faced, per-round scores, the
-              winner, and when the game was played.
+              A history of your completed games: the opponents you faced (AI or other players),
+              per-round scores, the winner, and when the game was played.
             </li>
             <li>
               Achievement progress: counts of specific in-game actions — melds made, cards laid
@@ -61,14 +61,35 @@ export default function PrivacyPage() {
               above, not stored separately.
             </li>
             <li>
-              Your default AI difficulty preference, if you set one on the Settings screen. (Theme
-              and sound effects on/off are also set there, but stay local to your device and are
-              never sent to us.)
+              A <span className="text-[var(--heading)]">display name</span>, if you set one. This
+              is optional, is <span className="text-[var(--heading)]">visible to other signed-in
+              players</span> on the Leaderboard and to anyone you&apos;re friends with, and does
+              not have to be your real name. Until you set one you appear as a generated label
+              like &ldquo;Player 4821&rdquo;.
+            </li>
+            <li>
+              A per-account <span className="text-[var(--heading)]">friend code</span> and your
+              friend list: which other accounts you&apos;ve added as friends, and any pending
+              friend requests you&apos;ve sent or received. Adding a friend makes your display
+              name visible to them and theirs to you.
+            </li>
+            <li>
+              Multiplayer game data: for any turn-based game you start or join, the other
+              participants, the seating, whose turn it is, hand sizes, scores, and the final
+              result. The full game state (including the shuffled deck and each player&apos;s
+              hand) is held server-side and only ever revealed to a player as their own view —
+              you never see another player&apos;s hand.
+            </li>
+            <li>
+              Your default AI difficulty preference, if you set one on the Settings screen. (Theme,
+              card back, colorblind mode, and sound/haptics on-off are also set there, but stay
+              local to your device and are never sent to us.)
             </li>
           </ul>
           <p className="mt-2">
-            We don&apos;t collect your name, location, contacts, photos, or any device
-            permissions. There are no ads and no analytics or tracking SDKs in this app.
+            We don&apos;t require your real name, and we don&apos;t collect your location,
+            contacts, photos, or any device permissions. There are no ads and no analytics or
+            tracking SDKs in this app.
           </p>
         </section>
 
@@ -84,7 +105,10 @@ export default function PrivacyPage() {
             >
               Supabase
             </a>
-            , protected by row-level security so only you can ever read or write your own rows.
+            , protected by row-level security so, other than the display name and stats that are
+            deliberately shown on the Leaderboard, only you can read or write your own rows.
+            Turn-based multiplayer moves are validated by a Supabase Edge Function that runs the
+            same game engine; it is the only thing that can see the full hidden game state.
           </p>
         </section>
 
@@ -92,8 +116,11 @@ export default function PrivacyPage() {
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Data retention and deletion</h2>
           <p>
             We keep your account data for as long as your account exists. To delete your account
-            and all associated stats, game history, and achievement progress, contact us at the
-            address below — we&apos;ll remove it within a reasonable time.
+            and everything tied to it — stats, game history, achievement progress, display name,
+            friends, and multiplayer games — email{" "}
+            <span className="text-[var(--heading)]">nick.l.dimartino@icloud.com</span> from the
+            address on the account and we&apos;ll remove it within a reasonable time. Deleting your
+            account also removes you from other players&apos; friends lists.
           </p>
         </section>
 

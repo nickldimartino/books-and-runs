@@ -282,6 +282,24 @@ export default function AccountPage() {
               </button>
             </form>
           </section>
+
+          <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+              Delete your account
+            </h2>
+            <p className="text-xs text-[var(--muted)]">
+              There&apos;s no self-serve delete yet. To remove your account and everything tied to
+              it — stats, game history, achievements, display name, friends, and multiplayer games
+              — email{" "}
+              <a
+                href="mailto:nick.l.dimartino@icloud.com?subject=Delete%20my%20Books%20%26%20Runs%20account"
+                className="text-[var(--heading)] underline hover:text-[var(--accent)]"
+              >
+                nick.l.dimartino@icloud.com
+              </a>{" "}
+              from the address on your account.
+            </p>
+          </section>
         </>
       )}
 
