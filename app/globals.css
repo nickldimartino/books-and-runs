@@ -1636,6 +1636,26 @@ a:active {
   animation: confirm-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Home's card fan (components/CardFanHero.tsx) — a one-time deal-in on the
+   inner wrapper only, so the outer wrapper's fan geometry (translate +
+   rotate per card) is never touched. Starts mostly visible (opacity 0.4,
+   not 0) and fast, so the page's first frame — thumbnail, shared preview —
+   still shows the hand rather than a blank gap. */
+@keyframes hero-deal {
+  from {
+    opacity: 0.4;
+    transform: translateY(24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-deal {
+  animation: hero-deal 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
 /* Tutorial spotlight ring — see components/TutorialOverlay.tsx */
 @keyframes tutorial-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--accent); }
@@ -1673,6 +1693,10 @@ a:active {
   }
 
   .confirm-pop {
+    animation: none;
+  }
+
+  .hero-deal {
     animation: none;
   }
 

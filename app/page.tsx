@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { CardFanHero } from "./components/CardFanHero";
 import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
@@ -221,6 +222,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
       <div>
+        <CardFanHero />
         {configured && user && level && (
           <Link
             href="/stats"
@@ -232,13 +234,9 @@ export default function HomePage() {
         )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          A free Contract Rummy card game you play right in your browser — build books, complete
-          runs, and win with the lowest score.
-        </p>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Play solo against AI opponents of five difficulty levels, or pass-and-play with friends
-          on one device. Sign in with email to track your stats and achievements across devices —
-          no download required.
+          A free Contract Rummy card game — build books, complete runs, win with the lowest score.
+          Play solo against five levels of AI, or pass-and-play on one device. Sign in to track
+          stats and achievements across devices. No download.
         </p>
         {configured && user && (
           <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>
@@ -261,15 +259,35 @@ export default function HomePage() {
           >
             New Game
           </Link>
-          <button
-            onClick={handleContinue}
-            disabled={!hasSavedGame}
-            className="w-full rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:cursor-not-allowed disabled:text-[var(--faint)] disabled:hover:bg-transparent"
-            title={hasSavedGame ? undefined : "No game in progress"}
-          >
-            Continue Local Game
-          </button>
-          {savedSummary && <p className="text-center text-xs text-[var(--faint)]">{savedSummary}</p>}
+          {hasSavedGame ? (
+            // A real "pick it back up" card when there's a game waiting —
+            // the round/contract/opponents it left off at, not a plain
+            // button with a caption underneath it.
+            <button
+              onClick={handleContinue}
+              className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)]"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[var(--accent)]/15 text-[var(--accent)]">
+                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                  <path d="M6 4l9 6-9 6V4z" fill="currentColor" />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-base font-semibold text-[var(--heading)]">Resume game</span>
+                {savedSummary && (
+                  <span className="block truncate text-xs text-[var(--faint)]">{savedSummary}</span>
+                )}
+              </span>
+            </button>
+          ) : (
+            <button
+              disabled
+              className="w-full rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--faint)]"
+              title="No game in progress"
+            >
+              Continue Local Game
+            </button>
+          )}
         </div>
 
         {/* Tinted rather than plain-bordered like the rest of the page — a
