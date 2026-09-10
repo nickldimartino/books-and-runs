@@ -5,8 +5,9 @@ import type { MpAction, RedactedView } from "@/mp/types";
  * Client side of multiplayer. The Edge Function (`mp`) is the authority — it
  * runs the real engine, hides the deck and other hands, and validates every
  * move. These helpers just call it with the caller's access token. The
- * read-only lists (mp_my_games / mp_my_record / mp_my_history) are plain
- * Postgres RPCs from migration 0010 and touch only public columns.
+ * read-only lists (mp_my_games / mp_my_history) and the stats RPC
+ * (mp_my_stats, migration 0011) are plain Postgres RPCs that touch only
+ * public columns.
  */
 
 const FN_BASE =
@@ -150,19 +151,6 @@ export async function getMyMpGames(supabase: SupabaseClient): Promise<MpGameSumm
   return (data as MpGameSummary[]) ?? [];
 }
 
-export interface MpRecord {
-  played: number;
-  won: number;
-  lost: number;
-}
-
-export async function getMyMpRecord(supabase: SupabaseClient): Promise<MpRecord> {
-  const { data, error } = await supabase.rpc("mp_my_record");
-  if (error) throw error;
-  const row = (Array.isArray(data) ? data[0] : data) as MpRecord | undefined;
-  return row ?? { played: 0, won: 0, lost: 0 };
-}
-
 export interface MpStats {
   played: number;
   won: number;
@@ -202,12 +190,6 @@ export async function getMyMpStats(supabase: SupabaseClient): Promise<MpStats> {
   };
 }
 
-export async function getMyMpActiveCount(supabase: SupabaseClient): Promise<number> {
-  const { data, error } = await supabase.rpc("mp_active_count");
-  if (error) throw error;
-  return typeof data === "number" ? data : 0;
-}
-
 export interface MpHistoryEntry {
   game_id: string;
   seats: MpSeatMeta[];
@@ -225,5 +207,3 @@ export async function getMyMpHistory(
   if (error) throw error;
   return (data as MpHistoryEntry[]) ?? [];
 }
-
-export const MP_GAME_CAP = 3;
