@@ -15,6 +15,7 @@ import { joinNames } from "../lib/formatNames";
 import { pullDailyDealStreak, syncDailyDealStreak, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
+import { renderShareCard } from "../lib/shareCard";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
 import { recordAchievementProgress } from "../lib/recordAchievementProgress";
 import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
@@ -278,49 +279,87 @@ export function GameOverScreen({ state }: { state: GameState }) {
 
   // Without live multiplayer, a shared result is this game's only social
   // loop — the sole way one player's game becomes someone else's reason to
-  // open the app. Built from the exact standings/isTie/winners this screen
-  // already computes above, so it can never drift from what's actually on
-  // screen. Never called during a tutorial — see the button's own !isTutorial
-  // guard below (a scripted practice round isn't a result worth sharing).
-  function shareText(): string {
-    const headline = isTie
+  // open the app. Both the image (renderShareCard) and the text fallback are
+  // built from the exact standings/isTie/winners this screen already
+  // computes, so neither can drift from what's on screen. Never called
+  // during a tutorial — see the button's own !isTutorial guard below.
+  function levelLabel(p: (typeof standings)[number]): string {
+    if (p.id === YOU_PLAYER_ID && level) return `Lv${level.level}`;
+    if (p.isAI && p.difficulty) return `Lv${AI_THEORETICAL_LEVEL[p.difficulty]}`;
+    return "";
+  }
+
+  function shareHeadline(): string {
+    return isTie
       ? `${joinNames(winners.map((w) => w.name))} tied in Books & Runs!`
       : `${winners[0].name} won Books & Runs!`;
-    // One player per line, same shape as the in-game header's own score
-    // list (Lv badge, name, score) — the single-line "A 12 · B 34 · C 56"
-    // this replaces read fine as a sentence but not as a scoreboard.
+  }
+
+  function shareText(): string {
+    // One player per line, same shape as the in-game header's own score list.
     const lines = standings.map((p) => {
-      const lv =
-        p.id === YOU_PLAYER_ID && level
-          ? `Lv${level.level} `
-          : p.isAI && p.difficulty
-            ? `Lv${AI_THEORETICAL_LEVEL[p.difficulty]} `
-            : "";
-      return `${lv}${p.name}: ${p.cumulativeScore}`;
+      const lv = levelLabel(p);
+      return `${lv ? lv + " " : ""}${p.name}: ${p.cumulativeScore}`;
     });
-    return `🃏 ${headline}\n${lines.join("\n")}`;
+    return `🃏 ${shareHeadline()}\n${lines.join("\n")}`;
+  }
+
+  async function shareImageFile(): Promise<File | null> {
+    try {
+      const blob = await renderShareCard({
+        headline: shareHeadline(),
+        rows: standings.map((p) => ({
+          rank: standings.filter((o) => o.cumulativeScore < p.cumulativeScore).length + 1,
+          level: levelLabel(p),
+          name: p.name,
+          score: p.cumulativeScore,
+          isWinner: winners.some((w) => w.id === p.id),
+        })),
+      });
+      return blob ? new File([blob], "books-and-runs.png", { type: "image/png" }) : null;
+    } catch (err) {
+      console.error("Failed to render the share image:", err);
+      return null;
+    }
   }
 
   async function handleShare() {
-    // navigator.share gets the scoreboard text with NO url in the payload
-    // at all — not in a separate `url` field, and not appended into `text`
-    // either. Both of those were tried already and both lost the multi-line
-    // formatting this exists to produce: a separate `url` field made real
-    // share targets (iOS Messages chief among them) drop `text` altogether
-    // and share only the link, and folding the url into `text` still got
-    // the whole thing collapsed onto one line — the OS's own link-detector
-    // finds the bare URL inside the text and demotes everything around it
-    // to a single-line caption on a link-preview card. A share sheet result
-    // with no link at all, but real line breaks, beats one with a link and
-    // none. The clipboard fallback below has no such detector in the way,
-    // so it keeps the url appended — useful there, since pasting it
-    // somewhere is the only way this path's copy is ever "sent" at all.
+    const file = await shareImageFile();
+
+    // 1. Native share sheet with the image attached — the good path on
+    //    phones. `text` rides along with no bare URL in it (the OS's own
+    //    link-detector otherwise collapses the caption; the image carries
+    //    the game's name and address itself now).
+    if (file && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: shareHeadline() });
+      } catch {
+        // cancelled — not a failure worth surfacing
+      }
+      return;
+    }
+
+    // 2. Desktop / no file share: put the actual image on the clipboard
+    //    where that's supported, so a paste into a chat or doc drops the
+    //    scoreboard, not a line of text.
+    if (file && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": file })]);
+        setShareState("copied");
+        setTimeout(() => setShareState("idle"), 2000);
+        return;
+      } catch {
+        // fall through to text
+      }
+    }
+
+    // 3. Last resort — the multi-line text, url appended (nothing here
+    //    reformats plain clipboard text).
     if (navigator.share) {
       try {
         await navigator.share({ text: shareText() });
       } catch {
-        // The share sheet itself throws if the player just cancels it —
-        // not a real failure worth surfacing as one.
+        /* cancelled */
       }
       return;
     }
