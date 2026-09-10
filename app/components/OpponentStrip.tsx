@@ -126,29 +126,28 @@ export function OpponentStrip({
       )}
 
       {open && (
-        // Everything the old Player activity table row carried — name,
-        // blurb, hand count, last discard, last pickup — but folded tight:
-        // the count rides in the header line instead of its own big-number
-        // tile, and each card sits beside its label rather than under it, so
-        // the whole card is only as tall as one mini card plus the header.
-        <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-2.5 text-xs">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="min-w-0 truncate font-semibold text-[var(--heading)]">
-              {open.name}
-              <span className="ml-1.5 font-normal text-[var(--faint)]">· {open.hand.length} in hand</span>
-            </p>
-            <button
-              onClick={() => setOpenId(null)}
-              aria-label="Close"
-              className="-mr-1 shrink-0 rounded p-0.5 text-sm leading-none text-[var(--faint)] hover:text-[var(--muted)]"
-            >
-              ✕
-            </button>
-          </div>
-          {open.isAI && personaBlurbFor(open.name) && (
-            <p className="mt-0.5 text-[var(--faint)]">{personaBlurbFor(open.name)}</p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2">
+        // Same three-column shape as the game header: identity on the left
+        // (name, hand count, persona blurb), then last discard, then last
+        // pickup — nothing the old Player activity row carried is dropped,
+        // it's just laid out to read at a glance the way the header does.
+        <div className="relative mt-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-3 text-xs">
+          <button
+            onClick={() => setOpenId(null)}
+            aria-label="Close"
+            className="absolute right-1.5 top-1.5 rounded p-1 text-sm leading-none text-[var(--faint)] hover:text-[var(--muted)]"
+          >
+            ✕
+          </button>
+          <div className="flex items-start justify-between gap-3 pr-5">
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-baseline gap-x-1.5">
+                <span className="font-semibold text-[var(--heading)]">{open.name}</span>
+                <span className="text-[var(--faint)]">{open.hand.length} in hand</span>
+              </p>
+              {open.isAI && personaBlurbFor(open.name) && (
+                <p className="mt-1 text-[var(--faint)]">{personaBlurbFor(open.name)}</p>
+              )}
+            </div>
             <ActivityCard label="Last discard" card={latestCardFor(discardHistory, open.id)} />
             <ActivityCard label="Last pickup" card={latestCardFor(pickupHistory, open.id)} />
           </div>
@@ -160,15 +159,15 @@ export function OpponentStrip({
 
 function ActivityCard({ label, card }: { label: string; card: DiscardEvent["card"] | null }) {
   return (
-    <div className="flex items-center gap-2">
-      <p className="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wide text-[var(--faint)]">
-        {label}
-      </p>
-      {card ? (
-        <PlayingCard card={card} small />
-      ) : (
-        <span className="text-sm text-[var(--faint)]">—</span>
-      )}
+    <div className="shrink-0 text-center">
+      <p className="whitespace-nowrap text-[10px] uppercase tracking-wide text-[var(--faint)]">{label}</p>
+      <div className="mt-1 flex justify-center">
+        {card ? (
+          <PlayingCard card={card} small />
+        ) : (
+          <span className="flex h-14 w-10 items-center justify-center text-sm text-[var(--faint)]">—</span>
+        )}
+      </div>
     </div>
   );
 }
