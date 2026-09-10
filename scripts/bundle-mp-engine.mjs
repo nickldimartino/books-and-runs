@@ -18,7 +18,12 @@ const root = resolve(fileURLToPath(import.meta.url), "../..");
 const SRC = join(root, "src");
 const OUT = join(root, "supabase/functions/mp/_engine");
 
-const SKIP = (f) => f.endsWith(".test.ts") || f === "testHelpers.ts";
+// Only the pieces the MP adapter's import graph touches. The rest of src/
+// (achievements, leveling, the tutorial deal, the demo script) is
+// app-progression code the Edge Function never runs.
+const SKIP = (f) =>
+  f.endsWith(".test.ts") ||
+  ["testHelpers.ts", "achievements.ts", "leveling.ts", "tutorial.ts", "demo.ts"].includes(f);
 
 function walk(dir) {
   const out = [];
