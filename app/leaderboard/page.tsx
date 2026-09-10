@@ -17,6 +17,37 @@ import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
 
+const ICON_PROPS = {
+  viewBox: "0 0 24 24",
+  fill: "none" as const,
+  stroke: "currentColor",
+  strokeWidth: 1.7,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+/** The near-universal "add friend" glyph — a person with a plus. */
+function PersonAddIcon() {
+  return (
+    <svg {...ICON_PROPS} className="h-4 w-4" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.25" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <path d="M18 8.5v5M15.5 11h5" />
+    </svg>
+  );
+}
+
+/** Same figure, request-already-sent — a person with a check. */
+function PersonCheckIcon() {
+  return (
+    <svg {...ICON_PROPS} className="h-4 w-4" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.25" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <path d="M15 11.5l2 2 4-4" />
+    </svg>
+  );
+}
+
 function formatWinRate(entry: LeaderboardEntry): string {
   if (entry.games_played < WIN_RATE_MIN_GAMES) return "—";
   return `${Math.round((100 * entry.games_won) / entry.games_played)}%`;
@@ -320,10 +351,15 @@ export default function LeaderboardPage() {
                           <button
                             onClick={() => addFriend(entry.user_id)}
                             disabled={requestedIds.has(entry.user_id)}
-                            title="Send a friend request"
-                            className="ml-2 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15 disabled:opacity-60"
+                            aria-label={
+                              requestedIds.has(entry.user_id)
+                                ? `Friend request sent to ${displayNameFor(entry)}`
+                                : `Add ${displayNameFor(entry)} as a friend`
+                            }
+                            title={requestedIds.has(entry.user_id) ? "Request sent" : "Add friend"}
+                            className="ml-2 inline-flex shrink-0 items-center rounded p-1 align-middle text-[var(--accent)] transition hover:bg-[var(--accent)]/15 disabled:text-[var(--faint)] disabled:hover:bg-transparent"
                           >
-                            {requestedIds.has(entry.user_id) ? "Requested" : "+ Friend"}
+                            {requestedIds.has(entry.user_id) ? <PersonCheckIcon /> : <PersonAddIcon />}
                           </button>
                         )}
                       </td>
