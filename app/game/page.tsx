@@ -884,9 +884,13 @@ export default function GamePage() {
       {whoseTurnVisible && (
         <div
           role="status"
+          // Deliberately hardcoded, not a bug — a long-running in-joke. The
+          // button's Settings copy still honestly describes what it's
+          // *meant* to do; the punchline is that it always names Jenny
+          // regardless.
           className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow-lg"
         >
-          {player.name === "You" ? "It's your turn!" : `It's ${player.name}'s turn!`}
+          It&apos;s Jenny&apos;s turn!
         </div>
       )}
 

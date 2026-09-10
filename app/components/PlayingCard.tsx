@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/types";
+import { CardFace } from "./CardFace";
 
 // Exported so HandPreviewBar.tsx's mini fanned cards can reuse the exact
 // same suit glyphs / red-suit rule as the real card face, rather than a
@@ -68,7 +69,6 @@ export function PlayingCard({
 
   const isRed = RED_SUITS.has(card.suit);
   const colorClass = card.isWild ? "wild" : isRed ? "red" : "";
-  const label = card.rank === "JOKER" ? "JKR" : card.rank;
 
   return (
     <div className="relative shrink-0">
@@ -114,14 +114,13 @@ export function PlayingCard({
               }
             : undefined
         }
-        className={`card-face card-enter ${colorClass} ${size} flex flex-col items-center justify-center gap-0.5 font-bold transition will-change-transform ${
+        className={`card-face card-enter ${colorClass} ${size} overflow-hidden transition will-change-transform ${
           onClick ? "cursor-pointer hover:-translate-y-1" : "cursor-default"
         } ${selected ? "card-lifted -translate-y-2 ring-2 ring-[var(--accent)]" : ""} ${
           isNew ? "ring-2 ring-[var(--highlight)]" : ""
         }`}
       >
-        <span>{label}</span>
-        <span className="text-base leading-none">{SUIT_SYMBOL[card.suit]}</span>
+        <CardFace card={card} />
       </div>
     </div>
   );
