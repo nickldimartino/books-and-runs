@@ -5,7 +5,7 @@
 // signed-out user or a project missing the MP migration. Used by the
 // Achievements page, the Profile page, and PlayerLevelContext.
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, EMPTY_PROGRESS_STATE } from "@/achievements";
 import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";
 

@@ -8,9 +8,9 @@
 // multiplayer are unavailable. Consumers that need an account gate on
 // `configured` and `user`.
 
-import { Session, User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { isSupabaseConfigured, supabase } from "./lib/supabaseClient";
+import { isSupabaseConfigured, loadSupabase } from "./lib/supabaseClient";
 
 interface AuthResult {
   error: string | null;
@@ -45,51 +45,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
-    if (!supabase) return;
+    // Kicks off the SDK's dynamic import (see loadSupabase). `user` is only
+    // set once this resolves, so every consumer effect gated on `user` is
+    // guaranteed a ready client.
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
 
-    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+    loadSupabase().then((client) => {
+      if (cancelled) return;
+      if (!client) {
+        setLoading(false);
+        return;
+      }
+      client.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
+        setUser(data.session?.user ?? null);
+        setLoading(false);
+      });
+      const { data: subscription } = client.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+      unsubscribe = () => subscription.subscription.unsubscribe();
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
-    if (!supabase) return { error: "Sign-in isn't configured yet." };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   }, []);
 
   const signUpWithPassword = useCallback(async (email: string, password: string): Promise<SignUpResult> => {
-    if (!supabase) return { error: "Sign-in isn't configured yet." };
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { data, error } = await client.auth.signUp({ email, password });
     if (error) return { error: error.message };
     if (data.user?.identities?.length === 0) return { error: null, alreadyRegistered: true };
     return { error: null, confirmationRequired: !data.session };
   }, []);
 
   const resetPasswordForEmail = useCallback(async (email: string) => {
-    if (!supabase) return { error: "Sign-in isn't configured yet." };
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     return { error: error?.message ?? null };
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {
-    if (!supabase) return { error: "Sign-in isn't configured yet." };
-    const { error } = await supabase.auth.updateUser({ password });
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.updateUser({ password });
     return { error: error?.message ?? null };
   }, []);
 
   const signOut = useCallback(async () => {
-    if (!supabase) return;
-    const { error } = await supabase.auth.signOut();
+    const client = await loadSupabase();
+    if (!client) return;
+    const { error } = await client.auth.signOut();
     // No user-facing surface for this (the button has no error state) — but
     // every other auth method here at least surfaces its error, so silently
     // discarding this one would be the odd one out.

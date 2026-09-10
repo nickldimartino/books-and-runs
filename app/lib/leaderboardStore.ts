@@ -7,7 +7,7 @@
 // so a project without migration 0011 still gets a working core sync.
 // `displayNameFor` is the shared "name or fallback" renderer.
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { levelProgress } from "@/leveling";
 import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";

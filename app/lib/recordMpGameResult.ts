@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GameState } from "@/types";
 import type { RedactedView } from "@/mp/types";
 import { recordGameResult, RoundHistoryEntry, YOU_PLAYER_ID } from "./recordGameResult";

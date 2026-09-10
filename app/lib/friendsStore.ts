@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Thin wrappers over the friend RPCs from migration 0009, in the same shape

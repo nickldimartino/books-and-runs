@@ -17,7 +17,7 @@ import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
 import { loadSavedGame } from "./lib/localSave";
-import { supabase } from "./lib/supabaseClient";
+import { loadSupabase, supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
 import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
 import { usePlayerLevel } from "./PlayerLevelContext";
@@ -264,11 +264,12 @@ function HomeGames({
   if (!hasSavedGame && invites.length === 0 && mine.length === 0) return null;
 
   async function respond(gameId: string, accept: boolean) {
-    if (!supabase) return;
+    const client = await loadSupabase();
+    if (!client) return;
     setBusyId(gameId);
     setRespondError(null);
     try {
-      await respondToMpGame(supabase, gameId, accept);
+      await respondToMpGame(client, gameId, accept);
       notifications.refresh();
     } catch {
       setRespondError("Couldn't respond — try again.");

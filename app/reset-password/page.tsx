@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
-import { supabase } from "../lib/supabaseClient";
+import { loadSupabase } from "../lib/supabaseClient";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -20,14 +20,27 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!supabase) return;
     // The reset-link email lands here with a recovery token in the URL,
-    // which Supabase parses on load and turns into this event — there's no
-    // separate "verify this token" step for us to drive.
-    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+    // which Supabase parses when the client initialises and turns into a
+    // PASSWORD_RECOVERY event. Because the client now loads lazily, that
+    // event may fire before this listener attaches — so also check for an
+    // already-established session (the recovery token creates one).
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    loadSupabase().then((client) => {
+      if (cancelled || !client) return;
+      client.auth.getSession().then(({ data }) => {
+        if (data.session) setReady(true);
+      });
+      const { data: subscription } = client.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
+      });
+      unsubscribe = () => subscription.subscription.unsubscribe();
     });
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   if (!configured) {
