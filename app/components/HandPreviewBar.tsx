@@ -123,6 +123,7 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
     <button
       onClick={onTap}
       aria-label="Jump to your hand"
+      data-tutorial="hand-bar"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)]"
     >
       {/* max-w-2xl matches game/page.tsx's <main> exactly on a phone, so the

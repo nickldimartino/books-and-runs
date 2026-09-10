@@ -103,7 +103,10 @@ export function CardFace({ card }: { card: Card }) {
   const isJoker = card.rank === "JOKER";
 
   return (
-    <svg viewBox="0 0 100 140" className="h-full w-full" aria-hidden="true">
+    // viewBox carries a 5×7-unit transparent margin (same 5:7 ratio as the
+    // drawing) so the corner indices don't get clipped by .card-face's
+    // border-radius — most visible on a large card on a wide screen.
+    <svg viewBox="-5 -7 110 154" className="h-full w-full" aria-hidden="true">
       <g fill="currentColor" data-tone={tone}>
         {/* top-left index, and a 180°-rotated copy bottom-right */}
         <g transform="translate(13 21)">

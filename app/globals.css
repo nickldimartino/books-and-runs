@@ -1746,3 +1746,16 @@ a:active {
     animation: none;
   }
 }
+
+/* A horizontal scroll region whose scrollbar must not sit on top of its
+   content (iOS Safari overlays a semi-opaque bar across the bottom of the
+   OpponentStrip chips otherwise). Scrolling still works by drag/swipe/wheel;
+   these strips are short enough that a hidden bar costs no discoverability. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit / Blink */
+}

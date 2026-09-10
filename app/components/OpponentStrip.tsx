@@ -43,10 +43,23 @@ export function OpponentStrip({
 }: OpponentStripProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const activeRef = useRef<HTMLButtonElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   }, [currentPlayerIndex]);
+
+  // Dismiss the open player card on any tap outside the strip — matches the
+  // expectation set by every other popover/menu on the platform. A chip tap
+  // stays inside rootRef so this doesn't fight the toggle/switch handlers.
+  useEffect(() => {
+    if (!openId) return;
+    const onDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpenId(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [openId]);
 
   const current = players[currentPlayerIndex];
   const open = openId ? players.find((p) => p.id === openId) : null;
@@ -57,10 +70,11 @@ export function OpponentStrip({
 
   return (
     <div
+      ref={rootRef}
       data-tutorial="opponent-strip"
       className="sticky top-0 z-30 -mx-4 border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-2 backdrop-blur"
     >
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+      <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
         {players.map((p, i) => {
           const active = i === currentPlayerIndex;
           const isOpen = openId === p.id;
