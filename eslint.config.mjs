@@ -42,7 +42,9 @@ const eslintConfig = defineConfig([
       ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
-  globalIgnores([".next/**", "out/**", "dist/**", "ios/**", "next-env.d.ts"]),
+  // supabase/functions is Deno (jsr: imports, .ts extensions, Deno globals) —
+  // not part of the Next app, deployed separately with `supabase functions deploy`.
+  globalIgnores([".next/**", "out/**", "dist/**", "ios/**", "supabase/functions/**", "next-env.d.ts"]),
 ]);
 
 export default eslintConfig;
