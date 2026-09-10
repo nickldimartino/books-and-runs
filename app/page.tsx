@@ -11,7 +11,7 @@ import { pullDailyDealStreak } from "./lib/leaderboardStore";
 import { loadSavedGame } from "./lib/localSave";
 import { supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
-import type { MpGameSummary } from "./lib/mpStore";
+import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { GameState } from "@/types";
 
@@ -171,55 +171,155 @@ function MoreSection({
   );
 }
 
-// Sits between Resume game and the Daily Deal. Shows only for signed-in
-// accounts (multiplayer needs one). A quiet "play with friends" row until
-// something actually needs the player, then it grows a count.
-function MultiplayerHomeSection({
-  games,
-  gameRequests,
-  yourTurn,
-  loading,
-}: {
-  games: MpGameSummary[];
-  gameRequests: number;
-  yourTurn: number;
-  loading: boolean;
-}) {
-  const attention = gameRequests + yourTurn;
-  if (loading && games.length === 0) return null;
+function opponentNames(g: MpGameSummary): string {
+  return g.seats
+    .filter((s) => s.seat !== g.your_seat)
+    .map((s) => s.name)
+    .join(", ");
+}
 
-  const parts: string[] = [];
-  if (yourTurn > 0) parts.push(`${yourTurn} to play`);
-  if (gameRequests > 0) parts.push(`${gameRequests} request${gameRequests > 1 ? "s" : ""}`);
-  const subtitle =
-    parts.length > 0
-      ? parts.join(" · ")
-      : games.length > 0
-        ? `${games.length} game${games.length > 1 ? "s" : ""} going`
-        : "Turn-based games with your friends";
-
+function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolean; dimmed: boolean }) {
+  const turnName = g.seats.find((s) => s.seat === g.turn_seat)?.name;
+  const chip =
+    g.status === "pending"
+      ? "Waiting to start"
+      : yourTurn
+        ? "Your turn"
+        : `Waiting for ${turnName ?? "…"}`;
   return (
     <Link
-      href="/multiplayer"
-      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
-        attention > 0
-          ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"
-          : "border-[var(--border)] hover:bg-[var(--panel-soft)]"
+      href={`/multiplayer/play?g=${g.game_id}`}
+      className={`flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)] ${
+        dimmed ? "opacity-55 hover:opacity-100" : ""
       }`}
     >
-      <div className="min-w-0">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--heading)]">
-          Multiplayer
-          {attention > 0 && (
-            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
-              {attention}
-            </span>
-          )}
-        </h2>
-        <p className="mt-0.5 truncate text-xs text-[var(--muted)]">{subtitle}</p>
-      </div>
-      <span className="shrink-0 text-sm font-medium text-[var(--accent)]">Open →</span>
+      <span className="min-w-0">
+        <span className="block truncate text-base font-semibold text-[var(--heading)]">
+          {opponentNames(g) || "Multiplayer game"}
+        </span>
+        <span className="block text-xs text-[var(--faint)]">
+          Round {g.round} of {g.total_rounds}
+        </span>
+      </span>
+      <span
+        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+          yourTurn ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)]"
+        }`}
+      >
+        {chip}
+      </span>
     </Link>
+  );
+}
+
+/**
+ * The one place on Home to resume anything in progress: the local saved
+ * game (tagged "Local"), every active multiplayer game (your-turn ones
+ * first, waiting-on-someone ones dimmed below), and any pending game
+ * invites with Accept / Decline inline. Renders nothing when there's
+ * nothing to show.
+ */
+function HomeGames({
+  hasSavedGame,
+  savedSummary,
+  onResumeLocal,
+  notifications,
+  userId,
+}: {
+  hasSavedGame: boolean;
+  savedSummary: string | null;
+  onResumeLocal: () => void;
+  notifications: ReturnType<typeof useNotifications>;
+  userId: string | undefined;
+}) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [respondError, setRespondError] = useState<string | null>(null);
+
+  const invites = notifications.mpGames.filter((g) => g.invite_status === "invited");
+  const mine = notifications.mpGames.filter((g) => g.invite_status === "accepted");
+  const yourTurn = mine.filter((g) => g.status === "active" && g.turn_user_id === userId);
+  const waiting = mine.filter((g) => !(g.status === "active" && g.turn_user_id === userId));
+
+  if (!hasSavedGame && invites.length === 0 && mine.length === 0) return null;
+
+  async function respond(gameId: string, accept: boolean) {
+    if (!supabase) return;
+    setBusyId(gameId);
+    setRespondError(null);
+    try {
+      await respondToMpGame(supabase, gameId, accept);
+      notifications.refresh();
+    } catch {
+      setRespondError("Couldn't respond — try again.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your games</h2>
+
+      {respondError && <p className="text-xs text-[var(--danger)]">{respondError}</p>}
+
+      {invites.map((g) => (
+        <div key={g.game_id} className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4 text-left">
+          <p className="text-sm font-medium text-[var(--heading)]">
+            {opponentNames(g) || "Someone"} invited you
+          </p>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            {g.total_rounds === 7 ? "Full game" : `${g.total_rounds}-round game`}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => respond(g.game_id, true)}
+              disabled={busyId === g.game_id}
+              className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            >
+              Accept
+            </button>
+            <button
+              onClick={() => respond(g.game_id, false)}
+              disabled={busyId === g.game_id}
+              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {hasSavedGame && (
+        <button
+          onClick={onResumeLocal}
+          className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)]"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[var(--accent)]/15 text-[var(--accent)]">
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+              <path d="M6 4l9 6-9 6V4z" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 text-base font-semibold text-[var(--heading)]">
+              Resume game
+              <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
+                Local
+              </span>
+            </span>
+            {savedSummary && (
+              <span className="block truncate text-xs text-[var(--faint)]">{savedSummary}</span>
+            )}
+          </span>
+        </button>
+      )}
+
+      {yourTurn.map((g) => (
+        <MpGameRow key={g.game_id} g={g} yourTurn dimmed={false} />
+      ))}
+      {waiting.map((g) => (
+        <MpGameRow key={g.game_id} g={g} yourTurn={false} dimmed />
+      ))}
+    </section>
   );
 }
 
@@ -324,63 +424,25 @@ export default function HomePage() {
       <div className="flex w-full flex-col gap-5">
         {showTutorialPrompt && (
           <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-left text-xs text-[var(--heading)]">
-            <strong className="font-semibold">New here?</strong> On the New Game screen, pick{" "}
-            <strong className="font-semibold">Tutorial</strong> for a short guided round that walks
-            you through a real turn step by step.
+            <strong className="font-semibold">New here?</strong> Tap New Game — there&apos;s a short
+            guided tutorial that walks you through a real turn step by step.
           </p>
         )}
 
-        <div className="flex flex-col gap-2">
-          <Link
-            href="/new-game"
-            className="rounded-lg bg-[var(--accent)] px-6 py-3.5 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
-          >
-            New Game
-          </Link>
-          {hasSavedGame ? (
-            // A real "pick it back up" card when there's a game waiting —
-            // the round/contract/opponents it left off at, not a plain
-            // button with a caption underneath it.
-            <button
-              onClick={handleContinue}
-              className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)]"
-            >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[var(--accent)]/15 text-[var(--accent)]">
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
-                  <path d="M6 4l9 6-9 6V4z" fill="currentColor" />
-                </svg>
-              </span>
-              <span className="min-w-0">
-                <span className="flex items-center gap-2 text-base font-semibold text-[var(--heading)]">
-                  Resume game
-                  <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
-                    Local
-                  </span>
-                </span>
-                {savedSummary && (
-                  <span className="block truncate text-xs text-[var(--faint)]">{savedSummary}</span>
-                )}
-              </span>
-            </button>
-          ) : (
-            <button
-              disabled
-              className="w-full rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--faint)]"
-              title="No game in progress"
-            >
-              Continue Local Game
-            </button>
-          )}
-        </div>
+        <Link
+          href="/new-game"
+          className="rounded-lg bg-[var(--accent)] px-6 py-3.5 text-center text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
+        >
+          New Game
+        </Link>
 
-        {configured && user && (
-          <MultiplayerHomeSection
-            games={notifications.mpGames}
-            gameRequests={notifications.gameRequests}
-            yourTurn={notifications.yourTurn}
-            loading={notifications.loading}
-          />
-        )}
+        <HomeGames
+          hasSavedGame={hasSavedGame}
+          savedSummary={savedSummary}
+          onResumeLocal={handleContinue}
+          notifications={notifications}
+          userId={user?.id}
+        />
 
         {/* Tinted rather than plain-bordered like the rest of the page — a
             visual notch below New Game's solid fill, but a clear notch above

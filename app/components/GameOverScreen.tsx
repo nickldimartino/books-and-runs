@@ -374,7 +374,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
 
   function playAgain() {
     quitToHome();
-    router.push("/new-game");
+    router.push("/new-game/local");
   }
 
   function goHome() {

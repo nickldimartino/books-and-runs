@@ -29,9 +29,9 @@ export default function HowToPlayPage() {
       <h1 className="text-2xl font-bold text-[var(--heading)]">How to Play</h1>
 
       <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--heading)]">
-        New here? The <strong className="font-semibold">Tutorial</strong> option on the New Game
-        screen walks you through a real round step by step, with pop-ups pointing at exactly what
-        to tap.
+        New here? Tap <strong className="font-semibold">New Game</strong> — there&apos;s a{" "}
+        <strong className="font-semibold">tutorial</strong> that walks you through a real round step
+        by step, with pop-ups pointing at exactly what to tap.
       </p>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
