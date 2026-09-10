@@ -206,6 +206,14 @@ export default function GamePage() {
       const src = flightEvent.isAI ? aiAnchorRef.current : handTarget ?? aiAnchorRef.current;
       fl.fly([{ card: flightEvent.card, from: src, to: discardPileRef.current }]);
       if (flightEvent.isAI) setAiStatus(`discarded the ${cardLabel(flightEvent.card)}`);
+    } else if (flightEvent.kind === "layoff") {
+      const src = flightEvent.isAI
+        ? aiAnchorRef.current
+        : (handTarget ?? aiAnchorRef.current);
+      const meldEl =
+        document.querySelector<HTMLElement>(`[data-meld-id="${flightEvent.meldId}"]`) ?? tableMeldsElRef.current;
+      fl.fly([{ card: flightEvent.card, from: src, to: meldEl }]);
+      if (flightEvent.isAI) setAiStatus(`laid a card off onto a meld`);
     } else if (flightEvent.kind === "meld") {
       if (flightEvent.isAI) {
         const n = flightEvent.cards.length;
@@ -1252,6 +1260,7 @@ export default function GamePage() {
                           return (
                             <button
                               key={meld.id}
+                              data-meld-id={meld.id}
                               onClick={() => handleMeldClick(meld)}
                               disabled={!isValidTarget}
                               className={`max-w-full rounded-lg p-1 transition ${

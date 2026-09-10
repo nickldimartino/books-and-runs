@@ -48,7 +48,8 @@ export interface BuyOffer {
 export type FlightInput =
   | { kind: "draw"; card: Card; fromDiscard: boolean; byId: string }
   | { kind: "discard"; card: Card; byId: string; isAI: boolean }
-  | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean };
+  | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean }
+  | { kind: "layoff"; card: Card; meldId: string; byId: string; isAI: boolean };
 
 export type FlightEvent = FlightInput & { id: number };
 
@@ -399,33 +400,57 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       const aiId = live.players[live.currentPlayerIndex].id;
       const meldsBefore = live.melds.length;
+      const meldSizeBefore = new Map(live.melds.map((m) => [m.id, m.cards.length]));
       const discardBefore = live.discardPile.length;
 
       playAITurn(live);
 
-      // Diff what the turn actually did, for the board's play-by-play and
-      // the discard-to-pile flight (see game/page.tsx). The AI meld that
-      // just landed is whichever melds are new since the snapshot.
+      const nextIsHuman = !live.roundOver && !live.gameOver && !live.players[live.currentPlayerIndex].isAI;
+
+      // Diff what the turn did, for the board's play-by-play and its
+      // flights. A meld is status-only (a fan of cards flying for an AI
+      // read as busy); a lay-off and the discard each get one uniform
+      // slide — but only while another AI is still up: once it's your
+      // turn, the pass-and-play gate takes over and the pile a card would
+      // land on is gone, so it would just skip anyway.
       const newMelds = live.melds.slice(meldsBefore);
       if (newMelds.length > 0) {
         emitFlight({ kind: "meld", cards: newMelds.flatMap((m) => m.cards), byId: aiId, isAI: true });
       }
-      if (live.discardPile.length > discardBefore) {
-        const top = live.discardPile[live.discardPile.length - 1];
-        // small gap after a meld flight so the two beats don't overlap
-        setTimeout(
-          () => emitFlight({ kind: "discard", card: top, byId: aiId, isAI: true }),
-          newMelds.length > 0 ? 260 : 0
+      if (!nextIsHuman) {
+        const grown = live.melds.find(
+          (m) => meldSizeBefore.has(m.id) && m.cards.length > (meldSizeBefore.get(m.id) ?? 0)
         );
+        if (grown) {
+          emitFlight({ kind: "layoff", card: grown.cards[grown.cards.length - 1], meldId: grown.id, byId: aiId, isAI: true });
+        }
+        if (live.discardPile.length > discardBefore) {
+          emitFlight({
+            kind: "discard",
+            card: live.discardPile[live.discardPile.length - 1],
+            byId: aiId,
+            isAI: true,
+          });
+        }
       }
 
       commit();
-      // Hold on the finished turn briefly so its result is legible, then
-      // move to the next player. The next player's own "thinking…" beat
-      // (AI_TURN_DELAY_MS) still applies on top for an AI; for a human it
-      // just means the AI's last move sits on screen a moment before the
-      // pass-and-play gate.
-      setTimeout(runAiLoop, live.roundOver || live.gameOver ? 0 : AI_RESULT_HOLD_MS);
+
+      if (live.roundOver || live.gameOver) {
+        setTimeout(runAiLoop, 0);
+      } else if (nextIsHuman) {
+        // Straight to the pass-and-play gate — no lingering AI board
+        // between the last AI's move and "it's your turn" (that in-between
+        // beat read as awkward).
+        setAiThinking(false);
+        setHasDrawnBoth(false);
+        setLastDrawnCardId(null);
+        setAwaitingReveal(true);
+      } else {
+        // Hold on the finished turn so its result is legible before the
+        // next AI's own "thinking…" beat.
+        setTimeout(runAiLoop, AI_RESULT_HOLD_MS);
+      }
     }, AI_TURN_DELAY_MS);
   }, [commit, setHasDrawnBoth, emitFlight]);
 
@@ -740,12 +765,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
         playCardTap();
         hapticLight();
+        if (card) emitFlight({ kind: "layoff", card, meldId, byId: player.id, isAI: false });
         if (!wentOut) armUndo({ state: preActionState, sessionCounters: preActionCounters });
         commit();
       }
       return ok;
     },
-    [hasDrawn, commit, bump, armUndo]
+    [hasDrawn, commit, bump, armUndo, emitFlight]
   );
 
   /**
