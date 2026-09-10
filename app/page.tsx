@@ -10,6 +10,7 @@ import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedTod
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
 import { loadSavedGame } from "./lib/localSave";
 import { supabase } from "./lib/supabaseClient";
+import { useFriendActivity } from "./lib/useFriendActivity";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { GameState } from "@/types";
 
@@ -118,20 +119,41 @@ function MoreLink({ href, onClick, children }: { href?: string; onClick?: () => 
 function MoreSection({
   configured,
   user,
+  friendRequests,
   onSignOut,
 }: {
   configured: boolean;
   user: boolean;
+  friendRequests: number;
   onSignOut: () => void;
 }) {
   return (
     <details className="group rounded-lg border border-[var(--border)]">
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
-        More
+        <span className="flex items-center gap-2">
+          More
+          {friendRequests > 0 && (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
+              {friendRequests}
+            </span>
+          )}
+        </span>
         <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
       </summary>
       <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
         <MoreLink href="/how-to-play?from=home">How to Play</MoreLink>
+        {configured && user && (
+          <MoreLink href="/friends">
+            <span className="flex items-center gap-2">
+              Friends
+              {friendRequests > 0 && (
+                <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
+                  {friendRequests}
+                </span>
+              )}
+            </span>
+          </MoreLink>
+        )}
         <MoreLink href="/settings">Settings</MoreLink>
         {configured && user && <MoreLink href="/account">Account</MoreLink>}
         <MoreLink href="/scorecard">Scorekeeper</MoreLink>
@@ -151,6 +173,7 @@ export default function HomePage() {
   const { configured, user, signOut } = useAuth();
   const { hasSavedGame, continueGame, startDailyDeal, state } = useGame();
   const { level } = usePlayerLevel();
+  const { incomingRequests } = useFriendActivity();
   // Covers both Continue and Daily Deal — either one commits GameContext's
   // state synchronously, but navigating to /game immediately afterward isn't
   // guaranteed to see that update yet (see the effect below), so both wait
@@ -327,7 +350,12 @@ export default function HomePage() {
           </ProgressTile>
         </section>
 
-        <MoreSection configured={configured} user={!!user} onSignOut={signOut} />
+        <MoreSection
+          configured={configured}
+          user={!!user}
+          friendRequests={incomingRequests}
+          onSignOut={signOut}
+        />
       </div>
 
       <p className="text-xs text-[var(--faint)]">

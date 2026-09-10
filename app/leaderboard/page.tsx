@@ -6,6 +6,7 @@ import { ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, WIN_RATE_MIN_GAMES } from "@/a
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
+import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
 import { displayNameFor, LeaderboardEntry, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
@@ -98,6 +99,11 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("level");
+  // Accounts you already friended or have a request pending with (either
+  // direction) — the "Add friend" button is hidden for these. `requested`
+  // covers the optimistic state right after a click, before the reload.
+  const [relatedIds, setRelatedIds] = useState<Set<string>>(new Set());
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -144,6 +150,38 @@ export default function LeaderboardPage() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!supabase || !user) return;
+    let cancelled = false;
+    Promise.all([getFriends(supabase), getFriendRequests(supabase)])
+      .then(([friends, requests]) => {
+        if (cancelled) return;
+        const s = new Set<string>();
+        friends.forEach((f) => s.add(f.userId));
+        requests.forEach((r) => s.add(r.otherUserId));
+        setRelatedIds(s);
+      })
+      .catch((err) => console.error("Failed to load friend state:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function addFriend(targetId: string) {
+    if (!supabase) return;
+    setRequestedIds((prev) => new Set(prev).add(targetId));
+    try {
+      await sendFriendRequest(supabase, targetId);
+    } catch (err) {
+      console.error("Add friend failed:", err);
+      setRequestedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+    }
+  }
 
   if (!authLoading && !configured) {
     return (
@@ -252,7 +290,19 @@ export default function LeaderboardPage() {
                       <td
                         className={`sticky left-0 px-3 py-2 font-medium ${isYou ? "bg-[var(--panel)] text-[var(--accent)]" : "bg-[var(--bg)] text-[var(--heading)]"}`}
                       >
-                        <span className="text-[var(--faint)]">{i + 1}.</span> {displayNameFor(entry)}
+                        <span className="whitespace-nowrap">
+                          <span className="text-[var(--faint)]">{i + 1}.</span> {displayNameFor(entry)}
+                        </span>
+                        {user && !isYou && !relatedIds.has(entry.user_id) && (
+                          <button
+                            onClick={() => addFriend(entry.user_id)}
+                            disabled={requestedIds.has(entry.user_id)}
+                            title="Send a friend request"
+                            className="ml-2 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15 disabled:opacity-60"
+                          >
+                            {requestedIds.has(entry.user_id) ? "Requested" : "+ Friend"}
+                          </button>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center font-semibold text-[var(--heading)]">{entry.level}</td>
                       <td className="px-2 py-2 text-center text-[var(--muted)]">
