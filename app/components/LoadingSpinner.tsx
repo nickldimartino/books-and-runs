@@ -2,19 +2,22 @@
 
 /**
  * Replaces the bare "Loading…" text every data-fetching page (Stats,
- * Achievements, Leaderboard, Account, Settings) used to show on its own,
- * with nothing else — consistent, but reads as unfinished. Tailwind's own
- * animate-spin utility (no custom keyframes needed here); respects
- * prefers-reduced-motion via the override in globals.css, same as every
- * other animation in this app.
+ * Achievements, Leaderboard, Account, Settings) used to show on its own —
+ * a small card turning over rather than a generic ring. Respects
+ * prefers-reduced-motion via the `.card-flip` override in globals.css
+ * (the card just sits face-up), same as every other animation here.
  */
 export function LoadingSpinner({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-6 text-sm text-[var(--faint)]">
-      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 animate-spin" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.25" />
-        <path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
+    <div className="flex flex-col items-center justify-center gap-3 py-8 text-sm text-[var(--faint)]">
+      <div style={{ perspective: "260px" }}>
+        <div
+          className="card-flip grid h-10 w-[30px] place-items-center rounded-md border border-[var(--accent)]/40 bg-[var(--card-bg)] text-[var(--card-red)]"
+          aria-hidden="true"
+        >
+          <span className="text-base leading-none">&hearts;</span>
+        </div>
+      </div>
       <span>{label}</span>
     </div>
   );

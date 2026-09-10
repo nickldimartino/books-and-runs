@@ -1113,7 +1113,16 @@ export default function GamePage() {
             </h2>
             {layOffError && <p className="mb-2 text-xs text-[var(--danger)]">{layOffError}</p>}
             {state.melds.length === 0 ? (
-              <p className="text-sm text-[var(--faint)]">No melds on the table yet.</p>
+              <div className="flex items-center gap-3 py-2">
+                <div className="flex shrink-0 gap-1.5" aria-hidden="true">
+                  <span className="h-11 w-8 rounded-md border-2 border-dashed border-[var(--border)]" />
+                  <span className="h-11 w-8 rounded-md border-2 border-dashed border-[var(--border)]" />
+                  <span className="h-11 w-8 rounded-md border-2 border-dashed border-[var(--border)]" />
+                </div>
+                <p className="text-sm text-[var(--faint)]">
+                  Nothing melded yet — complete this round&apos;s contract to lay the first books and runs down here.
+                </p>
+              </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {[...meldsByOwner.entries()].map(([ownerId, melds]) => {
