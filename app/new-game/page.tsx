@@ -32,47 +32,44 @@ function ChevronIcon({ className }: { className?: string }) {
 }
 
 /**
- * Every persona a New Game could possibly hand you, grouped by difficulty —
- * collapsed by default (same native-<details> disclosure Home's "More"
- * section and Settings' InfoDetails already use) since this is pure flavor
- * text, not something in the way of actually starting a game. Shows every
- * persona in AI_PERSONAS regardless of what's configured above: the point
- * is previewing who you *might* face, not just today's picks, since
- * pickAiPersonas reshuffles a fresh face in every game anyway.
+ * Every persona a New Game could possibly hand you — one collapsible
+ * section per difficulty (native <details>, same disclosure Home's "More"
+ * and Settings' InfoDetails use) so the whole roster of 35 doesn't unroll
+ * at once. Shows every persona in AI_PERSONAS regardless of what's
+ * configured above: the point is previewing who you *might* face, since
+ * pickAiPersonas reshuffles a fresh face into every game anyway.
  */
 function AiBiosSection() {
   return (
-    <details className="group rounded-lg border border-[var(--border)]">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+    <div className="flex flex-col gap-2">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
         Meet the AI opponents
-        <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
-      </summary>
-      <div className="flex flex-col gap-4 border-t border-[var(--border)] p-4">
-        {DIFFICULTIES.map((difficulty) => (
-          <div key={difficulty} className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-              {capitalize(difficulty)} · Lv{AI_THEORETICAL_LEVEL[difficulty]}
-            </h3>
-            <div className="flex flex-col gap-2">
-              {AI_PERSONAS[difficulty].map((p) => (
-                <div
-                  key={p.name}
-                  className="flex items-start gap-3 rounded-lg bg-[var(--panel)] px-3 py-2"
-                >
-                  <span className="text-xl leading-none" aria-hidden="true">
-                    {p.avatar}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-[var(--heading)]">{p.name}</span>
-                    <span className="text-xs text-[var(--muted)]">{p.blurb}</span>
-                  </div>
+      </h2>
+      {DIFFICULTIES.map((difficulty) => (
+        <details key={difficulty} className="group rounded-lg border border-[var(--border)]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+            <span>
+              {capitalize(difficulty)}
+              <span className="ml-2 text-xs text-[var(--faint)]">Lv{AI_THEORETICAL_LEVEL[difficulty]}</span>
+            </span>
+            <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
+          </summary>
+          <div className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
+            {AI_PERSONAS[difficulty].map((p) => (
+              <div key={p.name} className="flex items-start gap-3 rounded-lg bg-[var(--panel)] px-3 py-2">
+                <span className="text-xl leading-none" aria-hidden="true">
+                  {p.avatar}
+                </span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-[var(--heading)]">{p.name}</span>
+                  <span className="text-xs text-[var(--muted)]">{p.blurb}</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </details>
+        </details>
+      ))}
+    </div>
   );
 }
 

@@ -133,7 +133,6 @@ function MoreSection({
       <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
         <MoreLink href="/how-to-play">How to Play</MoreLink>
         <MoreLink href="/settings">Settings</MoreLink>
-        {configured && user && <MoreLink href="/profile">Profile</MoreLink>}
         {configured && user && <MoreLink href="/account">Account</MoreLink>}
         <MoreLink href="/scorecard">Scorekeeper</MoreLink>
         <MoreLink href="/history">History of Books &amp; Runs</MoreLink>
@@ -226,7 +225,7 @@ export default function HomePage() {
         <CardFanHero />
         {configured && user && level && (
           <Link
-            href="/profile"
+            href="/stats"
             className="mb-3 inline-block rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
             title={`${level.xpIntoLevel} / ${level.xpSpanForLevel} XP to level ${level.level + 1}`}
           >
@@ -317,7 +316,7 @@ export default function HomePage() {
         </section>
 
         <section className="grid grid-cols-3 gap-2">
-          <ProgressTile href="/stats" label="Stats">
+          <ProgressTile href="/stats" label="Profile">
             <StatsIcon />
           </ProgressTile>
           <ProgressTile href="/achievements" label="Achievements">

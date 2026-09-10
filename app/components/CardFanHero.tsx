@@ -1,11 +1,16 @@
 "use client";
 
-import { type CSSProperties } from "react";
-import { Card } from "@/types";
+import { useEffect, useState, type CSSProperties } from "react";
+import { Card, Rank, Suit } from "@/types";
 import { CardFace } from "./CardFace";
 
-// A book of 7s and the front of a spade run — "books and runs" in one hand.
-const FAN: Card[] = [
+const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
+const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
+// A deterministic hand for the server render and the first client render
+// (so hydration matches) — a book of 7s and the front of a spade run,
+// "books and runs" in one hand. A random one is dealt in right after mount.
+const DEFAULT_FAN: Card[] = [
   { id: "hero-7h", suit: "hearts", rank: "7", isWild: false },
   { id: "hero-7d", suit: "diamonds", rank: "7", isWild: false },
   { id: "hero-7s", suit: "spades", rank: "7", isWild: false },
@@ -13,20 +18,43 @@ const FAN: Card[] = [
   { id: "hero-9s", suit: "spades", rank: "9", isWild: false },
 ];
 
+/** Five distinct cards (no jokers — they read oddly in a decorative fan),
+ * a new set each page load. */
+function randomFan(): Card[] {
+  const seen = new Set<string>();
+  const out: Card[] = [];
+  while (out.length < 5) {
+    const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+    const rank = RANKS[Math.floor(Math.random() * RANKS.length)];
+    const key = `${rank}${suit}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ id: `hero-${key}`, suit, rank, isWild: rank === "2" });
+  }
+  return out;
+}
+
 /**
- * A small fanned hand at the top of Home — the real CardFace cards, dealt
- * in once on load and then still. Gives the landing screen a face instead
- * of opening straight into a wall of buttons. Purely decorative
- * (aria-hidden). The fan geometry lives on the outer wrapper (static); the
- * one-time deal-in lives on the inner wrapper (`hero-deal`, gated by
- * prefers-reduced-motion in globals.css, where it resolves to the cards
- * simply being present).
+ * A small fanned hand at the top of Home — real CardFace cards, a fresh
+ * random five dealt in on each load, then still. Gives the landing screen
+ * a face instead of opening straight into a wall of buttons. Purely
+ * decorative (aria-hidden). Fan geometry lives on the outer wrapper
+ * (static); the deal-in lives on the inner wrapper (`hero-deal`, gated by
+ * prefers-reduced-motion in globals.css to the cards simply being present).
  */
 export function CardFanHero() {
-  const mid = (FAN.length - 1) / 2;
+  const [fan, setFan] = useState<Card[]>(DEFAULT_FAN);
+
+  // After mount only — Math.random() during render would mismatch the
+  // static server HTML. Changing the cards changes their keys, which
+  // remounts them and replays the deal-in, so the swap reads as the hand
+  // being dealt rather than a flicker.
+  useEffect(() => setFan(randomFan()), []);
+
+  const mid = (fan.length - 1) / 2;
   return (
     <div aria-hidden="true" className="pointer-events-none relative mx-auto mb-5 h-[112px] w-full max-w-[260px]">
-      {FAN.map((card, i) => {
+      {fan.map((card, i) => {
         const offset = i - mid;
         const outer: CSSProperties = {
           transform: `translateX(calc(-50% + ${offset * 40}px)) translateY(${Math.abs(offset) * 6}px) rotate(${offset * 6.5}deg)`,
