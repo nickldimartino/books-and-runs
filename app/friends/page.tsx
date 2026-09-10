@@ -365,9 +365,6 @@ export default function FriendsPage() {
                 {copied ? "Copied" : "Copy code"}
               </button>
             </div>
-            <p className="mt-2 text-xs text-[var(--faint)]">
-              Share sends a link — your friend taps it and one tap adds you both.
-            </p>
           </section>
 
           {/* Add a friend */}
