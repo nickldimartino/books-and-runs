@@ -109,3 +109,19 @@ export async function removeFriend(supabase: SupabaseClient, otherUserId: string
   const { error } = await supabase.rpc("mp_remove_friend", { other: otherUserId });
   if (error) throw error;
 }
+
+/**
+ * Accept a shared friend link (`/friends?add=BR-XXXXX`). Creates an
+ * immediately-accepted friendship — the code owner shared the link, so
+ * there's nothing for them to approve. Returns the friend's name.
+ * Migration 0012.
+ */
+export async function addFriendByCode(
+  supabase: SupabaseClient,
+  code: string
+): Promise<{ userId: string; displayName: string | null }> {
+  const { data, error } = await supabase.rpc("mp_add_friend_by_code", { code });
+  if (error) throw error;
+  const row = (Array.isArray(data) ? data[0] : data) as LookupRow | undefined;
+  return { userId: row?.user_id ?? "", displayName: row?.display_name ?? null };
+}

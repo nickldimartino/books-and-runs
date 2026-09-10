@@ -17,7 +17,11 @@ export default function SignInPage() {
   const [resetEmailSent, setResetEmailSent] = useState(false);
 
   useEffect(() => {
-    if (user) router.replace("/");
+    if (!user) return;
+    // Return to an in-app page if one was requested (e.g. a shared friend
+    // link routes signed-out visitors through here). Only same-origin paths.
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
   }, [user, router]);
 
   if (!configured) {

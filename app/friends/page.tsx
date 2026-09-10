@@ -5,6 +5,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
+  addFriendByCode,
   Friend,
   FriendRequest,
   getFriendRequests,
@@ -29,6 +30,16 @@ type AddState =
   | { kind: "sent"; name: string }
   | { kind: "accepted"; name: string };
 
+type InviteLink =
+  | { kind: "idle" }
+  | { kind: "resolving" }
+  | { kind: "prompt"; name: string }
+  | { kind: "adding" }
+  | { kind: "done"; name: string }
+  | { kind: "self" }
+  | { kind: "already"; name: string }
+  | { kind: "invalid" };
+
 export default function FriendsPage() {
   const { configured, loading: authLoading, user } = useAuth();
 
@@ -40,8 +51,12 @@ export default function FriendsPage() {
 
   const [codeInput, setCodeInput] = useState("");
   const [addState, setAddState] = useState<AddState>({ kind: "idle" });
+  const [shareState, setShareState] = useState<"idle" | "shared" | "copied" | "error">("idle");
   const [copied, setCopied] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The ?add=CODE flow from a shared link.
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [linkInvite, setLinkInvite] = useState<InviteLink>({ kind: "idle" });
 
   const load = useCallback(async () => {
     if (!supabase || !user) return;
@@ -62,6 +77,45 @@ export default function FriendsPage() {
       setLoading(false);
     }
   }, [user]);
+
+  // Pick up ?add=CODE from a shared friend link (once, on mount).
+  useEffect(() => {
+    const add = new URLSearchParams(window.location.search).get("add");
+    if (add) setLinkCode(add.trim().toUpperCase());
+  }, []);
+
+  // Resolve the shared code to a name once we know who's signed in and have
+  // the current friends list to check against.
+  useEffect(() => {
+    if (!supabase || !user || !linkCode || loading) return;
+    if (linkInvite.kind !== "idle") return;
+    setLinkInvite({ kind: "resolving" });
+    lookupFriendCode(supabase, linkCode)
+      .then((match) => {
+        if (!match) return setLinkInvite({ kind: "invalid" });
+        if (match.userId === user.id) return setLinkInvite({ kind: "self" });
+        const name = nameOf(match.userId, match.displayName);
+        if (friends.some((f) => f.userId === match.userId)) {
+          return setLinkInvite({ kind: "already", name });
+        }
+        setLinkInvite({ kind: "prompt", name });
+      })
+      .catch(() => setLinkInvite({ kind: "invalid" }));
+  }, [user, linkCode, loading, linkInvite.kind, friends]);
+
+  async function acceptLink() {
+    if (!supabase || !linkCode) return;
+    setLinkInvite({ kind: "adding" });
+    try {
+      const res = await addFriendByCode(supabase, linkCode);
+      setLinkInvite({ kind: "done", name: nameOf(res.userId, res.displayName) });
+      window.history.replaceState(null, "", "/friends");
+      await load();
+    } catch (err) {
+      console.error("Failed to accept friend link:", err);
+      setLinkInvite({ kind: "invalid" });
+    }
+  }
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -156,6 +210,30 @@ export default function FriendsPage() {
     );
   }
 
+  async function shareCode() {
+    if (!code) return;
+    const url = `${window.location.origin}/friends?add=${code}`;
+    const text = `Add me as a friend on Books & Runs 🃏  My code: ${code}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Books & Runs", text, url });
+        setShareState("shared");
+        setTimeout(() => setShareState("idle"), 2000);
+      } catch {
+        /* user cancelled the sheet */
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
+    } catch {
+      setShareState("error");
+      setTimeout(() => setShareState("idle"), 2000);
+    }
+  }
+
   if (!authLoading && !configured) {
     return (
       <Shell>
@@ -172,14 +250,21 @@ export default function FriendsPage() {
   }
 
   if (!authLoading && configured && !user) {
+    const signInHref = linkCode
+      ? `/sign-in?next=${encodeURIComponent(`/friends?add=${linkCode}`)}`
+      : "/sign-in";
     return (
       <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in to add friends</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">
+          {linkCode ? "Sign in to add this friend" : "Sign in to add friends"}
+        </h1>
         <p className="text-sm text-[var(--muted)]">
-          Friends let you start multiplayer games together. Your friend list is tied to your account.
+          {linkCode
+            ? "Someone shared a friend link with you. Sign in and you'll come right back here to accept it."
+            : "Friends let you start multiplayer games together. Your friend list is tied to your account."}
         </p>
         <Link
-          href="/sign-in"
+          href={signInHref}
           className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
         >
           Sign in
@@ -216,20 +301,73 @@ export default function FriendsPage() {
         </p>
       ) : (
         <>
+          {/* Shared friend link (?add=CODE) */}
+          {linkInvite.kind === "prompt" && (
+            <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
+              <p className="text-sm text-[var(--heading)]">
+                Add <strong className="font-semibold">{linkInvite.name}</strong> as a friend?
+              </p>
+              <button
+                onClick={acceptLink}
+                className="mt-3 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+              >
+                Add friend
+              </button>
+            </section>
+          )}
+          {linkInvite.kind === "adding" && (
+            <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
+              Adding…
+            </section>
+          )}
+          {linkInvite.kind === "done" && (
+            <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4 text-sm text-[var(--accent)]">
+              You and <strong className="font-semibold">{linkInvite.name}</strong> are now friends.
+            </section>
+          )}
+          {linkInvite.kind === "already" && (
+            <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
+              You&apos;re already friends with <strong className="font-semibold">{linkInvite.name}</strong>.
+            </section>
+          )}
+          {linkInvite.kind === "self" && (
+            <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
+              That link has your own code — share it with a friend instead.
+            </section>
+          )}
+          {linkInvite.kind === "invalid" && (
+            <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--danger)]">
+              That friend link didn&apos;t work — the code may be wrong.
+            </section>
+          )}
+
           {/* Your code */}
           <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your friend code</h2>
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="select-all font-mono text-2xl font-bold tracking-widest text-[var(--heading)]">
                 {code}
               </span>
               <button
+                onClick={shareCode}
+                className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+              >
+                {shareState === "shared" || shareState === "copied"
+                  ? "Shared ✓"
+                  : shareState === "error"
+                    ? "Couldn't share"
+                    : "Share"}
+              </button>
+              <button
                 onClick={copyCode}
                 className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
               >
-                {copied ? "Copied" : "Copy"}
+                {copied ? "Copied" : "Copy code"}
               </button>
             </div>
+            <p className="mt-2 text-xs text-[var(--faint)]">
+              Share sends a link — your friend taps it and one tap adds you both.
+            </p>
           </section>
 
           {/* Add a friend */}
