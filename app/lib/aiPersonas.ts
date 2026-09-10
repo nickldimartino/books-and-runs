@@ -17,14 +17,6 @@ export interface AiPersona {
   blurb: string;
 }
 
-// The three personas Daily Deal's fixed table is built from — pulled out as
-// their own consts so DAILY_DEAL_PERSONAS can pin exactly this trio without
-// either duplicating their blurbs or coupling to wherever they happen to
-// sit in the Medium pool below (see DAILY_DEAL_PERSONAS' own note).
-const HEDDA: AiPersona = { name: "Hedda", avatar: "🦉", blurb: "Reads the discard pile like a book." };
-const REYNARD: AiPersona = { name: "Reynard", avatar: "🦊", blurb: "Always angling for the next lay-off." };
-const TALON: AiPersona = { name: "Talon", avatar: "🐺", blurb: "Plays it straight, no wasted moves." };
-
 /**
  * Seven personas per difficulty, picked (not generated) so each one reads as
  * a deliberate character rather than a random name generator's output — the
@@ -61,9 +53,9 @@ export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
     { name: "Bram", avatar: "🦌", blurb: "Second-guesses every pickup and keeps the wrong card." },
   ],
   medium: [
-    HEDDA,
-    REYNARD,
-    TALON,
+    { name: "Hedda", avatar: "🦉", blurb: "Reads the discard pile like a book." },
+    { name: "Reynard", avatar: "🦊", blurb: "Always angling for the next lay-off." },
+    { name: "Talon", avatar: "🐺", blurb: "Plays it straight, no wasted moves." },
     { name: "Bandit", avatar: "🦝", blurb: "Takes the exact card you were about to reach for." },
     { name: "Cleaver", avatar: "🐗", blurb: "Commits to a line early and makes it stick." },
     { name: "Slate", avatar: "🐈‍⬛", blurb: "Patient. Waits for you to overcommit, then goes." },
@@ -88,21 +80,6 @@ export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
     { name: "Sett", avatar: "🦡", blurb: "Locks down one meld and buries every option you had." },
   ],
 };
-
-/** The fixed roster Daily Deal draws its opponents from (see
- * dailyDealStore.ts) — deliberately NOT randomized like a normal game's
- * opponents (see pickAiPersonas): the whole point of a daily challenge is
- * comparing today's result against your own history, so the same table
- * needs to reappear rather than reshuffling like a regular New Game would.
- * Pins exactly [Hedda, Reynard, Talon] — its own list, NOT
- * `AI_PERSONAS.medium` (that pool is free to grow for New Game variety) and
- * NOT `AI_PERSONAS.medium.slice(0, 3)` (that couples to the pool's ordering)
- * — because Daily Deal's table size is derived from this list's length, so
- * a pool change here must never silently resize the daily table.
- * dailyDealStore.ts picks a *prefix* of this list (2 or 3 of them) per day,
- * never fewer, so Daily Deal is never a 2-player game but does vary between
- * 3 and 4 players day to day. */
-export const DAILY_DEAL_PERSONAS: AiPersona[] = [HEDDA, REYNARD, TALON];
 
 /**
  * A cosmetic "power level" per difficulty — pure flavor, not derived from

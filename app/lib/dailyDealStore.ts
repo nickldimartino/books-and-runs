@@ -1,7 +1,7 @@
-import { seededRng } from "@/deck";
+import { seededRng, shuffle } from "@/deck";
 import { createGame, PlayerConfig } from "@/gameEngine";
 import { CONTRACTS, ContractRequirement, GameState } from "@/types";
-import { DAILY_DEAL_PERSONAS } from "./aiPersonas";
+import { AI_PERSONAS } from "./aiPersonas";
 import { YOU_PLAYER_ID } from "./recordGameResult";
 
 const KEY = "booksAndRuns:dailyDeal";
@@ -56,18 +56,21 @@ export function dateSeed(dateKey: string): number {
   return hash >>> 0;
 }
 
-// Never fewer than 2 opponents (3 players total) — a 2-player game is over
-// the instant either side melds their contract, which made a "quick daily
-// round" feel more like a coin flip than a real hand of Contract Rummy.
-// Anywhere from 2 opponents up through the whole roster is fair game, so
-// the table itself varies day to day instead of being permanently fixed at
-// the floor. Derived from the same date seed as the shuffle (not a
-// separate random pick) so every player sees the same head count today,
-// the same way everyone sees the same deal.
+// Daily Deal is always a quick, few-minutes round: 2 or 3 opponents (3-4
+// players), never more — deliberately capped low and independent of how
+// big the Medium persona pool grows for New Game (createDailyDealGame
+// draws *which* opponents from that full pool now, but not *how many*).
+// Never fewer than 2, either — a 2-player game is over the instant either
+// side melds their contract, which made a "quick daily round" feel more
+// like a coin flip than a real hand. The count is derived from the raw
+// date seed (not the seeded RNG stream) so every player sees the same head
+// count today; a 2-way split doesn't suffer djb2's poor spread across a
+// small modulus the way the contract pick did (see dailyDealContract).
 const MIN_DAILY_DEAL_OPPONENTS = 2;
+const MAX_DAILY_DEAL_OPPONENTS = 3;
 
 function dailyDealOpponentCount(seed: number): number {
-  const span = DAILY_DEAL_PERSONAS.length - MIN_DAILY_DEAL_OPPONENTS + 1;
+  const span = MAX_DAILY_DEAL_OPPONENTS - MIN_DAILY_DEAL_OPPONENTS + 1;
   return MIN_DAILY_DEAL_OPPONENTS + (seed % span);
 }
 
@@ -91,16 +94,20 @@ function dailyDealContract(rng: () => number): ContractRequirement {
 }
 
 /**
- * Today's fixed challenge: you vs. 2+ Medium AIs (see
+ * Today's fixed challenge: you vs. 2 or 3 Medium AIs (see
  * dailyDealOpponentCount — never fewer than 2, so this is never a 2-player
  * game, but the exact head count varies day to day), a single round whose
  * contract also varies day to day (see dailyDealContract) so a Daily Deal
  * stays a genuinely quick, few-minutes play without ever being *only*
- * "2 Books," dealt from a shuffle seeded by today's date. The opponents
- * seated are deliberately a fixed *prefix* of DAILY_DEAL_PERSONAS rather
- * than a randomized pick like a normal game's AIs (see pickAiPersonas) —
- * the whole point of a daily challenge is comparing today's result against
- * your own history of playing the same table, not a fresh face every day.
+ * "2 Books," dealt from a shuffle seeded by today's date.
+ *
+ * Which Medium personas fill those seats is a seeded shuffle of the whole
+ * Medium pool — so the faces vary day to day like the contract and head
+ * count do — but, unlike a normal game's pickAiPersonas, it's fixed for
+ * the entire day: everyone playing today faces the identical table, which
+ * is the whole point of a daily challenge (comparing today's result
+ * against your own history of the same table — just not the *permanently*
+ * same table every single day).
  */
 export function createDailyDealGame(): GameState {
   const seed = dateSeed(localDateKey());
@@ -109,7 +116,12 @@ export function createDailyDealGame(): GameState {
   // dailyDealContract's own doc for why this one extra call, consumed here,
   // is what actually gives the contract choice a good spread across dates.
   const contract = dailyDealContract(rng);
-  const opponents = DAILY_DEAL_PERSONAS.slice(0, dailyDealOpponentCount(seed));
+  // Then the opponents, off the same stream: a full seeded shuffle of the
+  // Medium pool, sliced to today's head count. Consuming this here (between
+  // the contract and the deal) keeps the whole sequence a single
+  // deterministic stream, so every player still gets byte-for-byte the
+  // same table and deal today.
+  const opponents = shuffle(AI_PERSONAS.medium, rng).slice(0, dailyDealOpponentCount(seed));
   const configs: PlayerConfig[] = [
     { id: YOU_PLAYER_ID, name: "You", isAI: false },
     ...opponents.map((persona, i) => ({
