@@ -220,10 +220,15 @@ export default function FriendsPage() {
   async function shareCode() {
     if (!code) return;
     const url = `${window.location.origin}/friends?add=${code}`;
-    const text = `Add me as a friend on Books & Runs 🃏  My code: ${code}`;
+    // One combined string in `text`, and deliberately NO separate `url`
+    // field: when navigator.share gets both, several iOS share targets
+    // paste the link twice — once appended to the text, once as the
+    // attached URL. Keeping it all in `text` means exactly one link, and
+    // messaging apps still linkify it.
+    const message = `Add me as a friend on Books & Runs 🃏  My code: ${code}\n${url}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Books & Runs", text, url });
+        await navigator.share({ text: message });
         setShareState("shared");
         setTimeout(() => setShareState("idle"), 2000);
       } catch {
@@ -232,7 +237,7 @@ export default function FriendsPage() {
       return;
     }
     try {
-      await navigator.clipboard.writeText(`${text}\n${url}`);
+      await navigator.clipboard.writeText(message);
       setShareState("copied");
       setTimeout(() => setShareState("idle"), 2000);
     } catch {
