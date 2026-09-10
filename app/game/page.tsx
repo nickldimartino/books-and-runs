@@ -779,13 +779,16 @@ export default function GamePage() {
   // and handSection all mount inside the hand drawer (see its render further
   // down).
   const buildMeldSection = !player.hasMeldedContract && (
-    <section data-tutorial="build-meld" className="panel-elevated flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+    <section
+      data-tutorial="build-meld"
+      className="panel-elevated flex flex-col items-center gap-3 rounded-xl bg-[var(--panel-soft)] p-4 text-center"
+    >
       <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
         Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
       </h2>
 
       {contract.wholeHandMeld && (
-        <p className="text-xs text-[var(--muted)]">
+        <p className="max-w-prose text-xs text-[var(--muted)]">
           This is the final round — there&apos;s no discard once you meld, so every card in
           your hand has to go into these runs.
           {cardsNotYetGrouped > 0 &&
@@ -794,7 +797,7 @@ export default function GamePage() {
       )}
 
       {pendingGroups.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex w-full flex-col gap-2 text-left">
           {pendingGroups.map((group) => (
             <div
               key={group.id}
@@ -821,11 +824,11 @@ export default function GamePage() {
       )}
 
       {pendingGroupChoice && (
-        <div className="flex flex-col gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
+        <div className="flex w-full flex-col items-center gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
             Which card is the wild standing in for?
           </p>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             {pendingGroupChoice.options.map((start) => (
               <button
                 key={start}

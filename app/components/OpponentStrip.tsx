@@ -81,7 +81,11 @@ export function OpponentStrip({
       data-tutorial="opponent-strip"
       className="sticky top-0 z-30 -mx-4 border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-2 backdrop-blur"
     >
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+      {/* Outer scroller, inner shrink-to-content row with `mx-auto`: the
+          chips sit centered whenever they fit, and the row just scrolls
+          from the left once a full 8-player table outgrows the width. */}
+      <div className="no-scrollbar overflow-x-auto">
+        <div className="mx-auto flex w-max gap-1.5">
         {players.map((p, i) => {
           const active = i === currentPlayerIndex;
           const isOpen = openId === p.id;
@@ -124,6 +128,7 @@ export function OpponentStrip({
             </button>
           );
         })}
+        </div>
       </div>
 
       {statusLine && (
