@@ -10,8 +10,11 @@
 // (SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY are injected
 // automatically.)
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
+// ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
+// deploy bundler doesn't resolve the app's extension-less imports. Run
+// `node scripts/bundle-mp-engine.mjs` before every deploy.
 import {
   applyCommit,
   applyDraw,
@@ -19,8 +22,8 @@ import {
   dealGame,
   publicColumns,
   redactFor,
-} from "../../../src/mp/adapter.ts";
-import { MpConfig, MpEngine } from "../../../src/mp/types.ts";
+} from "./_engine/mp/adapter.ts";
+import { MpConfig, MpEngine } from "./_engine/mp/types.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

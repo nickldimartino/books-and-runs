@@ -13,32 +13,28 @@ database + routing.
 
 ### Deploy
 
+The Supabase deploy bundler does **not** resolve the app's extension-less
+relative imports (`./deck`, `../types`, …). So before every deploy, copy the
+engine with explicit `.ts` extensions into `mp/_engine/` (gitignored):
+
 ```bash
-supabase functions deploy mp
+node scripts/bundle-mp-engine.mjs
+npx supabase functions deploy mp
 ```
+
+Re-run the bundle step whenever anything in `src/` changes. The
+`supabase-js` dependency is pulled straight from JSR (`jsr:@supabase/supabase-js@2`)
+so it needs no import map.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are
 injected automatically. Requires `supabase/migrations/0010_multiplayer.sql`
 to have been run first.
 
-### If deploy fails on imports
-
-`mp/index.ts` imports the engine directly from `../../../src/` and relies on
-`deno.json`'s `"unstable": ["sloppy-imports"]` to resolve the engine's
-extension-less relative imports (`./deck`, `../types`, …). If your Supabase
-CLI is old enough that it doesn't honour that flag, the deploy will fail with
-"Module not found".
-
-Fallback — bundle a copy of the engine with explicit `.ts` extensions:
+### Confirm it's live
 
 ```bash
-node scripts/bundle-mp-engine.mjs
+npx supabase functions list        # should list `mp`
 ```
-
-Then change the two engine imports at the top of `mp/index.ts` from
-`../../../src/mp/adapter.ts` / `../../../src/mp/types.ts` to
-`./_engine/mp/adapter.ts` / `./_engine/mp/types.ts`, and deploy. Re-run the
-bundle script whenever `src/` changes. `_engine/` is gitignored.
 
 ### Smoke test after deploy
 
