@@ -23,12 +23,44 @@ export interface SavedGame {
   savedAt: number;
 }
 
+/**
+ * Whether a parsed value has the shape the game screen actually renders.
+ * The try/catch below only catches malformed JSON — a *structurally* wrong
+ * object (say `state.players` isn't an array) would otherwise sail through
+ * and crash GameContext/game/page.tsx on the first `.map`, with no in-app
+ * way back out. Corruption is rare but real: an interrupted write, storage
+ * eviction, a browser extension, or a future change to GameState's shape.
+ */
+function looksLikeSavedGame(v: unknown): v is SavedGame {
+  if (!v || typeof v !== "object") return false;
+  const g = v as Record<string, unknown>;
+  const s = g.state as Record<string, unknown> | undefined;
+  return (
+    !!s &&
+    typeof s === "object" &&
+    Array.isArray(s.players) &&
+    s.players.length > 0 &&
+    Array.isArray(s.selectedContracts) &&
+    s.selectedContracts.length > 0 &&
+    typeof s.round === "number" &&
+    Array.isArray(s.drawPile) &&
+    Array.isArray(s.discardPile) &&
+    Array.isArray(s.melds)
+  );
+}
+
 export function loadSavedGame(): SavedGame | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as SavedGame;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!looksLikeSavedGame(parsed)) {
+      // Unusable — drop it so a reload doesn't keep hitting the same crash.
+      clearSavedGame();
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }

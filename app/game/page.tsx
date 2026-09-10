@@ -114,6 +114,14 @@ function contractLabelLines(label: string): string[] {
   return label.split(" + ");
 }
 
+// Names can be up to 20 chars (New Game caps them there). "{name}'s hand" at
+// full length wraps the game header to several lines on a phone, so shorten
+// it just for that one possessive label — the full name still shows in the
+// score list, the OpponentStrip, and the pass-the-device screen.
+function shortNameForHeader(name: string): string {
+  return name.length > 12 ? `${name.slice(0, 11)}…` : name;
+}
+
 export default function GamePage() {
   const router = useRouter();
   const {
@@ -910,7 +918,7 @@ export default function GamePage() {
     <section data-tutorial="hand">
       <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-          {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+          {player.name === "You" ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
           <span className="ml-2 font-normal normal-case text-[var(--muted)]">
             ({handPenalty(player.hand)} pts)
           </span>
@@ -980,7 +988,7 @@ export default function GamePage() {
               onClick={handleShowWhoseTurn}
               className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
             >
-              Who&apos;s turn is it?
+              Whose turn is it?
             </button>
           )}
           <Link
@@ -1048,7 +1056,7 @@ export default function GamePage() {
             // than the single-line version this replaces.
             <>
               <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-                {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
+                {player.name === "You" ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
               </p>
               <p className="text-lg font-bold leading-tight text-[var(--heading)]">
                 {handPenalty(player.hand)} pts

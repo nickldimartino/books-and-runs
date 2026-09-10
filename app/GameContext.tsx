@@ -640,7 +640,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const draw = useCallback(
     (fromDiscard: boolean) => {
       const s = stateRef.current;
-      if (!s || hasDrawn) return;
+      // Guard on the ref, not the `hasDrawn` state: a burst of taps on the
+      // draw pile fires several synchronous calls before React re-renders
+      // (and before the button's `disabled={hasDrawn}` takes effect), and
+      // the state closure is stale `false` for every one of them. The ref is
+      // flipped synchronously by setHasDrawnBoth (line below, and it runs to
+      // completion before the next tap's handler starts), so call 2+ bail.
+      if (!s || hasDrawnRef.current) return;
       clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
@@ -682,7 +688,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hapticLight();
       commit();
     },
-    [hasDrawn, commit, setHasDrawnBoth, bump, clearUndoState, emitFlight]
+    [commit, setHasDrawnBoth, bump, clearUndoState, emitFlight]
   );
 
   const sortHand = useCallback(
@@ -727,7 +733,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const confirmMeld = useCallback(
     (groups: string[][], preferredRunStarts?: (number | undefined)[]) => {
       const s = stateRef.current;
-      if (!s || !hasDrawn) return false;
+      if (!s || !hasDrawnRef.current) return false;
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
       const contract = s.selectedContracts[s.round - 1];
@@ -773,13 +779,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       commit();
       return true;
     },
-    [hasDrawn, commit, bump, armUndo, emitFlight]
+    [commit, bump, armUndo, emitFlight]
   );
 
   const layOff = useCallback(
     (cardId: string, meldId: string, position?: "low" | "high") => {
       const s = stateRef.current;
-      if (!s || !hasDrawn) return false;
+      if (!s || !hasDrawnRef.current) return false;
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
       const card = player.hand.find((c) => c.id === cardId);
@@ -814,7 +820,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       return ok;
     },
-    [hasDrawn, commit, bump, armUndo, emitFlight]
+    [commit, bump, armUndo, emitFlight]
   );
 
   /**
@@ -869,7 +875,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const discard = useCallback(
     (cardId: string) => {
       const s = stateRef.current;
-      if (!s || !hasDrawn) return;
+      // Ref, not state — same rapid-tap reasoning as draw(). After the first
+      // discard flips it false (setHasDrawnBoth below), a second synchronous
+      // call bails here instead of re-running discardAndAdvance / the AI loop.
+      if (!s || !hasDrawnRef.current) return;
       clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
@@ -907,7 +916,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump, clearUndoState, emitFlight]
+    [commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump, clearUndoState, emitFlight]
   );
 
   const advanceRound = useCallback(() => {

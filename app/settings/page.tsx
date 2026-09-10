@@ -377,7 +377,7 @@ export default function SettingsPage() {
           />
 
           <BoolToggle
-            label="“Who's turn is it?” button"
+            label="“Whose turn is it?” button"
             value={settings.showWhoseTurn}
             onChange={(v) => updateSettings({ showWhoseTurn: v })}
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."

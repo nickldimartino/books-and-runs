@@ -19,9 +19,23 @@ export default function SignInPage() {
   useEffect(() => {
     if (!user) return;
     // Return to an in-app page if one was requested (e.g. a shared friend
-    // link routes signed-out visitors through here). Only same-origin paths.
+    // link routes signed-out visitors through here). Only same-origin
+    // relative paths — resolve against our origin and confirm it didn't
+    // escape. Guards against `//evil.com` and `/\evil.com` (browsers
+    // normalise the backslash), which a plain startsWith("/") check misses.
     const next = new URLSearchParams(window.location.search).get("next");
-    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+    let dest = "/";
+    if (next) {
+      try {
+        const u = new URL(next, window.location.origin);
+        if (u.origin === window.location.origin && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) {
+          dest = u.pathname + u.search + u.hash;
+        }
+      } catch {
+        /* malformed — fall through to "/" */
+      }
+    }
+    router.replace(dest);
   }, [user, router]);
 
   if (!configured) {

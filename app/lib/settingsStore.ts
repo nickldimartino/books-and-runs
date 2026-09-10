@@ -14,7 +14,7 @@ export interface HouseSettings {
   // Badge hand cards and the top discard-pile card that could currently be
   // laid off onto some meld on the table.
   highlightLayoffs: boolean;
-  // Show the "Who's turn is it?" button on the game board, which pops up a
+  // Show the "Whose turn is it?" button on the game board, which pops up a
   // brief on-screen reminder of whose turn it currently is.
   showWhoseTurn: boolean;
   // "Player activity", "Group melds by type", and "Expandable hand drawer"
