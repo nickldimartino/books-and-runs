@@ -150,10 +150,6 @@ export function OpponentStrip({
             <ActivityCard label="Last discard" card={latestCardFor(discardHistory, open.id)} />
             <ActivityCard label="Last pickup" card={latestCardFor(pickupHistory, open.id)} />
           </div>
-          <p className="mt-2 text-[10px] text-[var(--faint)]">
-            The discard/pickup columns reset each round. Blind draws from the draw pile aren&apos;t
-            shown — nobody could see those at a real table either.
-          </p>
         </div>
       )}
     </div>

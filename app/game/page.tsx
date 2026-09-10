@@ -308,14 +308,29 @@ export default function GamePage() {
   useEffect(() => {
     if (state || everHadStateRef.current || recoveryAttemptedRef.current) return;
     recoveryAttemptedRef.current = true;
-    if (loadSavedGame()) {
-      continueGame();
-    } else if (consumeTutorialStartingFlag()) {
+    // Tutorial flag first: pressing "Start Tutorial" on the New Game screen
+    // is an explicit choice that beats a stale saved game. (The happy path
+    // already has the tutorial state in memory before this page mounts and
+    // never reaches here — this only matters when the navigation landed
+    // faster than the state update.) Checking loadSavedGame() first here was
+    // the bug where starting a tutorial reopened whatever real game was
+    // saved.
+    if (consumeTutorialStartingFlag()) {
       startTutorialGame();
+    } else if (loadSavedGame()) {
+      continueGame();
     } else {
       router.replace("/");
     }
   }, [state, continueGame, startTutorialGame, router]);
+
+  // Happy path: startTutorialGame() already ran in the New Game handler, so
+  // the recovery effect above bailed on `state` without consuming the
+  // one-shot flag. Clear it here so it can't survive in sessionStorage and
+  // kick off a surprise tutorial the next time /game is entered cold.
+  useEffect(() => {
+    if (isTutorial) consumeTutorialStartingFlag();
+  }, [isTutorial]);
 
   useEffect(() => {
     setSelectedCardIds([]);
@@ -948,7 +963,7 @@ export default function GamePage() {
             </button>
           )}
           <Link
-            href="/how-to-play"
+            href="/how-to-play?from=game"
             className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
             How to play

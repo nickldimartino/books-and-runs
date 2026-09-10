@@ -131,7 +131,7 @@ function MoreSection({
         <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
       </summary>
       <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
-        <MoreLink href="/how-to-play">How to Play</MoreLink>
+        <MoreLink href="/how-to-play?from=home">How to Play</MoreLink>
         <MoreLink href="/settings">Settings</MoreLink>
         {configured && user && <MoreLink href="/account">Account</MoreLink>}
         <MoreLink href="/scorecard">Scorekeeper</MoreLink>
