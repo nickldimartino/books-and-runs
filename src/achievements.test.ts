@@ -16,9 +16,9 @@ describe("tierNumber", () => {
 });
 
 describe("ACHIEVEMENT_FAMILIES", () => {
-  it("has exactly 40 families, giving 200 achievements at 5 tiers each", () => {
-    expect(ACHIEVEMENT_FAMILIES).toHaveLength(40);
-    expect(allAchievements(EMPTY_PROGRESS_STATE)).toHaveLength(200);
+  it("has exactly 44 families, giving 220 achievements at 5 tiers each", () => {
+    expect(ACHIEVEMENT_FAMILIES).toHaveLength(44);
+    expect(allAchievements(EMPTY_PROGRESS_STATE)).toHaveLength(220);
   });
 
   it("has unique family ids", () => {
@@ -90,6 +90,23 @@ describe("allAchievements — locked/unlocked state", () => {
 
     const enough: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, gamesPlayed: 20, gamesWon: 16 };
     expect(achievementValue(ACHIEVEMENT_FAMILIES.find((f) => f.id === "win_rate")!, enough)).toBe(80);
+  });
+
+  it("multiplayer families read the mp progress fields", () => {
+    const state: AchievementProgressState = {
+      ...EMPTY_PROGRESS_STATE,
+      mpGamesPlayed: 8,
+      mpGamesWon: 5,
+      mpBestWinStreak: 4,
+    };
+    expect(achievementValue(ACHIEVEMENT_FAMILIES.find((f) => f.id === "mp_games_played")!, state)).toBe(8);
+    expect(achievementValue(ACHIEVEMENT_FAMILIES.find((f) => f.id === "mp_games_won")!, state)).toBe(5);
+    expect(achievementValue(ACHIEVEMENT_FAMILIES.find((f) => f.id === "mp_win_streak")!, state)).toBe(4);
+    // 5/8 = 62.5%, and 8 games clears MP_WIN_RATE_MIN_GAMES (6)
+    expect(achievementValue(ACHIEVEMENT_FAMILIES.find((f) => f.id === "mp_win_rate")!, state)).toBeCloseTo(62.5);
+
+    const tooFew: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, mpGamesPlayed: 3, mpGamesWon: 3 };
+    expect(achievementValue(ACHIEVEMENT_FAMILIES.find((f) => f.id === "mp_win_rate")!, tooFew)).toBe(0);
   });
 
   it("wins_by_difficulty families read their own difficulty key only", () => {

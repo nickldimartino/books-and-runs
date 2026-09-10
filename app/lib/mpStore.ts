@@ -163,6 +163,45 @@ export async function getMyMpRecord(supabase: SupabaseClient): Promise<MpRecord>
   return row ?? { played: 0, won: 0, lost: 0 };
 }
 
+export interface MpStats {
+  played: number;
+  won: number;
+  lost: number;
+  currentWinStreak: number;
+  bestWinStreak: number;
+  podiums: number;
+  biggestTableBeaten: number;
+}
+
+export const EMPTY_MP_STATS: MpStats = {
+  played: 0,
+  won: 0,
+  lost: 0,
+  currentWinStreak: 0,
+  bestWinStreak: 0,
+  podiums: 0,
+  biggestTableBeaten: 0,
+};
+
+/** Full multiplayer numbers from mp_my_stats() (migration 0011). Needs that
+ * migration; callers that can't guarantee it should catch and fall back to
+ * EMPTY_MP_STATS. */
+export async function getMyMpStats(supabase: SupabaseClient): Promise<MpStats> {
+  const { data, error } = await supabase.rpc("mp_my_stats");
+  if (error) throw error;
+  const r = (Array.isArray(data) ? data[0] : data) as Record<string, number> | undefined;
+  if (!r) return { ...EMPTY_MP_STATS };
+  return {
+    played: r.played ?? 0,
+    won: r.won ?? 0,
+    lost: r.lost ?? 0,
+    currentWinStreak: r.current_win_streak ?? 0,
+    bestWinStreak: r.best_win_streak ?? 0,
+    podiums: r.podiums ?? 0,
+    biggestTableBeaten: r.biggest_table_beaten ?? 0,
+  };
+}
+
 export async function getMyMpActiveCount(supabase: SupabaseClient): Promise<number> {
   const { data, error } = await supabase.rpc("mp_active_count");
   if (error) throw error;

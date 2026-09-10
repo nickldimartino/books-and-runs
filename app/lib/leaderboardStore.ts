@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { levelProgress } from "@/leveling";
+import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";
 
 interface PlayerStatsRow {
   games_played: number;
@@ -30,6 +31,9 @@ export interface LeaderboardEntry {
   // don't come from player_stats/achievement_counters.
   daily_deal_streak: number;
   daily_deal_best_streak: number;
+  mp_games_played: number;
+  mp_games_won: number;
+  mp_best_win_streak: number;
   updated_at: string;
 }
 
@@ -58,7 +62,7 @@ export function displayNameFor(entry: Pick<LeaderboardEntry, "user_id" | "displa
  * calling this can never clobber a name someone already chose.
  */
 export async function syncLeaderboardStats(supabase: SupabaseClient, userId: string): Promise<void> {
-  const [statsRes, countersRes] = await Promise.all([
+  const [statsRes, countersRes, mpStats] = await Promise.all([
     supabase
       .from("player_stats")
       .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
@@ -69,6 +73,8 @@ export async function syncLeaderboardStats(supabase: SupabaseClient, userId: str
       .select("counters")
       .eq("user_id", userId)
       .maybeSingle<AchievementCountersRow>(),
+    // Best-effort (migration 0011) — a missing RPC just leaves MP stats at 0.
+    getMyMpStats(supabase).catch(() => ({ ...EMPTY_MP_STATS })),
   ]);
   if (statsRes.error) throw statsRes.error;
   if (countersRes.error) throw countersRes.error;
@@ -80,6 +86,9 @@ export async function syncLeaderboardStats(supabase: SupabaseClient, userId: str
     gamesWon: stats?.games_won ?? 0,
     bestScore: stats?.best_score ?? null,
     winsByDifficulty: stats?.wins_by_difficulty ?? {},
+    mpGamesPlayed: mpStats.played,
+    mpGamesWon: mpStats.won,
+    mpBestWinStreak: mpStats.bestWinStreak,
   };
   const level = levelProgress(progress);
   const achievementsUnlocked = allAchievements(progress).filter((a) => a.unlocked).length;
@@ -96,6 +105,20 @@ export async function syncLeaderboardStats(supabase: SupabaseClient, userId: str
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
+
+  // The mp_* columns land in their own write so a project that hasn't run
+  // migration 0011 yet still gets a working core sync (level/XP already
+  // account for MP achievements via `progress` above).
+  if (mpStats.played > 0) {
+    const { error: mpError } = await supabase.from("leaderboard_entries").upsert({
+      user_id: userId,
+      mp_games_played: mpStats.played,
+      mp_games_won: mpStats.won,
+      mp_best_win_streak: mpStats.bestWinStreak,
+      updated_at: new Date().toISOString(),
+    });
+    if (mpError) console.error("Failed to sync MP leaderboard columns (run migration 0011):", mpError);
+  }
 }
 
 /** Sets (or clears, with null) just the signed-in user's own display name —

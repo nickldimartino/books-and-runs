@@ -108,6 +108,18 @@ function TableIcon() {
   );
 }
 
+/** Multiplayer vs. real people (Sociable, Friendly Rivalry, Hot Hand, ...) — two figures. */
+function PeopleIcon() {
+  return (
+    <svg {...SHARED_PROPS}>
+      <circle cx="8.5" cy="8" r="2.75" />
+      <path d="M3.5 19.5a5 5 0 0 1 10 0" />
+      <circle cx="16" cy="9.5" r="2.25" />
+      <path d="M15 14.6a4.3 4.3 0 0 1 5.5 4.9" />
+    </svg>
+  );
+}
+
 const ICON_BY_CATEGORY: Record<AchievementCategory, () => React.JSX.Element> = {
   accountStats: TrophyIcon,
   aiRivals: CrossedSwordsIcon,
@@ -117,6 +129,7 @@ const ICON_BY_CATEGORY: Record<AchievementCategory, () => React.JSX.Element> = {
   goingOut: FlagIcon,
   contracts: ClipboardIcon,
   tableComposition: TableIcon,
+  multiplayer: PeopleIcon,
 };
 
 export function AchievementIcon({

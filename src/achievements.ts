@@ -33,7 +33,14 @@ export type AchievementSource =
   | { kind: "gamesWon" }
   | { kind: "bestScore" } // lower is better; null until a game's been recorded
   | { kind: "winRate" } // gamesWon / gamesPlayed, gated by a minimum sample size
-  | { kind: "winsByDifficulty"; difficulty: string };
+  | { kind: "winsByDifficulty"; difficulty: string }
+  // Multiplayer, from mp_my_stats() — see app/lib/mpStore.ts. MP games also
+  // feed gamesPlayed / gamesWon / winsByDifficulty above; these are the
+  // "vs. real people only" cut.
+  | { kind: "mpGamesPlayed" }
+  | { kind: "mpGamesWon" }
+  | { kind: "mpBestWinStreak" }
+  | { kind: "mpWinRate" };
 
 // One of 8 broad groupings, matching the section comments below — used only
 // to pick which of the 8 hand-drawn icons (see AchievementIcon in
@@ -50,7 +57,8 @@ export type AchievementCategory =
   | "drawDiscard"
   | "goingOut"
   | "contracts"
-  | "tableComposition";
+  | "tableComposition"
+  | "multiplayer";
 
 export interface AchievementFamily {
   id: string;
@@ -71,6 +79,9 @@ export interface AchievementProgressState {
   gamesWon: number;
   bestScore: number | null;
   winsByDifficulty: Record<string, number>;
+  mpGamesPlayed: number;
+  mpGamesWon: number;
+  mpBestWinStreak: number;
 }
 
 export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
@@ -79,6 +90,9 @@ export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
   gamesWon: 0,
   bestScore: null,
   winsByDifficulty: {},
+  mpGamesPlayed: 0,
+  mpGamesWon: 0,
+  mpBestWinStreak: 0,
 };
 
 // A win-rate achievement with only 1-2 games played is meaningless (100%
@@ -87,6 +101,10 @@ export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
 // can apply the exact same "too small a sample to mean anything" floor
 // instead of picking its own number.
 export const WIN_RATE_MIN_GAMES = 10;
+
+// Multiplayer games are rarer than solo ones, so the "enough of a sample to
+// mean something" floor for the MP win-rate family is lower.
+export const MP_WIN_RATE_MIN_GAMES = 6;
 
 // Unlike a counter that climbs gradually, "best score" is a personal record
 // that can hit its theoretical floor (0) in a single short or lucky game —
@@ -135,6 +153,40 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
     unit: `% win rate (min. ${WIN_RATE_MIN_GAMES} games)`,
     source: { kind: "winRate" },
     thresholds: tierThresholds([10, 25, 40, 60, 80]),
+  },
+
+  // --- Multiplayer (vs. real people), from mp_my_stats() ---
+  {
+    id: "mp_games_played",
+    category: "multiplayer",
+    title: "Sociable",
+    unit: "multiplayer games played",
+    source: { kind: "mpGamesPlayed" },
+    thresholds: tierThresholds([1, 5, 15, 30, 60]),
+  },
+  {
+    id: "mp_games_won",
+    category: "multiplayer",
+    title: "Friendly Rivalry",
+    unit: "multiplayer games won",
+    source: { kind: "mpGamesWon" },
+    thresholds: tierThresholds([1, 3, 10, 25, 50]),
+  },
+  {
+    id: "mp_win_streak",
+    category: "multiplayer",
+    title: "Hot Hand",
+    unit: "multiplayer wins in a row",
+    source: { kind: "mpBestWinStreak" },
+    thresholds: tierThresholds([2, 3, 5, 8, 12]),
+  },
+  {
+    id: "mp_win_rate",
+    category: "multiplayer",
+    title: "Reliable Opponent",
+    unit: `% multiplayer win rate (min. ${MP_WIN_RATE_MIN_GAMES} games)`,
+    source: { kind: "mpWinRate" },
+    thresholds: tierThresholds([20, 35, 50, 65, 80]),
   },
 
   // --- One per AI difficulty, from wins_by_difficulty ---
@@ -462,6 +514,16 @@ export function achievementValue(family: AchievementFamily, state: AchievementPr
       return state.gamesPlayed >= WIN_RATE_MIN_GAMES ? (100 * state.gamesWon) / state.gamesPlayed : 0;
     case "winsByDifficulty":
       return winsByDifficultyValue(state, family.source.difficulty);
+    case "mpGamesPlayed":
+      return state.mpGamesPlayed;
+    case "mpGamesWon":
+      return state.mpGamesWon;
+    case "mpBestWinStreak":
+      return state.mpBestWinStreak;
+    case "mpWinRate":
+      return state.mpGamesPlayed >= MP_WIN_RATE_MIN_GAMES
+        ? (100 * state.mpGamesWon) / state.mpGamesPlayed
+        : 0;
   }
 }
 

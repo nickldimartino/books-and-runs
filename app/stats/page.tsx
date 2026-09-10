@@ -17,10 +17,11 @@ import { AchievementIcon } from "../components/AchievementIcons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
 import {
+  EMPTY_MP_STATS,
   getMyMpHistory,
-  getMyMpRecord,
+  getMyMpStats,
   MpHistoryEntry,
-  MpRecord,
+  MpStats,
 } from "../lib/mpStore";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
@@ -77,7 +78,7 @@ export default function ProfilePage() {
   const [history, setHistory] = useState<GameHistoryRow[]>([]);
   const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
   const [dailyDealBestStreak, setDailyDealBestStreak] = useState<number | null>(null);
-  const [mpRecord, setMpRecord] = useState<MpRecord | null>(null);
+  const [mpStats, setMpStats] = useState<MpStats | null>(null);
   const [mpHistory, setMpHistory] = useState<MpHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   // Distinct from "stats is null because you haven't played yet" — a query
@@ -113,26 +114,30 @@ export default function ProfilePage() {
         .select("daily_deal_best_streak")
         .eq("user_id", user.id)
         .maybeSingle<{ daily_deal_best_streak: number }>(),
-    ]).then(([statsRes, historyRes, countersRes, dailyDealRes]) => {
+      // Best-effort (needs migrations 0010/0011).
+      getMyMpStats(supabase).catch(() => ({ ...EMPTY_MP_STATS })),
+    ]).then(([statsRes, historyRes, countersRes, dailyDealRes, mp]) => {
       if (statsRes.error) {
         setStatsError(true);
       } else {
         setStats(statsRes.data);
       }
       setHistory((historyRes.data as GameHistoryRow[]) ?? []);
+      setMpStats(mp);
       setProgress({
         counters: countersRes.data?.counters ?? {},
         gamesPlayed: statsRes.data?.games_played ?? 0,
         gamesWon: statsRes.data?.games_won ?? 0,
         bestScore: statsRes.data?.best_score ?? null,
         winsByDifficulty: statsRes.data?.wins_by_difficulty ?? {},
+        mpGamesPlayed: mp.played,
+        mpGamesWon: mp.won,
+        mpBestWinStreak: mp.bestWinStreak,
       });
       setDailyDealBestStreak(dailyDealRes.data?.daily_deal_best_streak ?? 0);
       setLoading(false);
     });
 
-    // Multiplayer record + history — best-effort (needs migration 0010).
-    getMyMpRecord(supabase).then(setMpRecord).catch(() => setMpRecord(null));
     getMyMpHistory(supabase, 20).then(setMpHistory).catch(() => setMpHistory([]));
   }, [user]);
 
@@ -295,18 +300,31 @@ export default function ProfilePage() {
 
               {/* Multiplayer — vs. real people only (these games also feed the
                   overall stats above). */}
-              {mpRecord && mpRecord.played > 0 && (
+              {mpStats && mpStats.played > 0 && (
                 <section>
                   <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                     Multiplayer (vs. people)
                   </h2>
                   <div className="grid grid-cols-3 gap-3">
-                    <StatTile label="Played" value={mpRecord.played} />
-                    <StatTile label="Won" value={mpRecord.won} />
+                    <StatTile label="Played" value={mpStats.played} />
+                    <StatTile label="Won" value={mpStats.won} />
                     <StatTile
                       label="Win rate"
-                      value={mpRecord.played > 0 ? `${Math.round((100 * mpRecord.won) / mpRecord.played)}%` : "—"}
+                      value={mpStats.played > 0 ? `${Math.round((100 * mpStats.won) / mpStats.played)}%` : "—"}
                     />
+                    <StatTile
+                      label="Win streak"
+                      value={mpStats.currentWinStreak}
+                      sub={mpStats.bestWinStreak > 0 ? `best ${mpStats.bestWinStreak}` : undefined}
+                    />
+                    <StatTile
+                      label="Podium finishes"
+                      value={mpStats.podiums}
+                      sub="top half of the table"
+                    />
+                    {mpStats.biggestTableBeaten > 0 && (
+                      <StatTile label="Biggest table won" value={`${mpStats.biggestTableBeaten}p`} />
+                    )}
                   </div>
                 </section>
               )}

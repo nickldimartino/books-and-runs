@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, WIN_RATE_MIN_GAMES } from "@/achievements";
+import {
+  ACHIEVEMENT_FAMILIES,
+  ACHIEVEMENT_TIERS,
+  MP_WIN_RATE_MIN_GAMES,
+  WIN_RATE_MIN_GAMES,
+} from "@/achievements";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
@@ -26,7 +31,10 @@ type SortKey =
   | "games_played"
   | "worst_score"
   | "daily_deal_streak"
-  | "daily_deal_best_streak";
+  | "daily_deal_best_streak"
+  | "mp_games_won"
+  | "mp_win_rate"
+  | "mp_best_win_streak";
 
 // minWidth matches each column's own tuned width from before this was a
 // shared render loop (e.g. "Achievements" needs more room for "199/200"
@@ -42,6 +50,9 @@ const SORT_OPTIONS: { key: SortKey; label: string; minWidth: string }[] = [
   { key: "worst_score", label: "Worst score", minWidth: "90px" },
   { key: "daily_deal_streak", label: "Daily streak", minWidth: "90px" },
   { key: "daily_deal_best_streak", label: "Best streak", minWidth: "90px" },
+  { key: "mp_games_won", label: "MP wins", minWidth: "70px" },
+  { key: "mp_win_rate", label: "MP win rate", minWidth: "90px" },
+  { key: "mp_best_win_streak", label: "MP streak", minWidth: "80px" },
 ];
 
 /**
@@ -78,6 +89,14 @@ function sortValue(entry: LeaderboardEntry, key: SortKey): number {
       return entry.daily_deal_streak;
     case "daily_deal_best_streak":
       return entry.daily_deal_best_streak;
+    case "mp_games_won":
+      return entry.mp_games_won ?? 0;
+    case "mp_best_win_streak":
+      return entry.mp_best_win_streak ?? 0;
+    case "mp_win_rate":
+      return (entry.mp_games_played ?? 0) < MP_WIN_RATE_MIN_GAMES
+        ? -Infinity
+        : (entry.mp_games_won ?? 0) / (entry.mp_games_played ?? 1);
   }
 }
 
@@ -121,9 +140,11 @@ export default function LeaderboardPage() {
         if (cancelled || !supabase) return;
         return supabase
           .from("leaderboard_entries")
-          .select(
-            "user_id, display_name, level, total_xp, achievements_unlocked, games_played, games_won, average_score, worst_score, daily_deal_streak, daily_deal_best_streak, updated_at"
-          )
+          // select("*") rather than an explicit list: leaderboard_entries is
+          // all-public by design (see migration 0006), and a "*" means a
+          // project that hasn't run a stats-column migration yet still loads
+          // — the missing columns just read as undefined, handled below.
+          .select("*")
           // Every signed-in visit to Account/Leaderboard self-heals a row for
           // that account (see the sync above) — without this filter, an
           // account that only ever opened one of those pages once, and never
@@ -133,6 +154,8 @@ export default function LeaderboardPage() {
           // someone who's only ever played Daily Deal (never a full tracked
           // game) still has a real streak worth ranking, so the "real
           // activity" bar here is either kind of activity, not just games_played.
+          // MP games also bump games_played (recordMpGameResult → recordGameResult),
+          // so an MP-only player already passes the games_played filter.
           .or("games_played.gt.0,daily_deal_best_streak.gt.0")
           .order("level", { ascending: false })
           .order("total_xp", { ascending: false })
@@ -315,6 +338,13 @@ export default function LeaderboardPage() {
                       <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.worst_score)}</td>
                       <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.daily_deal_streak}</td>
                       <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.daily_deal_best_streak}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.mp_games_won ?? 0}</td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">
+                        {(entry.mp_games_played ?? 0) >= MP_WIN_RATE_MIN_GAMES
+                          ? `${Math.round((100 * (entry.mp_games_won ?? 0)) / (entry.mp_games_played ?? 1))}%`
+                          : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.mp_best_win_streak ?? 0}</td>
                     </tr>
                   );
                 })}

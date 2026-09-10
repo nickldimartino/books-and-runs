@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatAchievementProgress } from "../lib/achievementFormat";
+import { EMPTY_MP_STATS, getMyMpStats } from "../lib/mpStore";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
@@ -65,13 +66,17 @@ export default function AchievementsPage() {
         .select("counters")
         .eq("user_id", user.id)
         .maybeSingle<AchievementCountersRow>(),
-    ]).then(([statsRes, countersRes]) => {
+      getMyMpStats(supabase).catch(() => ({ ...EMPTY_MP_STATS })),
+    ]).then(([statsRes, countersRes, mpStats]) => {
       setProgress({
         counters: countersRes.data?.counters ?? {},
         gamesPlayed: statsRes.data?.games_played ?? 0,
         gamesWon: statsRes.data?.games_won ?? 0,
         bestScore: statsRes.data?.best_score ?? null,
         winsByDifficulty: statsRes.data?.wins_by_difficulty ?? {},
+        mpGamesPlayed: mpStats.played,
+        mpGamesWon: mpStats.won,
+        mpBestWinStreak: mpStats.bestWinStreak,
       });
       setLoading(false);
     });
