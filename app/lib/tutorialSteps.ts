@@ -110,9 +110,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "player-activity",
-    target: "player-activity",
+    target: "opponent-strip",
     title: "Keeping track",
-    body: "This shows what everyone's picked up, discarded, and how many cards they're holding — just like you'd see at a real table. Turn it off anytime in Settings.",
+    body: "This bar shows every player, how many cards they're each holding, and whose turn it is. Tap any player for their latest discard and their last pickup from the discard pile — just like you'd see at a real table.",
     gate: { type: "tap" },
   },
   {

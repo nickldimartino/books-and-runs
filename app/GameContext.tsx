@@ -47,8 +47,8 @@ export interface BuyOffer {
  */
 export type FlightInput =
   | { kind: "draw"; card: Card; fromDiscard: boolean; byId: string }
-  | { kind: "discard"; card: Card; byId: string; isAI: boolean }
-  | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean }
+  | { kind: "discard"; card: Card; byId: string; isAI: boolean; note?: string }
+  | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean; note?: string }
   | { kind: "layoff"; card: Card; meldId: string; byId: string; isAI: boolean };
 
 export type FlightEvent = FlightInput & { id: number };
@@ -138,7 +138,15 @@ const BUY_DISCARD_ENABLED = false;
 // readable before play moves on — the board stays on screen during an AI
 // turn now (see game/page.tsx), so there's something to watch.
 const AI_TURN_DELAY_MS = 450;
-const AI_RESULT_HOLD_MS = 650;
+const AI_RESULT_HOLD_MS = 900;
+
+const RANK_WORD: Record<string, string> = { A: "Ace", K: "King", Q: "Queen", J: "Jack" };
+/** "the 7 of diamonds", "the King of hearts", "a Joker" — for the opponent
+ * strip's play-by-play line. */
+function aiCardLabel(card: { rank: string; suit: string }): string {
+  if (card.suit === "joker") return "a Joker";
+  return `the ${RANK_WORD[card.rank] ?? card.rank} of ${card.suit}`;
+}
 
 // How long a confirmMeld/layOff stays undoable before the grace window
 // silently expires — long enough to catch an immediate "oops, wrong meld"
@@ -399,6 +407,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return;
       }
       const aiId = live.players[live.currentPlayerIndex].id;
+      const aiName = live.players[live.currentPlayerIndex].name;
       const meldsBefore = live.melds.length;
       const meldSizeBefore = new Map(live.melds.map((m) => [m.id, m.cards.length]));
       const discardBefore = live.discardPile.length;
@@ -407,30 +416,49 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       const nextIsHuman = !live.roundOver && !live.gameOver && !live.players[live.currentPlayerIndex].isAI;
 
-      // Diff what the turn did, for the board's play-by-play and its
-      // flights. A meld is status-only (a fan of cards flying for an AI
-      // read as busy); a lay-off and the discard each get one uniform
-      // slide — but only while another AI is still up: once it's your
-      // turn, the pass-and-play gate takes over and the pile a card would
-      // land on is gone, so it would just skip anyway.
+      // Sum up what the turn did into one status note (multiple rapid
+      // emitFlight calls collapse to the last one in a render batch, so the
+      // note rides on the single discard event). One card slide for the
+      // whole turn — the discard onto the pile — but only while another AI
+      // is still up: once it's your turn the pass-and-play gate takes over
+      // and there's no pile for it to land on.
       const newMelds = live.melds.slice(meldsBefore);
+      const grown = live.melds.filter(
+        (m) => meldSizeBefore.has(m.id) && m.cards.length > (meldSizeBefore.get(m.id) ?? 0)
+      );
+      const laidOff = grown.reduce((n, m) => n + (m.cards.length - (meldSizeBefore.get(m.id) ?? 0)), 0);
+      const didDiscard = live.discardPile.length > discardBefore;
+
+      // Prefer the headline: a meld, else a lay-off, else the routine
+      // discard. Kept to one short clause so the strip line doesn't wrap.
+      // The acting player's name is baked in — by the time the strip reads
+      // this the turn has already advanced, so it can't attribute the note
+      // by "whose turn is it" any more.
+      let action: string;
       if (newMelds.length > 0) {
-        emitFlight({ kind: "meld", cards: newMelds.flatMap((m) => m.cards), byId: aiId, isAI: true });
+        const label = live.selectedContracts[live.round - 1]?.label ?? "their contract";
+        action = laidOff > 0 ? `melded ${label} +${laidOff}` : `melded ${label}`;
+      } else if (laidOff > 0) {
+        action = `laid off ${laidOff} card${laidOff > 1 ? "s" : ""}`;
+      } else if (didDiscard) {
+        action = `discarded ${aiCardLabel(live.discardPile[live.discardPile.length - 1])}`;
+      } else {
+        action = "passed";
       }
+      const note = `${aiName} ${action}`;
+
       if (!nextIsHuman) {
-        const grown = live.melds.find(
-          (m) => meldSizeBefore.has(m.id) && m.cards.length > (meldSizeBefore.get(m.id) ?? 0)
-        );
-        if (grown) {
-          emitFlight({ kind: "layoff", card: grown.cards[grown.cards.length - 1], meldId: grown.id, byId: aiId, isAI: true });
-        }
-        if (live.discardPile.length > discardBefore) {
+        if (didDiscard) {
           emitFlight({
             kind: "discard",
             card: live.discardPile[live.discardPile.length - 1],
             byId: aiId,
             isAI: true,
+            note,
           });
+        } else {
+          // round 7: melded the whole hand, no discard to slide
+          emitFlight({ kind: "meld", cards: [], byId: aiId, isAI: true, note });
         }
       }
 

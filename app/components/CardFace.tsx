@@ -105,9 +105,6 @@ export function CardFace({ card }: { card: Card }) {
   return (
     <svg viewBox="0 0 100 140" className="h-full w-full" aria-hidden="true">
       <g fill="currentColor" data-tone={tone}>
-        {/* faint inner frame — reads as "printed card", costs one rect */}
-        <rect x="3.5" y="3.5" width="93" height="133" rx="7" fill="none" stroke="currentColor" strokeOpacity="0.14" />
-
         {/* top-left index, and a 180°-rotated copy bottom-right */}
         <g transform="translate(13 21)">
           <CornerIndex label={label} suit={card.suit} />

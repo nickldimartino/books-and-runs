@@ -9,6 +9,7 @@ import { AI_THEORETICAL_LEVEL, personaBlurbFor } from "../lib/aiPersonas";
 import { cardLabel, PlayingCard } from "../components/PlayingCard";
 import { CardFlightLayer, type CardFlightHandle } from "../components/CardFlightLayer";
 import { DrawPile, DiscardPile } from "../components/Piles";
+import { OpponentStrip } from "../components/OpponentStrip";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
 import { PassGate } from "../components/PassGate";
@@ -155,7 +156,6 @@ export default function GamePage() {
   // earlier — rather than the primary way a player would ever see it.
   const [layOffError, setLayOffError] = useState<string | null>(null);
   const [pendingGroupChoice, setPendingGroupChoice] = useState<PendingGroupChoice | null>(null);
-  const [activityOpen, setActivityOpen] = useState(() => isTutorial);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
   const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
@@ -185,6 +185,13 @@ export default function GamePage() {
   useEffect(() => {
     if (!flightEvent || flightEvent.id === lastFlightIdRef.current) return;
     lastFlightIdRef.current = flightEvent.id;
+
+    // The AI play-by-play for the strip — always applied, independent of
+    // whether the flight overlay is ready.
+    if ((flightEvent.kind === "discard" || flightEvent.kind === "meld") && flightEvent.isAI && flightEvent.note) {
+      setAiStatus(flightEvent.note);
+    }
+
     const fl = cardFlightRef.current;
     if (!fl) return;
 
@@ -204,21 +211,12 @@ export default function GamePage() {
     } else if (flightEvent.kind === "discard") {
       const src = flightEvent.isAI ? aiAnchorRef.current : handTarget ?? aiAnchorRef.current;
       fl.fly([{ card: flightEvent.card, from: src, to: discardPileRef.current }]);
-      if (flightEvent.isAI) setAiStatus(`discarded the ${cardLabel(flightEvent.card)}`);
     } else if (flightEvent.kind === "layoff") {
-      const src = flightEvent.isAI
-        ? aiAnchorRef.current
-        : (handTarget ?? aiAnchorRef.current);
+      const src = flightEvent.isAI ? aiAnchorRef.current : (handTarget ?? aiAnchorRef.current);
       const meldEl =
         document.querySelector<HTMLElement>(`[data-meld-id="${flightEvent.meldId}"]`) ?? tableMeldsElRef.current;
       fl.fly([{ card: flightEvent.card, from: src, to: meldEl }]);
-      if (flightEvent.isAI) setAiStatus(`laid a card off onto a meld`);
-    } else if (flightEvent.kind === "meld") {
-      if (flightEvent.isAI) {
-        const n = flightEvent.cards.length;
-        setAiStatus(`laid ${n} card${n > 1 ? "s" : ""} on the table`);
-        return;
-      }
+    } else if (flightEvent.kind === "meld" && !flightEvent.isAI) {
       // Your meld: snapshot the drawer's hand rect, close the drawer so the
       // fresh melds are visible on the table behind it, then fly the cards
       // onto Table melds once that layout has settled.
@@ -327,7 +325,10 @@ export default function GamePage() {
     setLayOffError(null);
     setConfirmingDiscard(null);
     setHandDrawerOpen(false);
-    setAiStatus(null);
+    // aiStatus is NOT cleared here — it must survive an AI→AI turn change so
+    // the strip's play-by-play stays put through a whole run of AI turns.
+    // It's cleared only when it becomes a human's turn (the effect below),
+    // and set fresh by the card-flight effect on each AI's own action.
     // roundOver/gameOver added specifically for handDrawerOpen: melding out
     // on a whole-hand-meld round (e.g. 3 Runs) ends the round *and* the game
     // in the same action, with no discard step, and neither
@@ -341,6 +342,12 @@ export default function GamePage() {
     // scroll-locked <body>, which on a phone meant Back to Home (below the
     // fold) became genuinely unreachable.
   }, [state?.currentPlayerIndex, state?.round, state?.roundOver, state?.gameOver]);
+
+  // Clear the AI play-by-play once it's a human's turn (or between rounds).
+  const currentIsHuman = !!state && !state.players[state.currentPlayerIndex]?.isAI;
+  useEffect(() => {
+    if (currentIsHuman) setAiStatus(null);
+  }, [currentIsHuman, state?.round]);
 
   // If the selection changes out from under a pending confirmation (the
   // only way that can happen here is the defensive card-not-found guard in
@@ -510,7 +517,6 @@ export default function GamePage() {
   // preferences are exactly as you left them once the tutorial ends.
   const savedSettings = loadLocalSettings();
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
-  const showPlayerActivity = isTutorial || savedSettings.showPlayerActivity;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
 
   const meldsByOwner = new Map<string, Meld[]>();
@@ -1055,6 +1061,15 @@ export default function GamePage() {
         </ul>
       </header>
 
+      <OpponentStrip
+        players={state.players}
+        currentPlayerIndex={state.currentPlayerIndex}
+        discardHistory={state.discardHistory}
+        pickupHistory={state.pickupHistory}
+        aiStatus={aiStatus}
+        aiThinking={aiThinking}
+      />
+
       {canUndo && (
         <div
           role="status"
@@ -1077,15 +1092,14 @@ export default function GamePage() {
       )}
 
       {player.isAI ? (
-        // Watch the turn play out — the piles stay on screen so the AI's
-        // discard has somewhere to land (see the card-flight effect), with
-        // a live line of what it actually just did rather than a blank
-        // "X is playing…".
+        // The strip above carries whose turn it is and the play-by-play now
+        // — this view just keeps the piles on screen (so the AI's discard
+        // flight has somewhere to land) with a quiet reminder of who's up.
         <div
           ref={(el) => {
             aiAnchorRef.current = el;
           }}
-          className="flex flex-1 flex-col items-center justify-center gap-6 py-4 text-center"
+          className="flex flex-1 flex-col items-center justify-center gap-5 py-6 text-center"
         >
           <section className="flex items-end justify-center gap-6">
             <div className="flex flex-col items-center gap-1 opacity-60">
@@ -1103,17 +1117,10 @@ export default function GamePage() {
               <span className="text-xs text-[var(--faint)]">Discard pile</span>
             </div>
           </section>
-          <div>
-            <p className="text-lg font-semibold text-[var(--heading)]">{player.name}&apos;s turn</p>
-            {/* Only ever set for a persona-named AI (see personaBlurbFor's
-                own doc) — undefined, and silently omitted, otherwise. */}
-            {personaBlurbFor(player.name) && (
-              <p className="text-xs text-[var(--faint)]">{personaBlurbFor(player.name)}</p>
-            )}
-            <p className="mt-1 min-h-[1.25rem] text-sm text-[var(--muted)]">
-              {aiStatus ? `${player.name} ${aiStatus}` : aiThinking ? "thinking…" : ""}
-            </p>
-          </div>
+          <p className="text-sm text-[var(--faint)]">
+            Waiting for {player.name}
+            {personaBlurbFor(player.name) ? ` — ${personaBlurbFor(player.name)}` : ""}
+          </p>
         </div>
       ) : (
         <>
@@ -1326,70 +1333,6 @@ export default function GamePage() {
               </div>
             )}
           </section>
-
-          {showPlayerActivity && (
-            <section data-tutorial="player-activity" className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4">
-              <button
-                onClick={() => setActivityOpen((v) => !v)}
-                className="flex w-full items-center justify-between text-left"
-                aria-expanded={activityOpen}
-              >
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                  Player activity this round
-                </h2>
-                <span className="text-xs text-[var(--faint)]">{activityOpen ? "Hide ▲" : "Show ▼"}</span>
-              </button>
-              {activityOpen && (
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full border-collapse text-left text-sm">
-                    <thead>
-                      <tr className="text-xs text-[var(--faint)]">
-                        <th className="pb-2 pr-3 font-medium">Player</th>
-                        <th className="pb-2 pr-3 font-medium">In hand</th>
-                        <th className="pb-2 pr-3 font-medium">Latest discard</th>
-                        <th className="pb-2 font-medium">Latest pickup</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.players.map((p) => {
-                        const latestDiscard = [...state.discardHistory]
-                          .reverse()
-                          .find((e) => e.playerId === p.id)?.card;
-                        const latestPickup = [...state.pickupHistory]
-                          .reverse()
-                          .find((e) => e.playerId === p.id)?.card;
-                        return (
-                          <tr key={p.id} className="border-t border-[var(--border)]">
-                            <td className="py-2 pr-3 text-[var(--heading)]">{p.name}</td>
-                            <td className="py-2 pr-3 text-[var(--muted)]">{p.hand.length}</td>
-                            <td className="py-2 pr-3">
-                              {latestDiscard ? (
-                                <PlayingCard card={latestDiscard} small />
-                              ) : (
-                                <span className="text-[var(--faint)]">—</span>
-                              )}
-                            </td>
-                            <td className="py-2">
-                              {latestPickup ? (
-                                <PlayingCard card={latestPickup} small />
-                              ) : (
-                                <span className="text-[var(--faint)]">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <p className="mt-2 text-xs text-[var(--faint)]">
-                    Mirrors what you&apos;d see at a real table. In hand is always current; the
-                    discard/pickup columns reset at the start of each round. Blind draws from the
-                    draw pile aren&apos;t shown, since no one could see those in person either.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
 
           <HandPreviewBar cards={visibleHand} onTap={() => setHandDrawerOpen(true)} />
           {handDrawerOpen && (

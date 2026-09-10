@@ -372,13 +372,6 @@ export default function SettingsPage() {
           />
 
           <BoolToggle
-            label="Player activity table"
-            value={settings.showPlayerActivity}
-            onChange={(v) => updateSettings({ showPlayerActivity: v })}
-            description="Show the collapsible 'Player activity this round' table on the game board, with each player's latest discard and discard-pile pickup."
-          />
-
-          <BoolToggle
             label="“Who's turn is it?” button"
             value={settings.showWhoseTurn}
             onChange={(v) => updateSettings({ showWhoseTurn: v })}

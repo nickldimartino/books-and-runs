@@ -10,24 +10,21 @@ export interface HouseSettings {
   // Badge hand cards and the top discard-pile card that could currently be
   // laid off onto some meld on the table.
   highlightLayoffs: boolean;
-  // Show the "Player activity this round" table (latest discard/pickup per
-  // player) on the game board.
-  showPlayerActivity: boolean;
   // Show the "Who's turn is it?" button on the game board, which pops up a
   // brief on-screen reminder of whose turn it currently is.
   showWhoseTurn: boolean;
-  // "Group melds by type" and "Expandable hand drawer" used to live here as
-  // their own toggles — both are permanent now (grouping books before runs
-  // is just how Table melds always renders; the hand drawer is the only
-  // hand layout there is, tutorial included — see game/page.tsx), so
-  // there's nothing left for either to configure.
+  // "Player activity", "Group melds by type", and "Expandable hand drawer"
+  // used to live here as toggles. All three are gone now: the always-on
+  // opponent strip (OpponentStrip.tsx) replaced Player activity, grouping
+  // books before runs is just how Table melds renders, and the hand drawer
+  // is the only hand layout there is — nothing left for any of them to
+  // configure.
 }
 
 export const DEFAULT_SETTINGS: HouseSettings = {
   preferredAiDifficulty: "medium",
   soundEnabled: true,
   highlightLayoffs: true,
-  showPlayerActivity: true,
   showWhoseTurn: true,
 };
 

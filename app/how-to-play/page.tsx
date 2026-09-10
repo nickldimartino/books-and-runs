@@ -273,9 +273,14 @@ export default function HowToPlayPage() {
           Settings lets you pick a color theme for the app and table, pick a card back
           independently of that theme, set a default AI difficulty for new AI opponents you add on
           the New Game screen, turn sound effects on or off, turn the possible-lay-off badges on or
-          off, show or hide the Player activity table, toggle the &quot;Who&apos;s turn is it?&quot;
-          button, and switch on colorblind-friendly card colors. None of that changes any of the
-          rules above — it&apos;s all just look-and-feel and optional assistance.
+          off, toggle the &quot;Who&apos;s turn is it?&quot; button, and switch on
+          colorblind-friendly card colors. None of that changes any of the rules above — it&apos;s
+          all just look-and-feel and optional assistance.
+        </p>
+        <p>
+          The bar of player chips at the top of the game board shows everyone&apos;s card count and
+          whose turn it is; tap a chip for that player&apos;s latest discard and their last pickup
+          from the discard pile.
         </p>
       </section>
 
