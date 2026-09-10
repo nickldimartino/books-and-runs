@@ -1,5 +1,11 @@
 "use client";
 
+// Profile page. Lifetime stats (games, win rate, best/worst/average score),
+// a per-AI-difficulty breakdown, the account level, the separate
+// "Multiplayer (vs. people)" section (played/won/streak/podiums, from
+// getMyMpStats), and expandable histories of past local and MP games.
+// Read-only — everything is fetched from Supabase on mount.
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {

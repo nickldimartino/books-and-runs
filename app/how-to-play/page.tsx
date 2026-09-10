@@ -1,3 +1,9 @@
+// The rules reference. Mostly static prose (server component) driven off
+// CONTRACTS for the round table, so the listed contracts can never drift
+// from what the engine actually deals. The back link is a client component
+// (BackLink.tsx) that returns you to wherever you came from — Home, or the
+// game if you arrived via `?from=game`.
+
 import type { ReactNode } from "react";
 import { CONTRACTS } from "@/types";
 import { HowToPlayBottomBackLink, HowToPlayTopBackLink } from "./BackLink";

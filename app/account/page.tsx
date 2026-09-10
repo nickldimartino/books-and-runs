@@ -1,5 +1,9 @@
 "use client";
 
+// The Account page: shown only when signed in. Edit the public display name
+// (written to leaderboard_entries), sign out, and the danger-zone actions.
+// Redirects to /sign-in when there's no session.
+
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";

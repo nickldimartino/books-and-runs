@@ -1,5 +1,10 @@
 "use client";
 
+// The Achievements browser: all 44 families × 5 tiers, grouped by category,
+// each showing current value vs. the tier threshold and unlocked state.
+// Pure display over `allAchievements(progress)` — the progress object is
+// assembled from Supabase by loadAchievementProgressState (+ getMyMpStats).
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../AuthContext";

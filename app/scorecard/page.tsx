@@ -1,5 +1,10 @@
 "use client";
 
+// A standalone pen-and-paper score sheet for people playing the physical
+// card game, with no engine involved — just a persisted grid of players ×
+// rounds with per-round totals. State lives in localStorage via
+// scorecardStore.ts. It borrows CONTRACTS only for the round labels.
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CONTRACTS, ContractRequirement, SHORT_GAME_CONTRACTS } from "@/types";

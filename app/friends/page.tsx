@@ -1,5 +1,12 @@
 "use client";
 
+// Friends page. The friend list, incoming/outgoing requests (accept/deny),
+// this account's own friend code + a Share action, and handling of an
+// incoming share link (`/friends?add=BR-XXXXX` → resolve the code → one tap
+// creates an already-accepted friendship both ways via addFriendByCode).
+// Signed-out visitors on a share link are routed through /sign-in?next=…
+// and land back here.
+
 import Link from "next/link";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";

@@ -1,5 +1,11 @@
 "use client";
 
+// Multiplayer game setup. Pick friends to invite (from friendsStore) and
+// optional AI seats, choose the round set, then createMpGame() hands it to
+// the Edge Function and routes Home — the game stays "pending" until every
+// invitee accepts (from the Home "Your games" list), at which point the
+// server deals. Signed-in + Supabase-configured only.
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";

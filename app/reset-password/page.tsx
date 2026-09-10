@@ -1,5 +1,9 @@
 "use client";
 
+// The landing page for a Supabase password-reset email link. Supabase puts
+// the user in a recovery session on arrival; this page just collects a new
+// password and calls updatePassword, then sends them on.
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";

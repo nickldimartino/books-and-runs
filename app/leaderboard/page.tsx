@@ -1,5 +1,11 @@
 "use client";
 
+// The leaderboard: one row per account from `leaderboard_entries` (a
+// self-reported public snapshot each client upserts via syncLeaderboardStats
+// — see migration 0006). Sortable by several stats including the MP columns
+// (min-games gates apply to win-rate sorts). Each row has an add-friend
+// button (the standard person-plus icon) when signed in.
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {

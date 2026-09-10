@@ -1,5 +1,10 @@
 "use client";
 
+// The Settings page: house rules and preferences. Preferred AI difficulty
+// is synced to the account (settingsStore + a Supabase upsert); sound,
+// haptics, lay-off highlighting and the like are local-only, like theme.
+// Links out to the theme and card-back pickers and to the Account page.
+
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";

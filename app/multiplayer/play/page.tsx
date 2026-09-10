@@ -1,5 +1,13 @@
 "use client";
 
+// The multiplayer game screen (`?g=<id>`). Driven by `useMpGame`, which
+// talks to the Edge Function and only ever holds this player's redacted
+// view. A turn is two round trips: draw (server returns the card), stage
+// the whole turn locally in the meld builder, then commit (groups +
+// lay-offs + discard, atomic). Shows "waiting for X" when it's not your
+// turn, the round summary between rounds, and standings + achievement
+// unlocks at game over. Manual resign only.
+
 import Link from "next/link";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";

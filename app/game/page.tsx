@@ -1,5 +1,14 @@
 "use client";
 
+// The solo / pass-and-play / tutorial / Daily Deal game screen — the
+// biggest single file in the app. It renders whatever `GameContext` holds:
+// the sticky OpponentStrip, the table melds, the draw/discard piles, the
+// hand drawer (DraggableHand + the meld builder), the round summary and
+// game-over screens, the tutorial overlay, and the CardFlightLayer. It
+// owns no game rules — every action calls a `useGame()` method. On mount
+// it decides what to resume: a starting-tutorial flag, then a saved game,
+// else back to Home.
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

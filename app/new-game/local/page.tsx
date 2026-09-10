@@ -1,5 +1,11 @@
 "use client";
 
+// The solo / pass-and-play game setup form: player names and seats (human
+// or AI + difficulty), round mode (all / short / custom), then it calls
+// GameContext to deal and routes to /game. AI names/blurbs come from
+// aiPersonas.ts. (The tutorial is no longer a round mode here — it's a
+// button on the /new-game fork screen.)
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

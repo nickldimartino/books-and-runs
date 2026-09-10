@@ -1,5 +1,13 @@
 "use client";
 
+// Home screen. The hero, the level badge (when signed in), the New Game
+// button, the Daily Deal entry, and `<HomeGames>` — the unified "Your
+// games" list that shows the local saved game (LOCAL tag), active
+// multiplayer games (your-turn first, waiting-on-someone dimmed), and
+// pending MP invites with inline Accept/Decline. Renders nothing if
+// there's nothing to resume. The notification badge count comes from
+// `useNotifications`.
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";

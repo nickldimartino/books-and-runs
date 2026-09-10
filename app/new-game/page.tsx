@@ -1,5 +1,11 @@
 "use client";
 
+// The New Game fork screen. Three choices: "Solo & pass-and-play" →
+// /new-game/local, "With friends" → /new-game/multiplayer (or a sign-in
+// prompt when not configured/signed in), and a "take the tutorial" button
+// that flags the tutorial as starting and jumps to /game. Deliberately the
+// single New Game entry point — the old separate multiplayer hub is gone.
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
