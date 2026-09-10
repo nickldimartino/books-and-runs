@@ -354,7 +354,7 @@ export function DraggableHand({
   }
 
   return (
-    <div ref={handRootRef} className="flex flex-wrap gap-2">
+    <div ref={handRootRef} className="flex flex-wrap justify-center gap-2">
       {orderedCards.map((card) => {
         const isDragging = dragId === card.id;
         return (

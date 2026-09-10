@@ -280,11 +280,6 @@ export default function NewMultiplayerGamePage() {
             )}
           </section>
 
-          <p className="text-xs text-[var(--faint)]">
-            Everyone you invite has to accept before the deal. A full multiplayer game can take days —
-            each player takes their turn when they next open the app.
-          </p>
-
           {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
           <button

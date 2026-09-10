@@ -7,8 +7,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
 import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
-import { recordMpGameResult } from "../../lib/recordMpGameResult";
-import { supabase } from "../../lib/supabaseClient";
+import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { useMpGame } from "../../lib/useMpGame";
 import { layOffOptions } from "@/meld";
 import type { Card, Meld, Player } from "@/types";
@@ -53,8 +52,6 @@ export default function MultiplayerPlayPage() {
   const [layoffArmed, setLayoffArmed] = useState(false);
   const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
 
-  const mySeat = view?.players.find((p) => p.userId === user?.id)?.seat ?? null;
-
   const scores = useMemo(
     () => (view ? [...view.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore) : []),
     [view]
@@ -82,17 +79,6 @@ export default function MultiplayerPlayPage() {
     seenRoundsRef.current = count;
   }, [view]);
 
-  // Record a finished game against normal stats / XP / achievements / the
-  // leaderboard, once.
-  const recordedRef = useRef(false);
-  useEffect(() => {
-    if (view?.gameOver && user && supabase && mySeat != null && !recordedRef.current) {
-      recordedRef.current = true;
-      recordMpGameResult(supabase, user.id, view, mySeat).catch((err) =>
-        console.error("Failed to record MP game result:", err)
-      );
-    }
-  }, [view, user, mySeat]);
 
   if (!authLoading && !user) {
     return (
@@ -172,6 +158,17 @@ export default function MultiplayerPlayPage() {
             </li>
           ))}
         </ol>
+
+        <p className="text-xs text-[var(--faint)]">
+          Recorded to your stats and multiplayer record.
+        </p>
+
+        {g.unlockedAchievements.length > 0 && (
+          <AchievementUnlockCard
+            items={g.unlockedAchievements}
+            heading={g.unlockedAchievements.length === 1 ? "Achievement unlocked" : "Achievements unlocked"}
+          />
+        )}
       </main>
     );
   }

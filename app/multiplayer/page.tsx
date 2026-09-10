@@ -127,7 +127,7 @@ export default function MultiplayerPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Multiplayer</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Turn-based games with friends — take your turn, then it&apos;s theirs. Up to {MP_GAME_CAP} going at once.
+          Turn-based games with friends. You can have up to {MP_GAME_CAP} games going at once.
         </p>
       </div>
 

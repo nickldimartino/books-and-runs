@@ -818,7 +818,7 @@ export default function GamePage() {
 
       {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={handleGroupSelected}
           disabled={!hasDrawn || selectedCardIds.length === 0 || !!pendingGroupChoice}
@@ -887,7 +887,7 @@ export default function GamePage() {
 
   const handSection = (
     <section data-tutorial="hand">
-      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
           {player.name === "You" ? "Your hand" : `${player.name}'s hand`}
           <span className="ml-2 font-normal normal-case text-[var(--muted)]">
@@ -897,7 +897,7 @@ export default function GamePage() {
             <span className="ml-2 text-[var(--accent)]">— contract melded</span>
           )}
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <button
             onClick={() => sortHand("suit")}
             title="Group same-suit cards together — good for spotting runs"
@@ -934,7 +934,7 @@ export default function GamePage() {
         onReorder={reorderHand}
         layoffEligibleIds={layoffEligibleHandIds}
       />
-      <p className="mt-1 text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
+      <p className="mt-1 text-center text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
     </section>
   );
 
@@ -1366,7 +1366,12 @@ export default function GamePage() {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Manage your hand"
-                className="fixed inset-x-0 bottom-0 z-[46] flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl"
+                // max-w-2xl + mx-auto: on a wide screen the drawer is a
+                // centered column the same width as the game board, so the
+                // hand, the sort buttons, and the meld/discard controls all
+                // sit within one reach instead of spread across the whole
+                // viewport. Full-bleed on phones (where max-w-2xl > screen).
+                className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl"
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>

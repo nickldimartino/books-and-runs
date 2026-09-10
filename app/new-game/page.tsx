@@ -206,21 +206,6 @@ export default function NewGamePage() {
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
 
-      {configured && user && (
-        <Link
-          href="/multiplayer/new"
-          className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)]"
-        >
-          <span>
-            <span className="block text-sm font-semibold text-[var(--heading)]">Play with friends</span>
-            <span className="block text-xs text-[var(--muted)]">
-              Turn-based multiplayer — this screen is for solo &amp; pass-and-play
-            </span>
-          </span>
-          <span className="shrink-0 text-sm font-medium text-[var(--accent)]">→</span>
-        </Link>
-      )}
-
       {roundMode === "tutorial" ? (
         <section className="flex flex-col gap-2 rounded-lg bg-[var(--panel)] p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">

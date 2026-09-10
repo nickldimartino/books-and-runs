@@ -351,7 +351,12 @@ export default function HomePage() {
                 </svg>
               </span>
               <span className="min-w-0">
-                <span className="block text-base font-semibold text-[var(--heading)]">Resume game</span>
+                <span className="flex items-center gap-2 text-base font-semibold text-[var(--heading)]">
+                  Resume game
+                  <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
+                    Local
+                  </span>
+                </span>
                 {savedSummary && (
                   <span className="block truncate text-xs text-[var(--faint)]">{savedSummary}</span>
                 )}
