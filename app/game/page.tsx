@@ -224,9 +224,21 @@ export default function GamePage() {
       const cards = flightEvent.cards;
       setHandDrawerOpen(false);
       requestAnimationFrame(() =>
-        requestAnimationFrame(() =>
-          fl.fly(cards.map((c, i) => ({ card: c, from: handRect, to: tableMeldsElRef.current, delay: i * 55 })))
-        )
+        requestAnimationFrame(() => {
+          const section = tableMeldsElRef.current;
+          // On a phone the Table melds section is often tall enough that its
+          // centre sits low or below the fold, so the meld cards flew
+          // downward off the bottom of the screen. Aim for a band near the
+          // *top* of the section instead (clamped into view), so the flight
+          // reads as cards going up onto the table.
+          let dest: HTMLElement | DOMRect | null = section;
+          if (section && window.innerWidth < 640) {
+            const r = section.getBoundingClientRect();
+            const y = Math.max(90, Math.min(r.top + 24, window.innerHeight - 130));
+            dest = new DOMRect(r.left, y, r.width, 44);
+          }
+          fl.fly(cards.map((c, i) => ({ card: c, from: handRect, to: dest, delay: i * 55 })));
+        })
       );
     }
   }, [flightEvent, handDrawerOpen]);
