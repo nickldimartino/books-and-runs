@@ -1,5 +1,12 @@
 "use client";
 
+// One hook behind every "something needs your attention" badge in the app:
+// pending friend requests + incoming game invites + games where it's your
+// turn, summed into `total`. Keeps a single Supabase Realtime channel
+// subscribed to the relevant tables and refetches on any change (plus an
+// exposed `refresh()`). Replaced the old separate useFriendActivity /
+// useMpActivity hooks.
+
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { getFriendRequests } from "./friendsStore";

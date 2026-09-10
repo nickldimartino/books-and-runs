@@ -1,3 +1,10 @@
+// The table themes (38 of them) and how they're applied. A theme is just a
+// `[data-theme]` value on <html> — the actual colours are CSS custom
+// properties defined per-theme in globals.css. `applyTheme` sets the
+// attribute directly (instant, no React re-render) and keeps the
+// <meta name="theme-color"> tag in step; layout.tsx re-applies the saved
+// choice before first paint so there's no flash. Persisted in localStorage.
+
 export type ThemeId =
   | "midnight"
   | "daylight"

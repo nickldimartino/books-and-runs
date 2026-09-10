@@ -1,3 +1,12 @@
+// The leaderboard is a single public table (`leaderboard_entries`, migration
+// 0006) with one self-reported row per account — there's no server job
+// aggregating it, each client just upserts its own snapshot. `syncLeaderboardStats`
+// is that upsert; it's called after every finished game and derives every
+// column (stats, level, XP, MP columns) from the same progress data the
+// Achievements page uses. The MP columns go in a separate best-effort upsert
+// so a project without migration 0011 still gets a working core sync.
+// `displayNameFor` is the shared "name or fallback" renderer.
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { levelProgress } from "@/leveling";

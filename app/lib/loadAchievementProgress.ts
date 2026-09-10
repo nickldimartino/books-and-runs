@@ -1,3 +1,10 @@
+// Assembles the one `AchievementProgressState` object that src/achievements.ts
+// and src/leveling.ts (both pure) need in order to compute unlocks and XP.
+// It stitches together three Supabase reads — player_stats, achievement_counters,
+// and the MP stats RPC — into that shape, falling back to empty values for a
+// signed-out user or a project missing the MP migration. Used by the
+// Achievements page, the Profile page, and PlayerLevelContext.
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, EMPTY_PROGRESS_STATE } from "@/achievements";
 import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";

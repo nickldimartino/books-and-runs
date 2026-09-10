@@ -1,5 +1,15 @@
 "use client";
 
+// The multiplayer play-screen hook — everything /multiplayer/play needs to
+// render and drive one game. Fetches the redacted view, exposes a local
+// turn draft (select cards, group them, stage lay-offs and a discard),
+// and submits a turn as two calls: `draw` then `commitTurn`. At game-over
+// it mirrors GameOverScreen's recording path for MP: flush the per-turn
+// achievement counters it derived from each committed move, call
+// recordMpGameResult (so the game counts toward normal stats/XP), and
+// diff a progress snapshot (taken on first load, keyed by game id in
+// localStorage) to surface any achievements this game unlocked.
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { validateManualGroup } from "@/meld";
 import type { Card, ContractRequirement } from "@/types";
