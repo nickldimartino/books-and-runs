@@ -1124,6 +1124,12 @@
    different parts of a real table. */
 body {
   background:
+    /* Fine two-way weave — reads as felt tooth, not a visible pattern. The
+       white threads catch a little light on the dark themes; the dark
+       threads give the light themes some tooth. Both are low enough to sit
+       under everything. */
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.022) 0 1px, transparent 1px 4px),
     radial-gradient(ellipse 120% 60% at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 65%),
     radial-gradient(ellipse 140% 90% at 50% 115%, color-mix(in srgb, black 22%, transparent), transparent 60%),
     var(--bg);
@@ -1133,6 +1139,24 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/* The game board's own play surface — a soft overhead "light on the
+   table" so the empty middle reads as felt with something above it, not
+   flat void, plus a faint edge vignette suggesting the table's rim.
+   Applied to <main> on the game screen only (game/page.tsx). */
+.game-felt {
+  position: relative;
+}
+.game-felt::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 32%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%),
+    radial-gradient(ellipse 120% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.14) 100%);
 }
 
 /* App-wide tactile press feedback — a small scale-down while a button or

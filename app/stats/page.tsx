@@ -316,15 +316,25 @@ export default function ProfilePage() {
                 </div>
               </section>
 
-              {/* Past games */}
-              <section>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                  Past games (last {PAST_GAMES_LIMIT})
-                </h2>
+              {/* Past games — collapsed; it's the longest thing on the page */}
+              <details className="group rounded-lg border border-[var(--border)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--faint)] [&::-webkit-details-marker]:hidden">
+                  <span>
+                    Past games
+                    <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">
+                      last {Math.min(history.length, PAST_GAMES_LIMIT)}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="text-[var(--faint)] transition group-open:rotate-180">
+                    ▼
+                  </span>
+                </summary>
                 {history.length === 0 ? (
-                  <p className="text-sm text-[var(--faint)]">No games recorded yet.</p>
+                  <p className="border-t border-[var(--border)] px-4 py-3 text-sm text-[var(--faint)]">
+                    No games recorded yet.
+                  </p>
                 ) : (
-                  <ul className="flex flex-col gap-2">
+                  <ul className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
                     {history.map((g) => {
                       const yourScore = yourScoreFor(g);
                       const wonOrTied = yourScore !== null && g.winner_score != null && yourScore === g.winner_score;
@@ -360,7 +370,7 @@ export default function ProfilePage() {
                     })}
                   </ul>
                 )}
-              </section>
+              </details>
             </>
           ) : (
             <p className="text-sm text-[var(--faint)]">

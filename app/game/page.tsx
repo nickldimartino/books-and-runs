@@ -8,6 +8,7 @@ import { usePlayerLevel } from "../PlayerLevelContext";
 import { AI_THEORETICAL_LEVEL, personaBlurbFor } from "../lib/aiPersonas";
 import { cardLabel, PlayingCard } from "../components/PlayingCard";
 import { CardFlightLayer, type CardFlightHandle } from "../components/CardFlightLayer";
+import { DrawPile, DiscardPile } from "../components/Piles";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
 import { PassGate } from "../components/PassGate";
@@ -36,8 +37,6 @@ interface PendingLayOff {
 // tutorial step spotlighting one of these needs the drawer forced open
 // first, or TutorialOverlay has nothing in the DOM to find.
 const DRAWER_TUTORIAL_TARGETS = new Set(["hand", "build-meld", "confirm-meld", "discard-btn"]);
-
-const CARD_BACK: Card = { id: "back", suit: "joker", rank: "JOKER", isWild: true };
 
 /** The rank a lay-off in this direction would represent, for labeling the choice. */
 function directionRank(meld: Meld, direction: "low" | "high"): string {
@@ -919,7 +918,7 @@ export default function GamePage() {
   );
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
+    <main className="game-felt mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
       <div className="flex items-center justify-between">
         <button
           onClick={() => {
@@ -1090,7 +1089,7 @@ export default function GamePage() {
         >
           <section className="flex items-end justify-center gap-6">
             <div className="flex flex-col items-center gap-1 opacity-60">
-              <PlayingCard card={CARD_BACK} faceDown />
+              <DrawPile count={state.drawPile.length} />
               <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
             </div>
             <div className="flex flex-col items-center gap-1">
@@ -1099,11 +1098,7 @@ export default function GamePage() {
                   discardPileRef.current = el;
                 }}
               >
-                {discardTop ? (
-                  <PlayingCard card={discardTop} />
-                ) : (
-                  <div className="h-20 w-14 rounded-lg border-2 border-dashed border-[var(--border)]" />
-                )}
+                <DiscardPile cards={state.discardPile} />
               </div>
               <span className="text-xs text-[var(--faint)]">Discard pile</span>
             </div>
@@ -1133,7 +1128,7 @@ export default function GamePage() {
                 className="disabled:opacity-50"
                 aria-label="Draw from pile"
               >
-                <PlayingCard card={CARD_BACK} faceDown />
+                <DrawPile count={state.drawPile.length} />
               </button>
               <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
             </div>
@@ -1148,11 +1143,7 @@ export default function GamePage() {
                 className="disabled:opacity-50"
                 aria-label="Draw from discard"
               >
-                {discardTop ? (
-                  <PlayingCard card={discardTop} canLayOff={discardTopCanLayOff} />
-                ) : (
-                  <div className="h-20 w-14 rounded-lg border-2 border-dashed border-[var(--border)]" />
-                )}
+                <DiscardPile cards={state.discardPile} canLayOff={discardTopCanLayOff} />
               </button>
               <span className="text-xs text-[var(--faint)]">Discard pile</span>
             </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Card, Rank, Suit } from "@/types";
 import { CardFace } from "./CardFace";
+import { RED_SUITS } from "./PlayingCard";
 
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -63,7 +64,13 @@ export function CardFanHero() {
         return (
           <div key={card.id} style={outer} className="absolute left-1/2 top-2 origin-bottom">
             <div className="hero-deal" style={{ animationDelay: `${i * 65}ms` }}>
-              <div className="card-face h-[90px] w-[64px] overflow-hidden rounded-lg">
+              {/* card-face's colour token drives CardFace's currentColor —
+                  same red/wild/black rule PlayingCard applies. */}
+              <div
+                className={`card-face ${
+                  card.isWild ? "wild" : RED_SUITS.has(card.suit) ? "red" : ""
+                } h-[90px] w-[64px] overflow-hidden rounded-lg`}
+              >
                 <CardFace card={card} />
               </div>
             </div>
