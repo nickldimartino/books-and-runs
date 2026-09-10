@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
 import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
+import { recordMpGameResult } from "../../lib/recordMpGameResult";
+import { supabase } from "../../lib/supabaseClient";
 import { useMpGame } from "../../lib/useMpGame";
 import { layOffOptions } from "@/meld";
 import type { Card, Meld, Player } from "@/types";
@@ -49,6 +51,9 @@ export default function MultiplayerPlayPage() {
   const { view } = g;
 
   const [layoffArmed, setLayoffArmed] = useState(false);
+  const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
+
+  const mySeat = view?.players.find((p) => p.userId === user?.id)?.seat ?? null;
 
   const scores = useMemo(
     () => (view ? [...view.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore) : []),
@@ -59,6 +64,35 @@ export default function MultiplayerPlayPage() {
   useEffect(() => {
     setLayoffArmed(false);
   }, [view?.currentSeat, view?.round, view?.youHaveDrawn]);
+
+  // Surface the "Round N results" beat when the server has advanced the round
+  // since we last looked. seenRoundsRef starts at the count we mounted with so
+  // an already-in-progress game doesn't flash an old round's summary.
+  const seenRoundsRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!view) return;
+    const count = view.roundResults.length;
+    if (seenRoundsRef.current === null) {
+      seenRoundsRef.current = count;
+      return;
+    }
+    if (count > seenRoundsRef.current && !view.gameOver) {
+      setRoundSummaryFor(view.roundResults[count - 1].round);
+    }
+    seenRoundsRef.current = count;
+  }, [view]);
+
+  // Record a finished game against normal stats / XP / achievements / the
+  // leaderboard, once.
+  const recordedRef = useRef(false);
+  useEffect(() => {
+    if (view?.gameOver && user && supabase && mySeat != null && !recordedRef.current) {
+      recordedRef.current = true;
+      recordMpGameResult(supabase, user.id, view, mySeat).catch((err) =>
+        console.error("Failed to record MP game result:", err)
+      );
+    }
+  }, [view, user, mySeat]);
 
   if (!authLoading && !user) {
     return (
@@ -208,6 +242,44 @@ export default function MultiplayerPlayPage() {
       />
 
       {g.error && <p className="text-sm text-[var(--danger)]">{g.error}</p>}
+
+      {roundSummaryFor != null &&
+        (() => {
+          const rr = view.roundResults.find((r) => r.round === roundSummaryFor);
+          if (!rr) return null;
+          const ranked = [...rr.scores].sort((a, b) => a.penalty - b.penalty);
+          return (
+            <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-[var(--heading)]">
+                  Round {rr.round} · {rr.label}
+                </h2>
+                <button
+                  onClick={() => setRoundSummaryFor(null)}
+                  className="rounded p-0.5 text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {ranked.map((s) => (
+                  <li key={s.seat} className="flex items-center justify-between">
+                    <span className="text-[var(--muted)]">
+                      {view.players.find((p) => p.seat === s.seat)?.name ?? `Seat ${s.seat}`}
+                    </span>
+                    <span className="text-[var(--heading)]">
+                      +{s.penalty} <span className="text-[var(--faint)]">({s.cumulative})</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-[var(--faint)]">
+                Round {rr.round + 1} is underway — take your turn below when it&apos;s yours.
+              </p>
+            </section>
+          );
+        })()}
 
       {!isMyTurn ? (
         <p className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">

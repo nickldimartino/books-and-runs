@@ -10,8 +10,8 @@ import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedTod
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
 import { loadSavedGame } from "./lib/localSave";
 import { supabase } from "./lib/supabaseClient";
-import { useFriendActivity } from "./lib/useFriendActivity";
-import { useMpActivity } from "./lib/useMpActivity";
+import { useNotifications } from "./lib/useNotifications";
+import type { MpGameSummary } from "./lib/mpStore";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { GameState } from "@/types";
 
@@ -121,11 +121,13 @@ function MoreSection({
   configured,
   user,
   friendRequests,
+  totalNotifications,
   onSignOut,
 }: {
   configured: boolean;
   user: boolean;
   friendRequests: number;
+  totalNotifications: number;
   onSignOut: () => void;
 }) {
   return (
@@ -133,9 +135,9 @@ function MoreSection({
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2">
           More
-          {friendRequests > 0 && (
+          {totalNotifications > 0 && (
             <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
-              {friendRequests}
+              {totalNotifications}
             </span>
           )}
         </span>
@@ -172,8 +174,18 @@ function MoreSection({
 // Sits between Resume game and the Daily Deal. Shows only for signed-in
 // accounts (multiplayer needs one). A quiet "play with friends" row until
 // something actually needs the player, then it grows a count.
-function MultiplayerHomeSection() {
-  const { games, attention, gameRequests, yourTurn, loading } = useMpActivity();
+function MultiplayerHomeSection({
+  games,
+  gameRequests,
+  yourTurn,
+  loading,
+}: {
+  games: MpGameSummary[];
+  gameRequests: number;
+  yourTurn: number;
+  loading: boolean;
+}) {
+  const attention = gameRequests + yourTurn;
   if (loading && games.length === 0) return null;
 
   const parts: string[] = [];
@@ -216,7 +228,7 @@ export default function HomePage() {
   const { configured, user, signOut } = useAuth();
   const { hasSavedGame, continueGame, startDailyDeal, state } = useGame();
   const { level } = usePlayerLevel();
-  const { incomingRequests } = useFriendActivity();
+  const notifications = useNotifications();
   // Covers both Continue and Daily Deal — either one commits GameContext's
   // state synchronously, but navigating to /game immediately afterward isn't
   // guaranteed to see that update yet (see the effect below), so both wait
@@ -356,7 +368,14 @@ export default function HomePage() {
           )}
         </div>
 
-        {configured && user && <MultiplayerHomeSection />}
+        {configured && user && (
+          <MultiplayerHomeSection
+            games={notifications.mpGames}
+            gameRequests={notifications.gameRequests}
+            yourTurn={notifications.yourTurn}
+            loading={notifications.loading}
+          />
+        )}
 
         {/* Tinted rather than plain-bordered like the rest of the page — a
             visual notch below New Game's solid fill, but a clear notch above
@@ -398,7 +417,8 @@ export default function HomePage() {
         <MoreSection
           configured={configured}
           user={!!user}
-          friendRequests={incomingRequests}
+          friendRequests={notifications.friendRequests}
+          totalNotifications={notifications.total}
           onSignOut={signOut}
         />
       </div>

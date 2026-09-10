@@ -265,16 +265,20 @@ export function redactFor(eng: MpEngine, config: MpConfig, viewerSeat: number | 
       runSize: contract.runSize,
       wholeHandMeld: contract.wholeHandMeld,
     },
-    players: s.players.map((p, i) => ({
-      seat: i,
-      name: p.name,
-      isAI: p.isAI,
-      userId: userIdForSeat(i),
-      handCount: p.hand.length,
-      hasMeldedContract: p.hasMeldedContract,
-      cumulativeScore: p.cumulativeScore,
-      resigned: eng.resignedSeats.includes(i),
-    })),
+    players: s.players.map((p, i) => {
+      const meta = config.seats.find((x) => x.seat === i);
+      return {
+        seat: i,
+        name: p.name,
+        isAI: p.isAI,
+        difficulty: meta && meta.kind === "ai" ? meta.difficulty : undefined,
+        userId: userIdForSeat(i),
+        handCount: p.hand.length,
+        hasMeldedContract: p.hasMeldedContract,
+        cumulativeScore: p.cumulativeScore,
+        resigned: eng.resignedSeats.includes(i),
+      };
+    }),
     yourSeat: viewerSeat,
     yourHand: viewerSeat != null ? s.players[viewerSeat].hand : [],
     currentSeat: s.currentPlayerIndex,

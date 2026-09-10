@@ -66,6 +66,7 @@ export interface RedactedPlayer {
   seat: number;
   name: string;
   isAI: boolean;
+  difficulty?: Difficulty;
   userId?: string;
   handCount: number;
   hasMeldedContract: boolean;

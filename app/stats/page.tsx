@@ -16,6 +16,12 @@ import { usePlayerLevel } from "../PlayerLevelContext";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
+import {
+  getMyMpHistory,
+  getMyMpRecord,
+  MpHistoryEntry,
+  MpRecord,
+} from "../lib/mpStore";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
 
@@ -71,6 +77,8 @@ export default function ProfilePage() {
   const [history, setHistory] = useState<GameHistoryRow[]>([]);
   const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
   const [dailyDealBestStreak, setDailyDealBestStreak] = useState<number | null>(null);
+  const [mpRecord, setMpRecord] = useState<MpRecord | null>(null);
+  const [mpHistory, setMpHistory] = useState<MpHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   // Distinct from "stats is null because you haven't played yet" — a query
   // error (e.g. an unapplied migration) also leaves stats null.
@@ -122,6 +130,10 @@ export default function ProfilePage() {
       setDailyDealBestStreak(dailyDealRes.data?.daily_deal_best_streak ?? 0);
       setLoading(false);
     });
+
+    // Multiplayer record + history — best-effort (needs migration 0010).
+    getMyMpRecord(supabase).then(setMpRecord).catch(() => setMpRecord(null));
+    getMyMpHistory(supabase, 20).then(setMpHistory).catch(() => setMpHistory([]));
   }, [user]);
 
   const achievements = useMemo(() => allAchievements(progress), [progress]);
@@ -281,6 +293,24 @@ export default function ProfilePage() {
                 </div>
               </section>
 
+              {/* Multiplayer — vs. real people only (these games also feed the
+                  overall stats above). */}
+              {mpRecord && mpRecord.played > 0 && (
+                <section>
+                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                    Multiplayer (vs. people)
+                  </h2>
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatTile label="Played" value={mpRecord.played} />
+                    <StatTile label="Won" value={mpRecord.won} />
+                    <StatTile
+                      label="Win rate"
+                      value={mpRecord.played > 0 ? `${Math.round((100 * mpRecord.won) / mpRecord.played)}%` : "—"}
+                    />
+                  </div>
+                </section>
+              )}
+
               {/* Achievement showcase */}
               <section className="rounded-2xl bg-[var(--panel)] p-5">
                 <div className="flex items-baseline justify-between">
@@ -371,6 +401,52 @@ export default function ProfilePage() {
                   </ul>
                 )}
               </details>
+
+              {mpHistory.length > 0 && (
+                <details className="group rounded-lg border border-[var(--border)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--faint)] [&::-webkit-details-marker]:hidden">
+                    <span>
+                      Past multiplayer games
+                      <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">
+                        last {mpHistory.length}
+                      </span>
+                    </span>
+                    <span aria-hidden="true" className="text-[var(--faint)] transition group-open:rotate-180">
+                      ▼
+                    </span>
+                  </summary>
+                  <ul className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
+                    {mpHistory.map((mg) => {
+                      const mySeat = mg.seats.find((s) => s.userId === user?.id)?.seat;
+                      const myScore = mySeat != null ? mg.cumulative_scores[String(mySeat)] : undefined;
+                      const winnerName = mg.winner_user_id
+                        ? mg.seats.find((s) => s.userId === mg.winner_user_id)?.name ?? "Someone"
+                        : "an AI";
+                      const won = mg.your_outcome === "won";
+                      return (
+                        <li key={mg.game_id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className={`font-medium ${won ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}>
+                              {won ? "You won" : mg.your_outcome === "resigned" ? "You left" : `Lost — ${winnerName} won`}
+                            </span>
+                            <span className="text-xs text-[var(--faint)]">
+                              {mg.completed_at
+                                ? new Date(mg.completed_at).toLocaleDateString(undefined, { dateStyle: "medium" })
+                                : ""}
+                            </span>
+                          </div>
+                          {myScore != null && (
+                            <p className="mt-0.5 text-xs text-[var(--muted)]">Your score: {myScore} pts</p>
+                          )}
+                          <p className="mt-1 text-xs text-[var(--faint)]">
+                            vs. {mg.seats.filter((s) => s.userId !== user?.id).map((s) => s.name).join(", ")}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </details>
+              )}
             </>
           ) : (
             <p className="text-sm text-[var(--faint)]">
