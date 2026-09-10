@@ -270,12 +270,12 @@ export default function HowToPlayPage() {
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">
         <h2 className="text-base font-semibold text-[var(--heading)]">Settings</h2>
         <p>
-          Settings lets you pick a color theme for the app and table, set a default AI difficulty
-          for new AI opponents you add on the New Game screen, turn sound effects on or off, choose
-          whether Table melds groups each player&apos;s books before their runs, turn the
-          possible-lay-off badges on or off, and show or hide the Player activity table. None of
-          that changes any of the rules above — it&apos;s all just look-and-feel and optional
-          assistance.
+          Settings lets you pick a color theme for the app and table, pick a card back
+          independently of that theme, set a default AI difficulty for new AI opponents you add on
+          the New Game screen, turn sound effects on or off, turn the possible-lay-off badges on or
+          off, show or hide the Player activity table, toggle the &quot;Who&apos;s turn is it?&quot;
+          button, and switch on colorblind-friendly card colors. None of that changes any of the
+          rules above — it&apos;s all just look-and-feel and optional assistance.
         </p>
       </section>
 
