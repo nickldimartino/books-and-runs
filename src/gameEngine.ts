@@ -70,6 +70,7 @@ export function createGame(
     pickupHistory: [],
     roundOver: false,
     gameOver: false,
+    stalledTurns: 0,
   };
 }
 
@@ -79,6 +80,29 @@ function currentContract(state: GameState) {
 
 function currentPlayer(state: GameState): Player {
   return state.players[state.currentPlayerIndex];
+}
+
+// Laying a contract, laying a card off, or going out counts as the round
+// making real progress — clears the stall counter. Drawing and discarding
+// on its own does not: two players can trade cards through the discard pile
+// forever without either ever getting closer to ending the round.
+function noteProgress(state: GameState) {
+  state.stalledTurns = 0;
+}
+
+// The round can't end normally any more. Two shapes, both caught here:
+//   • every player has melded but someone's stuck holding cards that fit no
+//     meld on the table — with 2 players both stuck, they cycle those cards
+//     through the discard pile indefinitely (trips fast, ~4 rotations); or
+//   • a deal so bad that nobody can complete the contract at all, so nobody
+//     ever melds and the draw/discard churn never resolves (a real game
+//     melds within a handful of turns, so this bound is very generous).
+// Either way endRound(null) scores every hand, same as a stock-out.
+function roundIsDeadlocked(state: GameState): boolean {
+  const stalled = state.stalledTurns ?? 0;
+  const n = state.players.length;
+  if (state.players.every((p) => p.hasMeldedContract) && stalled > n * 4) return true;
+  return stalled > n * 60;
 }
 
 /**
@@ -188,6 +212,7 @@ export function attemptMeldContract(state: GameState): Meld[] | null {
   player.hand = leftoverAfterMelds(player.hand, melds);
   player.hasMeldedContract = true;
   state.melds.push(...melds);
+  noteProgress(state);
   return melds;
 }
 
@@ -255,6 +280,7 @@ export function meldChosenGroups(
   player.hand = player.hand.filter((c) => !seen.has(c.id));
   player.hasMeldedContract = true;
   state.melds.push(...melds);
+  noteProgress(state);
   return melds;
 }
 
@@ -315,6 +341,7 @@ export function layOffCard(
     meld.cards.push(card);
   }
   player.hand = player.hand.filter((c) => c.id !== cardId);
+  noteProgress(state); // a card left a hand for the table — round is progressing
   return true;
 }
 
@@ -342,6 +369,16 @@ export function discardAndAdvance(state: GameState, cardId: string): boolean {
 
   if (player.hasMeldedContract && player.hand.length === 0) {
     endRound(state, player.id);
+    return true;
+  }
+
+  // Deadlock backstop: this turn made no real progress (no meld, no lay-off,
+  // nobody went out — those call noteProgress, which resets the counter).
+  // Past the bounds in roundIsDeadlocked the round can't resolve normally,
+  // so end it and score every hand.
+  state.stalledTurns = (state.stalledTurns ?? 0) + 1;
+  if (roundIsDeadlocked(state)) {
+    endRound(state, null);
     return true;
   }
 
@@ -394,5 +431,6 @@ export function startNextRound(state: GameState): GameState {
     pickupHistory: [],
     roundOver: false,
     gameOver: false,
+    stalledTurns: 0,
   };
 }

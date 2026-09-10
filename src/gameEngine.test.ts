@@ -732,6 +732,44 @@ describe("discardAndAdvance", () => {
     // but p1 (winner) keeps their pre-round score of 40 with no addition, p2 gets penalized further.
     expect(state.winnerId).toBe(state.players.reduce((a, b) => (a.cumulativeScore <= b.cumulativeScore ? a : b)).id);
   });
+
+  it("breaks a deadlock: both players melded, neither can go out → scores every hand", () => {
+    // p1 holds a 6, p2 holds a 6; the only meld on the table is a book of
+    // kings, so neither 6 can be laid off and neither hand can empty. Left
+    // alone they'd trade the cards forever (regression: fuzz seed 86).
+    const state = makeGameState({
+      round: 2,
+      currentPlayerIndex: 0,
+      players: [
+        makePlayer({ id: "p1", hand: makeHand([["6", "clubs"]]), hasMeldedContract: true, cumulativeScore: 0 }),
+        makePlayer({ id: "p2", hand: makeHand([["6", "spades"]]), hasMeldedContract: true, cumulativeScore: 0 }),
+      ],
+      drawPile: makeHand(["8", "9", "10", "J", "Q", "3", "4"]),
+      discardPile: makeHand(["7"]),
+      melds: [
+        {
+          id: "m1",
+          type: "book",
+          ownerId: "p1",
+          cards: makeHand([["K", "hearts"], ["K", "spades"], ["K", "clubs"]]),
+        },
+      ],
+    });
+
+    let ended = false;
+    for (let i = 0; i < 500 && !ended; i++) {
+      const p = state.players[state.currentPlayerIndex];
+      // simulate a stuck turn: keep a spare, discard the other, never meld/lay off
+      const spare = makeCard("2", "diamonds");
+      p.hand.push(spare);
+      ended = discardAndAdvance(state, p.hand[0].id);
+    }
+
+    expect(ended).toBe(true);
+    expect(state.roundOver).toBe(true);
+    expect(state.players[0].cumulativeScore).toBeGreaterThan(0);
+    expect(state.players[1].cumulativeScore).toBeGreaterThan(0);
+  });
 });
 
 describe("startNextRound", () => {

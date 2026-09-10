@@ -82,6 +82,16 @@ export interface GameState {
   roundOver: boolean;
   gameOver: boolean;
   winnerId?: string;
+  // Deadlock backstop (see discardAndAdvance): counts consecutive turns in
+  // which every player has already melded their contract and nobody has
+  // melded, laid off, or gone out. Once every player has melded, the only
+  // normal way a round ends is someone emptying their hand — but a player
+  // can be stuck holding cards that fit no meld on the table, and two such
+  // players will cycle those cards through the discard pile forever. Past a
+  // small multiple of the player count this ends the round and scores every
+  // hand, exactly as a stock-exhausted round does. Optional so saved games
+  // and multiplayer states written before this field round-trip fine.
+  stalledTurns?: number;
 }
 
 export const CONTRACTS: ContractRequirement[] = [
