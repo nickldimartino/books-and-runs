@@ -7,6 +7,7 @@ import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AI_THEORETICAL_LEVEL, personaBlurbFor } from "../lib/aiPersonas";
 import { cardLabel, PlayingCard } from "../components/PlayingCard";
+import { CardFlightLayer, type CardFlightHandle } from "../components/CardFlightLayer";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
 import { PassGate } from "../components/PassGate";
@@ -35,6 +36,8 @@ interface PendingLayOff {
 // tutorial step spotlighting one of these needs the drawer forced open
 // first, or TutorialOverlay has nothing in the DOM to find.
 const DRAWER_TUTORIAL_TARGETS = new Set(["hand", "build-meld", "confirm-meld", "discard-btn"]);
+
+const CARD_BACK: Card = { id: "back", suit: "joker", rank: "JOKER", isWild: true };
 
 /** The rank a lay-off in this direction would represent, for labeling the choice. */
 function directionRank(meld: Meld, direction: "low" | "high"): string {
@@ -111,6 +114,7 @@ export default function GamePage() {
     aiThinking,
     roundStartScores,
     lastDrawnCardId,
+    flightEvent,
     buyOffer,
     isTutorial,
     isDailyDeal,
@@ -162,8 +166,65 @@ export default function GamePage() {
   // Plain ref — an imperative handle for the drawer layout's "Lay off card"
   // button to scroll Table melds into view once it closes the drawer.
   const tableMeldsElRef = useRef<HTMLElement | null>(null);
+  // Anchors for the card-flight overlay (see CardFlightLayer). Draw/discard
+  // pile refs are set on whichever branch (yours vs. an AI turn) is mounted.
+  const cardFlightRef = useRef<CardFlightHandle>(null);
+  const drawPileRef = useRef<HTMLElement | null>(null);
+  const discardPileRef = useRef<HTMLElement | null>(null);
+  const aiAnchorRef = useRef<HTMLElement | null>(null);
+  // What the current AI just did, for the "watch the turn" panel — derived
+  // from GameContext's flightEvent, cleared when it's a human's turn again.
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
   const prevHasDrawnRef = useRef(hasDrawn);
   const whoseTurnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Drive the card-flight overlay off GameContext's flightEvent — a card
+  // clone travels pile→hand on a draw, hand→pile on a discard, hand→table
+  // on a meld. Purely presentational; a missing anchor just means no
+  // animation (CardFlightLayer already no-ops under reduced motion too).
+  const lastFlightIdRef = useRef(0);
+  useEffect(() => {
+    if (!flightEvent || flightEvent.id === lastFlightIdRef.current) return;
+    lastFlightIdRef.current = flightEvent.id;
+    const fl = cardFlightRef.current;
+    if (!fl) return;
+
+    const handTarget: HTMLElement | null = handDrawerOpen
+      ? document.querySelector('[data-tutorial="hand"]')
+      : document.querySelector('button[aria-label="Jump to your hand"]');
+
+    if (flightEvent.kind === "draw") {
+      fl.fly([
+        {
+          card: flightEvent.card,
+          from: flightEvent.fromDiscard ? discardPileRef.current : drawPileRef.current,
+          to: handTarget,
+          faceDown: !flightEvent.fromDiscard,
+        },
+      ]);
+    } else if (flightEvent.kind === "discard") {
+      const src = flightEvent.isAI ? aiAnchorRef.current : handTarget ?? aiAnchorRef.current;
+      fl.fly([{ card: flightEvent.card, from: src, to: discardPileRef.current }]);
+      if (flightEvent.isAI) setAiStatus(`discarded the ${cardLabel(flightEvent.card)}`);
+    } else if (flightEvent.kind === "meld") {
+      if (flightEvent.isAI) {
+        const n = flightEvent.cards.length;
+        setAiStatus(`laid ${n} card${n > 1 ? "s" : ""} on the table`);
+        return;
+      }
+      // Your meld: snapshot the drawer's hand rect, close the drawer so the
+      // fresh melds are visible on the table behind it, then fly the cards
+      // onto Table melds once that layout has settled.
+      const handRect = document.querySelector('[data-tutorial="hand"]')?.getBoundingClientRect() ?? null;
+      const cards = flightEvent.cards;
+      setHandDrawerOpen(false);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          fl.fly(cards.map((c, i) => ({ card: c, from: handRect, to: tableMeldsElRef.current, delay: i * 55 })))
+        )
+      );
+    }
+  }, [flightEvent, handDrawerOpen]);
 
   useEffect(() => {
     return () => {
@@ -259,6 +320,7 @@ export default function GamePage() {
     setLayOffError(null);
     setConfirmingDiscard(null);
     setHandDrawerOpen(false);
+    setAiStatus(null);
     // roundOver/gameOver added specifically for handDrawerOpen: melding out
     // on a whole-hand-meld round (e.g. 3 Runs) ends the round *and* the game
     // in the same action, with no discard step, and neither
@@ -1008,34 +1070,71 @@ export default function GamePage() {
       )}
 
       {player.isAI ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <p className="text-lg font-semibold text-[var(--heading)]">{player.name} is playing…</p>
-          {/* Only ever set for a persona-named AI (see personaBlurbFor's own
-              doc) — undefined, and so silently omitted, for anything else:
-              a human name, or an AI from before personas existed whose name
-              got carried over by a resumed saved game. */}
-          {personaBlurbFor(player.name) && (
-            <p className="text-xs text-[var(--faint)]">{personaBlurbFor(player.name)}</p>
-          )}
-          {aiThinking && <p className="text-sm text-[var(--faint)]">thinking…</p>}
+        // Watch the turn play out — the piles stay on screen so the AI's
+        // discard has somewhere to land (see the card-flight effect), with
+        // a live line of what it actually just did rather than a blank
+        // "X is playing…".
+        <div
+          ref={(el) => {
+            aiAnchorRef.current = el;
+          }}
+          className="flex flex-1 flex-col items-center justify-center gap-6 py-4 text-center"
+        >
+          <section className="flex items-end justify-center gap-6">
+            <div className="flex flex-col items-center gap-1 opacity-60">
+              <PlayingCard card={CARD_BACK} faceDown />
+              <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div
+                ref={(el) => {
+                  discardPileRef.current = el;
+                }}
+              >
+                {discardTop ? (
+                  <PlayingCard card={discardTop} />
+                ) : (
+                  <div className="h-20 w-14 rounded-lg border-2 border-dashed border-[var(--border)]" />
+                )}
+              </div>
+              <span className="text-xs text-[var(--faint)]">Discard pile</span>
+            </div>
+          </section>
+          <div>
+            <p className="text-lg font-semibold text-[var(--heading)]">{player.name}&apos;s turn</p>
+            {/* Only ever set for a persona-named AI (see personaBlurbFor's
+                own doc) — undefined, and silently omitted, otherwise. */}
+            {personaBlurbFor(player.name) && (
+              <p className="text-xs text-[var(--faint)]">{personaBlurbFor(player.name)}</p>
+            )}
+            <p className="mt-1 min-h-[1.25rem] text-sm text-[var(--muted)]">
+              {aiStatus ? `${player.name} ${aiStatus}` : aiThinking ? "thinking…" : ""}
+            </p>
+          </div>
         </div>
       ) : (
         <>
           <section data-tutorial="draw-piles" className="flex items-center justify-center gap-6">
             <div className="flex flex-col items-center gap-1">
               <button
+                ref={(el) => {
+                  drawPileRef.current = el;
+                }}
                 onClick={() => draw(false)}
                 disabled={hasDrawn}
                 className="disabled:opacity-50"
                 aria-label="Draw from pile"
               >
-                <PlayingCard card={{ id: "back", suit: "joker", rank: "JOKER", isWild: true }} faceDown />
+                <PlayingCard card={CARD_BACK} faceDown />
               </button>
               <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
             </div>
 
             <div className="flex flex-col items-center gap-1">
               <button
+                ref={(el) => {
+                  discardPileRef.current = el;
+                }}
                 onClick={() => draw(true)}
                 disabled={hasDrawn || !discardTop}
                 className="disabled:opacity-50"
@@ -1339,6 +1438,7 @@ export default function GamePage() {
         </>
       )}
 
+      <CardFlightLayer ref={cardFlightRef} />
       {tutorialOverlayNode}
     </main>
   );

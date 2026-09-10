@@ -38,6 +38,20 @@ export interface BuyOffer {
   card: Card;
 }
 
+/**
+ * The last card movement worth animating, published so the game board can
+ * fly a clone from A to B (see CardFlightLayer). `id` bumps on every event
+ * so the board's effect re-fires even for two events of the same kind in a
+ * row. Purely a presentation hint — carries no game-state authority, and a
+ * consumer that ignores it changes nothing.
+ */
+export type FlightInput =
+  | { kind: "draw"; card: Card; fromDiscard: boolean; byId: string }
+  | { kind: "discard"; card: Card; byId: string; isAI: boolean }
+  | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean };
+
+export type FlightEvent = FlightInput & { id: number };
+
 interface GameContextValue {
   state: GameState | null;
   hasDrawn: boolean;
@@ -47,6 +61,8 @@ interface GameContextValue {
   roundStartScores: Record<string, number>;
   roundHistory: RoundHistoryEntry[];
   lastDrawnCardId: string | null;
+  /** See FlightEvent — a presentation hint for the card-flight overlay. */
+  flightEvent: FlightEvent | null;
   buyOffer: BuyOffer | null;
   /** `trackStats` (default true) sets whether this game's results are
    * recorded to the signed-in account at all — see New Game's "Track stats
@@ -116,7 +132,12 @@ const GameContext = createContext<GameContextValue | null>(null);
  */
 const BUY_DISCARD_ENABLED = false;
 
-const AI_TURN_DELAY_MS = 550;
+// The "thinking…" beat before an AI acts, and the beat after it acts so the
+// result (the discard landing, "Talon laid down 2 Books") is actually
+// readable before play moves on — the board stays on screen during an AI
+// turn now (see game/page.tsx), so there's something to watch.
+const AI_TURN_DELAY_MS = 450;
+const AI_RESULT_HOLD_MS = 650;
 
 // How long a confirmMeld/layOff stays undoable before the grace window
 // silently expires — long enough to catch an immediate "oops, wrong meld"
@@ -195,6 +216,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [roundStartScores, setRoundStartScores] = useState<Record<string, number>>({});
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>([]);
   const [lastDrawnCardId, setLastDrawnCardId] = useState<string | null>(null);
+  const [flightEvent, setFlightEvent] = useState<FlightEvent | null>(null);
+  const flightIdRef = useRef(0);
+  const emitFlight = useCallback((e: FlightInput) => {
+    setFlightEvent({ ...e, id: ++flightIdRef.current });
+  }, []);
   const [buyOffer, setBuyOffer] = useState<BuyOffer | null>(null);
   const [isTutorial, setIsTutorial] = useState(false);
   // Mirrors isTutorial for use inside stable callbacks (persist, quitToHome)
@@ -371,11 +397,37 @@ export function GameProvider({ children }: { children: ReactNode }) {
         runAiLoop();
         return;
       }
+      const aiId = live.players[live.currentPlayerIndex].id;
+      const meldsBefore = live.melds.length;
+      const discardBefore = live.discardPile.length;
+
       playAITurn(live);
+
+      // Diff what the turn actually did, for the board's play-by-play and
+      // the discard-to-pile flight (see game/page.tsx). The AI meld that
+      // just landed is whichever melds are new since the snapshot.
+      const newMelds = live.melds.slice(meldsBefore);
+      if (newMelds.length > 0) {
+        emitFlight({ kind: "meld", cards: newMelds.flatMap((m) => m.cards), byId: aiId, isAI: true });
+      }
+      if (live.discardPile.length > discardBefore) {
+        const top = live.discardPile[live.discardPile.length - 1];
+        // small gap after a meld flight so the two beats don't overlap
+        setTimeout(
+          () => emitFlight({ kind: "discard", card: top, byId: aiId, isAI: true }),
+          newMelds.length > 0 ? 260 : 0
+        );
+      }
+
       commit();
-      runAiLoop();
+      // Hold on the finished turn briefly so its result is legible, then
+      // move to the next player. The next player's own "thinking…" beat
+      // (AI_TURN_DELAY_MS) still applies on top for an AI; for a human it
+      // just means the AI's last move sits on screen a moment before the
+      // pass-and-play gate.
+      setTimeout(runAiLoop, live.roundOver || live.gameOver ? 0 : AI_RESULT_HOLD_MS);
     }, AI_TURN_DELAY_MS);
-  }, [commit, setHasDrawnBoth]);
+  }, [commit, setHasDrawnBoth, emitFlight]);
 
   const startNewGame = useCallback(
     (configs: PlayerConfig[], contracts?: ContractRequirement[], trackStats: boolean = true) => {
@@ -557,11 +609,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       setLastDrawnCardId(card.id);
       setHasDrawnBoth(true);
+      emitFlight({ kind: "draw", card, fromDiscard: actuallyFromDiscard, byId: player.id });
       playCardTap();
       hapticLight();
       commit();
     },
-    [hasDrawn, commit, setHasDrawnBoth, bump, clearUndoState]
+    [hasDrawn, commit, setHasDrawnBoth, bump, clearUndoState, emitFlight]
   );
 
   const sortHand = useCallback(
@@ -647,11 +700,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       playMeld();
       hapticMedium();
+      emitFlight({ kind: "meld", cards: melds.flatMap((m) => m.cards), byId: player.id, isAI: false });
       if (!wentOut) armUndo({ state: preActionState, sessionCounters: preActionCounters });
       commit();
       return true;
     },
-    [hasDrawn, commit, bump, armUndo]
+    [hasDrawn, commit, bump, armUndo, emitFlight]
   );
 
   const layOff = useCallback(
@@ -750,8 +804,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       clearUndoState();
       const player = s.players[s.currentPlayerIndex];
       const isYou = player.id === YOU_PLAYER_ID;
+      const discarded = player.hand.find((c) => c.id === cardId);
 
       const roundEnded = discardAndAdvance(s, cardId);
+      if (discarded) emitFlight({ kind: "discard", card: discarded, byId: player.id, isAI: false });
       if (isYou) {
         bump("cards_discarded");
         // discardAndAdvance only ever ends the round for the player whose
@@ -782,7 +838,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump, clearUndoState]
+    [hasDrawn, commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump, clearUndoState, emitFlight]
   );
 
   const advanceRound = useCallback(() => {
@@ -844,6 +900,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundStartScores,
       roundHistory,
       lastDrawnCardId,
+      flightEvent,
       buyOffer,
       startNewGame,
       startTutorialGame,
@@ -876,6 +933,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundStartScores,
       roundHistory,
       lastDrawnCardId,
+      flightEvent,
       buyOffer,
       startNewGame,
       startTutorialGame,
