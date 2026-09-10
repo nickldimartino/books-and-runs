@@ -130,6 +130,21 @@ export async function syncLeaderboardStats(supabase: SupabaseClient, userId: str
   }
 }
 
+/** Max stored display-name length. Matches the DB CHECK in migration 0013
+ * and the `maxLength` on the Account page's input. */
+export const MAX_DISPLAY_NAME_LENGTH = 24;
+
+/** Clamp length and strip control / bidi-override chars before a name is
+ * stored — the Account input already caps length, but a direct call
+ * shouldn't be able to persist something oversized or layout-breaking that
+ * then renders to every other player on the leaderboard. */
+function sanitizeDisplayName(name: string | null): string | null {
+  if (name == null) return null;
+  const cleaned = name.replace(/[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g, "").trim();
+  if (!cleaned) return null;
+  return cleaned.slice(0, MAX_DISPLAY_NAME_LENGTH);
+}
+
 /** Sets (or clears, with null) just the signed-in user's own display name —
  * never touches the stat columns, so it can't undo a sync still in flight. */
 export async function updateLeaderboardDisplayName(
@@ -139,7 +154,7 @@ export async function updateLeaderboardDisplayName(
 ): Promise<void> {
   const { error } = await supabase.from("leaderboard_entries").upsert({
     user_id: userId,
-    display_name: displayName,
+    display_name: sanitizeDisplayName(displayName),
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

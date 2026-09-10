@@ -31,6 +31,8 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const MP_GAME_CAP = 3;
 const VALID_ROUNDS = [1, 2, 3, 4, 5, 6, 7];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (v: unknown): v is string => typeof v === "string" && UUID_RE.test(v);
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -56,14 +58,23 @@ async function resolveNames(ids: string[]): Promise<Map<string, string>> {
 }
 
 async function areFriends(a: string, b: string): Promise<boolean> {
+  // Both ids are validated as UUIDs by the caller. Use parameterized `.in()`
+  // filters rather than interpolating into a `.or()` string — a value with
+  // `,`/`(`/`)` in it could otherwise rewrite the filter (PostgREST filter
+  // injection). requester_id <> addressee_id is a table CHECK, so matching
+  // "both endpoints in {a,b}" can only be the (a,b) or (b,a) row.
+  if (!isUuid(a) || !isUuid(b)) return false;
   const { data } = await admin
     .from("friendships")
-    .select("id")
+    .select("requester_id, addressee_id")
     .eq("status", "accepted")
-    .or(
-      `and(requester_id.eq.${a},addressee_id.eq.${b}),and(requester_id.eq.${b},addressee_id.eq.${a})`
-    );
-  return (data?.length ?? 0) > 0;
+    .in("requester_id", [a, b])
+    .in("addressee_id", [a, b]);
+  return (data ?? []).some(
+    (r) =>
+      (r.requester_id === a && r.addressee_id === b) ||
+      (r.requester_id === b && r.addressee_id === a)
+  );
 }
 
 async function activeCount(uid: string): Promise<number> {
@@ -172,18 +183,26 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
   if (cleanRounds.length === 0) return json({ error: "pick at least one round" }, 400);
 
   const AI_DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
+  // Trim to a sane length and drop control chars — these names are stored in
+  // mp_games.seats and shown to every participant. (React escapes on render,
+  // so this is about row bloat / layout, not XSS.)
+  const cleanName = (v: unknown): string =>
+    (typeof v === "string" ? v : "")
+      // strip C0 control chars, DEL, and bidi override/isolate chars
+      .replace(/[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g, "")
+      .trim()
+      .slice(0, 40);
   const humans: string[] = [];
   const ais: { difficulty: string; name: string }[] = [];
   for (const s of rawSeats) {
-    if (s.kind === "human" && typeof s.user_id === "string" && s.user_id !== uid) {
+    if (s.kind === "human" && isUuid(s.user_id) && s.user_id !== uid) {
       humans.push(s.user_id);
     } else if (
       s.kind === "ai" &&
       typeof s.difficulty === "string" &&
-      AI_DIFFICULTIES.includes(s.difficulty) &&
-      typeof s.name === "string"
+      AI_DIFFICULTIES.includes(s.difficulty)
     ) {
-      ais.push({ difficulty: s.difficulty, name: s.name });
+      ais.push({ difficulty: s.difficulty, name: cleanName(s.name) || s.difficulty });
     }
   }
   const uniqueHumans = [...new Set(humans)];

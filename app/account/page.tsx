@@ -8,12 +8,15 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
-import { displayNameFor, syncLeaderboardStats, updateLeaderboardDisplayName } from "../lib/leaderboardStore";
+import {
+  displayNameFor,
+  MAX_DISPLAY_NAME_LENGTH,
+  syncLeaderboardStats,
+  updateLeaderboardDisplayName,
+} from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-
-const MAX_NAME_LENGTH = 24;
 
 /**
  * Re-establishes the current session with the account's own email + the
@@ -189,7 +192,7 @@ export default function AccountPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name on the Leaderboard"
-                maxLength={MAX_NAME_LENGTH}
+                maxLength={MAX_DISPLAY_NAME_LENGTH}
                 className="flex-1 rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               />
               <button
