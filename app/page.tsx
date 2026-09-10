@@ -11,6 +11,7 @@ import { pullDailyDealStreak } from "./lib/leaderboardStore";
 import { loadSavedGame } from "./lib/localSave";
 import { supabase } from "./lib/supabaseClient";
 import { useFriendActivity } from "./lib/useFriendActivity";
+import { useMpActivity } from "./lib/useMpActivity";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { GameState } from "@/types";
 
@@ -168,6 +169,48 @@ function MoreSection({
   );
 }
 
+// Sits between Resume game and the Daily Deal. Shows only for signed-in
+// accounts (multiplayer needs one). A quiet "play with friends" row until
+// something actually needs the player, then it grows a count.
+function MultiplayerHomeSection() {
+  const { games, attention, gameRequests, yourTurn, loading } = useMpActivity();
+  if (loading && games.length === 0) return null;
+
+  const parts: string[] = [];
+  if (yourTurn > 0) parts.push(`${yourTurn} to play`);
+  if (gameRequests > 0) parts.push(`${gameRequests} request${gameRequests > 1 ? "s" : ""}`);
+  const subtitle =
+    parts.length > 0
+      ? parts.join(" · ")
+      : games.length > 0
+        ? `${games.length} game${games.length > 1 ? "s" : ""} going`
+        : "Turn-based games with your friends";
+
+  return (
+    <Link
+      href="/multiplayer"
+      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
+        attention > 0
+          ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"
+          : "border-[var(--border)] hover:bg-[var(--panel-soft)]"
+      }`}
+    >
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--heading)]">
+          Multiplayer
+          {attention > 0 && (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
+              {attention}
+            </span>
+          )}
+        </h2>
+        <p className="mt-0.5 truncate text-xs text-[var(--muted)]">{subtitle}</p>
+      </div>
+      <span className="shrink-0 text-sm font-medium text-[var(--accent)]">Open →</span>
+    </Link>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
@@ -312,6 +355,8 @@ export default function HomePage() {
             </button>
           )}
         </div>
+
+        {configured && user && <MultiplayerHomeSection />}
 
         {/* Tinted rather than plain-bordered like the rest of the page — a
             visual notch below New Game's solid fill, but a clear notch above
