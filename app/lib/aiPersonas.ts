@@ -17,39 +17,75 @@ export interface AiPersona {
   blurb: string;
 }
 
+// The three personas Daily Deal's fixed table is built from — pulled out as
+// their own consts so DAILY_DEAL_PERSONAS can pin exactly this trio without
+// either duplicating their blurbs or coupling to wherever they happen to
+// sit in the Medium pool below (see DAILY_DEAL_PERSONAS' own note).
+const HEDDA: AiPersona = { name: "Hedda", avatar: "🦉", blurb: "Reads the discard pile like a book." };
+const REYNARD: AiPersona = { name: "Reynard", avatar: "🦊", blurb: "Always angling for the next lay-off." };
+const TALON: AiPersona = { name: "Talon", avatar: "🐺", blurb: "Plays it straight, no wasted moves." };
+
 /**
- * Three personas per difficulty, picked (not generated) so each one reads as
+ * Seven personas per difficulty, picked (not generated) so each one reads as
  * a deliberate character rather than a random name generator's output — the
  * blurb's tone escalates with the difficulty, same as the AI's own actual
  * play does. Animal avatars are a deliberate, low-effort choice: playful and
  * legible at a glance, with no cultural or gendered baggage a human
  * portrait would carry.
+ *
+ * Seven, specifically, is the most AIs a single game can seat at one
+ * difficulty — New Game caps a table at 8 players (MAX_PLAYERS) with at
+ * least one human — so a full roster of one difficulty now always draws a
+ * distinct name for every seat (see pickAiPersonas), with no numbered
+ * "Hedda II" repeats. Keep all five pools the same length: pickAiPersonas
+ * assumes it can always fill a same-difficulty table from that difficulty's
+ * own pool alone.
  */
 export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
   beginner: [
     { name: "Pip", avatar: "🐣", blurb: "Still learning the difference between a book and a run." },
     { name: "Nutmeg", avatar: "🐹", blurb: "Plays it safe and hopes for the best." },
     { name: "Barnaby", avatar: "🐢", blurb: "Takes their time — sometimes too much of it." },
+    { name: "Dabble", avatar: "🦆", blurb: "Picks up cards just in case, then forgets which case." },
+    { name: "Bumble", avatar: "🐸", blurb: "Leaps before looking, every single turn." },
+    { name: "Doodle", avatar: "🐛", blurb: "Still counts the run out on their fingers." },
+    { name: "Waffle", avatar: "🐨", blurb: "Holds onto everything and melds almost none of it." },
   ],
   easy: [
     { name: "Clover", avatar: "🐰", blurb: "Knows the rules, still working on the strategy." },
     { name: "Quill", avatar: "🦔", blurb: "Cautious, but starting to take real risks." },
     { name: "Hazel", avatar: "🐿️", blurb: "Quick to meld, slow to plan ahead." },
+    { name: "Skipper", avatar: "🦦", blurb: "Has a plan and sticks to it — right up until it stops working." },
+    { name: "Dax", avatar: "🦫", blurb: "Builds steadily. Never takes the shortcut, even the obvious one." },
+    { name: "Newt", avatar: "🦎", blurb: "Adapts to the table, always about a turn late." },
+    { name: "Bram", avatar: "🦌", blurb: "Second-guesses every pickup and keeps the wrong card." },
   ],
   medium: [
-    { name: "Hedda", avatar: "🦉", blurb: "Reads the discard pile like a book." },
-    { name: "Reynard", avatar: "🦊", blurb: "Always angling for the next lay-off." },
-    { name: "Talon", avatar: "🐺", blurb: "Plays it straight, no wasted moves." },
+    HEDDA,
+    REYNARD,
+    TALON,
+    { name: "Bandit", avatar: "🦝", blurb: "Takes the exact card you were about to reach for." },
+    { name: "Cleaver", avatar: "🐗", blurb: "Commits to a line early and makes it stick." },
+    { name: "Slate", avatar: "🐈‍⬛", blurb: "Patient. Waits for you to overcommit, then goes." },
+    { name: "Echo", avatar: "🦇", blurb: "Tracks every discard and plays the odds, not the hope." },
   ],
   hard: [
     { name: "Corvina", avatar: "🦅", blurb: "Rarely discards anything useful." },
     { name: "Zara", avatar: "🐆", blurb: "Fast, sharp, and not particularly forgiving." },
     { name: "Idris", avatar: "🦂", blurb: "Counts cards better than you'd like." },
+    { name: "Marlow", avatar: "🦈", blurb: "Smells a weak hand and closes before you recover." },
+    { name: "Kesler", avatar: "🐊", blurb: "Sits perfectly still for six turns. Then it's over." },
+    { name: "Sabre", avatar: "🐅", blurb: "Always one good draw from going out." },
+    { name: "Vex", avatar: "🐙", blurb: "Has cards working in three melds before you've laid one." },
   ],
   expert: [
     { name: "Vesper", avatar: "🐍", blurb: "Every discard is a trap." },
     { name: "Magnus", avatar: "🦁", blurb: "Plays for the whole game, not just the round." },
     { name: "Nyra", avatar: "🕷️", blurb: "Ruthlessly efficient. Good luck." },
+    { name: "Drake", avatar: "🐉", blurb: "Plays like the round's already scored. It usually is." },
+    { name: "Bly", avatar: "🐋", blurb: "You're playing this round. It's playing all seven." },
+    { name: "Rook", avatar: "🐦‍⬛", blurb: "Every card it discards, you'll regret picking up." },
+    { name: "Sett", avatar: "🦡", blurb: "Locks down one meld and buries every option you had." },
   ],
 };
 
@@ -58,10 +94,15 @@ export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
  * opponents (see pickAiPersonas): the whole point of a daily challenge is
  * comparing today's result against your own history, so the same table
  * needs to reappear rather than reshuffling like a regular New Game would.
- * All 3 of Medium's personas — dailyDealStore.ts picks a *prefix* of this
- * list (2 or 3 of them) per day, never fewer, so Daily Deal is never a
- * 2-player game but does vary between 3 and 4 players day to day. */
-export const DAILY_DEAL_PERSONAS: AiPersona[] = AI_PERSONAS.medium;
+ * Pins exactly [Hedda, Reynard, Talon] — its own list, NOT
+ * `AI_PERSONAS.medium` (that pool is free to grow for New Game variety) and
+ * NOT `AI_PERSONAS.medium.slice(0, 3)` (that couples to the pool's ordering)
+ * — because Daily Deal's table size is derived from this list's length, so
+ * a pool change here must never silently resize the daily table.
+ * dailyDealStore.ts picks a *prefix* of this list (2 or 3 of them) per day,
+ * never fewer, so Daily Deal is never a 2-player game but does vary between
+ * 3 and 4 players day to day. */
+export const DAILY_DEAL_PERSONAS: AiPersona[] = [HEDDA, REYNARD, TALON];
 
 /**
  * A cosmetic "power level" per difficulty — pure flavor, not derived from
@@ -85,10 +126,13 @@ function personaKey(p: AiPersona): string {
   return `${p.avatar} ${p.name}`;
 }
 
-/** Roman-enough numeral for a persona reused a 2nd/3rd/... time in one game
- * (only reachable with 4+ AIs at the same difficulty, since each pool has 3
- * names) — plain digits would read like part of the name itself ("Hedda 2"
- * looks like a typo), a numeral suffix reads as deliberately "the next one". */
+/** Roman-enough numeral for a persona reused a 2nd/3rd/... time in one game.
+ * Each pool now holds 7 names and a table seats at most 7 same-difficulty
+ * AIs (see AI_PERSONAS' own note), so this is unreachable from New Game as
+ * it stands — it's kept purely as a graceful fallback in case those limits
+ * ever change. Plain digits would read like part of the name itself
+ * ("Hedda 2" looks like a typo); a numeral suffix reads as deliberately
+ * "the next one". */
 function ordinalSuffix(n: number): string {
   const numerals = ["", "II", "III", "IV", "V", "VI", "VII"];
   return numerals[n - 1] ?? `${n}`;
@@ -101,9 +145,10 @@ function ordinalSuffix(n: number): string {
  * randomized each game, not one fixed persona per difficulty) so the same
  * difficulty doesn't stare back with the exact same face every time. Avoids
  * handing out the same persona twice within one game — two AIs both named
- * "Hedda" at the same table would be genuinely confusing — falling back to
- * a numbered repeat only once a difficulty's own pool of 3 is exhausted,
- * which only happens with 4+ AIs sharing a difficulty.
+ * "Hedda" at the same table would be genuinely confusing. Each pool holds 7
+ * personas and a table seats at most 7 same-difficulty AIs, so a normal
+ * New Game never exhausts a pool; the numbered-repeat fallback below
+ * (ordinalSuffix) only ever matters if that ratio changes.
  */
 export function pickAiPersonas(difficulties: Difficulty[]): { displayName: string; blurb: string }[] {
   const used = new Map<string, number>();
