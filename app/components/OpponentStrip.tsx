@@ -132,7 +132,7 @@ export function OpponentStrip({
       </div>
 
       {statusLine && (
-        <p className="mt-1 truncate text-[11px] text-[var(--faint)]" role="status">
+        <p className="mt-1 truncate text-center text-[11px] text-[var(--faint)]" role="status">
           {statusLine}
         </p>
       )}

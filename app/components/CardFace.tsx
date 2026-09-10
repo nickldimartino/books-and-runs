@@ -83,7 +83,9 @@ function CornerIndex({ label, suit }: { label: string; suit: string }) {
         x="0"
         y="0"
         textAnchor="middle"
-        fontSize={label.length > 1 ? 20 : 24}
+        // "JKR" (3 chars) needs to be smaller than "10" or its outer letter
+        // rides into .card-face's rounded corner and gets clipped.
+        fontSize={label.length > 2 ? 16 : label.length > 1 ? 20 : 24}
         fontWeight="700"
         fontFamily="ui-sans-serif, system-ui, sans-serif"
         fill="currentColor"
