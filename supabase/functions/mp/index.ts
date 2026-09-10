@@ -95,6 +95,13 @@ async function activeCount(uid: string): Promise<number> {
 
 async function addEvent(userId: string, kind: string, gameId: string | null, actorId: string | null) {
   await admin.from("mp_events").insert({ user_id: userId, kind, game_id: gameId, actor_id: actorId });
+  // Keep each user's inbox bounded — it's only ever read as "recent unseen"
+  // (see useNotifications). Trim to the newest ~40 per user on write; a
+  // periodic sweep (migration 0014) is the backstop for inactive accounts.
+  await admin.rpc("mp_trim_events", { p_user: userId, p_keep: 40 }).then(
+    () => {},
+    () => {}, // RPC not deployed yet → no-op, the cron sweep still covers it
+  );
 }
 
 interface GameRow {
@@ -104,6 +111,7 @@ interface GameRow {
   contract_rounds: number[];
   seats: MpConfig["seats"];
   turn_user_id: string | null;
+  updated_at: string;
 }
 
 function configOf(game: GameRow): MpConfig {
@@ -113,7 +121,7 @@ function configOf(game: GameRow): MpConfig {
 async function loadGame(gameId: string): Promise<GameRow | null> {
   const { data } = await admin
     .from("mp_games")
-    .select("id, host_id, status, contract_rounds, seats, turn_user_id")
+    .select("id, host_id, status, contract_rounds, seats, turn_user_id, updated_at")
     .eq("id", gameId)
     .maybeSingle();
   return (data as GameRow) ?? null;
@@ -365,7 +373,7 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
 
   const engine = stateRow.engine as MpEngine;
   const view = redactFor(engine, configOf(game), mine.seat);
-  return json({ status: game.status, view });
+  return json({ status: game.status, view, updated_at: game.updated_at });
 }
 
 async function handleMove(uid: string, body: Record<string, unknown>): Promise<Response> {

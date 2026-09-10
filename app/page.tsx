@@ -186,8 +186,15 @@ function opponentNames(g: MpGameSummary): string {
     .join(", ");
 }
 
+/** Whole days since a timestamp, or null if under 2 (not worth showing). */
+function daysStale(iso: string): number | null {
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return Number.isFinite(d) && d >= 2 ? d : null;
+}
+
 function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolean; dimmed: boolean }) {
   const turnName = g.seats.find((s) => s.seat === g.turn_seat)?.name;
+  const stale = daysStale(g.updated_at);
   const chip =
     g.status === "pending"
       ? "Waiting to start"
@@ -207,6 +214,12 @@ function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolea
         </span>
         <span className="block text-xs text-[var(--faint)]">
           Round {g.round} of {g.total_rounds}
+          {stale != null && !yourTurn && (
+            <span className={stale >= 14 ? "text-[var(--danger)]" : undefined}>
+              {" · "}
+              {stale >= 14 ? `no moves in ${stale} days` : `${stale}d`}
+            </span>
+          )}
         </span>
       </span>
       <span

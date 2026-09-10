@@ -287,9 +287,17 @@ export default function MultiplayerPlayPage() {
         })()}
 
       {!isMyTurn ? (
-        <p className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">
-          Waiting for <strong className="text-[var(--heading)]">{currentName}</strong> to take their turn.
-        </p>
+        <div className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">
+          <p>
+            Waiting for <strong className="text-[var(--heading)]">{currentName}</strong> to take their turn.
+          </p>
+          {g.daysSinceMove != null && g.daysSinceMove >= 14 && (
+            <p className="mt-1 text-xs text-[var(--faint)]">
+              No moves in {g.daysSinceMove} days. If this game&apos;s been abandoned, use “Resign” above
+              to end it.
+            </p>
+          )}
+        </div>
       ) : !drawn ? (
         <p className="rounded-lg bg-[var(--accent)]/10 px-4 py-3 text-center text-sm font-medium text-[var(--accent)]">
           Your turn — draw a card to start.

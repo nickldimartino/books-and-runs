@@ -87,6 +87,9 @@ export async function respondToMpGame(
 export interface MpStateResponse {
   status: "pending" | "active" | "complete" | "cancelled" | "dealing";
   view?: RedactedView;
+  /** mp_games.updated_at — present for a dealt game, so the UI can flag one
+   * that's had no moves in a long time as possibly abandoned. */
+  updated_at?: string;
   // present only when status === "pending"
   seats?: unknown[];
   host_id?: string;

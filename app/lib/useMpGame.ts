@@ -62,6 +62,9 @@ export interface UseMpGame {
   myTurn: boolean;
   youHaveDrawn: boolean;
   contract: ContractRequirement | null;
+  /** Whole days since the game last moved (from mp_games.updated_at), or
+   * null. Lets the play screen flag a game that looks abandoned. */
+  daysSinceMove: number | null;
 
   visibleHand: Card[]; // your hand minus anything staged
   selectedIds: string[];
@@ -396,6 +399,14 @@ export function useMpGame(gameId: string | null): UseMpGame {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
+  const daysSinceMove =
+    state?.updated_at != null
+      ? (() => {
+          const d = Math.floor((Date.now() - new Date(state.updated_at!).getTime()) / 86_400_000);
+          return Number.isFinite(d) && d >= 0 ? d : null;
+        })()
+      : null;
+
   return {
     status,
     view,
@@ -405,6 +416,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
     myTurn: !!view?.yourTurn,
     youHaveDrawn: !!view?.youHaveDrawn,
     contract,
+    daysSinceMove,
     visibleHand,
     selectedIds,
     draft,
