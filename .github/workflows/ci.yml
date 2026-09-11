@@ -43,6 +43,13 @@ jobs:
           # signed-out prompt, which the specs still handle.
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Opt-in: e2e/multiplayer.spec.ts (two real accounts vs. the live
+          # `mp` function) self-skips unless this is also set. Add a
+          # SUPABASE_SERVICE_ROLE_KEY repo secret (Supabase dashboard →
+          # Project Settings → API → "service_role") to actually run it
+          # here — an unset secret resolves to an empty string, which the
+          # spec treats the same as "not configured".
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
