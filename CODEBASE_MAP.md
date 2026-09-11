@@ -275,7 +275,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | Task | Command |
 |---|---|
 | Dev server | `npm run dev` |
-| Tests | `npm test` (vitest, 328 tests) |
+| Tests | `npm test` (vitest, 333 tests) |
 | E2E | `npm run test:e2e:ci` (Playwright — 5 browser projects; excludes `@visual` and self-skips the live 2-account MP test without `SUPABASE_SERVICE_ROLE_KEY`) |
 | Typecheck | `npx tsc --noEmit` |
 | Lint | `npm run lint` |

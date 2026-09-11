@@ -144,6 +144,26 @@ describe("ambience", () => {
     }
   });
 
+  it("keeps every chord — phrase A's 4-note pattern and phrase B's longer one alike — to the same ~4.56s bar", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+      const bassOsc = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
+
+      // 8 chords in the full cycle (see CHORDS) — advance through all of
+      // them and count how many times the bass root glides. Each chord's
+      // own repeats count is tuned so every bar is exactly 12 notes long
+      // regardless of its pattern's length, so this should land on exactly
+      // 8 glides (the 8th being the wrap back to chord 0), not drift.
+      await vi.advanceTimersByTimeAsync(8 * 4560 + 200);
+
+      expect(bassOsc.frequency.linearRampToValueAtTime.mock.calls.length).toBe(8);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("occasionally drops in a brighter sine sparkle note above the triangle arpeggio", async () => {
     vi.useFakeTimers();
     try {

@@ -8,15 +8,23 @@ import { loadLocalSettings } from "./settingsStore";
  * brighter C-major one — but a held, reverb-soaked pad chord reads as
  * ambient/exploration-game or choir music no matter how bright its key is,
  * which isn't the right mood for a card game. This version drops the pad
- * almost entirely: a light, bouncy triangle-wave arpeggio (root-third-
- * fifth-third) is the whole texture, cycling through a C-major
- * I–V–vi–IV progression, with one quiet sustained root note underneath for
- * warmth and an occasional bright sine "sparkle" note on top. A short
- * slap-delay stands in for reverb — enough space to not sound dry, not
- * enough to read as a cathedral. Calm, not dance-tempo, but constantly
- * moving rather than held. Entirely separate from sound.ts's own
- * AudioContext/volume — see settingsStore.ts's own doc for why this is its
- * own toggle, off by default.
+ * almost entirely: a light, bouncy triangle-wave arpeggio is the whole
+ * texture, with one quiet sustained root note underneath for warmth and an
+ * occasional bright sine "sparkle" note on top. A short slap-delay stands
+ * in for reverb — enough space to not sound dry, not enough to read as a
+ * cathedral. Calm, not dance-tempo, but constantly moving rather than held.
+ * Entirely separate from sound.ts's own AudioContext/volume — see
+ * settingsStore.ts's own doc for why this is its own toggle, off by
+ * default.
+ *
+ * Two 4-chord phrases (see CHORDS) rather than one — phrase A's simple
+ * root-third-fifth-third bounce, then phrase B, a slightly more ornamented
+ * root-fifth-third-octave-fifth-third shape a register brighter — so the
+ * ~36s full cycle actually goes somewhere instead of looping one 18s bar
+ * over and over. The cycle is built to end on G (the dominant) right
+ * before wrapping back to C (the tonic): that's a real authentic cadence
+ * landing exactly on the loop point, which is what makes the wrap read as
+ * a musical phrase resolving rather than an audible seam.
  */
 
 let ctx: AudioContext | null = null;
@@ -30,15 +38,34 @@ let arpStep = 0;
 let sessionId = 0;
 let timers: number[] = [];
 
-// Root note + a short up-down arpeggio (root, third, fifth, third) per
-// chord — C major's I–V–vi–IV, the same progression as the previous
-// version, just voiced as a broken chord instead of a held one, and kept
-// entirely in a bright octave 4–5 band.
-const CHORDS: { root: number; arp: [number, number, number, number] }[] = [
-  { root: 130.81, arp: [261.63, 329.63, 392.0, 329.63] }, // C  — C3 root, C4 E4 G4 E4
-  { root: 196.0, arp: [392.0, 493.88, 587.33, 493.88] }, // G   — G3 root, G4 B4 D5 B4
-  { root: 220.0, arp: [440.0, 523.25, 659.25, 523.25] }, // Am  — A3 root, A4 C5 E5 C5
-  { root: 174.61, arp: [349.23, 440.0, 523.25, 440.0] }, // F   — F3 root, F4 A4 C5 A4
+interface ChordSpec {
+  root: number;
+  /** The broken-chord pattern this chord's bar plays, in Hz. */
+  arp: number[];
+  /** How many times that pattern repeats before moving to the next chord —
+   * per-chord (not a single global count) so phrase B's longer pattern can
+   * repeat fewer times and still land on the same ~4.6s-per-chord pace as
+   * phrase A. */
+  repeats: number;
+}
+
+// Phrase A (I–V–vi–IV, C major) — a simple root-third-fifth-third bounce,
+// each chord's own bar in the same bright octave 4–5 band.
+// Phrase B (ii–vi–IV–V) — a busier root-fifth-third-octave-fifth-third
+// shape, real melodic contrast rather than just different chords, briefly
+// reaching a full octave higher (A5) at its peak before phrase B's final
+// chord (G, the dominant) resolves back to phrase A's C at the loop point.
+const CHORDS: ChordSpec[] = [
+  // — Phrase A —
+  { root: 130.81, arp: [261.63, 329.63, 392.0, 329.63], repeats: 3 }, // C  — C3 root, C4 E4 G4 E4
+  { root: 196.0, arp: [392.0, 493.88, 587.33, 493.88], repeats: 3 }, // G   — G3 root, G4 B4 D5 B4
+  { root: 220.0, arp: [440.0, 523.25, 659.25, 523.25], repeats: 3 }, // Am  — A3 root, A4 C5 E5 C5
+  { root: 174.61, arp: [349.23, 440.0, 523.25, 440.0], repeats: 3 }, // F   — F3 root, F4 A4 C5 A4
+  // — Phrase B —
+  { root: 146.83, arp: [293.66, 440.0, 349.23, 587.33, 440.0, 349.23], repeats: 2 }, // Dm — D3 root, D4 A4 F4 D5 A4 F4
+  { root: 220.0, arp: [440.0, 659.25, 523.25, 880.0, 659.25, 523.25], repeats: 2 }, // Am  — A3 root, A4 E5 C5 A5 E5 C5
+  { root: 174.61, arp: [349.23, 523.25, 440.0, 698.46, 523.25, 440.0], repeats: 2 }, // F   — F3 root, F4 C5 A4 F5 C5 A4
+  { root: 196.0, arp: [392.0, 587.33, 493.88, 783.99, 587.33, 493.88], repeats: 2 }, // G   — G3 root, G4 D5 B4 G5 D5 B4
 ];
 
 // C major pentatonic, an octave above the arpeggio — the occasional bright
@@ -46,8 +73,7 @@ const CHORDS: { root: number; arp: [number, number, number, number] }[] = [
 // whichever chord is currently playing.
 const SPARKLE_SCALE = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
 
-const ARPEGGIO_NOTE_MS = 380;
-const ARPEGGIO_REPEATS_PER_CHORD = 3; // ~4.6s per chord, ~18s for the full loop
+const ARPEGGIO_NOTE_MS = 380; // ~4.6s per chord either phrase, ~37s for the full 8-chord cycle
 const SPARKLE_MIN_DELAY_MS = 4000;
 const SPARKLE_MAX_DELAY_MS = 9000;
 
@@ -119,17 +145,17 @@ function playSparkleNote(c: AudioContext): void {
 }
 
 // The steady heartbeat of the whole texture: one arpeggio note every
-// ARPEGGIO_NOTE_MS, cycling through the current chord's 4-note pattern and
-// advancing to the next chord every ARPEGGIO_REPEATS_PER_CHORD trips
-// through it. The (much quieter) sustained bass root glides to match
-// whenever the chord changes.
+// ARPEGGIO_NOTE_MS, cycling through the current chord's own pattern and
+// advancing to the next chord once it's repeated chord.repeats times. The
+// (much quieter) sustained bass root glides to match whenever the chord
+// changes.
 function scheduleNextArpeggioNote(c: AudioContext, mySession: number): void {
   const id = window.setTimeout(() => {
     if (!running || mySession !== sessionId) return;
     const chord = CHORDS[chordStep];
     playArpeggioNote(c, chord.arp[arpStep % chord.arp.length]);
     arpStep += 1;
-    if (arpStep >= chord.arp.length * ARPEGGIO_REPEATS_PER_CHORD) {
+    if (arpStep >= chord.arp.length * chord.repeats) {
       arpStep = 0;
       chordStep = (chordStep + 1) % CHORDS.length;
       if (bassOsc) {
