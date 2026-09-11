@@ -2,12 +2,16 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { levelProgress, LevelProgress } from "@/leveling";
+import type { AchievementProgressState } from "@/achievements";
 import { useAuth } from "./AuthContext";
 import { loadAchievementProgressState } from "./lib/loadAchievementProgress";
 import { supabase } from "./lib/supabaseClient";
 
 interface PlayerLevelContextValue {
   level: LevelProgress | null;
+  /** The raw progress the level was computed from — so Home / Achievements
+   * can also derive "closest achievement" without a second fetch. */
+  progress: AchievementProgressState | null;
   loading: boolean;
   /** Re-fetches from Supabase and returns the fresh value — call after a
    * game finishes (see GameOverScreen) so the level updates without waiting
@@ -29,11 +33,13 @@ const PlayerLevelContext = createContext<PlayerLevelContextValue | null>(null);
 export function PlayerLevelProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [level, setLevel] = useState<LevelProgress | null>(null);
+  const [progress, setProgress] = useState<AchievementProgressState | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async (): Promise<LevelProgress | null> => {
     if (!supabase || !user) {
       setLevel(null);
+      setProgress(null);
       setLoading(false);
       return null;
     }
@@ -41,6 +47,7 @@ export function PlayerLevelProvider({ children }: { children: ReactNode }) {
     const state = await loadAchievementProgressState(supabase, user.id);
     const fresh = levelProgress(state);
     setLevel(fresh);
+    setProgress(state);
     setLoading(false);
     return fresh;
   }, [user]);
@@ -50,7 +57,7 @@ export function PlayerLevelProvider({ children }: { children: ReactNode }) {
   }, [load]);
 
   return (
-    <PlayerLevelContext.Provider value={{ level, loading, refresh: load }}>
+    <PlayerLevelContext.Provider value={{ level, progress, loading, refresh: load }}>
       {children}
     </PlayerLevelContext.Provider>
   );

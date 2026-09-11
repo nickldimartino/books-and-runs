@@ -23,6 +23,8 @@ import { loadSupabase, supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
 import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
 import { usePlayerLevel } from "./PlayerLevelContext";
+import { formatAchievementProgress } from "./lib/achievementFormat";
+import { AchievementInstance, allAchievements, AchievementProgressState } from "@/achievements";
 import { GameState } from "@/types";
 
 function capitalize(s: string): string {
@@ -101,6 +103,46 @@ function ProgressTile({ href, label, children }: { href: string; label: string; 
     >
       <span className="text-[var(--accent)]">{children}</span>
       <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
+    </Link>
+  );
+}
+
+/** The single locked achievement the account is furthest along toward — the
+ * one worth one more game to finish. Ignores anything not started (fraction
+ * 0) so this never nudges toward something the player has shown no interest
+ * in, and anything already at 100% waiting on a stat refresh. */
+function closestAchievement(progress: AchievementProgressState | null): AchievementInstance | null {
+  if (!progress) return null;
+  return (
+    allAchievements(progress)
+      .filter((a) => !a.unlocked && a.progressFraction > 0 && a.progressFraction < 1)
+      .sort((a, b) => b.progressFraction - a.progressFraction)[0] ?? null
+  );
+}
+
+/** A compact "you're 80% of the way to Hard · Bookkeeper" card on Home,
+ * linking into the Achievements page for the full picture. Rendered only
+ * when signed in and there's a partly-finished achievement to point at. */
+function ClosestAchievementCard({ achievement }: { achievement: AchievementInstance }) {
+  const pct = Math.round(achievement.progressFraction * 100);
+  return (
+    <Link
+      href="/achievements"
+      className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)]"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)]">
+          Closest achievement
+        </p>
+        <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">{pct}%</span>
+      </div>
+      <p className="mt-0.5 truncate text-sm font-semibold text-[var(--heading)]">
+        {capitalize(achievement.tier)} · {achievement.familyTitle}
+      </p>
+      <p className="mt-0.5 text-xs text-[var(--faint)]">{formatAchievementProgress(achievement)}</p>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
+        <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
+      </div>
     </Link>
   );
 }
@@ -362,7 +404,7 @@ export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
   const { hasSavedGame, continueGame, startDailyDeal, state } = useGame();
-  const { level } = usePlayerLevel();
+  const { level, progress } = usePlayerLevel();
   const notifications = useNotifications();
   // Covers both Continue and Daily Deal — either one commits GameContext's
   // state synchronously, but navigating to /game immediately afterward isn't
@@ -433,6 +475,7 @@ export default function HomePage() {
   }
 
   const dailyDealPlayedToday = dailyDeal ? playedToday(dailyDeal) : false;
+  const closest = configured && user ? closestAchievement(progress) : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
@@ -519,6 +562,8 @@ export default function HomePage() {
             <LeaderboardIcon />
           </ProgressTile>
         </section>
+
+        {closest && <ClosestAchievementCard achievement={closest} />}
 
         <MoreSection
           configured={configured}
