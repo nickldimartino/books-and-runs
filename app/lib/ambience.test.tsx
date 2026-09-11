@@ -164,6 +164,55 @@ describe("ambience", () => {
     }
   });
 
+  it("rotates into a new song within 5 minutes, crossfading rather than cutting the old one off", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+      const firstBass = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
+      expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
+      expect(firstBass.stop).not.toHaveBeenCalled();
+
+      // Comfortably past the module's own 5-minute rotation ceiling, plus
+      // the crossfade length that follows it.
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 5000);
+
+      // A second voice — its own filter/delay graph — has started for the
+      // incoming song, and the outgoing one's bass root has actually been
+      // torn down (not left playing forever underneath the new one).
+      expect(lastContext!.createBiquadFilter.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(firstBass.stop).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("wraps from the third song back to the first after three rotations", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+
+      await vi.advanceTimersByTimeAsync(3 * (5 * 60 * 1000 + 5000));
+
+      // Every song's bass root sits at or below 220Hz (A3); every arpeggio
+      // note and sparkle sits at C4 (261.63Hz) or higher — so filtering by
+      // that boundary reliably picks out just the one-per-voice bass roots.
+      const bassRoots = lastContext!.createOscillator.mock.results
+        .map((r) => (r.value as FakeOscillator).frequency.value)
+        .filter((f) => f > 0 && f <= 220);
+
+      // Song 1 ("Arpeggio")'s own first chord root (C3, 130.81Hz) is used
+      // by both the very first voice and the voice three rotations later
+      // (song 0 -> 1 -> 2 -> 0) — it should show up at least twice, not
+      // just once from the initial start.
+      const song1RootCount = bassRoots.filter((f) => f === 130.81).length;
+      expect(song1RootCount).toBeGreaterThanOrEqual(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("occasionally drops in a brighter sine sparkle note above the triangle arpeggio", async () => {
     vi.useFakeTimers();
     try {
