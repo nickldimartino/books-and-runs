@@ -7,7 +7,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render } from "@testing-library/react";
-import { GameProvider, useGame } from "./GameContext";
+import { GameProvider, UNDO_GRACE_MS, useGame } from "./GameContext";
+import { seededRng } from "@/deck";
+import { solveContract } from "@/meld";
 import { CONTRACTS, SHORT_GAME_CONTRACTS } from "@/types";
 import { YOU_PLAYER_ID } from "./lib/recordGameResult";
 
@@ -53,6 +55,34 @@ afterEach(() => {
   vi.runOnlyPendingTimers();
   vi.useRealTimers();
 });
+
+/**
+ * Deals real round-1 games (seeding Math.random, same trick
+ * src/ai/balance.test.ts and engine.fuzz.test.ts use) until one leaves the
+ * human holding a hand solveContract can meld outright, melds it, and
+ * returns the hand length beforehand — so undo tests exercise confirmMeld
+ * through a genuinely dealt hand instead of a hand-constructed one. The
+ * provider must already be mounted.
+ */
+function meldFirstSolvableHand(): number {
+  const realRandom = Math.random;
+  try {
+    for (let seed = 0; seed < 500; seed++) {
+      Math.random = seededRng(seed);
+      act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
+      act(() => api.revealHand());
+      act(() => api.draw(false));
+      const melds = solveContract(api.state!.players[0].hand, CONTRACTS[0], YOU_PLAYER_ID);
+      if (!melds) continue;
+      const before = api.state!.players[0].hand.length;
+      act(() => api.confirmMeld(melds.map((m) => m.cards.map((c) => c.id))));
+      return before;
+    }
+    throw new Error("meldFirstSolvableHand: no solvable hand found in 500 seeds");
+  } finally {
+    Math.random = realRandom;
+  }
+}
 
 describe("GameContext — turn flow", () => {
   it("starts a game with the human at the pass-gate, no cards drawn", () => {
@@ -209,5 +239,45 @@ describe("GameContext — hand ordering", () => {
     act(() => api.reorderHand(reversed));
 
     expect(api.state!.players[0].hand.map((c) => c.id)).toEqual(reversed);
+  });
+});
+
+describe("GameContext — undo grace window", () => {
+  it("arms canUndo/undoExpiresAt on a successful meld and reverts the hand on undoLastAction", () => {
+    mount();
+    const before = meldFirstSolvableHand();
+
+    expect(api.canUndo).toBe(true);
+    expect(api.undoExpiresAt).not.toBeNull();
+    expect(api.undoExpiresAt!).toBeGreaterThan(Date.now());
+    expect(api.state!.players[0].hand.length).toBeLessThan(before);
+
+    act(() => api.undoLastAction());
+
+    expect(api.canUndo).toBe(false);
+    expect(api.undoExpiresAt).toBeNull();
+    expect(api.state!.players[0].hand.length).toBe(before);
+  });
+
+  it("the grace window silently expires on its own after UNDO_GRACE_MS", () => {
+    mount();
+    meldFirstSolvableHand();
+    expect(api.canUndo).toBe(true);
+
+    act(() => vi.advanceTimersByTime(UNDO_GRACE_MS));
+
+    expect(api.canUndo).toBe(false);
+    expect(api.undoExpiresAt).toBeNull();
+  });
+
+  it("any other action invalidates a still-ticking grace window immediately", () => {
+    mount();
+    meldFirstSolvableHand();
+    expect(api.canUndo).toBe(true);
+
+    act(() => api.sortHand("rank"));
+
+    expect(api.canUndo).toBe(false);
+    expect(api.undoExpiresAt).toBeNull();
   });
 });

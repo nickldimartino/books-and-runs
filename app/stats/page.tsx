@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AchievementIcon } from "../components/AchievementIcons";
+import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
 import {
@@ -473,10 +474,20 @@ export default function ProfilePage() {
               )}
             </>
           ) : (
-            <p className="text-sm text-[var(--faint)]">
+            <EmptyState
+              icon="📊"
+              action={
+                <Link
+                  href="/new-game"
+                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+                >
+                  New Game
+                </Link>
+              }
+            >
               No games recorded yet — play one to see your stats here. Your level still counts every
               achievement you unlock along the way.
-            </p>
+            </EmptyState>
           )}
         </>
       )}

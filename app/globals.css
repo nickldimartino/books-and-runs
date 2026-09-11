@@ -1675,6 +1675,22 @@ a:active {
   animation: card-flip 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
+/* UndoRing (components/UndoRing.tsx) — the ring around the Undo button
+   drains linearly over its own animation-duration (set inline, in step
+   with GameContext's UNDO_GRACE_MS). 56.549 = 2 * PI * 9, the circle's
+   radius there — keep in sync by hand if that radius ever changes. */
+@keyframes undo-ring-drain {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 56.549; }
+}
+
+.undo-ring-sweep {
+  stroke-dashoffset: 0;
+  animation-name: undo-ring-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
 /* Home's card fan (components/CardFanHero.tsx) — a one-time deal-in on the
    inner wrapper only, so the outer wrapper's fan geometry (translate +
    rotate per card) is never touched. Starts mostly visible (opacity 0.4,
@@ -1741,6 +1757,13 @@ a:active {
 
   .card-flip {
     animation: none;
+  }
+
+  /* Ring reads as "half drained" rather than either full or misleadingly
+     empty — still communicates "this expires," just without the motion. */
+  .undo-ring-sweep {
+    animation: none;
+    stroke-dashoffset: 28;
   }
 
   /* Tailwind's own utility, used by LoadingSpinner.tsx */

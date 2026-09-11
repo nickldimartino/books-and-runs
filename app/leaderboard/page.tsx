@@ -15,6 +15,7 @@ import {
   WIN_RATE_MIN_GAMES,
 } from "@/achievements";
 import { useAuth } from "../AuthContext";
+import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
@@ -303,9 +304,19 @@ export default function LeaderboardPage() {
           every migration in <code>supabase/migrations/</code> applied.
         </p>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-[var(--faint)]">
+        <EmptyState
+          icon="🏆"
+          action={
+            <Link
+              href="/new-game"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            >
+              New Game
+            </Link>
+          }
+        >
           Nobody&apos;s finished a tracked game or a Daily Deal yet — play one to be the first.
-        </p>
+        </EmptyState>
       ) : (
         <>
           <label className="flex items-center gap-2 self-start text-sm text-[var(--muted)]">

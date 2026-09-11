@@ -113,6 +113,10 @@ interface GameContextValue {
   /** True for a few seconds right after confirmMeld/layOff succeeds (and
    * didn't also end the round — see undoLastAction), then auto-expires. */
   canUndo: boolean;
+  /** The Date.now() timestamp the current grace window expires at, or null
+   * when !canUndo — lets the UI show a live countdown (see UndoRing.tsx)
+   * without needing to poll GameContext every tick itself. */
+  undoExpiresAt: number | null;
   /** Reverts the most recent confirmMeld/layOff while canUndo is true; a
    * no-op otherwise. Any other action (draw, sort, reorder, discard, a new
    * meld/lay-off, advancing rounds, leaving the game) invalidates the grace
@@ -166,8 +170,10 @@ function aiCardLabel(card: { rank: string; suit: string }): string {
 
 // How long a confirmMeld/layOff stays undoable before the grace window
 // silently expires — long enough to catch an immediate "oops, wrong meld"
-// without turning into a real move-history/redo feature.
-const UNDO_GRACE_MS = 6000;
+// without turning into a real move-history/redo feature. Exported so
+// UndoRing.tsx's countdown animation always matches the real timeout
+// instead of a hand-copied duplicate that could drift out of sync.
+export const UNDO_GRACE_MS = 6000;
 
 /**
  * Everything undoLastAction needs to put back exactly as it was.
@@ -299,6 +305,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // timer live in refs, mutated directly, same as every other ref in this
   // provider that a callback needs to read/write outside a render.
   const [canUndo, setCanUndo] = useState(false);
+  const [undoExpiresAt, setUndoExpiresAt] = useState<number | null>(null);
   const undoSnapshotRef = useRef<UndoSnapshot | null>(null);
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -378,12 +385,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       undoTimeoutRef.current = null;
     }
     setCanUndo(false);
+    setUndoExpiresAt(null);
   }, []);
 
   const armUndo = useCallback(
     (snapshot: UndoSnapshot) => {
       undoSnapshotRef.current = snapshot;
       setCanUndo(true);
+      setUndoExpiresAt(Date.now() + UNDO_GRACE_MS);
       if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
       undoTimeoutRef.current = setTimeout(clearUndoState, UNDO_GRACE_MS);
     },
@@ -1026,6 +1035,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       getSessionCounters,
       clearSessionCounters,
       canUndo,
+      undoExpiresAt,
       undoLastAction,
     }),
     [
@@ -1059,6 +1069,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       getSessionCounters,
       clearSessionCounters,
       canUndo,
+      undoExpiresAt,
       undoLastAction,
     ]
   );

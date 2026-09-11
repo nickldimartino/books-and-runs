@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
   addFriendByCode,
@@ -458,12 +459,7 @@ export default function FriendsPage() {
               Your friends ({friends.length})
             </h2>
             {friends.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-lg border border-dashed border-[var(--border)] px-4 py-5">
-                <span className="text-2xl" aria-hidden="true">🃏</span>
-                <p className="text-sm text-[var(--faint)]">
-                  No friends yet. Send someone your code above to get started.
-                </p>
-              </div>
+              <EmptyState icon="🃏">No friends yet. Send someone your code above to get started.</EmptyState>
             ) : (
               <ul className="flex flex-col gap-2">
                 {friends.map((f) => (

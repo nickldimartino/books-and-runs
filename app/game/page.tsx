@@ -26,6 +26,7 @@ import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
+import { UndoRing } from "../components/UndoRing";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
@@ -149,6 +150,7 @@ export default function GamePage() {
     continueGame,
     startTutorialGame,
     canUndo,
+    undoExpiresAt,
     undoLastAction,
   } = useGame();
   const { level } = usePlayerLevel();
@@ -1209,8 +1211,9 @@ export default function GamePage() {
           <span className="text-[var(--muted)]">Meld or lay-off confirmed.</span>
           <button
             onClick={undoLastAction}
-            className="shrink-0 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-[var(--accent)] pl-2 pr-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
           >
+            {undoExpiresAt != null && <UndoRing expiresAt={undoExpiresAt} />}
             Undo
           </button>
         </div>
