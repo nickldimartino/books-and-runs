@@ -1172,13 +1172,13 @@ export default function GamePage() {
             length — only "Hand" in the middle is meant to read as a
             centered block; round info and this list are each pinned to
             their own edge of the header. */}
-        <ul className="shrink-0 text-right text-xs text-[var(--muted)]">
+        <ul className="shrink-0 space-y-1 text-right text-xs text-[var(--muted)]">
           {[...state.players]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="flex items-center justify-end gap-1">
                 {p.id === YOU_PLAYER_ID && level && (
-                  <span className="mr-1 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
                     Lv{level.level}
                   </span>
                 )}
@@ -1189,11 +1189,13 @@ export default function GamePage() {
                     glance: one is this account's real, earned progress, the
                     other is flavor. */}
                 {p.isAI && p.difficulty && (
-                  <span className="mr-1 rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--muted)]">
                     Lv{AI_THEORETICAL_LEVEL[p.difficulty]}
                   </span>
                 )}
-                {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
+                <span className="truncate">
+                  {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
+                </span>
               </li>
             ))}
         </ul>
