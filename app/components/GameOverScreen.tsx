@@ -48,6 +48,11 @@ interface XpLineItem {
   amount: number;
 }
 
+// With the protocol (unlike shareCard.ts's footer text, which is a purely
+// visual label) — a plain "books-and-runs.vercel.app" isn't reliably
+// auto-linkified as tappable by every share target, "https://…" is.
+const SITE_URL = "https://books-and-runs.vercel.app";
+
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
   const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial, isDailyDeal, trackStats } =
@@ -355,7 +360,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       const lv = levelLabel(p);
       return `${lv ? lv + " " : ""}${p.name}: ${p.cumulativeScore}`;
     });
-    return `🃏 ${shareHeadline()}\n${lines.join("\n")}`;
+    return `🃏 ${shareHeadline()}\n${lines.join("\n")}\n${SITE_URL}`;
   }
 
   async function shareImageFile(): Promise<File | null> {
@@ -381,12 +386,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
     const file = await shareImageFile();
 
     // 1. Native share sheet with the image attached — the good path on
-    //    phones. `text` rides along with no bare URL in it (the OS's own
-    //    link-detector otherwise collapses the caption; the image carries
-    //    the game's name and address itself now).
+    //    phones. `text` is just the URL, not the headline again — the image
+    //    already shows the headline and standings, so repeating it in the
+    //    caption was pure redundancy. The URL is what the picture alone
+    //    can't give the recipient: an actual way to go open the game.
     if (file && navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], text: shareHeadline() });
+        await navigator.share({ files: [file], text: SITE_URL });
       } catch {
         // cancelled — not a failure worth surfacing
       }
@@ -407,8 +413,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
       }
     }
 
-    // 3. Last resort — the multi-line text, url appended (nothing here
-    //    reformats plain clipboard text).
+    // 3. Last resort — no file share and no image-clipboard support: the
+    //    multi-line text (shareText, url appended) is the only content, so
+    //    it needs the full breakdown, unlike case 1's file-share caption.
     if (navigator.share) {
       try {
         await navigator.share({ text: shareText() });
