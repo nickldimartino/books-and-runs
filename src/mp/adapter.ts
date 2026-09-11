@@ -35,6 +35,15 @@ import { MpAction, MpConfig, MpEngine, RedactedView, RoundResult } from "./types
 /** Flat penalty added to a resigner's score so they always finish last. */
 export const RESIGN_PENALTY = 200;
 
+// Sanity caps on a commit payload, checked before any real validation work.
+// A real hand — even with extra decks for a big table — never gets close to
+// these; they exist purely to give a malformed/adversarial payload (e.g. an
+// array with thousands of entries) a cheap, immediate rejection instead of
+// however long meldChosenGroups/layOffCard would otherwise take to walk it.
+const MAX_GROUPS_PER_COMMIT = 20;
+const MAX_CARDS_PER_GROUP = 20;
+const MAX_LAYOFFS_PER_COMMIT = 50;
+
 /** Safety bound on the AI/round auto-advance loop. A round is at most a few
  * dozen turns even with weak AI; this is orders of magnitude clear of that. */
 const ADVANCE_GUARD = 5000;
@@ -199,6 +208,12 @@ export function applyCommit(
   if (s0.roundOver || s0.gameOver) return { engine: engIn, error: "the round is over" };
   if (s0.currentPlayerIndex !== seat) return { engine: engIn, error: "it isn't your turn" };
   if (!engIn.turnDrawn) return { engine: engIn, error: "draw a card first" };
+  if (action.groups && (action.groups.length > MAX_GROUPS_PER_COMMIT || action.groups.some((g) => g.length > MAX_CARDS_PER_GROUP))) {
+    return { engine: engIn, error: "too many cards to meld at once" };
+  }
+  if (action.layoffs && action.layoffs.length > MAX_LAYOFFS_PER_COMMIT) {
+    return { engine: engIn, error: "too many lay-offs at once" };
+  }
 
   const eng = clone(engIn);
   const s = eng.state;
