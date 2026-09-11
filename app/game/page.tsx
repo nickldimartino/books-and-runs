@@ -32,7 +32,7 @@ import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { playGameWin, playRoundWin } from "../lib/sound";
 import { hapticSuccess } from "../lib/haptics";
-import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
+import { layOffOptions, runCardRank, RUN_ORDER, solveContract, solveWholeHandContract, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
 import { Card, ContractRequirement, Meld } from "@/types";
@@ -562,6 +562,7 @@ export default function GamePage() {
   const savedSettings = loadLocalSettings();
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
+  const meldHintsEnabled = savedSettings.meldHints;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -761,6 +762,30 @@ export default function GamePage() {
     setPendingGroups((prev) => prev.filter((g) => g.id !== id));
   }
 
+  // "Show me a meld" (Settings → Meld hints, off by default): run the same
+  // solver the AI uses on the current hand and, if it finds a full
+  // contract, stage it as pending groups so the player just taps Confirm.
+  function showMeldHint() {
+    const melds = contract.wholeHandMeld
+      ? solveWholeHandContract(player.hand, contract, player.id)
+      : solveContract(player.hand, contract, player.id);
+    if (!melds) {
+      setGroupError("No complete contract in your hand yet — draw and try again.");
+      return;
+    }
+    setPendingGroupChoice(null);
+    setSelectedCardIds([]);
+    setGroupError(null);
+    setPendingGroups(
+      melds.map((m, i) => ({
+        id: `hint-${Date.now()}-${i}`,
+        type: m.type,
+        cardIds: m.cards.map((c) => c.id),
+        runStartIndex: m.runStartIndex,
+      }))
+    );
+  }
+
   function handleConfirmMeld() {
     const success = confirmMeld(
       pendingGroups.map((g) => g.cardIds),
@@ -849,6 +874,16 @@ export default function GamePage() {
       )}
 
       {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
+
+      {meldHintsEnabled && pendingGroups.length === 0 && (
+        <button
+          onClick={showMeldHint}
+          disabled={!hasDrawn || !!pendingGroupChoice}
+          className="text-xs font-medium text-[var(--accent)] underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          💡 Show me a meld
+        </button>
+      )}
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button

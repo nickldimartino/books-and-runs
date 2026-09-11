@@ -17,6 +17,13 @@ export interface HouseSettings {
   // Show the "Whose turn is it?" button on the game board, which pops up a
   // brief on-screen reminder of whose turn it currently is.
   showWhoseTurn: boolean;
+  // Show a "Show me a meld" button in the hand drawer that highlights a set
+  // of cards completing this round's contract (uses the same solver the AI
+  // does). Off by default — it's training wheels, not the default game.
+  meldHints: boolean;
+  // Sound-effect volume, 0–1. Independent of soundEnabled (which is the
+  // on/off master). Applied in sound.ts.
+  soundVolume: number;
   // "Player activity", "Group melds by type", and "Expandable hand drawer"
   // used to live here as toggles. All three are gone now: the always-on
   // opponent strip (OpponentStrip.tsx) replaced Player activity, grouping
@@ -30,6 +37,8 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   soundEnabled: true,
   highlightLayoffs: true,
   showWhoseTurn: true,
+  meldHints: false,
+  soundVolume: 0.7,
 };
 
 export function loadLocalSettings(): HouseSettings {

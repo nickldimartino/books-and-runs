@@ -131,6 +131,51 @@ const COLORBLIND_SWATCHES: Record<ColorblindMode, { red: string; wildBg: string;
   tritanopia: { red: "#b91c1c", wildBg: "#f3d0ec", wildText: "#7a1f6b" },
 };
 
+function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-5">
+      <h2 className="border-b border-[var(--border)] pb-1 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function VolumeSlider({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number;
+  disabled: boolean;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <InfoDetails label="Volume">
+        How loud the sound effects are. The Sound effects toggle above is the master on/off.
+      </InfoDetails>
+      <div className="flex items-center gap-3">
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={Math.round(value * 100)}
+          disabled={disabled}
+          onChange={(e) => onChange(Number(e.target.value) / 100)}
+          aria-label="Sound effects volume"
+          className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--panel)] accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+        />
+        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-[var(--muted)]">
+          {Math.round(value * 100)}%
+        </span>
+      </div>
+    </section>
+  );
+}
+
 function ChevronRightIcon() {
   return (
     <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[var(--faint)]" fill="none" aria-hidden="true">
@@ -295,6 +340,7 @@ export default function SettingsPage() {
         <LoadingSpinner />
       ) : (
         <>
+          <SettingsSection title="Appearance">
           {activeThemeOption && (
             <SwatchLinkRow
               href="/settings/theme"
@@ -314,6 +360,46 @@ export default function SettingsPage() {
             swatch={THEME_SWATCHES[activeCardBackOption ? activeCardBackOption.id : theme]}
           />
 
+          <section className="flex flex-col gap-2">
+            <InfoDetails label="Colorblind-friendly cards">
+              Shifts red and/or wild card colors to be easier to tell apart, for the color blindness
+              type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
+            </InfoDetails>
+            <div className="grid grid-cols-2 gap-2">
+              {COLORBLIND_MODES.map((m) => {
+                const swatch = COLORBLIND_SWATCHES[m.id];
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleColorblindModeChange(m.id)}
+                    title={m.description}
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                      colorblindMode === m.id
+                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: swatch.red }}
+                        title="Red card color"
+                      />
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: swatch.wildBg }}
+                        title="Wild card color"
+                      />
+                    </span>
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+          </SettingsSection>
+
+          <SettingsSection title="Gameplay">
           <section className="flex flex-col gap-2">
             <InfoDetails label="Default AI difficulty">
               Used as the starting difficulty when you add an AI opponent on the New Game screen.
@@ -363,10 +449,10 @@ export default function SettingsPage() {
           </section>
 
           <BoolToggle
-            label="Sound effects"
-            value={settings.soundEnabled}
-            onChange={(v) => updateSettings({ soundEnabled: v })}
-            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins."
+            label="Meld hints"
+            value={settings.meldHints}
+            onChange={(v) => updateSettings({ meldHints: v })}
+            description="Adds a “Show me a meld” button in the hand drawer that finds a set of cards completing the round’s contract and stages it for you. Off by default — training wheels, not the default game."
           />
 
           <BoolToggle
@@ -382,44 +468,21 @@ export default function SettingsPage() {
             onChange={(v) => updateSettings({ showWhoseTurn: v })}
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
           />
+          </SettingsSection>
 
-          <section className="flex flex-col gap-2">
-            <InfoDetails label="Colorblind-friendly cards">
-              Shifts red and/or wild card colors to be easier to tell apart, for the color blindness
-              type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
-            </InfoDetails>
-            <div className="grid grid-cols-2 gap-2">
-              {COLORBLIND_MODES.map((m) => {
-                const swatch = COLORBLIND_SWATCHES[m.id];
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => handleColorblindModeChange(m.id)}
-                    title={m.description}
-                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
-                      colorblindMode === m.id
-                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
-                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                    }`}
-                  >
-                    <span className="flex shrink-0 items-center gap-1" aria-hidden="true">
-                      <span
-                        className="h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ background: swatch.red }}
-                        title="Red card color"
-                      />
-                      <span
-                        className="h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ background: swatch.wildBg }}
-                        title="Wild card color"
-                      />
-                    </span>
-                    {m.name}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          <SettingsSection title="Sound & haptics">
+          <BoolToggle
+            label="Sound effects"
+            value={settings.soundEnabled}
+            onChange={(v) => updateSettings({ soundEnabled: v })}
+            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins, plus the matching haptic taps on iOS."
+          />
+          <VolumeSlider
+            value={settings.soundVolume}
+            disabled={!settings.soundEnabled}
+            onChange={(v) => updateSettings({ soundVolume: v })}
+          />
+          </SettingsSection>
 
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">

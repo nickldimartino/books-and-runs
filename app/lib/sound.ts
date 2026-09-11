@@ -9,6 +9,7 @@ import { loadLocalSettings } from "./settingsStore";
  */
 
 let ctx: AudioContext | null = null;
+let master: GainNode | null = null;
 
 function getContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -18,9 +19,23 @@ function getContext(): AudioContext | null {
   const AudioContextClass =
     window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextClass) return null;
-  if (!ctx) ctx = new AudioContextClass();
+  if (!ctx) {
+    ctx = new AudioContextClass();
+    master = ctx.createGain();
+    master.connect(ctx.destination);
+  }
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
   return ctx;
+}
+
+/** Everything routes through this instead of ctx.destination so the volume
+ * setting can scale the whole output. Re-reads the setting each call so a
+ * change on the Settings page takes effect on the next sound. */
+function output(c: AudioContext): AudioNode {
+  const vol = loadLocalSettings().soundVolume;
+  const v = Number.isFinite(vol) ? Math.max(0, Math.min(1, vol)) : 0.7;
+  if (master) master.gain.value = v;
+  return master ?? c.destination;
 }
 
 // Set by GameContext while a tutorial game is active, so the tutorial can
@@ -48,7 +63,7 @@ function tone(c: AudioContext, freq: number, start: number, duration: number, pe
   gain.gain.setValueAtTime(0, t0);
   gain.gain.linearRampToValueAtTime(peak, t0 + 0.008);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-  osc.connect(gain).connect(c.destination);
+  osc.connect(gain).connect(output(c));
   osc.start(t0);
   osc.stop(t0 + duration + 0.02);
 }
@@ -86,7 +101,7 @@ function noiseBurst(
   gain.gain.linearRampToValueAtTime(peak, t0 + 0.004);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
 
-  src.connect(filter).connect(gain).connect(c.destination);
+  src.connect(filter).connect(gain).connect(output(c));
   src.start(t0);
   src.stop(t0 + duration + 0.02);
 }
