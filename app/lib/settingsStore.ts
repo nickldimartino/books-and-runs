@@ -1,5 +1,7 @@
 // "House settings" — the preferences on the Settings page. Persisted in
-// localStorage only, per-device — none of it syncs to the account.
+// localStorage, and — when signed in — also mirrored to the account (see
+// accountSettingsSync.ts); this file itself stays local-only and knows
+// nothing about Supabase, same as every other store it's synced alongside.
 
 import { Difficulty } from "@/types";
 

@@ -85,6 +85,7 @@ reads and mutates in place.
 
 ```
 AuthProvider
+  └ AccountSettingsSync     pulls synced Settings/Theme/Card back/Card face → localStorage on sign-in
   └ PlayerLevelProvider     current level/XP, refetched after each game
       └ PendingSaveSync     retries game saves that failed offline
       └ GameProvider        THE local game — state, actions, AI loop, saves
@@ -96,6 +97,7 @@ AuthProvider
 | `app/GameContext.tsx` | **The heart of local play.** Holds the live `GameState`, exposes every action the game screen calls, runs the AI loop (`runAiLoop`), auto-saves to localStorage, and publishes `flightEvent` animation hints. ~1000 lines; start here for any solo-game behaviour. |
 | `app/PlayerLevelContext.tsx` | Level/XP for the header badge; `refresh()` after a game so it updates without a reload. |
 | `app/PendingSaveSync.tsx` | Background sync helper (see the "Data flows" section below). |
+| `app/AccountSettingsSync.tsx` | Pull side of `app/lib/accountSettingsSync.ts` — see the `settingsStore.ts` row below for the push side and why this exists. |
 
 ### 3b. Routes (`app/**/page.tsx`)
 
@@ -153,6 +155,7 @@ AuthProvider
 | `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme). |
 | `cardFaceStore.ts` | `cardFace` — 6 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
+| `accountSettingsSync.ts` | Mirrors the five stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set, and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
 | `tipsStore.ts` | `seenTips` — which first-visit page tips (`PageTip.tsx`) have been dismissed; "Show again" in Settings clears it. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
@@ -251,6 +254,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0019 | `favorite_game_configs` (owner-only) — syncs "my usual" solo/pass-and-play setup across devices. |
 | 0020 | `push_subscriptions` (owner-only) — Web Push endpoints; sent from the `mp` function's `addEvent()` via VAPID (`your_turn`/`game_request`/`nudge` only). |
 | 0021 | `bio` column on `leaderboard_entries` (140 chars, same shape as `display_name`) — set on Account, shown in OpponentStrip's popover for a multiplayer opponent (fetched client-side via `mp_participants` + `leaderboardStore.fetchBiosFor`, no Edge Function change needed). |
+| 0022 | Extends `settings` (0001) with `theme`/`card_back`/`card_face`/`colorblind_mode`/`meld_hints`/`highlight_layoffs`/`show_whose_turn`/`sound_volume`/`ambient_music_enabled`/`ambient_volume` — every Settings/Theme/Card back/Card face preference now syncs to the account, not just AI difficulty. See `accountSettingsSync.ts`. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -274,7 +278,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | Task | Command |
 |---|---|
 | Dev server | `npm run dev` |
-| Tests | `npm test` (vitest, 333 tests) |
+| Tests | `npm test` (vitest, 346 tests) |
 | E2E | `npm run test:e2e:ci` (Playwright — 5 browser projects; excludes `@visual` and self-skips the live 2-account MP test without `SUPABASE_SERVICE_ROLE_KEY`) |
 | Typecheck | `npx tsc --noEmit` |
 | Lint | `npm run lint` |

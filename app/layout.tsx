@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AccountSettingsSync } from "./AccountSettingsSync";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
 import { LocalSaveSync } from "./LocalSaveSync";
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased">
         <ServiceWorkerRegistrar />
         <AuthProvider>
+          <AccountSettingsSync />
           <PlayerLevelProvider>
             <PendingSaveSync />
             <GameProvider>

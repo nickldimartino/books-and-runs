@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { onAccountSettingsSynced, pushTheme } from "../../lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "../../lib/cardBackStore";
+import { supabase } from "../../lib/supabaseClient";
 import { applyTheme, loadLocalTheme, saveLocalTheme, ThemeId } from "../../lib/themeStore";
 import { SwatchPicker } from "../SwatchPicker";
 
@@ -14,12 +17,14 @@ import { SwatchPicker } from "../SwatchPicker";
  * to flip a toggle should have to scroll through.
  */
 export default function ThemeSettingsPage() {
+  const { user } = useAuth();
   const [theme, setTheme] = useState<ThemeId>("midnight");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setTheme(loadLocalTheme());
     setLoading(false);
+    return onAccountSettingsSynced(() => setTheme(loadLocalTheme()));
   }, []);
 
   function handleThemeChange(id: ThemeId) {
@@ -31,6 +36,7 @@ export default function ThemeSettingsPage() {
     // change immediately. A no-op whenever an explicit card back is already
     // chosen — changing the table theme must never disturb that.
     applyCardBack(loadLocalCardBack(), id);
+    pushTheme(supabase, user?.id ?? null, id);
   }
 
   return (

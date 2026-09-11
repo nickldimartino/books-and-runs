@@ -1,14 +1,21 @@
 "use client";
 
-// The Settings page: house rules and preferences. Preferred AI difficulty
-// is synced to the account (settingsStore + a Supabase upsert); sound,
-// haptics, lay-off highlighting and the like are local-only, like theme.
-// Links out to the theme and card-back pickers and to the Account page.
+// The Settings page: house rules and preferences. Everything here is kept
+// in localStorage (the actual source of truth for rendering) and, when
+// signed in, also mirrored to the account via accountSettingsSync.ts — see
+// AccountSettingsSync.tsx for the pull side. Links out to the theme,
+// card-back, and card-face pickers and to the Account page.
 
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import {
+  onAccountSettingsSynced,
+  pushAllDefaults,
+  pushColorblindMode,
+  pushHouseSettingsPatch,
+} from "../lib/accountSettingsSync";
 import {
   applyCardBack,
   CardBackId,
@@ -57,10 +64,6 @@ const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "exper
 // page itself, which does honor the CSS — showed "Easy".
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-interface SettingsRow {
-  preferred_ai_difficulty_default: string | null;
 }
 
 // Collapsed by default so a settings screen full of toggles doesn't read as
@@ -287,57 +290,45 @@ export default function SettingsPage() {
   const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
   const [pushError, setPushError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Re-reads every local store — called on mount, and again whenever
+  // AccountSettingsSync pulls the account's copy down while this page is
+  // already open (a sign-in that resolves right here, most commonly),
+  // since that sync writes straight to localStorage without going through
+  // this page's own React state.
+  function loadAllFromLocal() {
     setSettings(loadLocalSettings());
     setTheme(loadLocalTheme());
     setCardBack(loadLocalCardBack());
     setCardFace(loadLocalCardFace());
     setColorblindMode(loadLocalColorblindMode());
+  }
+
+  useEffect(() => {
+    loadAllFromLocal();
     const permission = getPushPermission();
     if (permission === "unsupported") setPushState("unsupported");
     else if (permission === "denied") setPushState("denied");
     else isPushSubscribed().then((subbed) => setPushState(subbed ? "on" : "off"));
-    if (!supabase || !user) {
-      setLoading(false);
-      return;
-    }
-    supabase
-      .from("settings")
-      .select("preferred_ai_difficulty_default")
-      .eq("user_id", user.id)
-      .maybeSingle<SettingsRow>()
-      .then(({ data, error }) => {
-        if (error) console.error("Failed to load synced settings:", error.message);
-        if (data) {
-          const synced: HouseSettings = {
-            ...loadLocalSettings(),
-            preferredAiDifficulty: (data.preferred_ai_difficulty_default as Difficulty) ?? "medium",
-          };
-          setSettings(synced);
-          // Keep local storage in step with the account's settings, since
-          // other pages (like New Game) read local storage only.
-          saveLocalSettings(synced);
-        }
-        setLoading(false);
-      });
-  }, [user]);
+    setLoading(false);
+    return onAccountSettingsSynced(loadAllFromLocal);
+  }, []);
 
   function handleColorblindModeChange(mode: ColorblindMode) {
     setColorblindMode(mode);
     saveLocalColorblindMode(mode);
     applyColorblindMode(mode);
+    pushColorblindMode(supabase, user?.id ?? null, mode);
   }
 
-  // Covers everything on this page that's local-only and instant-apply —
+  // Covers everything on this page that's local-only-but-account-synced —
   // theme and colorblind mode live in their own separate stores (see their
   // own handlers above), not HouseSettings, so a plain updateSettings(
   // DEFAULT_SETTINGS) alone wouldn't touch them; this calls all three
   // reset paths together so "Reset to defaults" really means the whole
-  // page, not just the toggles, even though Theme/Card back's own pickers
-  // no longer live on this page directly. Doesn't touch the signed-in
-  // account's synced AI difficulty by itself — that only ever changes via
-  // the separate, explicit "Sync to your account" action, same as any
-  // other local change here.
+  // page, not just the toggles, even though Theme/Card back/Card face's
+  // own pickers no longer live on this page directly. pushAllDefaults
+  // resets the account's copy too (when signed in), so a reset here can't
+  // get silently undone by a sync from another device later.
   function handleResetToDefaults() {
     setSettings(DEFAULT_SETTINGS);
     saveLocalSettings(DEFAULT_SETTINGS);
@@ -353,21 +344,24 @@ export default function SettingsPage() {
     saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
     applyColorblindMode(DEFAULT_COLORBLIND_MODE);
     setConfirmingReset(false);
+    pushAllDefaults(supabase, user?.id ?? null, DEFAULT_THEME);
   }
 
-  // Applies and persists a change to any local-only setting immediately —
-  // same instant-apply behavior Theme and Colorblind mode already have.
-  // None of these fields are ever synced to Supabase (see saveLocalSettings'
-  // own callers), so there's nothing an explicit "Save" step was ever
-  // protecting here; requiring one just meant a toggle flipped and then
-  // navigated away from — without noticing a button lower on the page —
-  // silently reverted on the next visit.
+  // Applies and persists a change to any setting on this page immediately —
+  // same instant-apply behavior Theme and Colorblind mode already have —
+  // and, when signed in, mirrors it to the account (pushHouseSettingsPatch
+  // debounces the two volume sliders itself; everything else pushes right
+  // away). There's nothing an explicit "Save" step was ever protecting
+  // here; requiring one just meant a toggle flipped and then navigated
+  // away from — without noticing a button lower on the page — silently
+  // reverted on the next visit.
   function updateSettings(patch: Partial<HouseSettings>) {
     setSettings((s) => {
       const next = { ...s, ...patch };
       saveLocalSettings(next);
       return next;
     });
+    pushHouseSettingsPatch(supabase, user?.id ?? null, patch);
   }
 
   async function handleTogglePush(next: boolean) {
@@ -406,9 +400,11 @@ export default function SettingsPage() {
         <LoadingSpinner />
       ) : (
         <>
-          <PageTip id="settings" title="Local to this device">
-            Theme, card face, sound, AI difficulty, and every toggle below stay on this browser —
-            nothing here syncs to your account. Not sure what something does? Tap the ⓘ next to it.
+          <PageTip id="settings" title="Carries over automatically when signed in">
+            Theme, card face, sound, AI difficulty, and every toggle below sync to your account —
+            sign in on another device (or a fresh &quot;Add to Home Screen&quot; install) and they show
+            up there too. Playing signed out keeps everything on this browser only. Not sure what
+            something does? Tap the ⓘ next to it.
           </PageTip>
 
           <SettingsSection title="Appearance">
@@ -556,6 +552,36 @@ export default function SettingsPage() {
                   screen or installed as an app; your browser controls the actual permission. Off
                   by default.
                 </InfoDetails>
+                <details>
+                  <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+                    <span>How do I add it to my home screen?</span>
+                    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[var(--faint)]" aria-hidden="true">
+                      <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </summary>
+                  <div className="mt-2 flex flex-col gap-3 text-xs text-[var(--faint)]">
+                    <div>
+                      <p className="font-semibold text-[var(--muted)]">Android (Chrome)</p>
+                      <ol className="mt-0.5 list-decimal space-y-0.5 pl-4">
+                        <li>Tap the ⋮ menu (top right).</li>
+                        <li>Tap &quot;Add to Home screen.&quot;</li>
+                        <li>Tap &quot;Add&quot; to confirm.</li>
+                      </ol>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[var(--muted)]">iPhone/iPad (Safari)</p>
+                      <ol className="mt-0.5 list-decimal space-y-0.5 pl-4">
+                        <li>Tap the Share icon (square with an arrow, at the bottom).</li>
+                        <li>Scroll down and tap &quot;Add to Home Screen.&quot;</li>
+                        <li>Tap &quot;Add&quot; (top right) to confirm.</li>
+                      </ol>
+                    </div>
+                    <p>
+                      Either way, open the game from the new icon on your home screen — not the
+                      browser — from then on.
+                    </p>
+                  </div>
+                </details>
                 {pushState === "unsupported" ? (
                   <p className="text-xs text-[var(--faint)]">
                     {isIosSafariNonStandalone()

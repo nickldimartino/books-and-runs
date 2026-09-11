@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { onAccountSettingsSynced, pushCardFace } from "../../lib/accountSettingsSync";
 import { CardFaceId, loadLocalCardFace, saveLocalCardFace } from "../../lib/cardFaceStore";
+import { supabase } from "../../lib/supabaseClient";
 import { CardFacePicker } from "../CardFacePicker";
 
 /**
@@ -13,17 +16,20 @@ import { CardFacePicker } from "../CardFacePicker";
  * middle of a page most visits are there to flip a toggle on.
  */
 export default function CardFaceSettingsPage() {
+  const { user } = useAuth();
   const [cardFace, setCardFace] = useState<CardFaceId>("classic");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setCardFace(loadLocalCardFace());
     setLoading(false);
+    return onAccountSettingsSynced(() => setCardFace(loadLocalCardFace()));
   }, []);
 
   function handleChange(id: CardFaceId) {
     setCardFace(id);
     saveLocalCardFace(id);
+    pushCardFace(supabase, user?.id ?? null, id);
   }
 
   return (

@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { onAccountSettingsSynced, pushCardBack } from "../../lib/accountSettingsSync";
 import { applyCardBack, CardBackId, loadLocalCardBack, saveLocalCardBack } from "../../lib/cardBackStore";
+import { supabase } from "../../lib/supabaseClient";
 import { loadLocalTheme, ThemeId } from "../../lib/themeStore";
 import { SwatchPicker } from "../SwatchPicker";
 
@@ -14,6 +17,7 @@ import { SwatchPicker } from "../SwatchPicker";
  * to flip a toggle should have to scroll through.
  */
 export default function CardBackSettingsPage() {
+  const { user } = useAuth();
   const [cardBack, setCardBack] = useState<CardBackId>("match");
   // Read-only here — needed only to resolve "match" into a real id when
   // applying a card back, not something this page ever changes itself.
@@ -24,12 +28,17 @@ export default function CardBackSettingsPage() {
     setCardBack(loadLocalCardBack());
     setTheme(loadLocalTheme());
     setLoading(false);
+    return onAccountSettingsSynced(() => {
+      setCardBack(loadLocalCardBack());
+      setTheme(loadLocalTheme());
+    });
   }, []);
 
   function handleCardBackChange(id: CardBackId) {
     setCardBack(id);
     saveLocalCardBack(id);
     applyCardBack(id, theme);
+    pushCardBack(supabase, user?.id ?? null, id);
   }
 
   return (
