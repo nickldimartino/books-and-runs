@@ -116,12 +116,12 @@ AuthProvider
 | `/friends` | Friend list, incoming/outgoing requests, friend code + share link (`?add=BR-XXXXX`). |
 | `/history` | Local (device) game history. |
 | `/scorecard` | Standalone pen-and-paper scorekeeper (no engine — just a score grid). |
-| `/settings`, `/settings/theme`, `/settings/card-back` | House rules, theme picker (38 themes), card-back picker. |
+| `/settings`, `/settings/theme`, `/settings/card-back`, `/settings/card-face` | House rules, theme picker (38 themes), card-back picker, card-face picker (6 styles). Every preference here syncs to the account when signed in — see `accountSettingsSync.ts`. |
 | `/account` | Display name, sign-out, danger zone. |
 | `/how-to-play` | Rules reference. `BackLink` returns to wherever you came from (`?from=game`). |
 | `/sign-in`, `/reset-password`, `/privacy`, `/terms` | Auth + legal. |
-| `layout.tsx`, `manifest.ts` | Root layout (before-paint theme/colorblind/card-back scripts, `<meta theme-color>`), PWA manifest. |
-| `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js` for everyone (offline shell caching — plain runtime caching, no build-time precache manifest). Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. |
+| `layout.tsx`, `manifest.ts` | Root layout, PWA manifest. Loads `public/init.js` — a plain synchronous `<script src>` (not `next/script`, deliberately — see the file's own comment) that applies the saved theme/colorblind/card-back/intro-splash state before first paint, so there's no flash of the wrong theme. |
+| `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js`, **production only**. A dev-mode registration used to shadow local code changes with a stale cache — a confusing "why isn't my edit showing up" trap that can persist across dev-server restarts, since the cache lives in the browser, not the server. Offline shell caching — plain runtime caching, no build-time precache manifest. Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. |
 | `public/sw.js`, `public/offline.html` | The service worker itself (fetch caching + `push`/`notificationclick` handlers) and its precached offline fallback page — plain static files, not part of the Next build. |
 
 ### 3c. Components (`app/components/`)
@@ -142,6 +142,8 @@ AuthProvider
 | `PassGate.tsx` / `BuyOfferGate.tsx` | game screen | "Pass the device to X" interstitial; the (disabled) buy-the-discard offer. |
 | `CardFanHero.tsx` | home | The decorative fanned-cards hero. |
 | `LoadingSpinner.tsx` | data pages | A card-flip loading state. |
+| `PageTip.tsx` | Home, New Game (×3), MP play, Settings, Achievements | A first-visit-only dismissible banner (see `tipsStore.ts`); permanently replaced several pages' old always-visible explanatory paragraphs. |
+| `IntroSplash.tsx` | home | The one-time "dealing" animation on first visit to `/` this session (`sessionStorage`, not `tipsStore` — replays every new session, purely decorative). |
 
 ### 3d. Stores & helpers (`app/lib/`)
 
@@ -324,12 +326,18 @@ Re-run the bundle step whenever `src/` changes.
 
 ---
 
-## 8. Audit — cleanup opportunities (2026-09-10)
+## 8. Audit — cleanup opportunities (last re-verified 2026-09-11)
 
-A full pass for dead code, redundancy, and easy wins. The codebase is clean
-and unusually well-commented; findings are modest.
+A full pass for dead code, redundancy, and optimization opportunities —
+originally done 2026-09-10, re-run from scratch after this session's
+largest batch of new features (card faces, account-wide settings sync,
+first-visit tips, account bios, security hardening). Same conclusion both
+times: the codebase is clean and unusually well-commented; findings stay
+modest even after roughly doubling in size. Nothing was removed this pass
+— every finding below was either already true and re-confirmed, or newly
+checked and found to be a false alarm.
 
-### Applied (verified inert, separate commits)
+### Applied historically (verified inert, separate commits)
 
 - **Removed 3 unused MP client wrappers** from `app/lib/mpStore.ts`:
   `getMyMpRecord` + `MpRecord`, `getMyMpActiveCount`, `MP_GAME_CAP`. Zero
@@ -337,6 +345,31 @@ and unusually well-commented; findings are modest.
   server-side (the Edge Function keeps its own `MP_GAME_CAP`), and
   `getMyMpStats` superseded `getMyMpRecord`. The Postgres RPCs
   (`mp_my_record`, `mp_active_count`) were left in the DB.
+
+### This pass's method (so a future re-check can repeat it cheaply)
+
+1. `npx ts-prune` for unused exports across the whole TS codebase.
+2. A file-level orphan check — every non-route `.ts`/`.tsx` file grepped
+   elsewhere for at least one reference by name.
+3. `grep` sweeps for `TODO`/`FIXME`/`HACK`/`@deprecated`, `console.log`
+   (vs. deliberate `console.error`), and `eslint-disable` comments.
+4. `git ls-files` checked for accidentally-tracked build output or
+   oversized files.
+5. Comment-density spot checks on the lowest-ratio files, to catch any
+   that are actually under-explained rather than just data-heavy.
+6. Re-read the two "report-only" findings below against the current code
+   to confirm they still hold rather than assuming.
+
+**Result:** `ts-prune` flagged nothing beyond Next.js's own
+framework-required exports (`default`/`metadata`/`viewport` on every
+route file — used implicitly by file-based routing, not dead) and the
+same "type alias only used in its own file" category as #3 below. The
+orphan check's three hits (`src/demo.ts`, `src/testHelpers.ts`,
+`src/mp/adapter.ts`) were all false positives from the check's own
+narrow search scope — `demo.ts` runs via `npm run demo`, `testHelpers.ts`
+is imported by 7 `*.test.ts` files, `adapter.ts` is imported by
+`supabase/functions/mp/index.ts` (outside `app`/`src`, where the check
+was looking). No genuinely orphaned file exists anywhere in the repo.
 
 ### Report-only — real but not worth the risk right now
 
@@ -353,11 +386,17 @@ and unusually well-commented; findings are modest.
    from different inputs. Consolidating means a shared "describe this turn"
    function over both the local and the redacted-MP shapes.
 
-3. **~15 type aliases are `export`ed but only used in their own file**
-   (`FlightSpec`, `BuyOffer`, `FlightInput`/`FlightEvent`, `ColorblindOption`,
-   `DailyDealResult`, `CreateMpGameInput`, `StagedGroup`/`StagedLayoff`,
-   `Candidate`, `GroupValidation`, `MpSeat`, `RedactedPlayer`,
-   `TUTORIAL_AI_ID`, `TUTORIAL_BOOK_IDS`/`RUN_IDS`, `MeldType`, …). Zero
+3. **~35 type aliases (plus a few small helper functions) are `export`ed
+   but only used in their own file** — `ts-prune` now flags around this
+   many, up from ~15 at the 09-10 count, growth roughly proportional to
+   how much code got added this session (`FlightSpec`, `BuyOffer`,
+   `FlightInput`/`FlightEvent`, `ColorblindOption`, `DailyDealResult`,
+   `CreateMpGameInput`, `Candidate`, `GroupValidation`, `MpSeat`,
+   `RedactedPlayer`, `TUTORIAL_AI_ID`, `TUTORIAL_BOOK_IDS`/`RUN_IDS`,
+   `MeldType`, `AchievementSource`/`AchievementFamily`, `SortMode`,
+   `ThemeErrorColors`, `TutorialGate`, `LayOffMove`, `ShareRow`/
+   `ShareCardInput`, `SavedScorecard`, `PendingSave`, `SubscribeResult`,
+   `ReportInput`, `AiPersona`, `RoundMode`, `Notifications`, …). Zero
    runtime cost; dropping `export` would only tidy the public surface.
    Left as-is — several are plausible future imports and the churn isn't
    worth it.
@@ -368,11 +407,35 @@ and unusually well-commented; findings are modest.
 5. **`app/lib/dailyDealStore.ts`** exports `localDateKey` and `dateSeed`
    used only internally — same "unnecessary export" category as #3.
 
-### Checked and clean
+6. **The five `loadLocalX`/`saveLocalX`/`applyX` store triads**
+   (`themeStore.ts`, `cardBackStore.ts`, `cardFaceStore.ts`,
+   `colorblindStore.ts`, and `settingsStore.ts`'s own shape) repeat the
+   same small pattern five times rather than sharing a generic "local
+   store" factory. Looked at deliberately this pass, not just carried
+   over: each is a handful of lines, each has genuinely different framing
+   (a CSS attribute vs. a React-live hook vs. a plain object), and a
+   factory abstraction would need to flex for all three shapes — net
+   more code and a layer of indirection to read through, for five files
+   that are individually trivial to read as they are. Not a finding,
+   a considered "no."
+
+### Checked and clean (both passes)
 
 - No `TODO`/`FIXME`/`HACK`/`@deprecated` markers anywhere.
-- All `console.*` calls are deliberate error logging in `.catch` handlers.
-- All 7 `eslint-disable` lines are `react-hooks/exhaustive-deps` on effects
-  with documented reasons (snapshot-once, finalize-once guards).
-- No orphaned components — every `app/components/*` file has an importer.
-- `tsc`, `eslint .`, `vitest` (199), and `next build` all pass clean.
+- All `console.*` calls are deliberate error logging in `.catch` handlers
+  (`src/demo.ts`'s plain `console.log`s are its actual output — it's a CLI
+  benchmark script, not app code).
+- All 11 `eslint-disable` lines (grew from 7) are `react-hooks/exhaustive-deps`
+  or a documented `@next/next` rule exception, each with a reason in the
+  adjacent comment.
+- No orphaned files — every non-route `.ts`/`.tsx` file has a real importer
+  somewhere in `app/`, `src/`, or `supabase/functions/`.
+- No build output, `node_modules`, or oversized files accidentally tracked
+  by git — the largest tracked files are `e2e/visual.spec.ts-snapshots/`
+  baseline PNGs, which are supposed to be there.
+- Bundle size: `/game` and Home are each ~220–236KB gzipped JS on first
+  load (measured directly from a real `next build`'s output, not
+  estimated); the Supabase SDK stays lazy-loaded off that path, enforced
+  by `scripts/check-bundle.mjs` in CI so this can't silently regress.
+- `tsc`, `eslint .`, `vitest` (346, up from 199), and `next build` all
+  pass clean.
