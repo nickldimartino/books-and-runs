@@ -9,6 +9,7 @@
 // unlocks at game over. Manual resign only.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
@@ -51,12 +52,16 @@ const RANK_SUIT: Record<string, string> = {
 };
 const label = (c: Card) => `${c.rank === "JOKER" ? "Jkr" : c.rank}${c.suit === "joker" ? "" : RANK_SUIT[c.suit]}`;
 
+const REACTION_EMOJI = ["👍", "😂", "😮", "🎉", "🔥", "😅"];
+
 export default function MultiplayerPlayPage() {
+  const router = useRouter();
   const gameId = useGameId();
   const { loading: authLoading, user } = useAuth();
   const g = useMpGame(user ? gameId : null);
   const { view } = g;
 
+  const [rematchBusy, setRematchBusy] = useState(false);
   const [layoffArmed, setLayoffArmed] = useState(false);
   const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
 
@@ -177,6 +182,20 @@ export default function MultiplayerPlayPage() {
             heading={g.unlockedAchievements.length === 1 ? "Achievement unlocked" : "Achievements unlocked"}
           />
         )}
+
+        <button
+          onClick={async () => {
+            setRematchBusy(true);
+            const id = await g.rematch();
+            setRematchBusy(false);
+            if (id) router.push(`/multiplayer/play?g=${id}`);
+          }}
+          disabled={rematchBusy}
+          className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+        >
+          {rematchBusy ? "Setting up…" : "Rematch — same players"}
+        </button>
+        {g.error && <p className="text-xs text-[var(--danger)]">{g.error}</p>}
       </main>
     );
   }
@@ -291,6 +310,19 @@ export default function MultiplayerPlayPage() {
           <p>
             Waiting for <strong className="text-[var(--heading)]">{currentName}</strong> to take their turn.
           </p>
+          {view.currentUserId && view.currentUserId !== user?.id && (
+            <button
+              onClick={() => g.nudge()}
+              disabled={g.nudgeState !== "idle"}
+              className="mt-2 rounded-md border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel)] disabled:opacity-60"
+            >
+              {g.nudgeState === "sent"
+                ? "Nudged 👍"
+                : g.nudgeState === "error"
+                  ? "Can't nudge yet"
+                  : `Nudge ${currentName}`}
+            </button>
+          )}
           {g.daysSinceMove != null && g.daysSinceMove >= 14 && (
             <p className="mt-1 text-xs text-[var(--faint)]">
               No moves in {g.daysSinceMove} days. If this game&apos;s been abandoned, use “Resign” above
@@ -486,6 +518,32 @@ export default function MultiplayerPlayPage() {
           </p>
         )}
       </section>
+
+      {/* Reactions — a broadcast to the other players, no persistence. */}
+      <div className="flex justify-center gap-1.5 pt-1">
+        {REACTION_EMOJI.map((e) => (
+          <button
+            key={e}
+            onClick={() => g.sendReaction(e)}
+            aria-label={`React ${e}`}
+            className="rounded-full px-2 py-1 text-lg transition hover:scale-110 hover:bg-[var(--panel)]"
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+
+      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center">
+        {g.reactions.map((r, i) => (
+          <span
+            key={r.id}
+            className="reaction-pop absolute text-4xl"
+            style={{ left: `${42 + ((i * 9) % 18)}%` }}
+          >
+            {r.emoji}
+          </span>
+        ))}
+      </div>
     </main>
   );
 }

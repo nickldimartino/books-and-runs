@@ -278,6 +278,7 @@ export function redactFor(eng: MpEngine, config: MpConfig, viewerSeat: number | 
     round: s.round,
     roundLabel: contract.label,
     totalRounds: s.selectedContracts.length,
+    contractRounds: config.contractRounds,
     contract: {
       books: contract.books,
       runs: contract.runs,

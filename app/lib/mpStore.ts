@@ -122,6 +122,32 @@ export async function resignMpGame(
   return callMp(supabase, "resign", { game_id: gameId });
 }
 
+/** Bumps the current-turn player's badge with a fresh notification (RPC
+ * mp_nudge, migration 0017). Rate-limited; throws if not allowed. */
+export async function nudgeMpGame(supabase: SupabaseClient, gameId: string): Promise<void> {
+  const { error } = await supabase.rpc("mp_nudge", { p_game_id: gameId });
+  if (error) throw error;
+}
+
+/** Starts a fresh game with the same line-up as a finished one. `seats` is
+ * everyone except `myUserId` (the function seats the host at 0). */
+export async function rematchMpGame(
+  supabase: SupabaseClient,
+  players: { seat: number; isAI: boolean; difficulty?: string; name: string; userId?: string }[],
+  myUserId: string,
+  contractRounds: number[]
+): Promise<{ game_id: string }> {
+  const seats: NewGameSeat[] = players
+    .filter((p) => !(p.userId && p.userId === myUserId))
+    .map((p) =>
+      p.isAI
+        ? { kind: "ai" as const, difficulty: p.difficulty ?? "medium", name: p.name }
+        : { kind: "human" as const, user_id: p.userId! }
+    )
+    .filter((s) => s.kind === "ai" || !!s.user_id);
+  return createMpGame(supabase, { contractRounds, seats });
+}
+
 // ── read-only lists (plain RPCs) ─────────────────────────────────────────
 
 export interface MpGameSummary {

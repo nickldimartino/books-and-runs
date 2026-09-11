@@ -78,6 +78,9 @@ export interface RedactedView {
   round: number;
   roundLabel: string;
   totalRounds: number;
+  /** 1-based CONTRACTS positions this game is playing, in order — so a
+   * rematch can be dealt with the same round set. */
+  contractRounds: number[];
   contract: {
     books: number;
     runs: number;

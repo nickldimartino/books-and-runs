@@ -23,6 +23,8 @@ import {
   MpError,
   MpMoveResponse,
   MpStateResponse,
+  nudgeMpGame,
+  rematchMpGame,
   resignMpGame,
   submitMpMove,
 } from "./mpStore";
@@ -84,6 +86,18 @@ export interface UseMpGame {
   setDiscard: (cardId: string | null) => void;
   commitTurn: () => Promise<void>;
   resign: () => Promise<void>;
+
+  /** Bump the current-turn player's notification badge. `nudgeState`
+   * reflects the last attempt. */
+  nudge: () => Promise<void>;
+  nudgeState: "idle" | "sent" | "error";
+  /** Start a fresh game with the same players + rounds. Resolves to the new
+   * game id, or null on failure. */
+  rematch: () => Promise<string | null>;
+  /** Broadcast an emoji to the other players in this game. */
+  sendReaction: (emoji: string) => void;
+  /** Reactions received in the last few seconds — each auto-expires. */
+  reactions: { id: number; emoji: string; seat: number }[];
 }
 
 /**
@@ -102,6 +116,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
+  const [nudgeState, setNudgeState] = useState<"idle" | "sent" | "error">("idle");
+  const [reactions, setReactions] = useState<{ id: number; emoji: string; seat: number }[]>([]);
+  const channelRef = useRef<ReturnType<NonNullable<typeof supabase>["channel"]> | null>(null);
+  const reactionIdRef = useRef(0);
   const loadedFor = useRef<string | null>(null);
 
   const view = state?.view ?? null;
@@ -190,14 +208,24 @@ export function useMpGame(gameId: string | null): UseMpGame {
   useEffect(() => {
     if (!supabase || !gameId) return;
     const channel = supabase
-      .channel(`mp-game-${gameId}`)
+      .channel(`mp-game-${gameId}`, { config: { broadcast: { self: false } } })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "mp_games", filter: `id=eq.${gameId}` },
         () => refresh()
       )
+      .on("broadcast", { event: "reaction" }, ({ payload }) => {
+        const id = ++reactionIdRef.current;
+        const emoji = String(payload?.emoji ?? "").slice(0, 8);
+        const seat = Number(payload?.seat ?? -1);
+        if (!emoji) return;
+        setReactions((r) => [...r, { id, emoji, seat }]);
+        setTimeout(() => setReactions((r) => r.filter((x) => x.id !== id)), 3200);
+      })
       .subscribe();
+    channelRef.current = channel;
     return () => {
+      channelRef.current = null;
       supabase?.removeChannel(channel);
     };
   }, [gameId, refresh]);
@@ -399,6 +427,45 @@ export function useMpGame(gameId: string | null): UseMpGame {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
+  const nudge = useCallback(async () => {
+    if (!supabase || !gameId) return;
+    try {
+      await nudgeMpGame(supabase, gameId);
+      setNudgeState("sent");
+    } catch {
+      setNudgeState("error");
+    }
+    setTimeout(() => setNudgeState("idle"), 4000);
+  }, [gameId]);
+
+  const rematch = useCallback(async (): Promise<string | null> => {
+    if (!supabase || !gameId || !view || !user) return null;
+    try {
+      const { game_id } = await rematchMpGame(
+        supabase,
+        view.players,
+        user.id,
+        view.contractRounds
+      );
+      return game_id;
+    } catch (err) {
+      setError(err instanceof MpError ? err.message : "Couldn't start a rematch.");
+      return null;
+    }
+  }, [gameId, view, user]);
+
+  const sendReaction = useCallback(
+    (emoji: string) => {
+      const seat = view?.yourSeat ?? -1;
+      channelRef.current?.send({ type: "broadcast", event: "reaction", payload: { emoji, seat } });
+      // Echo locally (self:false skips our own broadcast).
+      const id = ++reactionIdRef.current;
+      setReactions((r) => [...r, { id, emoji, seat }]);
+      setTimeout(() => setReactions((r) => r.filter((x) => x.id !== id)), 3200);
+    },
+    [view?.yourSeat]
+  );
+
   const daysSinceMove =
     state?.updated_at != null
       ? (() => {
@@ -433,5 +500,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
     setDiscard,
     commitTurn,
     resign,
+    nudge,
+    nudgeState,
+    rematch,
+    sendReaction,
+    reactions,
   };
 }
