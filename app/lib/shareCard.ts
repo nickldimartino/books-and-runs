@@ -32,8 +32,8 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob | nul
   const W = 540;
   const rowH = 52;
   const headerH = 188;
-  const footerH = 66;
-  const H = headerH + input.rows.length * rowH + footerH;
+  const bottomPad = 22;
+  const H = headerH + input.rows.length * rowH + bottomPad;
 
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -43,7 +43,6 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob | nul
   ctx.scale(scale, scale);
 
   const bg = themeColor("--bg", "#0a2b20");
-  const panel = themeColor("--panel", "#123c2c");
   const heading = themeColor("--heading", "#fef3c7");
   const text = themeColor("--text", "#f5f0e6");
   const faint = themeColor("--faint", "rgba(209,250,229,0.45)");
@@ -106,14 +105,6 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob | nul
     ctx.font = `700 18px ${sans}`;
     ctx.fillText(`${row.score}`, W - 40, y);
   });
-
-  // footer
-  ctx.fillStyle = panel;
-  ctx.fillRect(0, H - footerH, W, footerH);
-  ctx.textAlign = "center";
-  ctx.fillStyle = faint;
-  ctx.font = `500 14px ${sans}`;
-  ctx.fillText("books-and-runs.vercel.app", W / 2, H - footerH / 2);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }

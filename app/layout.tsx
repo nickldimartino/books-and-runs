@@ -26,7 +26,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Books & Runs",
-    title: "Books & Runs — free Contract Rummy card game",
+    // Deliberately just the name, not the full "Books & Runs — free
+    // Contract Rummy..." <title> — iMessage/Safari's rich link preview
+    // strips a title's leading "SiteName — " prefix when it matches
+    // og:site_name, so with the longer title this widget was showing only
+    // the tagline half ("free Contract Rummy card game") with no app name
+    // visible at all. A bare og:title sidesteps that stripping entirely.
+    title: "Books & Runs",
     description:
       "Play Contract Rummy solo against AI, pass-and-play on one device, or turn-based online with friends. Free, no download.",
     url: "/",
