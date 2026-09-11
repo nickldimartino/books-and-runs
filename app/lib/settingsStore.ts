@@ -24,6 +24,14 @@ export interface HouseSettings {
   // Sound-effect volume, 0–1. Independent of soundEnabled (which is the
   // on/off master). Applied in sound.ts.
   soundVolume: number;
+  // A generative ambient pad (no audio file — synthesized the same way the
+  // SFX are, see ambience.ts) that plays while a game screen is open.
+  // Entirely separate from soundEnabled/soundVolume — a player who wants
+  // table SFX but no music (or vice versa) can. Off by default: unlike a
+  // short tap/chime, looping background audio is the kind of thing that
+  // should be opted into, not sprung on someone.
+  ambientMusicEnabled: boolean;
+  ambientVolume: number;
   // "Player activity", "Group melds by type", and "Expandable hand drawer"
   // used to live here as toggles. All three are gone now: the always-on
   // opponent strip (OpponentStrip.tsx) replaced Player activity, grouping
@@ -39,6 +47,8 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   showWhoseTurn: true,
   meldHints: false,
   soundVolume: 0.7,
+  ambientMusicEnabled: false,
+  ambientVolume: 0.4,
 };
 
 export function loadLocalSettings(): HouseSettings {

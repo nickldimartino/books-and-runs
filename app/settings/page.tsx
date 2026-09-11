@@ -16,6 +16,7 @@ import {
   loadLocalCardBack,
   saveLocalCardBack,
 } from "../lib/cardBackStore";
+import { setAmbienceVolume } from "../lib/ambience";
 import {
   getPushPermission,
   isPushSubscribed,
@@ -152,16 +153,20 @@ function VolumeSlider({
   value,
   disabled,
   onChange,
+  label = "Volume",
+  description = "How loud the sound effects are. The Sound effects toggle above is the master on/off.",
+  ariaLabel = "Sound effects volume",
 }: {
   value: number;
   disabled: boolean;
   onChange: (v: number) => void;
+  label?: string;
+  description?: string;
+  ariaLabel?: string;
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <InfoDetails label="Volume">
-        How loud the sound effects are. The Sound effects toggle above is the master on/off.
-      </InfoDetails>
+      <InfoDetails label={label}>{description}</InfoDetails>
       <div className="flex items-center gap-3">
         <input
           type="range"
@@ -171,7 +176,7 @@ function VolumeSlider({
           value={Math.round(value * 100)}
           disabled={disabled}
           onChange={(e) => onChange(Number(e.target.value) / 100)}
-          aria-label="Sound effects volume"
+          aria-label={ariaLabel}
           className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--panel)] accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
         />
         <span className="w-10 shrink-0 text-right text-xs tabular-nums text-[var(--muted)]">
@@ -513,6 +518,23 @@ export default function SettingsPage() {
             value={settings.soundVolume}
             disabled={!settings.soundEnabled}
             onChange={(v) => updateSettings({ soundVolume: v })}
+          />
+          <BoolToggle
+            label="Ambient music"
+            value={settings.ambientMusicEnabled}
+            onChange={(v) => updateSettings({ ambientMusicEnabled: v })}
+            description="A soft generative background pad while a game screen is open — separate from sound effects, so you can have one without the other. Off by default."
+          />
+          <VolumeSlider
+            value={settings.ambientVolume}
+            disabled={!settings.ambientMusicEnabled}
+            onChange={(v) => {
+              updateSettings({ ambientVolume: v });
+              setAmbienceVolume(v);
+            }}
+            label="Ambient volume"
+            description="How loud the background pad is. Kept subtle even at 100% — it's meant to sit behind everything else."
+            ariaLabel="Ambient music volume"
           />
           </SettingsSection>
 

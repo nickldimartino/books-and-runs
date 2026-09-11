@@ -18,6 +18,8 @@ import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { useMpGame } from "../../lib/useMpGame";
+import { startAmbience, stopAmbience } from "../../lib/ambience";
+import { loadLocalSettings } from "../../lib/settingsStore";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { layOffOptions } from "@/meld";
 import type { Card, Meld, Player } from "@/types";
@@ -76,6 +78,13 @@ export default function MultiplayerPlayPage() {
   useEffect(() => {
     setLayoffArmed(false);
   }, [view?.currentSeat, view?.round, view?.youHaveDrawn]);
+
+  // Same ambient-pad treatment as local play's game screen — see its own
+  // comment for why this only reads the setting once, on mount.
+  useEffect(() => {
+    if (loadLocalSettings().ambientMusicEnabled) startAmbience();
+    return () => stopAmbience();
+  }, []);
 
   // Surface the "Round N results" beat when the server has advanced the round
   // since we last looked. seenRoundsRef starts at the count we mounted with so

@@ -30,6 +30,7 @@ import { UndoRing } from "../components/UndoRing";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
+import { startAmbience, stopAmbience } from "../lib/ambience";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { useFocusTrap } from "../lib/useFocusTrap";
 import { playCardSlide, playGameWin, playRoundWin } from "../lib/sound";
@@ -205,6 +206,16 @@ export default function GamePage() {
   // clone travels pile→hand on a draw, hand→pile on a discard, hand→table
   // on a meld. Purely presentational; a missing anchor just means no
   // animation (CardFlightLayer already no-ops under reduced motion too).
+  // Ambient pad (Settings → Ambient music, off by default) — starts once on
+  // mount if enabled, stops on leaving this screen either way. Doesn't
+  // react to the setting changing mid-game (Settings is a different route);
+  // consistent with how meldHints/highlightLayoffs etc. are also just read
+  // once per render rather than watched live.
+  useEffect(() => {
+    if (loadLocalSettings().ambientMusicEnabled) startAmbience();
+    return () => stopAmbience();
+  }, []);
+
   const lastFlightIdRef = useRef(0);
   useEffect(() => {
     if (!flightEvent || flightEvent.id === lastFlightIdRef.current) return;
