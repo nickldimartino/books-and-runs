@@ -471,6 +471,37 @@ export default function SettingsPage() {
           </section>
           </SettingsSection>
 
+          <SettingsSection title="Sound & haptics">
+          <BoolToggle
+            label="Sound effects"
+            value={settings.soundEnabled}
+            onChange={(v) => updateSettings({ soundEnabled: v })}
+            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins, plus the matching haptic taps on iOS."
+          />
+          <VolumeSlider
+            value={settings.soundVolume}
+            disabled={!settings.soundEnabled}
+            onChange={(v) => updateSettings({ soundVolume: v })}
+          />
+          <BoolToggle
+            label="Ambient music"
+            value={settings.ambientMusicEnabled}
+            onChange={(v) => updateSettings({ ambientMusicEnabled: v })}
+            description="A soft generative background pad while a game screen is open — separate from sound effects, so you can have one without the other. Off by default."
+          />
+          <VolumeSlider
+            value={settings.ambientVolume}
+            disabled={!settings.ambientMusicEnabled}
+            onChange={(v) => {
+              updateSettings({ ambientVolume: v });
+              setAmbienceVolume(v);
+            }}
+            label="Ambient volume"
+            description="How loud the background pad is. Kept subtle even at 100% — it's meant to sit behind everything else."
+            ariaLabel="Ambient music volume"
+          />
+          </SettingsSection>
+
           <SettingsSection title="Gameplay">
           <section className="flex flex-col gap-2">
             <InfoDetails label="Default AI difficulty">
@@ -509,37 +540,6 @@ export default function SettingsPage() {
             value={settings.showWhoseTurn}
             onChange={(v) => updateSettings({ showWhoseTurn: v })}
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
-          />
-          </SettingsSection>
-
-          <SettingsSection title="Sound & haptics">
-          <BoolToggle
-            label="Sound effects"
-            value={settings.soundEnabled}
-            onChange={(v) => updateSettings({ soundEnabled: v })}
-            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins, plus the matching haptic taps on iOS."
-          />
-          <VolumeSlider
-            value={settings.soundVolume}
-            disabled={!settings.soundEnabled}
-            onChange={(v) => updateSettings({ soundVolume: v })}
-          />
-          <BoolToggle
-            label="Ambient music"
-            value={settings.ambientMusicEnabled}
-            onChange={(v) => updateSettings({ ambientMusicEnabled: v })}
-            description="A soft generative background pad while a game screen is open — separate from sound effects, so you can have one without the other. Off by default."
-          />
-          <VolumeSlider
-            value={settings.ambientVolume}
-            disabled={!settings.ambientMusicEnabled}
-            onChange={(v) => {
-              updateSettings({ ambientVolume: v });
-              setAmbienceVolume(v);
-            }}
-            label="Ambient volume"
-            description="How loud the background pad is. Kept subtle even at 100% — it's meant to sit behind everything else."
-            ariaLabel="Ambient music volume"
           />
           </SettingsSection>
 
