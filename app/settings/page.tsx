@@ -419,10 +419,10 @@ export default function SettingsPage() {
         <LoadingSpinner />
       ) : (
         <>
-          <PageTip id="settings" title="Everything here is local to this device">
-            Theme, card face, sound, and every toggle below stay on this browser — only your
-            preferred AI difficulty can sync to your account. Not sure what something does? Tap the
-            ⓘ next to it.
+          <PageTip id="settings" title="Mostly local to this device">
+            Theme, card face, sound, and every toggle below stay on this browser. Preferred AI
+            difficulty is the one exception — it can sync to your account. Not sure what something
+            does? Tap the ⓘ next to it.
           </PageTip>
 
           <SettingsSection title="Appearance">
