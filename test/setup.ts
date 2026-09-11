@@ -1,6 +1,7 @@
 // Vitest setup for the jsdom "app" project — stubs the browser APIs the app
 // pokes on mount that jsdom doesn't implement (storage, audio, matchMedia,
-// scrollTo, vibration). Only the React component tests use this.
+// scrollTo, scrollIntoView, vibration). Only the React component tests use
+// this.
 
 import { vi } from "vitest";
 
@@ -47,6 +48,7 @@ if (!window.matchMedia) {
   }));
 }
 if (!window.scrollTo) window.scrollTo = vi.fn();
+if (!window.Element.prototype.scrollIntoView) window.Element.prototype.scrollIntoView = vi.fn();
 // sound.ts constructs one lazily; a bare stub is enough for tests.
 window.AudioContext =
   window.AudioContext ?? (vi.fn() as unknown as typeof window.AudioContext);

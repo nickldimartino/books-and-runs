@@ -29,6 +29,42 @@ interface OpponentStripProps {
   bios?: Record<string, string>;
 }
 
+/**
+ * A human player's display name may start with an emoji (nothing stops
+ * someone typing one into it on the Account page) — `name.charAt(0)` isn't
+ * safe for that: most emoji are encoded as a UTF-16 surrogate pair, so
+ * `charAt(0)` grabs only its leading half, an invalid lone surrogate that
+ * renders as a broken/mangled glyph instead of the emoji. Detects a real
+ * leading emoji (via a grapheme-aware segmenter, so multi-codepoint emoji —
+ * flags, skin-tone modifiers — come back whole) and returns it plus the
+ * name with that emoji (and the space after it) removed, so a chip never
+ * shows the same emoji twice — once as the avatar, once again in the name.
+ */
+function isEmojiGrapheme(segment: string): boolean {
+  // A segment made entirely of letters/numbers/combining marks is text
+  // (covers accented Latin, CJK, etc.) — never treat that as an emoji, no
+  // matter what else the check below would otherwise match.
+  if (/^[\p{L}\p{N}\p{M}]+$/u.test(segment)) return false;
+  // Extended_Pictographic covers most single-codepoint emoji; Regional
+  // Indicator pairs are flags (🇺🇸); a ZWJ means a joined multi-part emoji
+  // (👨‍👩‍👧) — the segmenter already grouped the whole sequence into one
+  // grapheme, this just confirms it's actually emoji and not some other
+  // ZWJ-joined script.
+  return new RegExp("\\p{Extended_Pictographic}|\\p{Regional_Indicator}|\\u200D", "u").test(segment);
+}
+
+function splitLeadingEmoji(name: string): { emoji: string | null; rest: string } {
+  const trimmed = name.trim();
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    const segments = new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(trimmed);
+    const first = segments[Symbol.iterator]().next().value as { segment: string } | undefined;
+    if (first && isEmojiGrapheme(first.segment)) {
+      return { emoji: first.segment, rest: trimmed.slice(first.segment.length).trim() };
+    }
+  }
+  return { emoji: null, rest: trimmed };
+}
+
 function latestCardFor(history: DiscardEvent[], playerId: string) {
   for (let i = history.length - 1; i >= 0; i--) {
     if (history[i].playerId === playerId) return history[i].card;
@@ -95,8 +131,12 @@ export function OpponentStrip({
         {players.map((p, i) => {
           const active = i === currentPlayerIndex;
           const isOpen = openId === p.id;
-          const avatar = p.isAI ? p.name.split(" ")[0] : p.name.trim().charAt(0).toUpperCase() || "•";
-          const shortName = p.isAI ? p.name.replace(/^\S+\s+/, "") : p.name;
+          const { emoji: humanEmoji, rest: humanRest } = p.isAI
+            ? { emoji: null, rest: p.name }
+            : splitLeadingEmoji(p.name);
+          const isEmojiAvatar = p.isAI || !!humanEmoji;
+          const avatar = p.isAI ? p.name.split(" ")[0] : humanEmoji ?? (humanRest.charAt(0).toUpperCase() || "•");
+          const shortName = p.isAI ? p.name.replace(/^\S+\s+/, "") : humanRest;
           return (
             <button
               key={p.id}
@@ -114,7 +154,7 @@ export function OpponentStrip({
               <span
                 aria-hidden="true"
                 className={
-                  p.isAI
+                  isEmojiAvatar
                     ? "text-sm leading-none"
                     : "grid h-4 w-4 place-items-center rounded-full bg-[var(--panel-soft)] text-[10px] font-bold leading-none text-[var(--muted)]"
                 }
