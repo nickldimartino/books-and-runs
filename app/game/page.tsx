@@ -31,8 +31,8 @@ import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
 import { useFocusTrap } from "../lib/useFocusTrap";
-import { playGameWin, playRoundWin } from "../lib/sound";
-import { hapticSuccess } from "../lib/haptics";
+import { playCardSlide, playGameWin, playRoundWin } from "../lib/sound";
+import { hapticLight, hapticSuccess } from "../lib/haptics";
 import { layOffOptions, runCardRank, RUN_ORDER, solveContract, solveWholeHandContract, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
@@ -794,7 +794,9 @@ export default function GamePage() {
       ? solveWholeHandContract(player.hand, contract, player.id)
       : solveContract(player.hand, contract, player.id);
     if (!melds) {
-      setGroupError("No complete contract in your hand yet — draw and try again.");
+      setGroupError(
+        `Nothing in your hand completes ${contractNeedLabel(contract.books, contract.runs)} yet — draw and check again.`
+      );
       return;
     }
     setPendingGroupChoice(null);
@@ -808,6 +810,11 @@ export default function GamePage() {
         runStartIndex: m.runStartIndex,
       }))
     );
+    // The groups above are only staged, not committed — the same sweep
+    // sound reorderHand/sortHand use for "cards moving," not confirmMeld's
+    // heavier landing sound, since nothing's actually melded until Confirm.
+    playCardSlide();
+    hapticLight();
   }
 
   function handleConfirmMeld() {
@@ -900,13 +907,20 @@ export default function GamePage() {
       {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
 
       {meldHintsEnabled && pendingGroups.length === 0 && (
-        <button
-          onClick={showMeldHint}
-          disabled={!hasDrawn || !!pendingGroupChoice}
-          className="text-xs font-medium text-[var(--accent)] underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          💡 Show me a meld
-        </button>
+        <div className="flex flex-col items-center gap-1">
+          <button
+            onClick={showMeldHint}
+            disabled={!hasDrawn || !!pendingGroupChoice}
+            aria-label="Find a meld in your hand and stage it for you to review"
+            className="flex items-center gap-2 rounded-full border border-[var(--accent)]/50 bg-[var(--accent)]/10 py-2 pl-3 pr-4 text-sm font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[var(--accent)]/10"
+          >
+            <span aria-hidden="true" className="text-base leading-none">
+              💡
+            </span>
+            Show me a meld
+          </button>
+          {!hasDrawn && <p className="text-[11px] text-[var(--faint)]">Draw a card first — it needs your full hand.</p>}
+        </div>
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-3">
