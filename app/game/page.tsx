@@ -30,6 +30,7 @@ import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
 import { loadLocalSettings } from "../lib/settingsStore";
+import { useFocusTrap } from "../lib/useFocusTrap";
 import { playGameWin, playRoundWin } from "../lib/sound";
 import { hapticSuccess } from "../lib/haptics";
 import { layOffOptions, runCardRank, RUN_ORDER, solveContract, solveWholeHandContract, validateManualGroup } from "@/meld";
@@ -179,6 +180,10 @@ export default function GamePage() {
   const [confirmingDiscard, setConfirmingDiscard] = useState<Card | null>(null);
   // Reset alongside every other per-turn UI state.
   const [handDrawerOpen, setHandDrawerOpen] = useState(false);
+  const handDrawerRef = useRef<HTMLDivElement | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const announcedTurnRef = useRef<number | null>(null);
+  const announcedDrawRef = useRef<string | null>(null);
   // Plain ref — an imperative handle for the drawer layout's "Lay off card"
   // button to scroll Table melds into view once it closes the drawer.
   const tableMeldsElRef = useRef<HTMLElement | null>(null);
@@ -269,12 +274,10 @@ export default function GamePage() {
   // The hand drawer is this codebase's
   // first real modal — the wild lay-off/turn-banner overlays are both
   // fixed-position but never block the page behind them the way this one's
-  // backdrop does, so unlike those, this needs the two things a genuine
-  // modal is expected to do: stop the page behind it from scrolling, and
-  // close on Escape. No focus trap, deliberately — there's no established
-  // pattern for one anywhere in this codebase yet, and this drawer's own
-  // content (the hand, its sort buttons, meld-builder controls) is already
-  // reachable by tab order without one.
+  // backdrop does, so unlike those, this needs what a genuine modal is
+  // expected to do: stop the page behind it from scrolling, close on
+  // Escape, and trap focus (useFocusTrap on handDrawerRef below) so a
+  // keyboard / screen-reader user can't tab out onto the hidden board.
   useEffect(() => {
     if (!handDrawerOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -288,6 +291,27 @@ export default function GamePage() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [handDrawerOpen]);
+  useFocusTrap(handDrawerRef, handDrawerOpen);
+
+  // Screen-reader announcements (rendered into the sr-only live region in
+  // the main return): whose turn it is, and your own draw.
+  useEffect(() => {
+    if (!state || state.gameOver || awaitingReveal) return;
+    const idx = state.currentPlayerIndex;
+    if (announcedTurnRef.current === idx) return;
+    announcedTurnRef.current = idx;
+    const p = state.players[idx];
+    setAnnouncement(p.id === YOU_PLAYER_ID ? "Your turn." : `${p.name}'s turn.`);
+  }, [state, awaitingReveal]);
+  useEffect(() => {
+    if (!lastDrawnCardId || !state || announcedDrawRef.current === lastDrawnCardId) return;
+    if (state.players[state.currentPlayerIndex]?.id !== YOU_PLAYER_ID) return;
+    announcedDrawRef.current = lastDrawnCardId;
+    const card = state.players
+      .find((p) => p.id === YOU_PLAYER_ID)
+      ?.hand.find((c) => c.id === lastDrawnCardId);
+    if (card) setAnnouncement(`You drew the ${cardLabel(card)}.`);
+  }, [lastDrawnCardId, state]);
 
   function handleShowWhoseTurn() {
     setWhoseTurnVisible(true);
@@ -1007,6 +1031,11 @@ export default function GamePage() {
 
   return (
     <main className="game-felt mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
+      {/* Screen-reader running commentary — turn changes and your own draws.
+          AI plays are announced separately by OpponentStrip's status line. */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </div>
       <div className="flex items-center justify-between">
         <button
           onClick={() => {
@@ -1430,15 +1459,17 @@ export default function GamePage() {
                 className="fixed inset-0 z-[45] bg-black/50"
               />
               <div
+                ref={handDrawerRef}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Manage your hand"
+                tabIndex={-1}
                 // max-w-2xl + mx-auto: on a wide screen the drawer is a
                 // centered column the same width as the game board, so the
                 // hand, the sort buttons, and the meld/discard controls all
                 // sit within one reach instead of spread across the whole
                 // viewport. Full-bleed on phones (where max-w-2xl > screen).
-                className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl"
+                className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl outline-none"
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>

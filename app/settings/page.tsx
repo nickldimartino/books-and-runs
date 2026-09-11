@@ -216,7 +216,7 @@ function SwatchLinkRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
-          <span className="block text-xs text-[var(--faint)]">Tap to change</span>
+          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
         </span>
         <ChevronRightIcon />
       </Link>
@@ -407,6 +407,7 @@ export default function SettingsPage() {
             <select
               value={settings.preferredAiDifficulty}
               onChange={(e) => updateSettings({ preferredAiDifficulty: e.target.value as Difficulty })}
+              aria-label="Default AI difficulty"
               className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
             >
               {DIFFICULTIES.map((d) => (

@@ -41,10 +41,12 @@
   --border: rgba(30, 41, 26, 0.12);
   --heading: #1f3d2e;
   --text: #24291f;
-  --muted: rgba(36, 41, 31, 0.68);
-  --faint: rgba(36, 41, 31, 0.42);
-  --accent: #d97706;
-  --accent-hover: #b45309;
+  --muted: rgba(36, 41, 31, 0.72);
+  --faint: rgba(36, 41, 31, 0.5);
+  /* Deepened from #d97706 so cream text on an accent button clears WCAG AA
+     (4.5:1) — the old amber only hit 3.06:1. */
+  --accent: #a85708;
+  --accent-hover: #8a4708;
   --on-accent: #fffaf0;
   --danger: #dc2626;
   --highlight: #0284c7;

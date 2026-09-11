@@ -1,7 +1,7 @@
 {
   "name": "books-and-runs",
   "version": "1.0.0",
-  "description": "Books & Runs \u2014 local pass-and-play card game with AI opponents",
+  "description": "Books & Runs — local pass-and-play card game with AI opponents",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -19,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@babel/core": "^7.29.7",
     "@babel/eslint-parser": "^7.29.7",
     "@babel/preset-react": "^7.29.7",

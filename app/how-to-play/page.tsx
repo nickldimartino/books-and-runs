@@ -62,7 +62,7 @@ export default function HowToPlayPage() {
         </p>
         <div className="overflow-hidden rounded-xl border border-[var(--border)]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--panel)] text-[var(--faint)]">
+            <thead className="bg-[var(--panel)] text-[var(--muted)]">
               <tr>
                 <th className="px-3 py-2 font-medium">Round</th>
                 <th className="px-3 py-2 font-medium">Contract</th>
@@ -245,7 +245,7 @@ export default function HowToPlayPage() {
         </p>
         <div className="overflow-hidden rounded-xl border border-[var(--border)]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--panel)] text-[var(--faint)]">
+            <thead className="bg-[var(--panel)] text-[var(--muted)]">
               <tr>
                 <th className="px-3 py-2 font-medium">Card</th>
                 <th className="px-3 py-2 font-medium">Penalty points</th>
