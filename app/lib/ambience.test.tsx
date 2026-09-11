@@ -51,10 +51,15 @@ class FakeFilter {
 class FakeAudioContext {
   state: "running" | "suspended" = "running";
   currentTime = 0;
+  sampleRate = 44100;
   destination = fakeNode();
   createOscillator = vi.fn(() => new FakeOscillator());
   createGain = vi.fn(() => new FakeGain());
   createBiquadFilter = vi.fn(() => new FakeFilter());
+  createConvolver = vi.fn(() => ({ buffer: null, connect: vi.fn(() => fakeNode()) }));
+  createBuffer = vi.fn((_channels: number, length: number) => ({
+    getChannelData: () => new Float32Array(length),
+  }));
   resume = vi.fn(async () => {
     this.state = "running";
   });
@@ -98,6 +103,62 @@ describe("ambience", () => {
     // filter's own sweep LFO.
     expect(lastContext!.createOscillator).toHaveBeenCalledTimes(9);
     expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
+    // The synthetic reverb — one impulse-response buffer fed to one
+    // ConvolverNode, built once at start.
+    expect(lastContext!.createConvolver).toHaveBeenCalledTimes(1);
+    expect(lastContext!.createBuffer).toHaveBeenCalledTimes(1);
+  });
+
+  it("glides every pad voice to the next chord once the hold period elapses", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+      const oscillatorsAtStart = lastContext!.createOscillator.mock.results.map((r) => r.value as FakeOscillator);
+
+      // Hold (20s) + morph (5s), from the module's own constants — none of
+      // these oscillators' frequencies have been touched since creation.
+      await vi.advanceTimersByTimeAsync(25_000);
+
+      const glided = oscillatorsAtStart.filter((osc) => osc.frequency.linearRampToValueAtTime.mock.calls.length > 0);
+      // Exactly the 4 pad voices glide on a chord change — their detune
+      // LFOs and the filter-sweep LFO never touch .frequency.
+      expect(glided).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("occasionally drops in a sparse melody note", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+      const oscillatorsAtStart = lastContext!.createOscillator.mock.calls.length;
+
+      // Comfortably past the module's own max melody-note delay (14s).
+      await vi.advanceTimersByTimeAsync(15_000);
+
+      expect(lastContext!.createOscillator.mock.calls.length).toBeGreaterThan(oscillatorsAtStart);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stop() cancels pending chord/melody timers — nothing fires afterward", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience, stopAmbience } = await import("./ambience");
+      startAmbience();
+      stopAmbience();
+      const oscillatorsAfterStop = lastContext!.createOscillator.mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(lastContext!.createOscillator.mock.calls.length).toBe(oscillatorsAfterStop);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("is idempotent — calling start again while playing doesn't rebuild the graph", async () => {

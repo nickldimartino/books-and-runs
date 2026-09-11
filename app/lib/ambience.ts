@@ -1,28 +1,49 @@
 import { loadLocalSettings } from "./settingsStore";
 
 /**
- * Optional generative ambient pad for the game screens — synthesized with
- * the Web Audio API, same "no audio files, no licensing, works offline"
- * approach sound.ts already uses for SFX, just sustained instead of a
- * one-shot burst. A bare open-fifth drone (no major/minor third) across
- * four octaves, each voice very slowly detuned by its own LFO so the chord
- * never quite locks into a static, looping-sounding tone, with a slow
- * filter sweep on top for a little movement. Entirely separate from
- * sound.ts's own AudioContext/volume — see settingsStore.ts's own doc for
- * why this is its own toggle, off by default.
+ * Optional generative ambient music for the game screens — synthesized
+ * entirely with the Web Audio API (same "no audio files, no licensing,
+ * works offline" approach sound.ts already uses for SFX), aiming for a
+ * calm, evolving backdrop rather than a single static tone: a four-voice
+ * pad that glides between a slow D-minor chord progression (i–bVII–bVI–v),
+ * a sparse plucked melody drawn from the same scale and dropped in at
+ * random intervals, and a touch of synthetic hall reverb so the whole
+ * thing has some space instead of sounding like a dry lab tone. Entirely
+ * separate from sound.ts's own AudioContext/volume — see settingsStore.ts's
+ * own doc for why this is its own toggle, off by default.
  */
 
 let ctx: AudioContext | null = null;
-let ambientGain: GainNode | null = null;
-let filter: BiquadFilterNode | null = null;
+let masterGain: GainNode | null = null;
+let padFilter: BiquadFilterNode | null = null;
 let voices: { osc: OscillatorNode; lfo: OscillatorNode }[] = [];
 let filterLfo: OscillatorNode | null = null;
+let mixBus: GainNode | null = null;
 let running = false;
+let chordStep = 0;
+let sessionId = 0;
+let timers: number[] = [];
 
-// C2, G2, C3, G3 — a bare fifth, calm and harmonically neutral rather than
-// clearly major or minor (which would read as more "cheerful"/"tense" than
-// a background pad should).
-const CHORD_HZ = [65.41, 98.0, 130.81, 196.0];
+// Each chord is the four pad voices' target frequency (bass → soprano),
+// voiced in similar registers to the next chord so a voice glides a short
+// distance rather than leaping — i (Dm) → bVII (C) → bVI (Bb) → v (Am), a
+// calm, modal, slightly melancholy loop rather than a clear major "theme".
+const CHORDS: [number, number, number, number][] = [
+  [146.83, 174.61, 220.0, 293.66], // Dm  — D3 F3 A3 D4
+  [130.81, 164.81, 196.0, 261.63], // C   — C3 E3 G3 C4
+  [116.54, 146.83, 174.61, 233.08], // Bb — Bb2 D3 F3 Bb3
+  [110.0, 130.81, 164.81, 196.0], // Am  — A2 C3 E3 G3
+];
+
+// D natural minor across two octaves — the sparse melody's note pool, kept
+// separate from the pad's own voices so a melody note is always consonant
+// with whichever chord happens to be holding underneath it.
+const MELODY_SCALE = [293.66, 329.63, 349.23, 392.0, 440.0, 466.16, 523.25, 587.33];
+
+const CHORD_HOLD_SECONDS = 20;
+const CHORD_MORPH_SECONDS = 5;
+const MELODY_MIN_DELAY_MS = 5000;
+const MELODY_MAX_DELAY_MS = 14000;
 
 function clampVolume(v: number): number {
   // Capped well below sound.ts's own ceiling — even "100%" on this slider
@@ -48,6 +69,85 @@ function ensureContext(): AudioContext | null {
   return ctx;
 }
 
+// A short synthetic impulse response (exponentially-decaying white noise)
+// fed to a ConvolverNode — the cheapest way to get a real sense of space
+// out of Web Audio without shipping an actual recorded IR file.
+function createReverbImpulse(c: AudioContext): AudioBuffer {
+  const seconds = 2.8;
+  const decay = 3.2;
+  const length = Math.floor(c.sampleRate * seconds);
+  const impulse = c.createBuffer(2, length, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    }
+  }
+  return impulse;
+}
+
+// Glides every pad voice to the next chord in the progression over
+// CHORD_MORPH_SECONDS, holds there, then schedules the next change —
+// this (not a hard cut) is what keeps the pad from ever repeating the
+// original single-drone complaint: it's always slowly on its way
+// somewhere else.
+function scheduleNextChord(c: AudioContext, mySession: number): void {
+  const id = window.setTimeout(
+    () => {
+      if (!running || mySession !== sessionId) return;
+      chordStep = (chordStep + 1) % CHORDS.length;
+      const chord = CHORDS[chordStep];
+      const now = c.currentTime;
+      voices.forEach((v, i) => {
+        v.osc.frequency.cancelScheduledValues(now);
+        v.osc.frequency.setValueAtTime(v.osc.frequency.value, now);
+        v.osc.frequency.linearRampToValueAtTime(chord[i], now + CHORD_MORPH_SECONDS);
+      });
+      scheduleNextChord(c, mySession);
+    },
+    (CHORD_HOLD_SECONDS + CHORD_MORPH_SECONDS) * 1000
+  );
+  timers.push(id);
+}
+
+// A single soft, plucked note — a triangle oscillator with a quick swell
+// and a slow decay, the same shape a harp or kalimba note has, dropped
+// through the shared reverb bus. Short-lived: it disconnects itself once
+// it's done, nothing here needs tearing down from stopAmbience.
+function playMelodyNote(c: AudioContext): void {
+  if (!mixBus) return;
+  const freq = MELODY_SCALE[Math.floor(Math.random() * MELODY_SCALE.length)];
+  const osc = c.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.value = freq;
+
+  const noteFilter = c.createBiquadFilter();
+  noteFilter.type = "lowpass";
+  noteFilter.frequency.value = 2200;
+
+  const noteGain = c.createGain();
+  noteGain.gain.value = 0;
+
+  osc.connect(noteFilter).connect(noteGain).connect(mixBus);
+
+  const now = c.currentTime;
+  noteGain.gain.setValueAtTime(0, now);
+  noteGain.gain.linearRampToValueAtTime(0.22, now + 0.6);
+  noteGain.gain.linearRampToValueAtTime(0, now + 3.2);
+  osc.start(now);
+  osc.stop(now + 3.4);
+}
+
+function scheduleNextNote(c: AudioContext, mySession: number): void {
+  const delay = MELODY_MIN_DELAY_MS + Math.random() * (MELODY_MAX_DELAY_MS - MELODY_MIN_DELAY_MS);
+  const id = window.setTimeout(() => {
+    if (!running || mySession !== sessionId) return;
+    playMelodyNote(c);
+    scheduleNextNote(c, mySession);
+  }, delay);
+  timers.push(id);
+}
+
 /** Starts the pad (fades in over ~2.5s). A no-op if already playing, or if
  * the browser has no Web Audio support at all. Safe to call from a page
  * mount effect — if the AudioContext comes up suspended (no user gesture
@@ -57,28 +157,47 @@ export function startAmbience(): void {
   const c = ensureContext();
   if (!c) return;
   running = true;
+  chordStep = 0;
+  sessionId += 1;
+  const mySession = sessionId;
 
-  filter = c.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 900;
-  filter.Q.value = 0.7;
+  padFilter = c.createBiquadFilter();
+  padFilter.type = "lowpass";
+  padFilter.frequency.value = 900;
+  padFilter.Q.value = 0.7;
 
-  ambientGain = c.createGain();
-  ambientGain.gain.value = 0;
-  filter.connect(ambientGain);
-  ambientGain.connect(c.destination);
+  masterGain = c.createGain();
+  masterGain.gain.value = 0;
 
-  voices = CHORD_HZ.map((freq, i) => {
+  mixBus = c.createGain();
+  mixBus.gain.value = 1;
+  padFilter.connect(mixBus);
+
+  // Dry signal straight through, plus a reverb send through a short
+  // synthetic impulse response — together these are most of what makes
+  // this read as produced ambient music rather than a bare synth tone.
+  const dryGain = c.createGain();
+  dryGain.gain.value = 0.75;
+  const reverbSend = c.createGain();
+  reverbSend.gain.value = 0.45;
+  const convolver = c.createConvolver();
+  convolver.buffer = createReverbImpulse(c);
+
+  mixBus.connect(dryGain).connect(masterGain);
+  mixBus.connect(reverbSend).connect(convolver).connect(masterGain);
+  masterGain.connect(c.destination);
+
+  voices = CHORDS[0].map((freq, i) => {
     const osc = c.createOscillator();
     osc.type = "sine";
     osc.frequency.value = freq;
 
     const oscGain = c.createGain();
-    oscGain.gain.value = 1 / CHORD_HZ.length;
+    oscGain.gain.value = 1 / CHORDS[0].length;
 
     // A slow, per-voice detune wobble (phase-offset so the voices don't
-    // swell in unison) — what keeps a sustained drone from reading as a
-    // static, obviously-looping tone.
+    // swell in unison) — what keeps a held chord from reading as a static,
+    // obviously-looping tone in between chord changes.
     const lfo = c.createOscillator();
     lfo.type = "sine";
     lfo.frequency.value = 0.05 + i * 0.013;
@@ -86,7 +205,7 @@ export function startAmbience(): void {
     lfoGain.gain.value = 3;
     lfo.connect(lfoGain).connect(osc.detune);
 
-    osc.connect(oscGain).connect(filter!);
+    osc.connect(oscGain).connect(padFilter!);
     lfo.start();
     osc.start();
     return { osc, lfo };
@@ -97,13 +216,16 @@ export function startAmbience(): void {
   filterLfo.frequency.value = 0.02;
   const filterLfoGain = c.createGain();
   filterLfoGain.gain.value = 350;
-  filterLfo.connect(filterLfoGain).connect(filter.frequency);
+  filterLfo.connect(filterLfoGain).connect(padFilter.frequency);
   filterLfo.start();
 
   const vol = clampVolume(loadLocalSettings().ambientVolume);
   const now = c.currentTime;
-  ambientGain.gain.setValueAtTime(0, now);
-  ambientGain.gain.linearRampToValueAtTime(vol, now + 2.5);
+  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.linearRampToValueAtTime(vol, now + 2.5);
+
+  scheduleNextChord(c, mySession);
+  scheduleNextNote(c, mySession);
 
   if (c.state === "suspended") {
     const retry = () => c.resume().catch(() => {});
@@ -115,12 +237,16 @@ export function startAmbience(): void {
 /** Fades out over ~1.2s and tears down the oscillator graph. Safe to call
  * even if nothing's playing. */
 export function stopAmbience(): void {
-  if (!running || !ctx || !ambientGain) {
+  timers.forEach((id) => window.clearTimeout(id));
+  timers = [];
+  sessionId += 1; // invalidates any callback already past its clearTimeout race
+
+  if (!running || !ctx || !masterGain) {
     running = false;
     return;
   }
   const c = ctx;
-  const gain = ambientGain;
+  const gain = masterGain;
   const now = c.currentTime;
   gain.gain.cancelScheduledValues(now);
   gain.gain.setValueAtTime(gain.gain.value, now);
@@ -146,12 +272,13 @@ export function stopAmbience(): void {
 
   voices = [];
   filterLfo = null;
+  mixBus = null;
   running = false;
 }
 
 /** Re-reads the volume setting and ramps to it smoothly — called when the
  * player moves the slider while ambience is already playing. */
 export function setAmbienceVolume(volume: number): void {
-  if (!ambientGain || !ctx) return;
-  ambientGain.gain.setTargetAtTime(clampVolume(volume), ctx.currentTime, 0.3);
+  if (!masterGain || !ctx) return;
+  masterGain.gain.setTargetAtTime(clampVolume(volume), ctx.currentTime, 0.3);
 }

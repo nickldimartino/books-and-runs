@@ -4,7 +4,7 @@ import { CSSProperties, useState } from "react";
 import { THEMES, ThemeCategory, ThemeId, ThemeOption } from "../lib/themeStore";
 import { THEME_SWATCHES } from "./themeSwatches";
 
-function CheckBadge({ className }: { className: string }) {
+export function CheckBadge({ className }: { className: string }) {
   return (
     <svg viewBox="0 0 20 20" className={className} fill="currentColor" aria-hidden="true">
       <path

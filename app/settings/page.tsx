@@ -18,6 +18,14 @@ import {
 } from "../lib/cardBackStore";
 import { setAmbienceVolume } from "../lib/ambience";
 import {
+  CARD_FACES,
+  CardFaceId,
+  DEFAULT_CARD_FACE,
+  loadLocalCardFace,
+  saveLocalCardFace,
+} from "../lib/cardFaceStore";
+import { CardFace } from "../components/CardFace";
+import {
   getPushPermission,
   isPushSubscribed,
   subscribeToPush,
@@ -235,11 +243,40 @@ function SwatchLinkRow({
   );
 }
 
+// The same "current selection, tap to change" row as SwatchLinkRow, but
+// previewing an actual small rendered card instead of a flat color circle —
+// what's being chosen here is a drawing, not a color, so a real preview of
+// it is more honest than a swatch.
+function CardFaceLinkRow({ name, cardFace }: { name: string; cardFace: CardFaceId }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[var(--muted)]">Card face</label>
+      <Link
+        href="/settings/card-face"
+        className="flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition hover:bg-[var(--panel-soft)]"
+      >
+        <span
+          className="card-face flex h-9 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md"
+          aria-hidden="true"
+        >
+          <CardFace card={{ id: "preview", suit: "hearts", rank: "7", isWild: false }} style={cardFace} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
+          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
+        </span>
+        <ChevronRightIcon />
+      </Link>
+    </section>
+  );
+}
+
 export default function SettingsPage() {
   const { configured, user } = useAuth();
   const [settings, setSettings] = useState<HouseSettings>(DEFAULT_SETTINGS);
   const [theme, setTheme] = useState<ThemeId>("midnight");
   const [cardBack, setCardBack] = useState<CardBackId>(DEFAULT_CARD_BACK);
+  const [cardFace, setCardFace] = useState<CardFaceId>(DEFAULT_CARD_FACE);
   const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -251,6 +288,7 @@ export default function SettingsPage() {
     setSettings(loadLocalSettings());
     setTheme(loadLocalTheme());
     setCardBack(loadLocalCardBack());
+    setCardFace(loadLocalCardFace());
     setColorblindMode(loadLocalColorblindMode());
     const permission = getPushPermission();
     if (permission === "unsupported") setPushState("unsupported");
@@ -306,6 +344,8 @@ export default function SettingsPage() {
     setCardBack(DEFAULT_CARD_BACK);
     saveLocalCardBack(DEFAULT_CARD_BACK);
     applyCardBack(DEFAULT_CARD_BACK, DEFAULT_THEME);
+    setCardFace(DEFAULT_CARD_FACE);
+    saveLocalCardFace(DEFAULT_CARD_FACE);
     setColorblindMode(DEFAULT_COLORBLIND_MODE);
     saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
     applyColorblindMode(DEFAULT_COLORBLIND_MODE);
@@ -394,6 +434,11 @@ export default function SettingsPage() {
             label="Card back"
             name={activeCardBackOption ? activeCardBackOption.name : "Match table theme"}
             swatch={THEME_SWATCHES[activeCardBackOption ? activeCardBackOption.id : theme]}
+          />
+
+          <CardFaceLinkRow
+            name={CARD_FACES.find((f) => f.id === cardFace)?.name ?? "Classic"}
+            cardFace={cardFace}
           />
 
           <section className="flex flex-col gap-2">

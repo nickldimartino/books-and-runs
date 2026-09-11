@@ -152,6 +152,7 @@ AuthProvider
 | `settingsStore.ts` | `settings` — house rules (`HouseSettings`): preferred difficulty, sound, haptics. |
 | `themeStore.ts` | `theme` — 38 themes, applied via `[data-theme]` before paint. |
 | `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme). |
+| `cardFaceStore.ts` | `cardFace` — 6 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
@@ -272,7 +273,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | Task | Command |
 |---|---|
 | Dev server | `npm run dev` |
-| Tests | `npm test` (vitest, 294 tests) |
+| Tests | `npm test` (vitest, 310 tests) |
 | E2E | `npm run test:e2e:ci` (Playwright — 5 browser projects; excludes `@visual` and self-skips the live 2-account MP test without `SUPABASE_SERVICE_ROLE_KEY`) |
 | Typecheck | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
