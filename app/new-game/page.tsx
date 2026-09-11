@@ -49,15 +49,23 @@ export default function NewGamePage() {
     router.push("/game");
   }
 
+  // What "Play my usual" actually shows and deals — the saved config with
+  // seat 0's name overridden by the account's *current* display name, so
+  // the card can never show (or deal) a stale name after it's changed on
+  // the Account page. Computed once and reused for both the description
+  // and the deal itself.
+  const yourNameLocked = !!(configured && user);
+  const yourName = accountDisplayName?.trim() || "You";
+  const favoriteForDisplay: FavoriteGameConfig | null =
+    favorite && yourNameLocked ? { ...favorite, humanNames: [yourName, ...favorite.humanNames.slice(1)] } : favorite;
+
   function playFavorite() {
-    if (!favorite) return;
-    const yourName = (configured && user && accountDisplayName?.trim()) || "You";
-    const humanNames =
-      configured && user
-        ? [yourName, ...favorite.humanNames.slice(1, favorite.humanCount)]
-        : favorite.humanNames.slice(0, favorite.humanCount);
-    const configs = playerConfigsFor(humanNames, favorite.aiDifficulties);
-    startNewGame(configs, contractsFor(favorite.roundMode, favorite.customRounds), true);
+    if (!favoriteForDisplay) return;
+    const configs = playerConfigsFor(
+      favoriteForDisplay.humanNames.slice(0, favoriteForDisplay.humanCount),
+      favoriteForDisplay.aiDifficulties
+    );
+    startNewGame(configs, contractsFor(favoriteForDisplay.roundMode, favoriteForDisplay.customRounds), true);
     router.push("/game");
   }
 
@@ -75,10 +83,10 @@ export default function NewGamePage() {
       <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
 
       <div className="flex flex-col gap-3">
-        {favorite && (
+        {favoriteForDisplay && (
           <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-5">
             <p className="text-base font-semibold text-[var(--heading)]">Play my usual</p>
-            <p className="mt-1 text-sm text-[var(--muted)]">{describeFavoriteGameConfig(favorite)}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{describeFavoriteGameConfig(favoriteForDisplay)}</p>
             <button
               onClick={playFavorite}
               className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"

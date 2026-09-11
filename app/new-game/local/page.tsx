@@ -151,6 +151,15 @@ export default function NewLocalGamePage() {
   const selectedContracts: ContractRequirement[] = contractsFor(roundMode, customRounds);
   const canStart = totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS && selectedContracts.length > 0;
 
+  // What "Your usual" actually shows and plays — the saved config with seat
+  // 0's name overridden by the account's *current* display name, same as
+  // handlePlayFavorite already deals under. Computed once and reused for
+  // both, so the card can never show a stale name while dealing a fresh
+  // one (or vice versa) — describing `favorite` directly here was exactly
+  // that bug.
+  const favoriteForDisplay: FavoriteGameConfig | null =
+    favorite && yourNameLocked ? { ...favorite, humanNames: [yourName, ...favorite.humanNames.slice(1)] } : favorite;
+
   // The current form as a saveable config — also what "Save as my usual"
   // snapshots.
   const currentConfig: FavoriteGameConfig = {
@@ -229,12 +238,8 @@ export default function NewLocalGamePage() {
   }
 
   function handlePlayFavorite() {
-    if (!favorite) return;
-    // Seat 0 always plays under the account's *current* name, even if it's
-    // changed since this lineup was saved — the saved blob isn't the source
-    // of truth for it, Account settings is.
-    const cfg = yourNameLocked ? { ...favorite, humanNames: [yourName, ...favorite.humanNames.slice(1)] } : favorite;
-    dealAndGo(cfg, favorite.humanCount, true);
+    if (!favoriteForDisplay) return;
+    dealAndGo(favoriteForDisplay, favoriteForDisplay.humanCount, true);
   }
 
   function handleSaveFavorite() {
@@ -271,13 +276,13 @@ export default function NewLocalGamePage() {
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">Solo &amp; pass-and-play</h1>
 
-      {favorite && (
+      {favoriteForDisplay && (
         <section className="flex flex-col gap-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-[var(--heading)]">Your usual</h2>
               <p className="mt-0.5 truncate text-xs text-[var(--muted)]">
-                {describeFavoriteGameConfig(favorite)}
+                {describeFavoriteGameConfig(favoriteForDisplay)}
               </p>
             </div>
             <button
