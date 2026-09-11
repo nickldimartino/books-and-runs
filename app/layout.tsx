@@ -6,8 +6,7 @@ import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
 import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
 import { SettingsSync } from "./SettingsSync";
-import { DEFAULT_THEME, THEME_BG, THEMES } from "./lib/themeStore";
-import { COLORBLIND_MODES } from "./lib/colorblindStore";
+import { DEFAULT_THEME, THEME_BG } from "./lib/themeStore";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -59,60 +58,39 @@ export const viewport: Viewport = {
   themeColor: THEME_BG[DEFAULT_THEME],
 };
 
-// Applies a previously-chosen theme before first paint, so static export's
-// server-rendered (theme-less) HTML doesn't flash Midnight before swapping
-// to whatever the visitor picked last time. The allow-list is generated
-// from THEMES itself (not hand-copied) so adding a theme there can never
-// again silently leave this check stale — a stale list here meant a saved
-// theme applied fine within a session (applyTheme sets the attribute
-// directly) but silently reverted to Midnight on every full page load.
-// Also re-points the theme-color <meta> tag (see the `viewport` export
-// above) at the saved theme's own --bg, for the same reason and on the same
-// before-first-paint schedule — otherwise every page load would show
-// DEFAULT_THEME's status-bar tint for an instant (or indefinitely, for
-// anyone who never happens to touch the theme picker mid-session) instead
-// of the visitor's actual theme.
-const THEME_IDS_JSON = JSON.stringify(THEMES.map((t) => t.id));
-const THEME_BG_JSON = JSON.stringify(THEME_BG);
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("booksAndRuns:theme");if(${THEME_IDS_JSON}.indexOf(t)!==-1){document.documentElement.setAttribute("data-theme",t);var m=document.querySelector('meta[name="theme-color"]');var bg=${THEME_BG_JSON};if(m&&bg[t])m.setAttribute("content",bg[t]);}}catch(e){}})();`;
-
-// Same reasoning as THEME_INIT_SCRIPT, for the colorblind card-color
-// override (see colorblindStore.ts) — applied before first paint so a
-// returning visitor with a non-default mode saved doesn't see a flash of
-// standard card colors before hydration catches up. "off" is deliberately
-// excluded from the allow-list: applyColorblindMode() never sets the
-// attribute for "off" (it removes it instead), and the CSS in globals.css
-// has no [data-colorblind="off"] block to match anyway.
-const COLORBLIND_IDS_JSON = JSON.stringify(COLORBLIND_MODES.map((m) => m.id).filter((id) => id !== "off"));
-const COLORBLIND_INIT_SCRIPT = `(function(){try{var c=localStorage.getItem("booksAndRuns:colorblindMode");if(${COLORBLIND_IDS_JSON}.indexOf(c)!==-1){document.documentElement.setAttribute("data-colorblind",c);}}catch(e){}})();`;
-
-// Same reasoning again, for the card back (see cardBackStore.ts) — computed
-// rather than just copied from data-theme, since the saved choice might be
-// "match" (mirror whatever the table theme is, the default) or a real theme
-// id of its own; reuses THEME_IDS_JSON's own allow-list and "midnight"
-// fallback so this can never drift out of step with loadLocalTheme's own
-// default. Runs after THEME_INIT_SCRIPT sets data-theme, but computes its
-// own `theme` value independently rather than reading the attribute back
-// off <html> — cheaper, and avoids any ordering assumption between the two
-// script tags.
-const CARDBACK_INIT_SCRIPT = `(function(){try{var ids=${THEME_IDS_JSON};var t=localStorage.getItem("booksAndRuns:theme");var theme=ids.indexOf(t)!==-1?t:"midnight";var cb=localStorage.getItem("booksAndRuns:cardBack");var effective=cb==="match"?theme:(ids.indexOf(cb)!==-1?cb:theme);document.documentElement.setAttribute("data-cardback",effective);}catch(e){}})();`;
-
-// Arms the first-visit intro (see components/IntroSplash.tsx). Runs before
-// the body paints so html[data-intro]::before can cover the screen with no
-// flash of the home content underneath. Only the very first entry to "/" in
-// a browser session: a refresh keeps sessionStorage so it won't replay, and
-// reduced-motion skips it entirely. The 4.5s self-clear is a safety net in
-// case the React component never mounts.
-const INTRO_INIT_SCRIPT = `(function(){try{if(location.pathname!=="/")return;if(sessionStorage.getItem("booksAndRuns:introSeen"))return;if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){sessionStorage.setItem("booksAndRuns:introSeen","1");return;}document.documentElement.setAttribute("data-intro","1");setTimeout(function(){document.documentElement.removeAttribute("data-intro");},4500);}catch(e){}})();`;
+// Applies the saved theme/colorblind-mode/card-back before first paint, and
+// arms the first-visit intro — all four used to be inline
+// <script dangerouslySetInnerHTML> tags here, generated from THEMES/
+// THEME_BG/COLORBLIND_MODES at build time. Moved to public/init.js, loaded
+// below as a plain, deliberately-synchronous <script src> in the same spot
+// — the whole point is running during HTML parsing, before the browser's
+// first paint, so a returning visitor's saved theme is already applied by
+// the time anything is on screen; that's also exactly why it's NOT
+// next/script's beforeInteractive strategy despite the name — that
+// executes once Next's own client bootstrap runs and inserts it, which
+// isn't guaranteed to land before first paint the way parsing a plain
+// synchronous <script> does (verified by watching for a theme flash with
+// each approach). The eslint-disable below is that same tradeoff, not an
+// oversight — a blocking script is the point, not a bug.
+//
+// This was originally meant to also let vercel.json's CSP drop
+// script-src 'unsafe-inline' — turned out not to be reachable: this
+// (modified) Next's App Router streams the RSC payload into the client via
+// its own inline `<script>self.__next_f.push(...)</script>` tags (visible
+// in `out/*.html` after a build), a different mechanism entirely and not
+// something app code controls. Tested directly (a local static server
+// replaying vercel.json's header with 'unsafe-inline' removed): those
+// tags get blocked and hydration fails outright (React error #412) on
+// every page. Keeping this file external anyway — real code organization
+// win, and it's one less inline script in the count if Next ever offers a
+// nonce/hash mechanism for the RSC payload itself.
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: COLORBLIND_INIT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: CARDBACK_INIT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: INTRO_INIT_SCRIPT }} />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts -- deliberately blocking, see the comment above */}
+        <script src="/init.js" />
       </head>
       <body className="min-h-screen antialiased">
         <ServiceWorkerRegistrar />
