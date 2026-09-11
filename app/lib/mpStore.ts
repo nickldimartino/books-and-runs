@@ -26,7 +26,7 @@ export class MpError extends Error {
 
 async function callMp<T>(
   supabase: SupabaseClient,
-  path: "create" | "respond" | "state" | "move" | "resign",
+  path: "create" | "respond" | "cancel" | "state" | "move" | "resign",
   payload: Record<string, unknown>
 ): Promise<T> {
   const {
@@ -82,6 +82,14 @@ export async function respondToMpGame(
   accept: boolean
 ): Promise<{ status: string; accepted?: boolean }> {
   return callMp(supabase, "respond", { game_id: gameId, accept });
+}
+
+/** Withdraws a game you're hosting that's still waiting on invitees to
+ * accept — the host-side counterpart to respondToMpGame's decline. Only
+ * works while the game is still `pending`; once everyone's in and it's
+ * dealt, resignMpGame is the way out instead. */
+export async function cancelMpGame(supabase: SupabaseClient, gameId: string): Promise<{ status: string }> {
+  return callMp(supabase, "cancel", { game_id: gameId });
 }
 
 export interface MpStateResponse {

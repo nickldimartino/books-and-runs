@@ -151,6 +151,69 @@ export const THEME_BG: Record<ThemeId, string> = {
   confetti: "#fffaf0",
 };
 
+/**
+ * The handful of --bg/--panel/--border/--heading/--text/--muted/--accent/
+ * --accent-hover/--on-accent values every theme defines, duplicated by hand
+ * here for the same reason THEME_BG above is: app/global-error.tsx has to
+ * bring its own <html>/<body> (the root layout — and so globals.css's
+ * [data-theme] rules — never mounts when it's showing), so it can't read
+ * these off a CSS custom property the way every themed component in the app
+ * normally does. Keep in sync with globals.css's [data-theme] blocks by hand
+ * when adding or re-coloring a theme.
+ */
+export interface ThemeErrorColors {
+  bg: string;
+  panel: string;
+  border: string;
+  heading: string;
+  text: string;
+  muted: string;
+  accent: string;
+  accentHover: string;
+  onAccent: string;
+}
+
+export const THEME_ERROR_COLORS: Record<ThemeId, ThemeErrorColors> = {
+  midnight: { bg: "#0a2b20", panel: "#123c2c", border: "rgba(209, 250, 229, 0.15)", heading: "#fef3c7", text: "#f5f0e6", muted: "rgba(209, 250, 229, 0.78)", accent: "#fbbf24", accentHover: "#fcd34d", onAccent: "#022c22" },
+  daylight: { bg: "#f4f1ea", panel: "#ffffff", border: "rgba(30, 41, 26, 0.12)", heading: "#1f3d2e", text: "#24291f", muted: "rgba(36, 41, 31, 0.72)", accent: "#a85708", accentHover: "#8a4708", onAccent: "#fffaf0" },
+  pastel: { bg: "#eef1fb", panel: "#ffffff", border: "rgba(58, 66, 110, 0.16)", heading: "#3c5e82", text: "#34314a", muted: "rgba(52, 49, 74, 0.68)", accent: "#ef8b6b", accentHover: "#e97a54", onAccent: "#3d1806" },
+  casino: { bg: "#170a0a", panel: "#2b1010", border: "rgba(230, 200, 140, 0.18)", heading: "#e9c46a", text: "#f2e8d8", muted: "rgba(242, 232, 216, 0.72)", accent: "#d4af37", accentHover: "#e6c65c", onAccent: "#1a0e02" },
+  arcade: { bg: "#14092b", panel: "#1f1147", border: "rgba(255, 255, 255, 0.14)", heading: "#ff5fb0", text: "#ece6ff", muted: "rgba(236, 230, 255, 0.72)", accent: "#33e6c9", accentHover: "#5cf0d8", onAccent: "#0c1220" },
+  noir: { bg: "#0d0d0d", panel: "#1c1c1c", border: "rgba(255, 255, 255, 0.16)", heading: "#f5f5f5", text: "#e8e8e8", muted: "rgba(232, 232, 232, 0.72)", accent: "#e8e8e8", accentHover: "#ffffff", onAccent: "#0d0d0d" },
+  sakura: { bg: "#fdf1f5", panel: "#ffffff", border: "rgba(107, 33, 55, 0.14)", heading: "#7a2142", text: "#4a2233", muted: "rgba(74, 34, 51, 0.68)", accent: "#d63868", accentHover: "#c22a58", onAccent: "#fff5f8" },
+  ember: { bg: "#0f0906", panel: "#1e120a", border: "rgba(255, 158, 87, 0.18)", heading: "#ff9552", text: "#f5e6d8", muted: "rgba(245, 230, 216, 0.72)", accent: "#ff5a1f", accentHover: "#ff7a45", onAccent: "#1a0800" },
+  lagoon: { bg: "#04211f", panel: "#0a3634", border: "rgba(255, 214, 224, 0.16)", heading: "#ffe3ec", text: "#e3f6f2", muted: "rgba(227, 246, 242, 0.72)", accent: "#ff6f91", accentHover: "#ff8aa8", onAccent: "#2b0410" },
+  sahara: { bg: "#2a1810", panel: "#3d2517", border: "rgba(255, 214, 165, 0.16)", heading: "#f4c78a", text: "#f2e4d3", muted: "rgba(242, 228, 211, 0.72)", accent: "#2fb6a8", accentHover: "#45cabc", onAccent: "#04211d" },
+  aurora: { bg: "#060b14", panel: "#0f1d2e", border: "rgba(103, 232, 249, 0.16)", heading: "#86efac", text: "#e0f2f7", muted: "rgba(224, 242, 247, 0.72)", accent: "#c084fc", accentHover: "#d8b4fe", onAccent: "#1e0a2e" },
+  jade: { bg: "#0b1210", panel: "#132019", border: "rgba(212, 175, 55, 0.18)", heading: "#f0d78c", text: "#eaf3ec", muted: "rgba(234, 243, 236, 0.72)", accent: "#2fae72", accentHover: "#3fc588", onAccent: "#04140c" },
+  verdigris: { bg: "#0c1613", panel: "#16241f", border: "rgba(212, 149, 96, 0.18)", heading: "#8fd4bd", text: "#e9f2ee", muted: "rgba(233, 242, 238, 0.72)", accent: "#d97b45", accentHover: "#e8935f", onAccent: "#2a0f02" },
+  alabaster: { bg: "#f2f1ef", panel: "#ffffff", border: "rgba(30, 30, 28, 0.14)", heading: "#2b2a27", text: "#333230", muted: "rgba(51, 50, 48, 0.68)", accent: "#2b2a27", accentHover: "#3d3b37", onAccent: "#f2f1ef" },
+  citrus: { bg: "#fff8ee", panel: "#ffffff", border: "rgba(120, 53, 15, 0.14)", heading: "#7a3b12", text: "#3d2611", muted: "rgba(61, 38, 17, 0.7)", accent: "#f2711d", accentHover: "#ff8a3d", onAccent: "#2a0d00" },
+  frost: { bg: "#f4f9fc", panel: "#ffffff", border: "rgba(15, 52, 79, 0.14)", heading: "#0f3a5f", text: "#16324a", muted: "rgba(22, 50, 74, 0.68)", accent: "#2ba7d9", accentHover: "#45bcec", onAccent: "#f0fbff" },
+  meadow: { bg: "#f9f8ec", panel: "#ffffff", border: "rgba(45, 74, 30, 0.14)", heading: "#2f4a1e", text: "#33341c", muted: "rgba(51, 52, 28, 0.68)", accent: "#d6a419", accentHover: "#e8b62f", onAccent: "#2a1c00" },
+  coralsand: { bg: "#fdf3e7", panel: "#ffffff", border: "rgba(120, 65, 20, 0.14)", heading: "#8a4a1e", text: "#4a3420", muted: "rgba(74, 52, 32, 0.68)", accent: "#ff7a5c", accentHover: "#ff9276", onAccent: "#2a0800" },
+  lilac: { bg: "#f4f1f6", panel: "#ffffff", border: "rgba(70, 40, 90, 0.14)", heading: "#4a2c5e", text: "#362640", muted: "rgba(54, 38, 64, 0.68)", accent: "#8654a3", accentHover: "#9968b8", onAccent: "#fbf7fd" },
+  champagne: { bg: "#faf3e4", panel: "#ffffff", border: "rgba(120, 90, 20, 0.14)", heading: "#6b4f12", text: "#3d2f14", muted: "rgba(61, 47, 20, 0.68)", accent: "#c9972f", accentHover: "#ddab48", onAccent: "#2a1c00" },
+  valentines: { bg: "#2b0a14", panel: "#3d1220", border: "rgba(255, 182, 200, 0.18)", heading: "#ff8fab", text: "#f5e4ea", muted: "rgba(245, 228, 234, 0.72)", accent: "#e0245e", accentHover: "#f0407a", onAccent: "#fff0f4" },
+  sweetheart: { bg: "#fff0f4", panel: "#ffffff", border: "rgba(180, 20, 70, 0.14)", heading: "#a8154a", text: "#4a1428", muted: "rgba(74, 20, 40, 0.68)", accent: "#e0245e", accentHover: "#f0407a", onAccent: "#fff0f4" },
+  stpatricks: { bg: "#052e16", panel: "#0c3f1f", border: "rgba(255, 215, 130, 0.16)", heading: "#ffd93d", text: "#eafaf0", muted: "rgba(234, 250, 240, 0.72)", accent: "#2fbf6f", accentHover: "#45d685", onAccent: "#04140a" },
+  cloverfield: { bg: "#f3fbf3", panel: "#ffffff", border: "rgba(10, 90, 40, 0.14)", heading: "#0d5c30", text: "#143a20", muted: "rgba(20, 58, 32, 0.68)", accent: "#2fa864", accentHover: "#3fc078", onAccent: "#04140a" },
+  easter: { bg: "#fdf6fb", panel: "#ffffff", border: "rgba(120, 60, 110, 0.14)", heading: "#7a3d70", text: "#4a2e46", muted: "rgba(74, 46, 70, 0.68)", accent: "#6fb88a", accentHover: "#85cc9e", onAccent: "#0a2214" },
+  springdusk: { bg: "#1c1030", panel: "#281848", border: "rgba(200, 170, 255, 0.16)", heading: "#d8b8f0", text: "#ede4f5", muted: "rgba(237, 228, 245, 0.72)", accent: "#7fd9a8", accentHover: "#98e6bc", onAccent: "#0a2214" },
+  july4th: { bg: "#050e2e", panel: "#0d1a44", border: "rgba(255, 255, 255, 0.16)", heading: "#ffffff", text: "#f0f2fa", muted: "rgba(240, 242, 250, 0.72)", accent: "#d9263a", accentHover: "#ec4256", onAccent: "#fff5f5" },
+  starsandstripes: { bg: "#f7f9fd", panel: "#ffffff", border: "rgba(20, 40, 100, 0.14)", heading: "#16255e", text: "#14203f", muted: "rgba(20, 32, 63, 0.68)", accent: "#c8102e", accentHover: "#dc3048", onAccent: "#fff5f5" },
+  halloween: { bg: "#0d0710", panel: "#1c1020", border: "rgba(157, 92, 255, 0.18)", heading: "#ff8c1a", text: "#f0e6f5", muted: "rgba(240, 230, 245, 0.72)", accent: "#9d5cff", accentHover: "#b47dff", onAccent: "#150a20" },
+  candycorn: { bg: "#fff8ec", panel: "#ffffff", border: "rgba(120, 60, 180, 0.16)", heading: "#7a3d0f", text: "#4a2e0a", muted: "rgba(74, 46, 10, 0.68)", accent: "#8b3fd9", accentHover: "#a05de6", onAccent: "#fbf5ff" },
+  thanksgiving: { bg: "#2a1608", panel: "#3d2410", border: "rgba(230, 150, 60, 0.18)", heading: "#e08a2e", text: "#f2e4d3", muted: "rgba(242, 228, 211, 0.72)", accent: "#c1541f", accentHover: "#d76b32", onAccent: "#2a0d00" },
+  pumpkinspice: { bg: "#fbf0e0", panel: "#ffffff", border: "rgba(120, 65, 20, 0.16)", heading: "#7a3d0f", text: "#4a3018", muted: "rgba(74, 48, 24, 0.68)", accent: "#d2691e", accentHover: "#e07d36", onAccent: "#2a0d00" },
+  hanukkah: { bg: "#0a1230", panel: "#121c42", border: "rgba(200, 210, 255, 0.16)", heading: "#e8ecff", text: "#eef0fa", muted: "rgba(238, 240, 250, 0.72)", accent: "#d4af37", accentHover: "#e6c65c", onAccent: "#1a1400" },
+  festivaloflights: { bg: "#f2f6ff", panel: "#ffffff", border: "rgba(30, 50, 120, 0.14)", heading: "#1a3a7a", text: "#16224a", muted: "rgba(22, 34, 74, 0.68)", accent: "#c9972f", accentHover: "#ddab48", onAccent: "#2a1c00" },
+  christmas: { bg: "#0a2818", panel: "#123821", border: "rgba(255, 215, 200, 0.16)", heading: "#f4c95d", text: "#f0ede3", muted: "rgba(240, 237, 227, 0.72)", accent: "#c8102e", accentHover: "#e0304a", onAccent: "#fff5f5" },
+  candycane: { bg: "#fef7f5", panel: "#ffffff", border: "rgba(180, 20, 40, 0.14)", heading: "#0d5c34", text: "#3a1418", muted: "rgba(58, 20, 24, 0.68)", accent: "#d2122e", accentHover: "#e8324a", onAccent: "#fff5f5" },
+  newyears: { bg: "#0a0a0c", panel: "#18161c", border: "rgba(230, 200, 120, 0.2)", heading: "#f0d78c", text: "#f0eef2", muted: "rgba(240, 238, 242, 0.72)", accent: "#d4af37", accentHover: "#e6c65c", onAccent: "#1a1400" },
+  confetti: { bg: "#fffaf0", panel: "#ffffff", border: "rgba(150, 110, 20, 0.16)", heading: "#8a6510", text: "#3a2e10", muted: "rgba(58, 46, 16, 0.68)", accent: "#d94f9e", accentHover: "#e56db3", onAccent: "#2a0a1c" },
+};
+
 export const DEFAULT_THEME: ThemeId = "midnight";
 
 const KEY = "booksAndRuns:theme";

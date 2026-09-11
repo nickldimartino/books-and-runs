@@ -3,18 +3,17 @@
 // Last-resort boundary: catches a crash in the ROOT layout itself (the
 // providers — Auth/Game/PlayerLevel — or the layout render), where even
 // app/error.tsx and the app's CSS aren't available. It has to bring its own
-// <html>/<body>, so the styling is inline and uses the Midnight palette
-// literally (globals.css isn't loaded at this point).
+// <html>/<body>, so the styling is inline rather than the usual
+// var(--heading)-style theme tokens (globals.css's [data-theme] rules never
+// mount here — the root layout that imports that stylesheet is exactly what
+// crashed). loadLocalTheme() reads the player's saved choice straight out of
+// localStorage, and THEME_ERROR_COLORS (themeStore.ts) is the same palette
+// every other theme already uses, just duplicated into plain JS so this
+// screen can match it without any CSS in play.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { report } from "./lib/errorReporter";
-
-const BG = "#0a2b20";
-const HEADING = "#fef3c7";
-const TEXT = "#f5f0e6";
-const MUTED = "rgba(209, 250, 229, 0.78)";
-const ACCENT = "#fbbf24";
-const ON_ACCENT = "#022c22";
+import { DEFAULT_THEME, loadLocalTheme, THEME_ERROR_COLORS } from "./lib/themeStore";
 
 export default function GlobalError({
   error,
@@ -23,6 +22,16 @@ export default function GlobalError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
+  // Starts at the default theme's colors (matches THEME_INIT_SCRIPT's own
+  // fallback) so the very first paint is never unstyled, then corrects to
+  // the saved choice — localStorage isn't readable during the initial
+  // server-rendered pass, only once this client component actually mounts.
+  const [themeId, setThemeId] = useState(DEFAULT_THEME);
+  useEffect(() => {
+    setThemeId(loadLocalTheme());
+  }, []);
+  const c = THEME_ERROR_COLORS[themeId];
+
   useEffect(() => {
     console.error("Global error boundary caught:", error);
     report({ message: error.message, stack: error.stack, source: "global-error" });
@@ -41,17 +50,17 @@ export default function GlobalError({
           gap: "1.25rem",
           padding: "0 1.5rem",
           textAlign: "center",
-          background: BG,
-          color: TEXT,
+          background: c.bg,
+          color: c.text,
           fontFamily:
             "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         }}
       >
         <title>Books &amp; Runs hit a snag</title>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: HEADING, margin: 0 }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: c.heading, margin: 0 }}>
           Books &amp; Runs hit a snag
         </h1>
-        <p style={{ fontSize: "0.875rem", color: MUTED, maxWidth: "22rem", margin: 0 }}>
+        <p style={{ fontSize: "0.875rem", color: c.muted, maxWidth: "22rem", margin: 0 }}>
           Something went wrong loading the app. Reloading usually fixes it.
         </p>
         <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
@@ -61,8 +70,8 @@ export default function GlobalError({
               border: "none",
               cursor: "pointer",
               borderRadius: "0.5rem",
-              background: ACCENT,
-              color: ON_ACCENT,
+              background: c.accent,
+              color: c.onAccent,
               padding: "0.75rem 1.5rem",
               fontSize: "0.875rem",
               fontWeight: 600,
@@ -78,8 +87,8 @@ export default function GlobalError({
             href="/"
             style={{
               borderRadius: "0.5rem",
-              border: `1px solid ${MUTED}`,
-              color: MUTED,
+              border: `1px solid ${c.border}`,
+              color: c.muted,
               padding: "0.75rem 1.5rem",
               fontSize: "0.875rem",
               fontWeight: 500,

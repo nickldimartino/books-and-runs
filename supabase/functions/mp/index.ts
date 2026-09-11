@@ -1,7 +1,7 @@
 // Books & Runs — multiplayer Edge Function.
 //
-// One deployed function, path-routed: /mp/create /mp/respond /mp/state
-// /mp/move /mp/resign. It is the ONLY thing that reads or writes
+// One deployed function, path-routed: /mp/create /mp/respond /mp/cancel
+// /mp/state /mp/move /mp/resign. It is the ONLY thing that reads or writes
 // mp_game_state (the sealed full state + deck) — every client gets back a
 // redacted view. All real game logic lives in ../../../src/mp/adapter.ts,
 // which is pure and unit-tested; this file is auth + DB + wiring.
@@ -341,6 +341,36 @@ async function handleRespond(uid: string, body: Record<string, unknown>): Promis
   return json({ status: "active" });
 }
 
+// The host withdraws a game invite before everyone's accepted — the other
+// direction of handleRespond's decline: there, an *invitee* says no and the
+// whole pending game cancels; here, the *host* changes their mind before
+// anyone (or everyone but one straggler) has responded. Only ever touches a
+// still-`pending` game — once it's `active`, resigning is the way out.
+async function handleCancel(uid: string, body: Record<string, unknown>): Promise<Response> {
+  const gameId = String(body.game_id ?? "");
+  const game = await loadGame(gameId);
+  if (!game) return json({ error: "no such game" }, 404);
+  if (game.host_id !== uid) return json({ error: "only the host can cancel this" }, 403);
+  if (game.status !== "pending") return json({ error: "this game already started" }, 409);
+
+  const { data: cancelled } = await admin
+    .from("mp_games")
+    .update({ status: "cancelled", completed_at: new Date().toISOString() })
+    .eq("id", gameId)
+    .eq("status", "pending")
+    .select("id");
+  if ((cancelled?.length ?? 0) === 0) return json({ status: game.status });
+
+  const { data: others } = await admin
+    .from("mp_participants")
+    .select("user_id")
+    .eq("game_id", gameId)
+    .neq("user_id", uid);
+  for (const o of others ?? []) await addEvent(o.user_id, "game_cancelled", gameId, uid);
+
+  return json({ status: "cancelled" });
+}
+
 async function handleState(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
   const game = await loadGame(gameId);
@@ -511,6 +541,8 @@ Deno.serve(async (req) => {
         return await handleCreate(user.id, body);
       case "respond":
         return await handleRespond(user.id, body);
+      case "cancel":
+        return await handleCancel(user.id, body);
       case "state":
         return await handleState(user.id, body);
       case "move":

@@ -653,7 +653,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
-  const revealHand = useCallback(() => setAwaitingReveal(false), []);
+  // Tapping through the pass-and-play "your turn — tap to see your hand"
+  // gate (or the solo game's own first reveal) fans the hand out — the same
+  // sweep sound sortHand/reorderHand use, since it's literally the same
+  // "cards spreading across the table" motion.
+  const revealHand = useCallback(() => {
+    setAwaitingReveal(false);
+    playCardSlide();
+    hapticLight();
+  }, []);
 
   const draw = useCallback(
     (fromDiscard: boolean) => {

@@ -38,6 +38,7 @@ tells you a project's real state.
 | 0016 | observability — `schema_migrations`, `client_errors`, `app_events` |
 | 0017 | `mp_nudge()` — "your turn" reminder, rate-limited |
 | 0018 | `daily_deal_scores` — per-deal friend leaderboard (`daily_deal_submit`, `daily_deal_friend_scores`) |
+| 0019 | `favorite_game_configs` — sync "my usual" solo/pass-and-play setup across devices |
 
 ## New migrations
 

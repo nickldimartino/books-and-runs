@@ -244,6 +244,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0016 | Observability: `schema_migrations` (version tracking, backfilled), `client_errors` (insert-only), `app_events` (anonymous analytics). |
 | 0017 | `mp_nudge()` — "your turn" reminder for a stalled MP game, rate-limited. |
 | 0018 | `daily_deal_scores` (owner-only) + `daily_deal_submit()` / `daily_deal_friend_scores()` — per-deal friend leaderboard on the Daily Deal game-over screen. |
+| 0019 | `favorite_game_configs` (owner-only) — syncs "my usual" solo/pass-and-play setup across devices. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -251,7 +252,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 
 ### Edge Function (`supabase/functions/mp/`)
 
-- `index.ts` — Deno. Path-routed: `/mp/{create,respond,state,move,resign}`.
+- `index.ts` — Deno. Path-routed: `/mp/{create,respond,cancel,state,move,resign}`.
   Auth + DB + wiring only. Uses the service-role client to reach the sealed
   `mp_game_state`.
 - `_shared/cors.ts` — `corsHeaders`, `json()`.

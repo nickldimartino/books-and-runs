@@ -145,6 +145,24 @@ function sanitizeDisplayName(name: string | null): string | null {
   return cleaned.slice(0, MAX_DISPLAY_NAME_LENGTH);
 }
 
+/**
+ * The signed-in account's own chosen display name, or null if they haven't
+ * set one — the raw value (never the "Player 4821" placeholder), so callers
+ * can tell "no name chosen yet" apart from an actual choice and fall back
+ * however makes sense for where they're showing it (the Account page shows
+ * the placeholder as a preview; New Game's seat-0 lock falls back to "You"
+ * instead — see app/new-game/local/page.tsx).
+ */
+export async function fetchOwnDisplayName(supabase: SupabaseClient, userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("display_name")
+    .eq("user_id", userId)
+    .maybeSingle<{ display_name: string | null }>();
+  if (error) throw error;
+  return data?.display_name?.trim() || null;
+}
+
 /** Sets (or clears, with null) just the signed-in user's own display name —
  * never touches the stat columns, so it can't undo a sync still in flight. */
 export async function updateLeaderboardDisplayName(

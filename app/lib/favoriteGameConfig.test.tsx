@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   clearFavoriteGameConfig,
   contractsFor,
   describeFavoriteGameConfig,
   FavoriteGameConfig,
   loadFavoriteGameConfig,
+  loadFavoriteGameConfigWithCloud,
   playerConfigsFor,
   saveFavoriteGameConfig,
 } from "./favoriteGameConfig";
@@ -107,5 +109,69 @@ describe("playerConfigsFor", () => {
 
   it("falls back to a default name for a blank human slot", () => {
     expect(playerConfigsFor(["  "], []).map((c) => c.name)).toEqual(["You"]);
+  });
+});
+
+const SOLO_VS_2_EASY: FavoriteGameConfig = {
+  humanCount: 1,
+  humanNames: ["Nick"],
+  aiDifficulties: ["easy", "easy"],
+  roundMode: "all",
+  customRounds: [],
+};
+
+/** A minimal SupabaseClient stub covering exactly the chain
+ * pull/pushFavoriteGameConfig use, recording every upsert it sees. */
+function fakeSupabase(pullResult: { data: unknown; error: unknown }) {
+  const upserts: Record<string, unknown>[] = [];
+  const client = {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => pullResult,
+        }),
+      }),
+      upsert: async (row: Record<string, unknown>) => {
+        upserts.push(row);
+        return { error: null };
+      },
+      delete: () => ({ eq: async () => ({ error: null }) }),
+    }),
+  };
+  return { client: client as unknown as SupabaseClient, upserts };
+}
+
+describe("loadFavoriteGameConfigWithCloud", () => {
+  it("returns the local copy untouched when signed out", async () => {
+    saveFavoriteGameConfig(SOLO_VS_3_HARD);
+    const result = await loadFavoriteGameConfigWithCloud(null, null);
+    expect(result).toEqual(SOLO_VS_3_HARD);
+  });
+
+  it("prefers the cloud copy and caches it locally", async () => {
+    saveFavoriteGameConfig(SOLO_VS_3_HARD); // stale local copy
+    const { client } = fakeSupabase({ data: { config: SOLO_VS_2_EASY }, error: null });
+
+    const result = await loadFavoriteGameConfigWithCloud(client, "u1");
+
+    expect(result).toEqual(SOLO_VS_2_EASY);
+    expect(loadFavoriteGameConfig()).toEqual(SOLO_VS_2_EASY); // cached for offline use
+  });
+
+  it("pushes the local copy up when the cloud has none yet", async () => {
+    saveFavoriteGameConfig(SOLO_VS_3_HARD);
+    const { client, upserts } = fakeSupabase({ data: null, error: null });
+
+    const result = await loadFavoriteGameConfigWithCloud(client, "u1");
+
+    expect(result).toEqual(SOLO_VS_3_HARD);
+    await Promise.resolve(); // let the fire-and-forget push settle
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]).toMatchObject({ user_id: "u1", config: SOLO_VS_3_HARD });
+  });
+
+  it("returns null when neither side has anything saved", async () => {
+    const { client } = fakeSupabase({ data: null, error: null });
+    expect(await loadFavoriteGameConfigWithCloud(client, "u1")).toBeNull();
   });
 });

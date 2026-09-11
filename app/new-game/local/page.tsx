@@ -12,14 +12,18 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { useGame } from "../../GameContext";
 import { AI_PERSONAS, AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
+import { fetchOwnDisplayName } from "../../lib/leaderboardStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
+import { supabase } from "../../lib/supabaseClient";
 import {
   clearFavoriteGameConfig,
   contractsFor,
+  deleteCloudFavoriteGameConfig,
   describeFavoriteGameConfig,
   FavoriteGameConfig,
-  loadFavoriteGameConfig,
+  loadFavoriteGameConfigWithCloud,
   playerConfigsFor,
+  pushFavoriteGameConfig,
   saveFavoriteGameConfig,
 } from "../../lib/favoriteGameConfig";
 import { CONTRACTS, ContractRequirement, Difficulty } from "@/types";
@@ -108,15 +112,40 @@ export default function NewLocalGamePage() {
   // confirmation without a toast system.
   const [favorite, setFavorite] = useState<FavoriteGameConfig | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  // The signed-in account's own chosen display name — once it's loaded,
+  // seat 0 (you, in both solo and pass-and-play) is locked to it, the same
+  // name everywhere else in the app shows you as. null while unresolved or
+  // signed out/no name chosen yet, in which case seat 0 stays "You" and,
+  // for a guest, still freely editable (see yourNameLocked below).
+  const [accountDisplayName, setAccountDisplayName] = useState<string | null>(null);
 
   // Pick up the house-rule default from Settings once mounted (before the
-  // player has had a chance to touch the AI difficulty picker themselves).
+  // player has had a chance to touch the AI difficulty picker themselves),
+  // and the favorite lineup — local cache first, reconciled against the
+  // cloud copy once signed in (see loadFavoriteGameConfigWithCloud's own
+  // doc). Signed-in only: fetch the account's own display name too, so
+  // seat 0 can be locked to it rather than a freely-typed "You".
   useEffect(() => {
     const preferred = loadLocalSettings().preferredAiDifficulty;
     setDefaultDifficulty(preferred);
     setAiDifficulties([preferred]);
-    setFavorite(loadFavoriteGameConfig());
-  }, []);
+    loadFavoriteGameConfigWithCloud(supabase, user?.id ?? null).then(setFavorite);
+    if (supabase && user) {
+      fetchOwnDisplayName(supabase, user.id)
+        .then(setAccountDisplayName)
+        .catch((err) => console.error("Failed to load your display name:", err));
+    }
+  }, [user]);
+
+  // Signed in → seat 0 is locked to the account's own name (its only
+  // editing surface is Account settings), falling back to "You" until a
+  // name's actually been chosen. Not signed in → no account to lock to,
+  // so seat 0 stays freely editable, same as every other pass-and-play seat.
+  const yourNameLocked = !!(configured && user);
+  const yourName = accountDisplayName?.trim() || "You";
+  useEffect(() => {
+    if (yourNameLocked) setHumanNames((prev) => (prev[0] === yourName ? prev : [yourName, ...prev.slice(1)]));
+  }, [yourNameLocked, yourName]);
 
   const totalPlayers = humanCount + aiDifficulties.length;
   const selectedContracts: ContractRequirement[] = contractsFor(roundMode, customRounds);
@@ -201,7 +230,11 @@ export default function NewLocalGamePage() {
 
   function handlePlayFavorite() {
     if (!favorite) return;
-    dealAndGo(favorite, favorite.humanCount, true);
+    // Seat 0 always plays under the account's *current* name, even if it's
+    // changed since this lineup was saved — the saved blob isn't the source
+    // of truth for it, Account settings is.
+    const cfg = yourNameLocked ? { ...favorite, humanNames: [yourName, ...favorite.humanNames.slice(1)] } : favorite;
+    dealAndGo(cfg, favorite.humanCount, true);
   }
 
   function handleSaveFavorite() {
@@ -210,11 +243,21 @@ export default function NewLocalGamePage() {
     setFavorite(currentConfig);
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 2000);
+    if (supabase && user) {
+      pushFavoriteGameConfig(supabase, user.id, currentConfig).catch((err) =>
+        console.error("Failed to sync your usual setup to the cloud:", err)
+      );
+    }
   }
 
   function handleForgetFavorite() {
     clearFavoriteGameConfig();
     setFavorite(null);
+    if (supabase && user) {
+      deleteCloudFavoriteGameConfig(supabase, user.id).catch((err) =>
+        console.error("Failed to forget your usual setup in the cloud:", err)
+      );
+    }
   }
 
   return (
@@ -277,19 +320,38 @@ export default function NewLocalGamePage() {
           </button>
         </div>
         <div className="flex flex-col gap-2">
-          {humanNames.map((name, i) => (
-            <input
-              key={i}
-              type="text"
-              value={name}
-              onChange={(e) => setHumanName(i, e.target.value)}
-              placeholder={i === 0 ? "You" : `Player ${i + 1}`}
-              maxLength={20}
-              className="rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text)] outline-none ring-1 ring-transparent focus:ring-[var(--accent)]"
-            />
-          ))}
+          {humanNames.map((name, i) =>
+            i === 0 && yourNameLocked ? (
+              <div
+                key={i}
+                className="flex items-center justify-between gap-3 rounded-md bg-[var(--panel)] px-3 py-2 text-sm"
+              >
+                <span className="truncate text-[var(--text)]">{name}</span>
+                <Link
+                  href="/account"
+                  className="shrink-0 text-xs text-[var(--faint)] underline hover:text-[var(--muted)]"
+                >
+                  Change in Account
+                </Link>
+              </div>
+            ) : (
+              <input
+                key={i}
+                type="text"
+                value={name}
+                onChange={(e) => setHumanName(i, e.target.value)}
+                placeholder={i === 0 ? "You" : `Player ${i + 1}`}
+                maxLength={20}
+                className="rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text)] outline-none ring-1 ring-transparent focus:ring-[var(--accent)]"
+              />
+            )
+          )}
         </div>
-        <p className="text-xs text-[var(--faint)]">Just for this game — these names won&apos;t change your account.</p>
+        <p className="text-xs text-[var(--faint)]">
+          {yourNameLocked
+            ? "Other players here are just for this game — their names won't change your account."
+            : "Just for this game — these names won't change your account."}
+        </p>
 
         {configured && user && humanCount >= 2 && (
           <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--heading)]">

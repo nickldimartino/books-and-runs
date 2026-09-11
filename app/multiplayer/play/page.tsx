@@ -18,6 +18,7 @@ import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { useMpGame } from "../../lib/useMpGame";
+import type { MpSeatMeta } from "../../lib/mpStore";
 import { layOffOptions } from "@/meld";
 import type { Card, Meld, Player } from "@/types";
 import type { RedactedView } from "@/mp/types";
@@ -62,6 +63,7 @@ export default function MultiplayerPlayPage() {
   const { view } = g;
 
   const [rematchBusy, setRematchBusy] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [layoffArmed, setLayoffArmed] = useState(false);
   const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
 
@@ -126,6 +128,16 @@ export default function MultiplayerPlayPage() {
   }
 
   if (g.status === "pending" || g.status === "dealing") {
+    const pendingSeats = (g.pending?.seats ?? []) as MpSeatMeta[];
+    const pendingParticipants = g.pending?.participants ?? [];
+    const isHost = !!user && g.pending?.host_id === user.id;
+
+    async function handleCancelPending() {
+      setCancelBusy(true);
+      await g.cancelPending();
+      setCancelBusy(false);
+    }
+
     return (
       <Center>
         <h1 className="text-xl font-bold text-[var(--heading)]">
@@ -136,12 +148,52 @@ export default function MultiplayerPlayPage() {
             ? "The game is being set up — this page will update."
             : "The game starts once everyone you invited accepts."}
         </p>
+
+        {g.status === "pending" && pendingParticipants.length > 0 && (
+          <ul className="flex w-full flex-col gap-1.5 text-left">
+            {pendingParticipants.map((p) => {
+              const seat = pendingSeats.find((s) => s.userId === p.user_id);
+              const accepted = p.invite_status === "accepted";
+              return (
+                <li
+                  key={p.user_id}
+                  className="flex items-center justify-between gap-3 rounded-md bg-[var(--panel-soft)] px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 truncate text-[var(--heading)]">{seat?.name ?? "Someone"}</span>
+                  <span
+                    className={`shrink-0 text-xs font-medium ${
+                      accepted ? "text-[var(--accent)]" : "text-[var(--faint)]"
+                    }`}
+                  >
+                    {accepted ? "Accepted" : "Waiting"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {g.error && <p className="text-xs text-[var(--danger)]">{g.error}</p>}
+
         <button
           onClick={g.refresh}
           className="rounded-md border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
           Refresh
         </button>
+
+        {/* Only the host can withdraw a still-pending invite — an invitee's
+            way out is declining it from Home instead (respondToMpGame). */}
+        {g.status === "pending" && isHost && (
+          <button
+            onClick={handleCancelPending}
+            disabled={cancelBusy}
+            className="text-sm text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50"
+          >
+            {cancelBusy ? "Cancelling…" : "Cancel this game"}
+          </button>
+        )}
+
         <BackLink />
       </Center>
     );

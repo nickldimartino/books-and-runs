@@ -178,6 +178,19 @@ export function playAchievementUnlock(): void {
   tone(c, 1318.51, 0.08, 0.22, 0.2, "sine"); // E6
 }
 
+/** Sending or receiving an emoji reaction in a multiplayer game (see
+ * useMpGame's sendReaction / broadcast handler) — a tiny, playful blip.
+ * Deliberately not built from the card-noise family noiseBurst() feeds
+ * every other effect here: a reaction isn't a card action, so it reads as
+ * its own, lighter kind of feedback rather than a quieter copy of a tap. */
+export function playReaction(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  tone(c, 1200, 0, 0.06, 0.16, "sine");
+  tone(c, 1600, 0.05, 0.08, 0.14, "sine");
+}
+
 /** Leveling up (see GameOverScreen) — a short triumphant ascending run.
  * Same triangle-wave family as playGameWin (both are "big meta-progression
  * moment" sounds), but its own shorter, three-note shape rather than

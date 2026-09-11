@@ -11,12 +11,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
+import { fetchOwnDisplayName } from "../lib/leaderboardStore";
 import { markTutorialStarting } from "../lib/localSave";
+import { supabase } from "../lib/supabaseClient";
 import {
   contractsFor,
   describeFavoriteGameConfig,
   FavoriteGameConfig,
-  loadFavoriteGameConfig,
+  loadFavoriteGameConfigWithCloud,
   playerConfigsFor,
 } from "../lib/favoriteGameConfig";
 
@@ -26,10 +28,19 @@ export default function NewGamePage() {
   const { startTutorialGame, startNewGame } = useGame();
   const [startingTutorial, setStartingTutorial] = useState(false);
   const [favorite, setFavorite] = useState<FavoriteGameConfig | null>(null);
+  // See app/new-game/local/page.tsx's own doc — seat 0 always plays under
+  // the account's current display name, not whatever was saved into the
+  // favorite lineup.
+  const [accountDisplayName, setAccountDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
-    setFavorite(loadFavoriteGameConfig());
-  }, []);
+    loadFavoriteGameConfigWithCloud(supabase, user?.id ?? null).then(setFavorite);
+    if (supabase && user) {
+      fetchOwnDisplayName(supabase, user.id)
+        .then(setAccountDisplayName)
+        .catch((err) => console.error("Failed to load your display name:", err));
+    }
+  }, [user]);
 
   function startTutorial() {
     setStartingTutorial(true);
@@ -40,7 +51,12 @@ export default function NewGamePage() {
 
   function playFavorite() {
     if (!favorite) return;
-    const configs = playerConfigsFor(favorite.humanNames.slice(0, favorite.humanCount), favorite.aiDifficulties);
+    const yourName = (configured && user && accountDisplayName?.trim()) || "You";
+    const humanNames =
+      configured && user
+        ? [yourName, ...favorite.humanNames.slice(1, favorite.humanCount)]
+        : favorite.humanNames.slice(0, favorite.humanCount);
+    const configs = playerConfigsFor(humanNames, favorite.aiDifficulties);
     startNewGame(configs, contractsFor(favorite.roundMode, favorite.customRounds), true);
     router.push("/game");
   }

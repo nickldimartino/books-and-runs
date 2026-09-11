@@ -18,7 +18,10 @@ import { allAchievements } from "@/achievements";
 import { ACHIEVEMENT_TIER_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import type { AchievementUnlockItem } from "../components/AchievementUnlock";
+import { hapticLight, hapticMedium, hapticSuccess } from "../lib/haptics";
+import { playCardTap, playGameWin, playMeld, playReaction, playRoundWin } from "../lib/sound";
 import {
+  cancelMpGame,
   getMpState,
   MpError,
   MpMoveResponse,
@@ -87,6 +90,10 @@ export interface UseMpGame {
   setDiscard: (cardId: string | null) => void;
   commitTurn: () => Promise<void>;
   resign: () => Promise<void>;
+  /** Withdraws a game you're hosting that's still waiting on invitees —
+   * only meaningful while `status === "pending"` and you're the host.
+   * Resolves true on success (the pending screen then shows "cancelled"). */
+  cancelPending: () => Promise<boolean>;
 
   /** Bump the current-turn player's notification badge. `nudgeState`
    * reflects the last attempt. */
@@ -177,6 +184,22 @@ export function useMpGame(gameId: string | null): UseMpGame {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapKey, user, !!view, view?.gameOver]);
 
+  // The round or game just ended — from either side's turn, not only the
+  // local player's own move (a realtime refresh after the opponent goes out
+  // flips these the exact same way). Mirrors app/game/page.tsx's identical
+  // watcher for local play: plain booleans in the dep array fire exactly
+  // once per false→true transition; gameOver takes priority since a
+  // game-over round is also round-over, so only one chime plays.
+  useEffect(() => {
+    if (view?.gameOver) {
+      playGameWin();
+      hapticSuccess();
+    } else if (view?.roundOver) {
+      playRoundWin();
+      hapticSuccess();
+    }
+  }, [view?.roundOver, view?.gameOver]);
+
   // Game over: flush the last counters, record the result against normal
   // stats + XP + achievements, then diff to list what unlocked.
   const finalizedRef = useRef<string | null>(null);
@@ -228,6 +251,8 @@ export function useMpGame(gameId: string | null): UseMpGame {
         if (!emoji) return;
         setReactions((r) => [...r, { id, emoji, seat }]);
         setTimeout(() => setReactions((r) => r.filter((x) => x.id !== id)), 3200);
+        playReaction();
+        hapticLight();
       })
       .subscribe();
     channelRef.current = channel;
@@ -314,6 +339,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
       const res = await run(() => submitMpMove(supabase!, gameId, { type: "draw", from }));
       const drawnId = res && "drawnCard" in res ? res.drawnCard?.id : undefined;
       const drawn = drawnId ? res?.view.yourHand.find((c) => c.id === drawnId) : undefined;
+      if (res) {
+        playCardTap();
+        hapticLight();
+      }
       bumpC("turns_taken");
       if (drawn?.isWild) bumpC("wilds_drawn");
       if (drawn?.rank === "JOKER") bumpC("jokers_drawn");
@@ -399,6 +428,18 @@ export function useMpGame(gameId: string | null): UseMpGame {
     );
     if (!res) return; // failed — nothing applied server-side
 
+    // The round/game-over chime is handled by its own transition effect
+    // above (it needs to fire from a realtime refresh too, not just your
+    // own commit) — this is just the per-turn "you melded / played a card"
+    // feedback, same split local play's confirmMeld/layOff/discard use.
+    if (preDraft.groups.length > 0) {
+      playMeld();
+      hapticMedium();
+    } else {
+      playCardTap();
+      hapticLight();
+    }
+
     const cardById = (id: string) => preView.yourHand.find((c) => c.id === id);
     for (const grp of preDraft.groups) {
       const cards = grp.cardIds.map(cardById).filter((c): c is Card => !!c);
@@ -434,11 +475,29 @@ export function useMpGame(gameId: string | null): UseMpGame {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
+  const cancelPending = useCallback(async (): Promise<boolean> => {
+    if (!supabase || !gameId) return false;
+    setBusy(true);
+    setError(null);
+    try {
+      await cancelMpGame(supabase, gameId);
+      refresh(); // picks up the now-"cancelled" status from the server
+      return true;
+    } catch (err) {
+      setError(err instanceof MpError ? err.message : "Couldn't cancel this game.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [gameId, refresh]);
+
   const nudge = useCallback(async () => {
     if (!supabase || !gameId) return;
     try {
       await nudgeMpGame(supabase, gameId);
       setNudgeState("sent");
+      playCardTap();
+      hapticLight();
     } catch {
       setNudgeState("error");
     }
@@ -469,6 +528,8 @@ export function useMpGame(gameId: string | null): UseMpGame {
       const id = ++reactionIdRef.current;
       setReactions((r) => [...r, { id, emoji, seat }]);
       setTimeout(() => setReactions((r) => r.filter((x) => x.id !== id)), 3200);
+      playReaction();
+      hapticLight();
     },
     [view?.yourSeat]
   );
@@ -507,6 +568,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
     setDiscard,
     commitTurn,
     resign,
+    cancelPending,
     nudge,
     nudgeState,
     rematch,
