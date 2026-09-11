@@ -2,7 +2,8 @@
 
 // Home screen. The hero, the level badge (when signed in), the New Game
 // button, the Daily Deal entry, and `<HomeGames>` — the unified "Your
-// games" list that shows the local saved game (LOCAL tag), active
+// games" list that shows the in-progress solo/pass-and-play game (tagged
+// with its mode; synced to the account by LocalSaveSync), active
 // multiplayer games (your-turn first, waiting-on-someone dimmed), and
 // pending MP invites with inline Accept/Decline. Renders nothing if
 // there's nothing to resume. The notification badge count comes from
@@ -33,6 +34,13 @@ function capitalize(s: string): string {
  * from the raw saved state rather than GameContext (which only has a game
  * loaded once continueGame() has actually been called) — this needs to know
  * what's *there* before committing to resuming it. */
+/** "Solo" (you vs AI) or "Pass & play" (2+ humans on one device) — shown on
+ * the Resume card in place of the old "Local" tag now that the game syncs. */
+function savedGameMode(state: GameState): string {
+  const humanCount = state.players.filter((p) => !p.isAI).length;
+  return humanCount > 1 ? "Pass & play" : "Solo";
+}
+
 function summarizeSavedGame(state: GameState): string {
   const ais = state.players.filter((p) => p.isAI);
   const humanCount = state.players.length - ais.length;
@@ -244,12 +252,14 @@ function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolea
 function HomeGames({
   hasSavedGame,
   savedSummary,
+  savedMode,
   onResumeLocal,
   notifications,
   userId,
 }: {
   hasSavedGame: boolean;
   savedSummary: string | null;
+  savedMode: string | null;
   onResumeLocal: () => void;
   notifications: ReturnType<typeof useNotifications>;
   userId: string | undefined;
@@ -325,9 +335,11 @@ function HomeGames({
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-base font-semibold text-[var(--heading)]">
               Resume game
-              <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
-                Local
-              </span>
+              {savedMode && (
+                <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
+                  {savedMode}
+                </span>
+              )}
             </span>
             {savedSummary && (
               <span className="block truncate text-xs text-[var(--faint)]">{savedSummary}</span>
@@ -358,6 +370,7 @@ export default function HomePage() {
   // for `state` to actually show up here before navigating.
   const [navigatingToGame, setNavigatingToGame] = useState(false);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
+  const [savedMode, setSavedMode] = useState<string | null>(null);
   const [dailyDeal, setDailyDeal] = useState<DailyDealState | null>(null);
 
   // Re-reads on every hasSavedGame flip (a game starting, finishing, or
@@ -366,6 +379,7 @@ export default function HomePage() {
   useEffect(() => {
     const saved = loadSavedGame();
     setSavedSummary(saved ? summarizeSavedGame(saved.state) : null);
+    setSavedMode(saved ? savedGameMode(saved.state) : null);
   }, [hasSavedGame]);
 
   // Loaded once per visit to Home — this page fully remounts every time you
@@ -463,6 +477,7 @@ export default function HomePage() {
         <HomeGames
           hasSavedGame={hasSavedGame}
           savedSummary={savedSummary}
+          savedMode={savedMode}
           onResumeLocal={handleContinue}
           notifications={notifications}
           userId={user?.id}

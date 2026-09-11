@@ -1,7 +1,20 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { GameState } from "@/types";
 import { RoundHistoryEntry } from "./recordGameResult";
 
 const SAVE_KEY = "booksAndRuns:savedGame";
+
+// Fired after the local saved game is written / cleared, so LocalSaveSync
+// can mirror it to the account (see LocalSaveSync.tsx). `br:solo-synced`
+// goes the other way — LocalSaveSync fires it after pulling a newer save
+// down from the cloud, so GameContext re-reads hasSavedGame.
+export const SOLO_SAVE_EVENT = "br:solo-save";
+export const SOLO_CLEAR_EVENT = "br:solo-clear";
+export const SOLO_SYNCED_EVENT = "br:solo-synced";
+
+function emit(name: string) {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(name));
+}
 
 export interface SavedGame {
   state: GameState;
@@ -70,6 +83,7 @@ export function saveGame(data: Omit<SavedGame, "savedAt">): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(SAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
+    emit(SOLO_SAVE_EVENT);
   } catch {
     // storage unavailable/full — local persistence is a nicety, not required
   }
@@ -82,6 +96,62 @@ export function clearSavedGame(): void {
   } catch {
     // ignore
   }
+  emit(SOLO_CLEAR_EVENT);
+}
+
+/**
+ * Writes a SavedGame pulled from the cloud straight into local storage
+ * (used by LocalSaveSync when another device has a newer save). Skips the
+ * SOLO_SAVE_EVENT — this came *from* the cloud, re-pushing it would be a
+ * pointless round-trip — and fires SOLO_SYNCED_EVENT so the UI refreshes.
+ */
+export function applyCloudSave(data: SavedGame): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    emit(SOLO_SYNCED_EVENT);
+  } catch {
+    // ignore
+  }
+}
+
+interface SoloSaveRow {
+  save: SavedGame;
+  saved_at: number;
+}
+
+/** The account's synced solo/pass-and-play save, or null. Same shape check
+ * as loadSavedGame — a structurally broken row is treated as absent. */
+export async function loadCloudSave(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<SavedGame | null> {
+  const { data, error } = await supabase
+    .from("solo_saves")
+    .select("save, saved_at")
+    .eq("user_id", userId)
+    .maybeSingle<SoloSaveRow>();
+  if (error || !data) return null;
+  return looksLikeSavedGame(data.save) ? data.save : null;
+}
+
+export async function pushCloudSave(
+  supabase: SupabaseClient,
+  userId: string,
+  data: SavedGame
+): Promise<void> {
+  const { error } = await supabase.from("solo_saves").upsert({
+    user_id: userId,
+    save: data,
+    saved_at: data.savedAt,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+export async function clearCloudSave(supabase: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await supabase.from("solo_saves").delete().eq("user_id", userId);
+  if (error) throw error;
 }
 
 // A tutorial game deliberately never touches SAVE_KEY (see GameContext.tsx's

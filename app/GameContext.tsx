@@ -302,7 +302,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setHasSavedGame(loadSavedGame() !== null);
+    const check = () => setHasSavedGame(loadSavedGame() !== null);
+    check();
+    // LocalSaveSync fires this after pulling a newer save down from the
+    // account — re-read so Home's "Resume game" card reflects it.
+    window.addEventListener("br:solo-synced", check);
+    return () => window.removeEventListener("br:solo-synced", check);
   }, []);
 
   const setHasDrawnBoth = useCallback((value: boolean) => {
