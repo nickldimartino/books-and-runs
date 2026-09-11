@@ -36,6 +36,8 @@ tells you a project's real state.
 | 0014 | MP housekeeping — `mp_trim_events`, daily `pg_cron` sweep |
 | 0015 | `solo_saves` — sync the in-progress solo/pass-and-play game |
 | 0016 | observability — `schema_migrations`, `client_errors`, `app_events` |
+| 0017 | `mp_nudge()` — "your turn" reminder, rate-limited |
+| 0018 | `daily_deal_scores` — per-deal friend leaderboard (`daily_deal_submit`, `daily_deal_friend_scores`) |
 
 ## New migrations
 

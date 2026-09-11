@@ -22,8 +22,18 @@ import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { track } from "../lib/analytics";
 import { DailyDealState, mergeCloudDailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
+import {
+  DailyDealFriendScore,
+  fetchDailyDealFriendScores,
+  submitDailyDealScore,
+} from "../lib/dailyDealLeaderboard";
 import { joinNames } from "../lib/formatNames";
-import { pullDailyDealStreak, syncDailyDealStreak, syncLeaderboardStats } from "../lib/leaderboardStore";
+import {
+  displayNameFor,
+  pullDailyDealStreak,
+  syncDailyDealStreak,
+  syncLeaderboardStats,
+} from "../lib/leaderboardStore";
 import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { renderShareCard } from "../lib/shareCard";
@@ -271,6 +281,10 @@ export function GameOverScreen({ state }: { state: GameState }) {
   // redundant cloud round trip) on every re-render, not correctness.
   const dailyDealRecordedRef = useRef(false);
   const [dailyDealState, setDailyDealState] = useState<DailyDealState | null>(null);
+  // The per-deal friend leaderboard (migration 0018) — you plus any accepted
+  // friends who've played today's same deal, best score first. Stays null
+  // when signed out, unconfigured, or 0018 hasn't been run.
+  const [dailyDealFriendScores, setDailyDealFriendScores] = useState<DailyDealFriendScore[] | null>(null);
   useEffect(() => {
     if (!isDailyDeal || dailyDealRecordedRef.current) return;
     dailyDealRecordedRef.current = true;
@@ -297,6 +311,22 @@ export function GameOverScreen({ state }: { state: GameState }) {
             console.error("Failed to sync Daily Deal streak:", err);
           }
         );
+        // Record this account's score for today's deal, then pull the
+        // friend leaderboard for it. Best-effort: a project without
+        // migration 0018 just won't show the panel. `history[0]` is the
+        // entry recordDailyDealResult keeps for today (whether it just
+        // recorded it or a replay left the original in place).
+        const todays = result.history[0];
+        if (todays) {
+          (async () => {
+            try {
+              await submitDailyDealScore(supabase!, todays.date, todays.yourScore, todays.won);
+              setDailyDealFriendScores(await fetchDailyDealFriendScores(supabase!, todays.date));
+            } catch (err) {
+              console.error("Daily Deal friend scores unavailable (run migration 0018):", err);
+            }
+          })();
+        }
       }
     })();
   }, [isDailyDeal, state, user]);
@@ -499,6 +529,40 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="mt-1 text-xs text-[var(--faint)]">
             Best streak: {dailyDealState.bestStreak}. Come back tomorrow for the next one.
           </p>
+        </div>
+      )}
+
+      {/* Per-deal friend leaderboard (migration 0018). Only worth showing
+          once it's actually a comparison — you plus at least one friend
+          who's played today's same deal. */}
+      {isDailyDeal && dailyDealFriendScores && dailyDealFriendScores.length >= 2 && (
+        <div className="rounded-xl bg-[var(--panel-soft)] p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+            Today&apos;s deal · friends
+          </h3>
+          <ol className="mt-2 flex flex-col gap-1">
+            {dailyDealFriendScores.map((s, i) => (
+              <li
+                key={s.userId}
+                className={`flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm ${
+                  s.isMe
+                    ? "bg-[var(--accent)]/15 font-semibold text-[var(--heading)]"
+                    : "text-[var(--text)]"
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="w-4 shrink-0 text-right tabular-nums text-[var(--faint)]">{i + 1}</span>
+                  <span className="truncate">
+                    {s.isMe ? "You" : displayNameFor({ user_id: s.userId, display_name: s.displayName })}
+                  </span>
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  {s.score}
+                  {s.won ? " 🏆" : ""}
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
       )}
 

@@ -152,6 +152,8 @@ AuthProvider
 | `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme). |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
+| `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
+| `favoriteGameConfig.ts` | "My usual" saved solo/pass-and-play setup (localStorage): load/save/describe + `contractsFor` / `playerConfigsFor` deal helpers. |
 | `scorecardStore.ts` | `scorecard` — the standalone scorekeeper's grid. |
 | `pendingSaveQueue.ts` | `pendingSaves` — finished games whose Supabase write failed; retried by `PendingSaveSync`. |
 
@@ -236,6 +238,12 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0010 | **Multiplayer:** `mp_games`, `mp_game_state` (RLS on, **zero policies** → unreachable), `mp_participants`, `mp_my_games`/`mp_my_history`/etc. RPCs. |
 | 0011 | MP stats: `mp_my_stats()` RPC + `mp_games_played/won/best_win_streak` on `leaderboard_entries`. |
 | 0012 | One-tap friend links: `mp_add_friend_by_code()` + `friendships replica identity full` (so accept/unfriend reach both parties over Realtime). |
+| 0013 | Security hardening: `WITH CHECK` on self-report UPDATE policies, display-name constraint, `mp_rate_limit` + `mp_bump_rate_limit()`. |
+| 0014 | MP housekeeping: `mp_trim_events()`, `mp_housekeeping()` + daily `pg_cron`. |
+| 0015 | `solo_saves` (owner-only) — cloud sync of the in-progress solo/pass-and-play game (`LocalSaveSync`). |
+| 0016 | Observability: `schema_migrations` (version tracking, backfilled), `client_errors` (insert-only), `app_events` (anonymous analytics). |
+| 0017 | `mp_nudge()` — "your turn" reminder for a stalled MP game, rate-limited. |
+| 0018 | `daily_deal_scores` (owner-only) + `daily_deal_submit()` / `daily_deal_friend_scores()` — per-deal friend leaderboard on the Daily Deal game-over screen. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
