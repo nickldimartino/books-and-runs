@@ -1,6 +1,14 @@
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
+  // Skip the first-visit intro splash (its own spec covers it).
+  await page.addInitScript(() => {
+    try {
+      sessionStorage.setItem("booksAndRuns:introSeen", "1");
+    } catch {
+      /* ignore */
+    }
+  });
   await page.goto("/");
   await page.evaluate(() => {
     try {

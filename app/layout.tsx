@@ -76,6 +76,14 @@ const COLORBLIND_INIT_SCRIPT = `(function(){try{var c=localStorage.getItem("book
 // script tags.
 const CARDBACK_INIT_SCRIPT = `(function(){try{var ids=${THEME_IDS_JSON};var t=localStorage.getItem("booksAndRuns:theme");var theme=ids.indexOf(t)!==-1?t:"midnight";var cb=localStorage.getItem("booksAndRuns:cardBack");var effective=cb==="match"?theme:(ids.indexOf(cb)!==-1?cb:theme);document.documentElement.setAttribute("data-cardback",effective);}catch(e){}})();`;
 
+// Arms the first-visit intro (see components/IntroSplash.tsx). Runs before
+// the body paints so html[data-intro]::before can cover the screen with no
+// flash of the home content underneath. Only the very first entry to "/" in
+// a browser session: a refresh keeps sessionStorage so it won't replay, and
+// reduced-motion skips it entirely. The 4.5s self-clear is a safety net in
+// case the React component never mounts.
+const INTRO_INIT_SCRIPT = `(function(){try{if(location.pathname!=="/")return;if(sessionStorage.getItem("booksAndRuns:introSeen"))return;if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){sessionStorage.setItem("booksAndRuns:introSeen","1");return;}document.documentElement.setAttribute("data-intro","1");setTimeout(function(){document.documentElement.removeAttribute("data-intro");},4500);}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -83,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: COLORBLIND_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: CARDBACK_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: INTRO_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
         <AuthProvider>

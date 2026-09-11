@@ -6,6 +6,14 @@ import { test, expect } from "@playwright/test";
 // doesn't, the page shows the "not set up" state, which is also asserted.
 
 test.beforeEach(async ({ page }) => {
+  // Skip the first-visit intro splash (its own spec covers it).
+  await page.addInitScript(() => {
+    try {
+      sessionStorage.setItem("booksAndRuns:introSeen", "1");
+    } catch {
+      /* ignore */
+    }
+  });
   await page.goto("/");
   await page.evaluate(() => {
     try {
@@ -13,7 +21,7 @@ test.beforeEach(async ({ page }) => {
         .filter((k) => k.startsWith("booksAndRuns"))
         .forEach((k) => localStorage.removeItem(k));
     } catch {
-      /* ignore */
+      /* private mode */
     }
   });
 });

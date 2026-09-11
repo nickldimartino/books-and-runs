@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { CardFanHero } from "./components/CardFanHero";
+import { IntroSplash } from "./components/IntroSplash";
 import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
@@ -421,6 +422,7 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
+      <IntroSplash />
       <div>
         <CardFanHero />
         {configured && user && level && (
