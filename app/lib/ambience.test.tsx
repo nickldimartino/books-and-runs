@@ -116,9 +116,9 @@ describe("ambience", () => {
       startAmbience();
       const oscillatorsAtStart = lastContext!.createOscillator.mock.results.map((r) => r.value as FakeOscillator);
 
-      // Hold (20s) + morph (5s), from the module's own constants — none of
+      // Hold (9s) + morph (2.5s), from the module's own constants — none of
       // these oscillators' frequencies have been touched since creation.
-      await vi.advanceTimersByTimeAsync(25_000);
+      await vi.advanceTimersByTimeAsync(11_600);
 
       const glided = oscillatorsAtStart.filter((osc) => osc.frequency.linearRampToValueAtTime.mock.calls.length > 0);
       // Exactly the 4 pad voices glide on a chord change — their detune
@@ -136,8 +136,8 @@ describe("ambience", () => {
       startAmbience();
       const oscillatorsAtStart = lastContext!.createOscillator.mock.calls.length;
 
-      // Comfortably past the module's own max melody-note delay (14s).
-      await vi.advanceTimersByTimeAsync(15_000);
+      // Comfortably past the module's own max melody-note delay (7s).
+      await vi.advanceTimersByTimeAsync(8_000);
 
       expect(lastContext!.createOscillator.mock.calls.length).toBeGreaterThan(oscillatorsAtStart);
     } finally {

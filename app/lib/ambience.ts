@@ -4,13 +4,16 @@ import { loadLocalSettings } from "./settingsStore";
  * Optional generative ambient music for the game screens — synthesized
  * entirely with the Web Audio API (same "no audio files, no licensing,
  * works offline" approach sound.ts already uses for SFX), aiming for a
- * calm, evolving backdrop rather than a single static tone: a four-voice
- * pad that glides between a slow D-minor chord progression (i–bVII–bVI–v),
- * a sparse plucked melody drawn from the same scale and dropped in at
- * random intervals, and a touch of synthetic hall reverb so the whole
- * thing has some space instead of sounding like a dry lab tone. Entirely
- * separate from sound.ts's own AudioContext/volume — see settingsStore.ts's
- * own doc for why this is its own toggle, off by default.
+ * calm but upbeat backdrop rather than a single static tone: a four-voice
+ * pad that glides between a brighter C-major progression (I–V–vi–IV) in a
+ * higher register, a sparse plucked melody drawn from the major pentatonic
+ * scale and dropped in fairly often, and a touch of synthetic hall reverb
+ * so the whole thing has some space instead of sounding like a dry lab
+ * tone. Deliberately not the previous D-minor version — that read as slow
+ * and melancholy; this stays calm (no dance-tempo rhythm section) while
+ * moving and resolving noticeably more often. Entirely separate from
+ * sound.ts's own AudioContext/volume — see settingsStore.ts's own doc for
+ * why this is its own toggle, off by default.
  */
 
 let ctx: AudioContext | null = null;
@@ -24,26 +27,29 @@ let chordStep = 0;
 let sessionId = 0;
 let timers: number[] = [];
 
-// Each chord is the four pad voices' target frequency (bass → soprano),
-// voiced in similar registers to the next chord so a voice glides a short
-// distance rather than leaping — i (Dm) → bVII (C) → bVI (Bb) → v (Am), a
-// calm, modal, slightly melancholy loop rather than a clear major "theme".
+// Each chord is the four pad voices' target frequency (bass → soprano) —
+// C → G → Am → F, the classic I–V–vi–IV "upbeat" progression, three major
+// chords against one gentle relative minor for a touch of shade rather
+// than the previous all-minor loop. Voiced a clear register higher than
+// the old D-minor version throughout (this pad's lowest note is now C3;
+// its highest reaches A4) — brighter both harmonically and tonally.
 const CHORDS: [number, number, number, number][] = [
-  [146.83, 174.61, 220.0, 293.66], // Dm  — D3 F3 A3 D4
-  [130.81, 164.81, 196.0, 261.63], // C   — C3 E3 G3 C4
-  [116.54, 146.83, 174.61, 233.08], // Bb — Bb2 D3 F3 Bb3
-  [110.0, 130.81, 164.81, 196.0], // Am  — A2 C3 E3 G3
+  [130.81, 196.0, 261.63, 329.63], // C  — C3 G3 C4 E4
+  [146.83, 196.0, 246.94, 392.0], // G  — D3 G3 B3 G4
+  [130.81, 220.0, 329.63, 440.0], // Am — C3 A3 E4 A4
+  [174.61, 220.0, 261.63, 349.23], // F  — F3 A3 C4 F4
 ];
 
-// D natural minor across two octaves — the sparse melody's note pool, kept
-// separate from the pad's own voices so a melody note is always consonant
-// with whichever chord happens to be holding underneath it.
-const MELODY_SCALE = [293.66, 329.63, 349.23, 392.0, 440.0, 466.16, 523.25, 587.33];
+// C major pentatonic (no half-steps at all, so nothing can land "wrong")
+// across two octaves — the sparse melody's note pool, kept separate from
+// the pad's own voices so a melody note is always consonant with whichever
+// chord happens to be holding underneath it.
+const MELODY_SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
 
-const CHORD_HOLD_SECONDS = 20;
-const CHORD_MORPH_SECONDS = 5;
-const MELODY_MIN_DELAY_MS = 5000;
-const MELODY_MAX_DELAY_MS = 14000;
+const CHORD_HOLD_SECONDS = 9;
+const CHORD_MORPH_SECONDS = 2.5;
+const MELODY_MIN_DELAY_MS = 2500;
+const MELODY_MAX_DELAY_MS = 7000;
 
 function clampVolume(v: number): number {
   // Capped well below sound.ts's own ceiling — even "100%" on this slider
@@ -132,10 +138,10 @@ function playMelodyNote(c: AudioContext): void {
 
   const now = c.currentTime;
   noteGain.gain.setValueAtTime(0, now);
-  noteGain.gain.linearRampToValueAtTime(0.22, now + 0.6);
-  noteGain.gain.linearRampToValueAtTime(0, now + 3.2);
+  noteGain.gain.linearRampToValueAtTime(0.24, now + 0.35);
+  noteGain.gain.linearRampToValueAtTime(0, now + 2.2);
   osc.start(now);
-  osc.stop(now + 3.4);
+  osc.stop(now + 2.4);
 }
 
 function scheduleNextNote(c: AudioContext, mySession: number): void {
@@ -163,7 +169,10 @@ export function startAmbience(): void {
 
   padFilter = c.createBiquadFilter();
   padFilter.type = "lowpass";
-  padFilter.frequency.value = 900;
+  // Noticeably more open than the original 900Hz — lets more of the pad's
+  // own overtones through, which reads as brighter even before the higher
+  // chord voicings above are accounted for.
+  padFilter.frequency.value = 1600;
   padFilter.Q.value = 0.7;
 
   masterGain = c.createGain();
@@ -200,7 +209,7 @@ export function startAmbience(): void {
     // obviously-looping tone in between chord changes.
     const lfo = c.createOscillator();
     lfo.type = "sine";
-    lfo.frequency.value = 0.05 + i * 0.013;
+    lfo.frequency.value = 0.08 + i * 0.017;
     const lfoGain = c.createGain();
     lfoGain.gain.value = 3;
     lfo.connect(lfoGain).connect(osc.detune);
@@ -213,9 +222,9 @@ export function startAmbience(): void {
 
   filterLfo = c.createOscillator();
   filterLfo.type = "sine";
-  filterLfo.frequency.value = 0.02;
+  filterLfo.frequency.value = 0.03;
   const filterLfoGain = c.createGain();
-  filterLfoGain.gain.value = 350;
+  filterLfoGain.gain.value = 450;
   filterLfo.connect(filterLfoGain).connect(padFilter.frequency);
   filterLfo.start();
 
