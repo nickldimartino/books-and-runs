@@ -8,6 +8,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
 import {
   displayNameFor,
   MAX_DISPLAY_NAME_LENGTH,
@@ -50,6 +51,8 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState("");
   const [passwordSaveState, setPasswordSaveState] = useState<SaveState>("idle");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const [exportState, setExportState] = useState<"idle" | "working" | "error">("idle");
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -164,6 +167,19 @@ export default function AccountPage() {
     setCurrentPassword("");
     setNewPassword("");
     setPasswordSaveState("saved");
+  }
+
+  async function handleExportData() {
+    if (!supabase || !user) return;
+    setExportState("working");
+    try {
+      const data = await buildUserDataExport(supabase, user);
+      downloadUserDataExport(data, user.id);
+      setExportState("idle");
+    } catch (err) {
+      console.error("Failed to export account data:", err);
+      setExportState("error");
+    }
   }
 
   return (
@@ -281,6 +297,26 @@ export default function AccountPage() {
                 {passwordSaveState === "saving" ? "Saving…" : "Change password"}
               </button>
             </form>
+          </section>
+
+          <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+              Your data
+            </h2>
+            <p className="text-xs text-[var(--muted)]">
+              Download everything tied to this account — stats, game history, achievements,
+              friends, and multiplayer record — as one JSON file.
+            </p>
+            <button
+              onClick={handleExportData}
+              disabled={exportState === "working"}
+              className="self-start rounded-lg border border-[var(--accent)]/60 px-4 py-2.5 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {exportState === "working" ? "Preparing your download…" : "Download my data"}
+            </button>
+            {exportState === "error" && (
+              <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare the download — try again.</p>
+            )}
           </section>
 
           <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">

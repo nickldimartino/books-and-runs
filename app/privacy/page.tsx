@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       </Link>
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Privacy Policy</h1>
-        <p className="mt-1 text-sm text-[var(--faint)]">Last updated September 10, 2026</p>
+        <p className="mt-1 text-sm text-[var(--faint)]">Last updated September 11, 2026</p>
       </div>
 
       <div className="flex flex-col gap-5 text-sm leading-relaxed text-[var(--muted)]">
@@ -113,9 +113,11 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Data retention and deletion</h2>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">Data export and deletion</h2>
           <p>
-            We keep your account data for as long as your account exists. To delete your account
+            The Account page has a <span className="text-[var(--heading)]">Download my data</span> button
+            that gives you everything above as one file, any time, with no need to ask. We keep your
+            account data for as long as your account exists. To delete your account
             and everything tied to it — stats, game history, achievement progress, display name,
             friends, and multiplayer games — email{" "}
             <span className="text-[var(--heading)]">nick.l.dimartino@icloud.com</span> from the
