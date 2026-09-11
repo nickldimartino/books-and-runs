@@ -31,7 +31,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      # Excludes e2e/visual.spec.ts — its baselines were made on macOS, and
+      # Playwright's screenshot comparison is platform-sensitive (font
+      # rasterization differs enough between macOS and this runner's Linux
+      # to fail on rendering noise, not a real regression). Run those
+      # locally with `npm run test:e2e:visual` instead; see the spec file's
+      # own doc for what it'd take to run them here too.
+      - run: npm run test:e2e:ci
         env:
           # The dev server reads these; absent, "With friends" shows the
           # signed-out prompt, which the specs still handle.

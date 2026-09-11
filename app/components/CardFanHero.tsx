@@ -54,7 +54,11 @@ export function CardFanHero() {
 
   const mid = (fan.length - 1) / 2;
   return (
-    <div aria-hidden="true" className="pointer-events-none relative mx-auto mb-5 h-[112px] w-full max-w-[260px]">
+    <div
+      aria-hidden="true"
+      data-testid="card-fan-hero"
+      className="pointer-events-none relative mx-auto mb-5 h-[112px] w-full max-w-[260px]"
+    >
       {fan.map((card, i) => {
         const offset = i - mid;
         const outer: CSSProperties = {
