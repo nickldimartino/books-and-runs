@@ -281,7 +281,6 @@ export default function SettingsPage() {
   const [cardFace, setCardFace] = useState<CardFaceId>(DEFAULT_CARD_FACE);
   const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
   const [loading, setLoading] = useState(true);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [tipsReset, setTipsReset] = useState(false);
   const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
@@ -357,14 +356,11 @@ export default function SettingsPage() {
 
   // Applies and persists a change to any local-only setting immediately —
   // same instant-apply behavior Theme and Colorblind mode already have.
-  // None of these fields (AI difficulty aside) are ever synced to Supabase
-  // (see saveLocalSettings' own callers), so there's nothing an explicit
-  // "Save" step was ever protecting here; requiring one just meant a toggle
-  // flipped and then navigated away from — without noticing a button lower
-  // on the page — silently reverted on the next visit. preferredAiDifficulty
-  // is included here too (it needs to persist locally right away, same as
-  // everything else) — syncAiDifficultyToAccount below handles the one
-  // genuinely separate action: mirroring it to a signed-in account.
+  // None of these fields are ever synced to Supabase (see saveLocalSettings'
+  // own callers), so there's nothing an explicit "Save" step was ever
+  // protecting here; requiring one just meant a toggle flipped and then
+  // navigated away from — without noticing a button lower on the page —
+  // silently reverted on the next visit.
   function updateSettings(patch: Partial<HouseSettings>) {
     setSettings((s) => {
       const next = { ...s, ...patch };
@@ -392,16 +388,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function syncAiDifficultyToAccount() {
-    if (!supabase || !user) return;
-    setSaveState("saving");
-    const { error } = await supabase.from("settings").upsert({
-      user_id: user.id,
-      preferred_ai_difficulty_default: settings.preferredAiDifficulty,
-    });
-    setSaveState(error ? "error" : "saved");
-  }
-
   const activeThemeOption = THEMES.find((t) => t.id === theme);
   const activeCardBackOption = cardBack === "match" ? undefined : THEMES.find((t) => t.id === cardBack);
 
@@ -419,10 +405,9 @@ export default function SettingsPage() {
         <LoadingSpinner />
       ) : (
         <>
-          <PageTip id="settings" title="Mostly local to this device">
-            Theme, card face, sound, and every toggle below stay on this browser. Preferred AI
-            difficulty is the one exception — it can sync to your account. Not sure what something
-            does? Tap the ⓘ next to it.
+          <PageTip id="settings" title="Local to this device">
+            Theme, card face, sound, AI difficulty, and every toggle below stay on this browser —
+            nothing here syncs to your account. Not sure what something does? Tap the ⓘ next to it.
           </PageTip>
 
           <SettingsSection title="Appearance">
@@ -506,37 +491,6 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            {/* Every other setting on this page saves the instant it changes
-                (see updateSettings) — this is the one exception, since it's
-                the only field with somewhere else to go: a signed-in
-                account, reachable from any device. That's a deliberate,
-                explicit action, not something that should fire on every
-                keystroke through a dropdown. */}
-            {configured && user && (
-              <div className="flex flex-col gap-1.5">
-                <button
-                  onClick={syncAiDifficultyToAccount}
-                  disabled={saveState === "saving"}
-                  className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
-                >
-                  {saveState === "saving" ? "Saving…" : "Sync to your account"}
-                </button>
-                {saveState === "saved" && (
-                  <p className="text-xs text-[var(--muted)]">Saved to your account.</p>
-                )}
-                {saveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">Couldn&apos;t reach your account to save it there.</p>
-                )}
-              </div>
-            )}
-            {configured && !user && (
-              <p className="text-xs text-[var(--faint)]">
-                <Link href="/sign-in" className="underline hover:text-[var(--muted)]">
-                  Sign in
-                </Link>{" "}
-                to keep this the same everywhere you play.
-              </p>
-            )}
           </section>
 
           <BoolToggle

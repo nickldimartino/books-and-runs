@@ -85,7 +85,6 @@ reads and mutates in place.
 
 ```
 AuthProvider
-  └ SettingsSync            pulls account settings → localStorage on sign-in
   └ PlayerLevelProvider     current level/XP, refetched after each game
       └ PendingSaveSync     retries game saves that failed offline
       └ GameProvider        THE local game — state, actions, AI loop, saves
@@ -96,7 +95,7 @@ AuthProvider
 | `app/AuthContext.tsx` | Supabase auth wrapper. Sign in/up/out, password reset. All of it optional — `isSupabaseConfigured` gates it, and the game works with no project connected. |
 | `app/GameContext.tsx` | **The heart of local play.** Holds the live `GameState`, exposes every action the game screen calls, runs the AI loop (`runAiLoop`), auto-saves to localStorage, and publishes `flightEvent` animation hints. ~1000 lines; start here for any solo-game behaviour. |
 | `app/PlayerLevelContext.tsx` | Level/XP for the header badge; `refresh()` after a game so it updates without a reload. |
-| `app/SettingsSync.tsx` / `app/PendingSaveSync.tsx` | Background sync helpers (see the "Data flows" section below). |
+| `app/PendingSaveSync.tsx` | Background sync helper (see the "Data flows" section below). |
 
 ### 3b. Routes (`app/**/page.tsx`)
 

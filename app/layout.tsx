@@ -5,7 +5,6 @@ import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
 import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
-import { SettingsSync } from "./SettingsSync";
 import { DEFAULT_THEME, THEME_BG } from "./lib/themeStore";
 import "./globals.css";
 
@@ -95,7 +94,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased">
         <ServiceWorkerRegistrar />
         <AuthProvider>
-          <SettingsSync />
           <PlayerLevelProvider>
             <PendingSaveSync />
             <GameProvider>

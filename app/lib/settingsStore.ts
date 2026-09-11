@@ -1,6 +1,5 @@
 // "House settings" — the preferences on the Settings page. Persisted in
-// localStorage; only `preferredAiDifficulty` is also synced to the account
-// (see SettingsSync / settings page). Everything else is per-device.
+// localStorage only, per-device — none of it syncs to the account.
 
 import { Difficulty } from "@/types";
 
