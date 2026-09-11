@@ -7,7 +7,11 @@
     "strict": true,
     "esModuleInterop": true,
     "declaration": true,
-    "sourceMap": false
+    "sourceMap": false,
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  // Just the engine — the *.test.ts files pull in vitest globals and aren't
+  // part of the `npm run demo` build.
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/testHelpers.ts"]
 }
