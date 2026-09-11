@@ -564,6 +564,16 @@ export default function GamePage() {
       ? state.players.map((p) => (p.id === YOU_PLAYER_ID ? { ...p, name: accountDisplayName } : p))
       : state.players;
   const opponentStripBios = ownBio ? { [YOU_PLAYER_ID]: ownBio } : undefined;
+  // Same override, applied to the whole state object rather than just the
+  // players array — RoundSummary and GameOverScreen both read names straight
+  // off state.players (standings, "X went out!", the winner line, and the
+  // game_history row GameOverScreen's attemptSave persists), so passing raw
+  // `state` into either one reintroduces the exact "your name doesn't update
+  // until the game restarts" bug this whole override exists to fix. Every
+  // other field is identical — only `.name` on the YOU_PLAYER_ID entry ever
+  // differs from `state`, so this is safe to swap in wherever `state` would
+  // otherwise have gone for a display/persistence purpose.
+  const stateForDisplay = { ...state, players: playersForDisplay };
 
   // Computed once and rendered as a sibling on every branch below, tutorial
   // or not — a pending step (the "wrapup" one especially) needs to stay
@@ -583,11 +593,11 @@ export default function GamePage() {
       />
     ) : null;
 
-  if (state.gameOver) return <GameOverScreen state={state} />;
+  if (state.gameOver) return <GameOverScreen state={stateForDisplay} />;
   if (state.roundOver) {
     return (
       <>
-        <RoundSummary state={state} roundStartScores={roundStartScores} onNextRound={advanceRound} />
+        <RoundSummary state={stateForDisplay} roundStartScores={roundStartScores} onNextRound={advanceRound} />
         {tutorialOverlayNode}
       </>
     );
