@@ -10,6 +10,7 @@
 
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { installErrorReporter, setErrorUser } from "./lib/errorReporter";
 import { isSupabaseConfigured, loadSupabase } from "./lib/supabaseClient";
 
 interface AuthResult {
@@ -43,6 +44,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
+
+  // Wire global error capture once, and keep the reporter's user id current.
+  useEffect(() => {
+    installErrorReporter();
+  }, []);
+  useEffect(() => {
+    setErrorUser(user?.id ?? null);
+  }, [user]);
 
   useEffect(() => {
     // Kicks off the SDK's dynamic import (see loadSupabase). `user` is only

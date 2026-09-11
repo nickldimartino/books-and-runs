@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { track } from "../../lib/analytics";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pickAiPersonas } from "../../lib/aiPersonas";
 import { Friend, getFriends } from "../../lib/friendsStore";
@@ -102,6 +103,12 @@ export default function NewMultiplayerGamePage() {
         })),
       ];
       await createMpGame(supabase, { contractRounds: rounds, seats });
+      track("mp_game_created", {
+        players: 1 + picked.size + ais.length,
+        humans: 1 + picked.size,
+        ais: ais.length,
+        rounds: rounds.length,
+      });
       router.push("/");
     } catch (err) {
       setError(err instanceof MpError ? err.message : "Couldn't create the game — try again.");

@@ -32,6 +32,7 @@ import { layOffOptions } from "@/meld";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
 import { createDailyDealGame } from "./lib/dailyDealStore";
+import { track } from "./lib/analytics";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
 import { playCardSlide, playCardTap, playMeld, playUndo, setTutorialSoundOverride } from "./lib/sound";
@@ -536,6 +537,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (configs.length >= 6) bump("large_table_games");
       }
 
+      const humans = configs.filter((c) => !c.isAI).length;
+      const aiConfigs = configs.filter((c) => c.isAI);
+      track("game_started", {
+        mode: humans > 1 ? "pass" : "solo",
+        players: configs.length,
+        ais: aiConfigs.length,
+        difficulty: aiConfigs[0]?.difficulty ?? "none",
+        rounds: (contracts ?? []).length || 7,
+      });
+
       persist();
       if (state.players[state.currentPlayerIndex].isAI) {
         runAiLoop();
@@ -570,6 +581,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setBuyOffer(null);
     buyQueueRef.current = [];
     sessionCountersRef.current = {};
+    track("game_started", { mode: "tutorial", players: 2, ais: 1, difficulty: "beginner", rounds: 1 });
     // No persist() — see the isTutorialRef guard at the top of persist().
   }, [setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
@@ -599,6 +611,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setBuyOffer(null);
     buyQueueRef.current = [];
     sessionCountersRef.current = {};
+    track("game_started", { mode: "daily", players: state.players.length, ais: state.players.length - 1, difficulty: "mixed", rounds: 1 });
     // No persist() — see the isDailyDealRef guard at the top of persist().
     if (state.players[state.currentPlayerIndex].isAI) {
       runAiLoop();

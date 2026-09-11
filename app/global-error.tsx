@@ -7,6 +7,7 @@
 // literally (globals.css isn't loaded at this point).
 
 import { useEffect } from "react";
+import { report } from "./lib/errorReporter";
 
 const BG = "#0a2b20";
 const HEADING = "#fef3c7";
@@ -24,6 +25,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Global error boundary caught:", error);
+    report({ message: error.message, stack: error.stack, source: "global-error" });
   }, [error]);
 
   return (

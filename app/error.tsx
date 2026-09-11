@@ -12,11 +12,13 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { clearSavedGame } from "./lib/localSave";
+import { report } from "./lib/errorReporter";
 
 // Note: this (modified) Next passes `retry`, not the upstream `reset` name.
 export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error("Route error boundary caught:", error);
+    report({ message: error.message, stack: error.stack, source: "error-boundary" });
   }, [error]);
 
   return (

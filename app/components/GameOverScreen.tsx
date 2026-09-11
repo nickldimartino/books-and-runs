@@ -20,6 +20,7 @@ import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } f
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { track } from "../lib/analytics";
 import { DailyDealState, mergeCloudDailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
 import { joinNames } from "../lib/formatNames";
 import { pullDailyDealStreak, syncDailyDealStreak, syncLeaderboardStats } from "../lib/leaderboardStore";
@@ -62,6 +63,19 @@ export function GameOverScreen({ state }: { state: GameState }) {
   // was exhausted).
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const recordedRef = useRef(false);
+
+  // Anonymous completion event — see analytics.ts. Once per mount.
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (trackedRef.current) return;
+    trackedRef.current = true;
+    const humans = state.players.filter((p) => !p.isAI).length;
+    track("game_completed", {
+      mode: isTutorial ? "tutorial" : isDailyDeal ? "daily" : humans > 1 ? "pass" : "solo",
+      rounds: state.selectedContracts.length,
+      won: state.winnerId === YOU_PLAYER_ID,
+    });
+  }, [state, isTutorial, isDailyDeal]);
   // Tracked separately from `saved` so a retry after a partial failure (one
   // write went through, the other didn't) only re-sends the write that
   // actually failed — neither recordGameResult nor recordAchievementProgress

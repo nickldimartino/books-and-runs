@@ -27,3 +27,11 @@ create policy "solo_saves: owner update" on public.solo_saves
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "solo_saves: owner delete" on public.solo_saves
   for delete using (auth.uid() = user_id);
+
+-- Record this migration (see supabase/migrations/README.md). Guarded in
+-- case 0016 (which creates the table) hasn't been run yet.
+do $$ begin
+  insert into public.schema_migrations (version) values ('0015_solo_save_sync')
+    on conflict (version) do nothing;
+exception when undefined_table then null;
+end $$;
