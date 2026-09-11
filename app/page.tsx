@@ -515,7 +515,7 @@ export default function HomePage() {
             the plain nav buttons below it, matching how much attention a
             once-a-day hook actually deserves: more than "here's a settings
             page," less than the primary CTA. */}
-        <section className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left">
+        <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-[var(--heading)]">Daily Deal</h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">

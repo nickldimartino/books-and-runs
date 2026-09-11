@@ -1108,7 +1108,7 @@ export default function GamePage() {
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announcement}
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <button
           onClick={() => {
             // Unlike a real game, neither a tutorial nor a Daily Deal can be
@@ -1121,6 +1121,10 @@ export default function GamePage() {
         >
           ← Home
         </button>
+        {/* flex-wrap on the row above (not here) so this stays one group —
+            on the narrowest real phones (~320px) three buttons' worth of
+            text doesn't fit on one line; wrapping the group to its own row
+            reads far better than each button's own label wrapping in place. */}
         <div className="flex items-center gap-2">
           {showWhoseTurn && (
             <button
