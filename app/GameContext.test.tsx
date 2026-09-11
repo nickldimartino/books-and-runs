@@ -158,4 +158,56 @@ describe("GameContext — persistence", () => {
     expect(api.isTutorial).toBe(true);
     expect(localStorage.getItem("booksAndRuns:savedGame")).toBeNull();
   });
+
+  it("a Daily Deal game never writes the real saved-game slot", () => {
+    mount();
+    act(() => api.startDailyDeal());
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+
+    expect(api.isDailyDeal).toBe(true);
+    expect(localStorage.getItem("booksAndRuns:savedGame")).toBeNull();
+  });
+
+  it("quitToHome() drops the game and clears the saved slot", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, SHORT_GAME_CONTRACTS));
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+    expect(localStorage.getItem("booksAndRuns:savedGame")).toBeTruthy();
+
+    act(() => api.quitToHome());
+
+    expect(api.state).toBeNull();
+    expect(api.hasSavedGame).toBe(false);
+    expect(localStorage.getItem("booksAndRuns:savedGame")).toBeNull();
+  });
+});
+
+describe("GameContext — hand ordering", () => {
+  it("sortHand() reorders without adding or losing a card", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
+    act(() => api.revealHand());
+
+    const before = api.state!.players[0].hand.map((c) => c.id).sort();
+    act(() => api.sortHand("rank"));
+    const after = api.state!.players[0].hand.map((c) => c.id).sort();
+
+    expect(after).toEqual(before);
+    expect(api.state!.players[0].hand).toHaveLength(13);
+  });
+
+  it("reorderHand() applies an exact given order", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
+    act(() => api.revealHand());
+
+    const reversed = [...api.state!.players[0].hand.map((c) => c.id)].reverse();
+    act(() => api.reorderHand(reversed));
+
+    expect(api.state!.players[0].hand.map((c) => c.id)).toEqual(reversed);
+  });
 });
