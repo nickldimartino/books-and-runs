@@ -72,9 +72,14 @@ need `SUPPORT_EMAIL` to differ from the Resend account's own address.
 
 ### Smoke test after deploy
 
+`$SUPABASE_URL`/`$SUPABASE_ANON_KEY` aren't real shell env vars — pull them
+from `.env.local` (the app's own `NEXT_PUBLIC_...` copies) instead of typing
+them by hand:
+
 ```bash
-curl -X POST "$SUPABASE_URL/functions/v1/contact" \
-  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+export $(grep -E '^NEXT_PUBLIC_SUPABASE_(URL|ANON_KEY)=' .env.local | xargs)
+curl -X POST "$NEXT_PUBLIC_SUPABASE_URL/functions/v1/contact" \
+  -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"bug","subject":"test","description":"smoke test"}'
 ```
