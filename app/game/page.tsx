@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AI_THEORETICAL_LEVEL, personaBlurbFor } from "../lib/aiPersonas";
@@ -35,6 +36,7 @@ import { loadLocalSettings } from "../lib/settingsStore";
 import { useFocusTrap } from "../lib/useFocusTrap";
 import { playCardSlide, playGameWin, playRoundWin } from "../lib/sound";
 import { hapticLight, hapticSuccess } from "../lib/haptics";
+import { supabase } from "../lib/supabaseClient";
 import { layOffOptions, runCardRank, RUN_ORDER, solveContract, solveWholeHandContract, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
@@ -155,6 +157,30 @@ export default function GamePage() {
     undoLastAction,
   } = useGame();
   const { level } = usePlayerLevel();
+  const { configured, user } = useAuth();
+  // A saved/resumed game's YOU_PLAYER_ID entry keeps whatever name it was
+  // dealt with — changing your display name on the Account page later
+  // doesn't retroactively touch it. Read the account's current name/bio
+  // here and override at render time instead (see playersForDisplay below)
+  // rather than rewriting the persisted game, so every display of "your"
+  // name — this round header, OpponentStrip — always reflects the account
+  // as it is right now, the same "account name wins" rule New Game's own
+  // seat-0 lock already follows.
+  const [accountDisplayName, setAccountDisplayName] = useState<string | null>(null);
+  const [ownBio, setOwnBio] = useState<string | null>(null);
+  useEffect(() => {
+    if (!supabase || !user) return;
+    supabase
+      .from("leaderboard_entries")
+      .select("display_name, bio")
+      .eq("user_id", user.id)
+      .maybeSingle<{ display_name: string | null; bio: string | null }>()
+      .then(({ data }) => {
+        setAccountDisplayName(data?.display_name?.trim() || null);
+        setOwnBio(data?.bio?.trim() || null);
+      });
+  }, [user]);
+  const yourNameLocked = !!(configured && user);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
@@ -526,6 +552,18 @@ export default function GamePage() {
   }
 
   if (!state) return null;
+
+  // state.players as actually rendered — YOU_PLAYER_ID's name overridden to
+  // the account's current display name (see the effect above) rather than
+  // whatever this game happened to be dealt with. Never touches `state`
+  // itself: everything else (discard/pickup history, achievement counters)
+  // keys off player id, not name, so an id-preserving swap here is enough
+  // for the whole screen to read correctly, not just OpponentStrip.
+  const playersForDisplay =
+    yourNameLocked && accountDisplayName
+      ? state.players.map((p) => (p.id === YOU_PLAYER_ID ? { ...p, name: accountDisplayName } : p))
+      : state.players;
+  const opponentStripBios = ownBio ? { [YOU_PLAYER_ID]: ownBio } : undefined;
 
   // Computed once and rendered as a sibling on every branch below, tutorial
   // or not — a pending step (the "wrapup" one especially) needs to stay
@@ -1173,7 +1211,7 @@ export default function GamePage() {
             centered block; round info and this list are each pinned to
             their own edge of the header. */}
         <ul className="shrink-0 space-y-1 text-right text-xs text-[var(--muted)]">
-          {[...state.players]
+          {[...playersForDisplay]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
               <li key={p.id} className="flex items-center justify-end gap-1">
@@ -1202,12 +1240,13 @@ export default function GamePage() {
       </header>
 
       <OpponentStrip
-        players={state.players}
+        players={playersForDisplay}
         currentPlayerIndex={state.currentPlayerIndex}
         discardHistory={state.discardHistory}
         pickupHistory={state.pickupHistory}
         aiStatus={aiStatus}
         aiThinking={aiThinking}
+        bios={opponentStripBios}
       />
 
       {canUndo && (
@@ -1372,7 +1411,7 @@ export default function GamePage() {
             ) : (
               <div className="flex flex-col gap-3">
                 {[...meldsByOwner.entries()].map(([ownerId, melds]) => {
-                  const owner = state.players.find((p) => p.id === ownerId);
+                  const owner = playersForDisplay.find((p) => p.id === ownerId);
                   return (
                     <div key={ownerId}>
                       <p
