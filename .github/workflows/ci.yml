@@ -14,6 +14,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Node 22's bundled npm doesn't match the npm version package-lock.json
+      # was generated with, and `npm ci` validates the lockfile strictly
+      # enough that the mismatch fails it outright ("Missing: typescript@…
+      # from lock file") even though the lockfile and package.json really
+      # are in sync. Pinning here to the same npm version used locally is
+      # more reliable than chasing whatever setup-node's default drifts to.
+      - run: npm install -g npm@11.19.0
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
@@ -29,6 +36,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Node 22's bundled npm doesn't match the npm version package-lock.json
+      # was generated with, and `npm ci` validates the lockfile strictly
+      # enough that the mismatch fails it outright ("Missing: typescript@…
+      # from lock file") even though the lockfile and package.json really
+      # are in sync. Pinning here to the same npm version used locally is
+      # more reliable than chasing whatever setup-node's default drifts to.
+      - run: npm install -g npm@11.19.0
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       # Excludes e2e/visual.spec.ts — its baselines were made on macOS, and
