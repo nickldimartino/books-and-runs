@@ -10,11 +10,30 @@ import { COLORBLIND_MODES } from "./lib/colorblindStore";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Books & Runs",
+  metadataBase: new URL("https://books-and-runs.vercel.app"),
+  title: {
+    default: "Books & Runs — free Contract Rummy card game",
+    template: "%s — Books & Runs",
+  },
   description:
-    "Books & Runs is a free browser-based Contract Rummy card game. Play solo against AI opponents or pass-and-play with friends on one device — no download required.",
+    "Books & Runs is a free browser-based Contract Rummy card game. Play solo against five levels of AI, pass-and-play with friends on one device, or turn-based online — no download required.",
+  applicationName: "Books & Runs",
+  keywords: ["Contract Rummy", "card game", "rummy", "books and runs", "free card game", "Liverpool Rummy"],
   verification: {
     google: "jI87NzjdGYGEBETrJ4QjX6sIetF6C7kZLg-p4zkwYbc",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Books & Runs",
+    title: "Books & Runs — free Contract Rummy card game",
+    description:
+      "Play Contract Rummy solo against AI, pass-and-play on one device, or turn-based online with friends. Free, no download.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Books & Runs — free Contract Rummy card game",
+    description: "Contract Rummy solo vs AI, pass-and-play, or online with friends. Free, no download.",
   },
 };
 
