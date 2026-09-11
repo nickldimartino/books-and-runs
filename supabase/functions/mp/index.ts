@@ -11,6 +11,10 @@
 // automatically.)
 
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
+// Deno's npm compat — sends the actual Web Push HTTP request (VAPID auth +
+// aes128gcm payload encryption) so this doesn't need a hand-rolled crypto
+// implementation. Pinned exact, same convention as every other dep here.
+import webpush from "npm:web-push@3.6.7";
 import { corsHeaders, json } from "../_shared/cors.ts";
 // ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
 // deploy bundler doesn't resolve the app's extension-less imports. Run
@@ -28,6 +32,19 @@ import { MpConfig, MpEngine } from "./_engine/mp/types.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+// Push notifications ("your turn" etc. — see addEvent/sendPushForEvent
+// below) are entirely optional: unset either of these (a project that
+// hasn't run `supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...`
+// yet) and every push send is just skipped, same as a missing RPC elsewhere
+// in this file. VAPID_SUBJECT identifies the sender to push services per
+// spec — a mailto: or https: URL; defaults to something generic rather than
+// failing outright if it's not set.
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:support@booksandruns.app";
+const PUSH_ENABLED = !!VAPID_PUBLIC_KEY && !!VAPID_PRIVATE_KEY;
+if (PUSH_ENABLED) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const MP_GAME_CAP = 3;
 const VALID_ROUNDS = [1, 2, 3, 4, 5, 6, 7];
@@ -93,6 +110,56 @@ async function activeCount(uid: string): Promise<number> {
   return count ?? 0;
 }
 
+// Only the kinds worth interrupting someone for over push — friend_request/
+// friend_accepted/game_cancelled/game_over stay inbox-only (useNotifications'
+// badge), same as before this existed. Keyed by kind → the {title, body}
+// shown in the notification; deliberately generic (no extra DB round trip
+// per send for a nicer "Zara melded 2 Books" — worth adding later, not
+// required for the notification to be useful now).
+const PUSH_COPY: Record<string, { title: string; body: string }> = {
+  your_turn: { title: "Your turn", body: "It's your move in Books & Runs." },
+  game_request: { title: "Game invite", body: "You've been invited to a multiplayer game." },
+  nudge: { title: "Nudge", body: "Someone's waiting on your move." },
+};
+
+async function sendPushForEvent(userId: string, kind: string, gameId: string | null) {
+  const copy = PUSH_COPY[kind];
+  if (!PUSH_ENABLED || !copy) return;
+
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth_key")
+    .eq("user_id", userId);
+  if (!subs || subs.length === 0) return;
+
+  const payload = JSON.stringify({
+    title: copy.title,
+    body: copy.body,
+    url: gameId ? `/multiplayer/play?g=${gameId}` : "/",
+    tag: gameId ? `mp-${gameId}` : kind,
+  });
+
+  await Promise.all(
+    subs.map(async (s) => {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } }, payload);
+      } catch (err) {
+        // 404/410 means the push service has permanently discarded this
+        // endpoint (uninstalled, permission revoked, browser data cleared)
+        // — clean it up rather than retrying it forever. Anything else is
+        // logged and swallowed: a push failure must never fail the game
+        // action (move/create/respond) that triggered it.
+        const status = (err as { statusCode?: number } | null)?.statusCode;
+        if (status === 404 || status === 410) {
+          await admin.from("push_subscriptions").delete().eq("id", s.id);
+        } else {
+          console.error(`push send failed for ${kind}:`, err);
+        }
+      }
+    })
+  );
+}
+
 async function addEvent(userId: string, kind: string, gameId: string | null, actorId: string | null) {
   await admin.from("mp_events").insert({ user_id: userId, kind, game_id: gameId, actor_id: actorId });
   // Keep each user's inbox bounded — it's only ever read as "recent unseen"
@@ -102,6 +169,8 @@ async function addEvent(userId: string, kind: string, gameId: string | null, act
     () => {},
     () => {}, // RPC not deployed yet → no-op, the cron sweep still covers it
   );
+  // Best-effort, never blocks the caller's own response on a push failure.
+  await sendPushForEvent(userId, kind, gameId).catch((err) => console.error("sendPushForEvent failed:", err));
 }
 
 interface GameRow {

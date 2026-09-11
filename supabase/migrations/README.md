@@ -39,6 +39,7 @@ tells you a project's real state.
 | 0017 | `mp_nudge()` — "your turn" reminder, rate-limited |
 | 0018 | `daily_deal_scores` — per-deal friend leaderboard (`daily_deal_submit`, `daily_deal_friend_scores`) |
 | 0019 | `favorite_game_configs` — sync "my usual" solo/pass-and-play setup across devices |
+| 0020 | `push_subscriptions` — Web Push ("your turn" notifications), sent from the `mp` function via VAPID |
 
 ## New migrations
 

@@ -16,6 +16,12 @@ import {
   loadLocalCardBack,
   saveLocalCardBack,
 } from "../lib/cardBackStore";
+import {
+  getPushPermission,
+  isPushSubscribed,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "../lib/pushSubscriptions";
 import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
 import {
@@ -233,12 +239,18 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
+  const [pushError, setPushError] = useState<string | null>(null);
 
   useEffect(() => {
     setSettings(loadLocalSettings());
     setTheme(loadLocalTheme());
     setCardBack(loadLocalCardBack());
     setColorblindMode(loadLocalColorblindMode());
+    const permission = getPushPermission();
+    if (permission === "unsupported") setPushState("unsupported");
+    else if (permission === "denied") setPushState("denied");
+    else isPushSubscribed().then((subbed) => setPushState(subbed ? "on" : "off"));
     if (!supabase || !user) {
       setLoading(false);
       return;
@@ -311,6 +323,25 @@ export default function SettingsPage() {
       saveLocalSettings(next);
       return next;
     });
+  }
+
+  async function handleTogglePush(next: boolean) {
+    if (!supabase || !user) return;
+    if (!next) {
+      setPushState("busy");
+      await unsubscribeFromPush(supabase);
+      setPushState("off");
+      return;
+    }
+    setPushState("busy");
+    setPushError(null);
+    const result = await subscribeToPush(supabase, user.id);
+    if (result.ok) setPushState("on");
+    else if (result.reason === "denied") setPushState("denied");
+    else {
+      setPushState("off");
+      setPushError(result.reason ?? "Couldn't turn on notifications.");
+    }
   }
 
   async function syncAiDifficultyToAccount() {
@@ -484,6 +515,50 @@ export default function SettingsPage() {
             onChange={(v) => updateSettings({ soundVolume: v })}
           />
           </SettingsSection>
+
+          {configured && user && (
+            <SettingsSection title="Notifications">
+              <section className="flex flex-col gap-2">
+                <InfoDetails label="Turn notifications">
+                  A push notification when it&apos;s your move in a multiplayer game — the only way
+                  to know besides opening the app. Works once this page is added to your home
+                  screen or installed as an app; your browser controls the actual permission. Off
+                  by default.
+                </InfoDetails>
+                {pushState === "unsupported" ? (
+                  <p className="text-xs text-[var(--faint)]">Not supported in this browser.</p>
+                ) : pushState === "denied" ? (
+                  <p className="text-xs text-[var(--faint)]">
+                    Blocked in your browser&apos;s notification settings for this site — allow them
+                    there to turn this back on.
+                  </p>
+                ) : (
+                  <div className="flex gap-2">
+                    {(
+                      [
+                        [true, "On"],
+                        [false, "Off"],
+                      ] as [boolean, string][]
+                    ).map(([v, l]) => (
+                      <button
+                        key={l}
+                        onClick={() => handleTogglePush(v)}
+                        disabled={pushState === "busy"}
+                        className={`flex-1 rounded-md px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                          (pushState === "on") === v
+                            ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                            : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                        }`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {pushError && <p className="text-xs text-[var(--danger)]">{pushError}</p>}
+              </section>
+            </SettingsSection>
+          )}
 
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">

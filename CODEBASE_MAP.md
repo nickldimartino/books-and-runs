@@ -120,6 +120,8 @@ AuthProvider
 | `/how-to-play` | Rules reference. `BackLink` returns to wherever you came from (`?from=game`). |
 | `/sign-in`, `/reset-password`, `/privacy`, `/terms` | Auth + legal. |
 | `layout.tsx`, `manifest.ts` | Root layout (before-paint theme/colorblind/card-back scripts, `<meta theme-color>`), PWA manifest. |
+| `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js` for everyone (offline shell caching — plain runtime caching, no build-time precache manifest). Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. |
+| `public/sw.js`, `public/offline.html` | The service worker itself (fetch caching + `push`/`notificationclick` handlers) and its precached offline fallback page — plain static files, not part of the Next build. |
 
 ### 3c. Components (`app/components/`)
 
@@ -155,6 +157,7 @@ AuthProvider
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
 | `favoriteGameConfig.ts` | "My usual" saved solo/pass-and-play setup (localStorage): load/save/describe + `contractsFor` / `playerConfigsFor` deal helpers. |
 | `scorecardStore.ts` | `scorecard` — the standalone scorekeeper's grid. |
+| `pushSubscriptions.ts` | Web Push opt-in (Settings page): register `public/sw.js`, subscribe/unsubscribe via `PushManager`, keep `push_subscriptions` (migration 0020) in step. The actual send is server-side — see `mp/index.ts`'s `sendPushForEvent`. |
 | `pendingSaveQueue.ts` | `pendingSaves` — finished games whose Supabase write failed; retried by `PendingSaveSync`. |
 
 **Recording a finished game (the write path)**
@@ -245,6 +248,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0017 | `mp_nudge()` — "your turn" reminder for a stalled MP game, rate-limited. |
 | 0018 | `daily_deal_scores` (owner-only) + `daily_deal_submit()` / `daily_deal_friend_scores()` — per-deal friend leaderboard on the Daily Deal game-over screen. |
 | 0019 | `favorite_game_configs` (owner-only) — syncs "my usual" solo/pass-and-play setup across devices. |
+| 0020 | `push_subscriptions` (owner-only) — Web Push endpoints; sent from the `mp` function's `addEvent()` via VAPID (`your_turn`/`game_request`/`nudge` only). |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped

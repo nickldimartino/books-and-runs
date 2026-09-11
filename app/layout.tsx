@@ -4,6 +4,7 @@ import { GameProvider } from "./GameContext";
 import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
+import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
 import { SettingsSync } from "./SettingsSync";
 import { DEFAULT_THEME, THEME_BG, THEMES } from "./lib/themeStore";
 import { COLORBLIND_MODES } from "./lib/colorblindStore";
@@ -114,6 +115,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: INTRO_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
+        <ServiceWorkerRegistrar />
         <AuthProvider>
           <SettingsSync />
           <PlayerLevelProvider>
