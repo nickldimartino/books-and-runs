@@ -11,6 +11,7 @@ import { useAuth } from "../AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { formatAchievementProgress } from "../lib/achievementFormat";
 import { EMPTY_MP_STATS, getMyMpStats } from "../lib/mpStore";
 import {
@@ -175,6 +176,11 @@ export default function AchievementsPage() {
         <LoadingSpinner />
       ) : (
         <>
+          <PageTip id="achievements" title="Tracked automatically">
+            Progress updates as you play — solo, pass-and-play, and multiplayer games all count, no
+            separate action needed. Check back after a few games to see what&apos;s close.
+          </PageTip>
+
           <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-3">
             <div className="flex flex-wrap gap-2">
               {([

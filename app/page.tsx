@@ -15,6 +15,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { CardFanHero } from "./components/CardFanHero";
 import { IntroSplash } from "./components/IntroSplash";
+import { PageTip } from "./components/PageTip";
 import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
@@ -442,17 +443,6 @@ export default function HomePage() {
       .catch((err) => console.error("Failed to pull Daily Deal streak from cloud:", err));
   }, [user]);
 
-  // A first-time nudge toward the Tutorial, shown only when there's nothing
-  // else already pulling that role: no game in progress to resume, and (for
-  // a signed-in account) no XP yet — the one signal available without a
-  // dedicated fetch that "this account has never actually finished a game."
-  // Left showing for a signed-out/guest visitor and for an unconfigured
-  // deployment, since neither has any other way to tell "have I played
-  // before" — mildly redundant for a returning guest, but never wrong for a
-  // genuinely new one, which is the case this is actually for.
-  const isNewAccount = !configured || !user || (level !== null && level.totalXp === 0);
-  const showTutorialPrompt = !hasSavedGame && isNewAccount;
-
   // continueGame()/startDailyDeal() set GameContext's state synchronously,
   // but navigating to /game immediately afterward isn't guaranteed to see
   // that update — /game bounces straight back here the instant it renders
@@ -492,23 +482,17 @@ export default function HomePage() {
           </Link>
         )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          A free Contract Rummy card game — build books, complete runs, win with the lowest score.
-          Play solo against five levels of AI, or pass-and-play on one device. Sign in to track
-          stats and achievements across devices. No download.
-        </p>
         {configured && user && (
           <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>
         )}
       </div>
 
       <div className="flex w-full flex-col gap-5">
-        {showTutorialPrompt && (
-          <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-left text-xs text-[var(--heading)]">
-            <strong className="font-semibold">New here?</strong> Tap New Game — there&apos;s a short
-            guided tutorial that walks you through a real turn step by step.
-          </p>
-        )}
+        <PageTip id="home" title="Welcome to Books & Runs">
+          A free Contract Rummy card game — build books, complete runs, win with the lowest score.
+          Tap New Game to jump in; there&apos;s a short guided tutorial your first time through a
+          real turn. Sign in to track stats and achievements across devices.
+        </PageTip>
 
         <Link
           href="/new-game"

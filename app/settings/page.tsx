@@ -25,6 +25,8 @@ import {
   saveLocalCardFace,
 } from "../lib/cardFaceStore";
 import { CardFace } from "../components/CardFace";
+import { PageTip } from "../components/PageTip";
+import { resetSeenTips } from "../lib/tipsStore";
 import {
   getPushPermission,
   isPushSubscribed,
@@ -281,6 +283,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [tipsReset, setTipsReset] = useState(false);
   const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
   const [pushError, setPushError] = useState<string | null>(null);
 
@@ -416,6 +419,12 @@ export default function SettingsPage() {
         <LoadingSpinner />
       ) : (
         <>
+          <PageTip id="settings" title="Everything here is local to this device">
+            Theme, card face, sound, and every toggle below stay on this browser — only your
+            preferred AI difficulty can sync to your account. Not sure what something does? Tap the
+            ⓘ next to it.
+          </PageTip>
+
           <SettingsSection title="Appearance">
           {activeThemeOption && (
             <SwatchLinkRow
@@ -626,6 +635,26 @@ export default function SettingsPage() {
               </section>
             </SettingsSection>
           )}
+
+          <SettingsSection title="Help">
+            <section className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--heading)]">First-visit tips</p>
+                <p className="text-xs text-[var(--faint)]">
+                  Bring back the dismissed tips on Home, New Game, and a few other pages.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  resetSeenTips();
+                  setTipsReset(true);
+                }}
+                className="shrink-0 rounded-lg bg-[var(--panel)] px-3 py-2 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+              >
+                {tipsReset ? "Done ✓" : "Show again"}
+              </button>
+            </section>
+          </SettingsSection>
 
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">

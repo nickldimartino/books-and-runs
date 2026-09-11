@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { PageTip } from "../components/PageTip";
 import { useGame } from "../GameContext";
 import { fetchOwnDisplayName } from "../lib/leaderboardStore";
 import { markTutorialStarting } from "../lib/localSave";
@@ -81,6 +82,13 @@ export default function NewGamePage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
+
+      <PageTip id="new-game" title="Pick your pace">
+        Solo &amp; pass-and-play is one sitting on this device — against AI, or passing it around a
+        table. With friends is slower-paced: everyone plays on their own time, no need to be online
+        together. Once you&apos;ve played a game, a one-tap &quot;Play my usual&quot; shortcut shows
+        up here too.
+      </PageTip>
 
       <div className="flex flex-col gap-3">
         {favoriteForDisplay && (

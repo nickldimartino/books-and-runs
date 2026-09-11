@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { track } from "../../lib/analytics";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { PageTip } from "../../components/PageTip";
 import { pickAiPersonas } from "../../lib/aiPersonas";
 import { Friend, getFriends } from "../../lib/friendsStore";
 import { displayNameFor } from "../../lib/leaderboardStore";
@@ -137,6 +138,12 @@ export default function NewMultiplayerGamePage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New multiplayer game</h1>
+
+      <PageTip id="new-game-multiplayer" title="How this works">
+        Pick friends to invite, and add AI to fill any empty seats. Everyone you invite has to
+        accept before the deal — once it starts, take your turn whenever works for you, then it&apos;s
+        the next player&apos;s.
+      </PageTip>
 
       {authLoading || loading ? (
         <LoadingSpinner />

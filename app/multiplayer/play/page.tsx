@@ -14,6 +14,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
+import { PageTip } from "../../components/PageTip";
 import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
@@ -302,6 +303,12 @@ export default function MultiplayerPlayPage() {
           Leave
         </button>
       </div>
+
+      <PageTip id="multiplayer-play" title="Playing async">
+        You don&apos;t need to be online at the same time. Take your turn, then it&apos;s the next
+        player&apos;s — check back from Home, or turn on notifications in Settings to know when
+        it&apos;s yours again.
+      </PageTip>
 
       <header className="rounded-xl bg-[var(--panel)] px-4 py-3">
         <p className="text-xs uppercase tracking-wide text-[var(--faint)]">

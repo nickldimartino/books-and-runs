@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { PageTip } from "../../components/PageTip";
 import { useGame } from "../../GameContext";
 import { AI_PERSONAS, AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { fetchOwnDisplayName } from "../../lib/leaderboardStore";
@@ -275,6 +276,12 @@ export default function NewLocalGamePage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">Solo &amp; pass-and-play</h1>
+
+      <PageTip id="new-game-local" title="Setting up">
+        Add human players for pass-and-play — everyone shares this device, handing it over each
+        turn — or fill seats with AI opponents at their own difficulty. &quot;All 7&quot; is the full
+        game; &quot;Short&quot; and &quot;Custom&quot; let you play fewer rounds.
+      </PageTip>
 
       {favoriteForDisplay && (
         <section className="flex flex-col gap-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
