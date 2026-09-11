@@ -565,6 +565,10 @@ export default function HomePage() {
         ·{" "}
         <Link href="/terms" className="underline hover:text-[var(--muted)]">
           Terms
+        </Link>{" "}
+        ·{" "}
+        <Link href="/support" className="underline hover:text-[var(--muted)]">
+          Contact
         </Link>
       </p>
     </main>

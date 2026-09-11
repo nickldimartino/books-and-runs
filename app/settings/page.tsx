@@ -639,6 +639,19 @@ export default function SettingsPage() {
                 {tipsReset ? "Done ✓" : "Show again"}
               </button>
             </section>
+
+            <section className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--heading)]">Found a bug? Have an idea?</p>
+                <p className="text-xs text-[var(--faint)]">Send a report or feature request.</p>
+              </div>
+              <Link
+                href="/support"
+                className="shrink-0 rounded-lg bg-[var(--panel)] px-3 py-2 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+              >
+                Contact us
+              </Link>
+            </section>
           </SettingsSection>
 
           {confirmingReset ? (

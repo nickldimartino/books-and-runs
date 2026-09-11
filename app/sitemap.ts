@@ -7,7 +7,7 @@ const SITE = "https://books-and-runs.vercel.app";
 
 // The pages worth indexing: the marketing/rules surface, not the in-app
 // screens (which need an account or an in-progress game to mean anything).
-const PATHS = ["", "/how-to-play", "/history", "/scorecard", "/new-game", "/privacy", "/terms"];
+const PATHS = ["", "/how-to-play", "/history", "/scorecard", "/new-game", "/privacy", "/terms", "/support"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

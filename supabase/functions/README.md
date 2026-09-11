@@ -46,3 +46,37 @@ With two signed-in test accounts that are already friends:
 3. Either account `POST /functions/v1/mp/state` `{ game_id }` — confirm the
    response shows full cards only for that caller's own seat, counts for the
    rest, and no `drawPile` contents anywhere.
+
+## `contact` — bug reports & feature requests
+
+Takes a submission from the Support page (`app/support/page.tsx`) and emails
+it via [Resend](https://resend.com). Exists so the destination address
+never has to ship to the client — it lives only in the `SUPPORT_EMAIL`
+secret below. Callable while signed out; see the function's own doc for why
+that's fine here.
+
+### Deploy
+
+```bash
+npx supabase secrets set RESEND_API_KEY=re_xxx SUPPORT_EMAIL=you@example.com
+npx supabase functions deploy contact
+```
+
+`RESEND_API_KEY` comes from a (free-tier is plenty) [Resend](https://resend.com)
+account. Without a verified custom domain, Resend's shared `onboarding@resend.dev`
+sender can only deliver to the email address the Resend account itself was
+signed up with — which is exactly what you want here if `SUPPORT_EMAIL` is
+that same address, so no domain verification is required to get this
+working. Verify a real domain later if you want a nicer `from` address or
+need `SUPPORT_EMAIL` to differ from the Resend account's own address.
+
+### Smoke test after deploy
+
+```bash
+curl -X POST "$SUPABASE_URL/functions/v1/contact" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"bug","subject":"test","description":"smoke test"}'
+```
+
+Expect `{"ok":true}` and an email at `SUPPORT_EMAIL` within a minute.
