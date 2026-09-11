@@ -8,11 +8,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getPushPermission,
+  isIosSafariNonStandalone,
   isPushSubscribed,
   isPushSupported,
   subscribeToPush,
   unsubscribeFromPush,
 } from "./pushSubscriptions";
+
+function stubUserAgent(ua: string, { maxTouchPoints = 0, standalone }: { maxTouchPoints?: number; standalone?: boolean } = {}) {
+  vi.stubGlobal("navigator", {
+    ...window.navigator,
+    userAgent: ua,
+    maxTouchPoints,
+    ...(standalone !== undefined ? { standalone } : {}),
+  });
+}
 
 class FakeSubscription {
   endpoint = "https://push.example/abc123";
@@ -95,6 +105,43 @@ describe("isPushSupported / getPushPermission", () => {
     installBrowserApis({ permission: "denied" });
     expect(isPushSupported()).toBe(true);
     expect(getPushPermission()).toBe("denied");
+  });
+});
+
+describe("isIosSafariNonStandalone", () => {
+  const IPHONE_UA =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+  const ANDROID_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36";
+
+  it("true for an iPhone opened as a regular browser tab", () => {
+    stubUserAgent(IPHONE_UA, { standalone: false });
+    expect(isIosSafariNonStandalone()).toBe(true);
+  });
+
+  it("false for an iPhone already added to the Home Screen (standalone)", () => {
+    stubUserAgent(IPHONE_UA, { standalone: true });
+    expect(isIosSafariNonStandalone()).toBe(false);
+  });
+
+  it("false on a non-iOS device regardless of standalone state", () => {
+    stubUserAgent(ANDROID_UA, { standalone: false });
+    expect(isIosSafariNonStandalone()).toBe(false);
+  });
+
+  it("treats a touch-capable 'Macintosh' UA as iPadOS (iPadOS 13+'s own UA quirk)", () => {
+    stubUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+      { maxTouchPoints: 5, standalone: false }
+    );
+    expect(isIosSafariNonStandalone()).toBe(true);
+  });
+
+  it("doesn't mistake an actual Mac (no touch points) for iPadOS", () => {
+    stubUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+      { maxTouchPoints: 0, standalone: false }
+    );
+    expect(isIosSafariNonStandalone()).toBe(false);
   });
 });
 

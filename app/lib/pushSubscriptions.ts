@@ -22,6 +22,29 @@ export function isPushSupported(): boolean {
   );
 }
 
+/**
+ * True when the reason isPushSupported() is false is specifically "this is
+ * iOS/iPadOS Safari, opened as a regular browser tab" — Apple's Push API
+ * (unlike every other engine's) doesn't exist at all outside a page that's
+ * been added to the Home Screen and opened from there, so "not supported"
+ * on its own leaves this — by far the most common way anyone actually
+ * hits that state — with no way to tell "this device can never do this"
+ * apart from "you're just not looking at it the right way yet".
+ */
+export function isIosSafariNonStandalone(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const isIos =
+    /iPad|iPhone|iPod/.test(ua) ||
+    // iPadOS 13+ reports as a Mac unless you also check for touch support.
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
+  if (!isIos) return false;
+  const standalone =
+    (navigator as unknown as { standalone?: boolean }).standalone === true ||
+    window.matchMedia?.("(display-mode: standalone)").matches;
+  return !standalone;
+}
+
 /** `Notification.permission`, or "unsupported" when the API doesn't exist
  * at all — lets the Settings toggle render a real state either way instead
  * of assuming "default". */

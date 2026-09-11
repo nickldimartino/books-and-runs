@@ -29,6 +29,7 @@ import { PageTip } from "../components/PageTip";
 import { resetSeenTips } from "../lib/tipsStore";
 import {
   getPushPermission,
+  isIosSafariNonStandalone,
   isPushSubscribed,
   subscribeToPush,
   unsubscribeFromPush,
@@ -556,7 +557,11 @@ export default function SettingsPage() {
                   by default.
                 </InfoDetails>
                 {pushState === "unsupported" ? (
-                  <p className="text-xs text-[var(--faint)]">Not supported in this browser.</p>
+                  <p className="text-xs text-[var(--faint)]">
+                    {isIosSafariNonStandalone()
+                      ? "iPhone/iPad only supports this once the page is added to your Home Screen — tap the Share icon, then \"Add to Home Screen\", then open it from there."
+                      : "Not supported in this browser."}
+                  </p>
                 ) : pushState === "denied" ? (
                   <p className="text-xs text-[var(--faint)]">
                     Blocked in your browser&apos;s notification settings for this site — allow them
