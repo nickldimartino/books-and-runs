@@ -28,6 +28,7 @@ interface AchievementCountersRow {
 export interface LeaderboardEntry {
   user_id: string;
   display_name: string | null;
+  bio: string | null;
   level: number;
   total_xp: number;
   achievements_unlocked: number;
@@ -134,13 +135,30 @@ export async function syncLeaderboardStats(supabase: SupabaseClient, userId: str
  * and the `maxLength` on the Account page's input. */
 export const MAX_DISPLAY_NAME_LENGTH = 24;
 
+// Control characters (U+0000–U+001F, U+007F) and bidi-override/isolate
+// characters (U+202A–U+202E, U+2066–U+2069) — built from numeric code
+// points rather than typed as literal escapes, so nothing here can silently
+// end up as a raw, invisible bidi-override character sitting in the source
+// file itself. Shared by sanitizeDisplayName and sanitizeBio below.
+function stripControlAndBidiChars(s: string): string {
+  const cc = (n: number) => String.fromCharCode(n);
+  const ranges: [number, number][] = [
+    [0x0000, 0x001f],
+    [0x007f, 0x007f],
+    [0x202a, 0x202e],
+    [0x2066, 0x2069],
+  ];
+  const pattern = ranges.map(([a, b]) => (a === b ? cc(a) : `${cc(a)}-${cc(b)}`)).join("");
+  return s.replace(new RegExp(`[${pattern}]`, "g"), "");
+}
+
 /** Clamp length and strip control / bidi-override chars before a name is
  * stored — the Account input already caps length, but a direct call
  * shouldn't be able to persist something oversized or layout-breaking that
  * then renders to every other player on the leaderboard. */
 function sanitizeDisplayName(name: string | null): string | null {
   if (name == null) return null;
-  const cleaned = name.replace(/[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g, "").trim();
+  const cleaned = stripControlAndBidiChars(name).trim();
   if (!cleaned) return null;
   return cleaned.slice(0, MAX_DISPLAY_NAME_LENGTH);
 }
@@ -176,6 +194,67 @@ export async function updateLeaderboardDisplayName(
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
+}
+
+/** Max stored bio length (migration 0021). Matches the DB CHECK and the
+ * `maxLength` on the Account page's textarea. */
+export const MAX_BIO_LENGTH = 140;
+
+/** Same treatment as sanitizeDisplayName above — the Account textarea
+ * already caps length, but a direct call shouldn't be able to persist
+ * something oversized or layout-breaking that then renders in every other
+ * player's OpponentStrip popover. */
+function sanitizeBio(bio: string | null): string | null {
+  if (bio == null) return null;
+  const cleaned = stripControlAndBidiChars(bio).trim();
+  if (!cleaned) return null;
+  return cleaned.slice(0, MAX_BIO_LENGTH);
+}
+
+/** The signed-in account's own bio, or null if they haven't set one — same
+ * shape as fetchOwnDisplayName above. */
+export async function fetchOwnBio(supabase: SupabaseClient, userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("bio")
+    .eq("user_id", userId)
+    .maybeSingle<{ bio: string | null }>();
+  if (error) throw error;
+  return data?.bio?.trim() || null;
+}
+
+/** Sets (or clears, with null) just the signed-in user's own bio — never
+ * touches the stat columns, same as updateLeaderboardDisplayName above. */
+export async function updateLeaderboardBio(supabase: SupabaseClient, userId: string, bio: string | null): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    bio: sanitizeBio(bio),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/**
+ * Bios for a set of other accounts, keyed by user_id — used to show a
+ * multiplayer opponent's bio in OpponentStrip's popover (see
+ * multiplayer/play/page.tsx). A missing/empty bio just isn't a key in the
+ * returned map, so callers can use a plain `bios[userId]` lookup. Reads
+ * leaderboard_entries directly (any-signed-in-user-can-read, same as every
+ * other display_name lookup) rather than a dedicated RPC — nothing here is
+ * more sensitive than what the Leaderboard page already shows wholesale.
+ */
+export async function fetchBiosFor(supabase: SupabaseClient, userIds: string[]): Promise<Record<string, string>> {
+  if (userIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("user_id, bio")
+    .in("user_id", userIds);
+  if (error) throw error;
+  const bios: Record<string, string> = {};
+  for (const row of (data ?? []) as { user_id: string; bio: string | null }[]) {
+    if (row.bio && row.bio.trim()) bios[row.user_id] = row.bio.trim();
+  }
+  return bios;
 }
 
 /**

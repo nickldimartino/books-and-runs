@@ -11,8 +11,10 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
 import {
   displayNameFor,
+  MAX_BIO_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
   syncLeaderboardStats,
+  updateLeaderboardBio,
   updateLeaderboardDisplayName,
 } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
@@ -62,6 +64,10 @@ export default function AccountPage() {
   const [nameSaveState, setNameSaveState] = useState<SaveState>("idle");
   const [nameError, setNameError] = useState<string | null>(null);
 
+  const [bioText, setBioText] = useState("");
+  const [bioSaveState, setBioSaveState] = useState<SaveState>("idle");
+  const [bioError, setBioError] = useState<string | null>(null);
+
   const [newEmail, setNewEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
   const [emailSaveState, setEmailSaveState] = useState<SaveState>("idle");
@@ -104,11 +110,12 @@ export default function AccountPage() {
     });
     supabase
       .from("leaderboard_entries")
-      .select("display_name")
+      .select("display_name, bio")
       .eq("user_id", user.id)
-      .maybeSingle<{ display_name: string | null }>()
+      .maybeSingle<{ display_name: string | null; bio: string | null }>()
       .then(({ data }) => {
         setDisplayName(data?.display_name ?? "");
+        setBioText(data?.bio ?? "");
         setLoading(false);
       });
   }, [user]);
@@ -170,6 +177,22 @@ export default function AccountPage() {
     } catch (err) {
       console.error("Failed to save display name:", err);
       setNameSaveState("error");
+    }
+  }
+
+  async function handleSaveBio(e: FormEvent) {
+    e.preventDefault();
+    if (!supabase || !user) return;
+    setBioError(null);
+    setBioSaveState("saving");
+    try {
+      const trimmed = bioText.trim();
+      await updateLeaderboardBio(supabase, user.id, trimmed.length > 0 ? trimmed : null);
+      setBioText(trimmed);
+      setBioSaveState("saved");
+    } catch (err) {
+      console.error("Failed to save bio:", err);
+      setBioSaveState("error");
     }
   }
 
@@ -330,6 +353,41 @@ export default function AccountPage() {
               <p className="text-xs text-[var(--muted)]">Saved.</p>
             )}
             {nameSaveState === "error" && !nameError && (
+              <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>
+            )}
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Bio</h2>
+            <p className="text-xs text-[var(--faint)]">
+              A short line other players can see when they tap your chip in a multiplayer game.
+              Optional.
+            </p>
+            <form onSubmit={handleSaveBio} className="flex flex-col gap-2">
+              <textarea
+                value={bioText}
+                onChange={(e) => setBioText(e.target.value)}
+                placeholder="Say something about yourself…"
+                maxLength={MAX_BIO_LENGTH}
+                rows={2}
+                className="resize-none rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-[var(--faint)]">
+                  {bioText.length} / {MAX_BIO_LENGTH}
+                </span>
+                <button
+                  type="submit"
+                  disabled={bioSaveState === "saving"}
+                  className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+            {bioError && <p className="text-xs text-[var(--danger)]">{bioError}</p>}
+            {bioSaveState === "saved" && !bioError && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+            {bioSaveState === "error" && !bioError && (
               <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>
             )}
           </section>

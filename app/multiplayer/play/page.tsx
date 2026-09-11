@@ -20,7 +20,10 @@ import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { useMpGame } from "../../lib/useMpGame";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
+import { fetchBiosFor } from "../../lib/leaderboardStore";
+import { getMpParticipantUserIds } from "../../lib/mpStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
+import { supabase } from "../../lib/supabaseClient";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { layOffOptions } from "@/meld";
 import type { Card, Meld, Player } from "@/types";
@@ -69,6 +72,35 @@ export default function MultiplayerPlayPage() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [layoffArmed, setLayoffArmed] = useState(false);
   const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
+  // Seat id ("seat-N", matching stripPlayers' Player.id below) → that
+  // opponent's bio, for OpponentStrip's popover. Fetched once the game is
+  // dealt (mp_participants has real seat assignments by then) — a pending
+  // game has no OpponentStrip on screen yet anyway.
+  const [bioBySeatId, setBioBySeatId] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !gameId || !view) return;
+    let cancelled = false;
+    getMpParticipantUserIds(client, gameId)
+      .then(async (seatToUserId) => {
+        const userIds = Object.values(seatToUserId);
+        const bios = await fetchBiosFor(client, userIds);
+        if (cancelled) return;
+        const bySeat: Record<string, string> = {};
+        for (const [seat, userId] of Object.entries(seatToUserId)) {
+          if (bios[userId]) bySeat[`seat-${seat}`] = bios[userId];
+        }
+        setBioBySeatId(bySeat);
+      })
+      .catch((err) => console.error("Failed to load opponent bios:", err));
+    return () => {
+      cancelled = true;
+    };
+    // Only needs the game's identity, not every view update — participants
+    // and bios don't change mid-game.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, !!view]);
 
   const scores = useMemo(
     () => (view ? [...view.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore) : []),
@@ -331,6 +363,7 @@ export default function MultiplayerPlayPage() {
         pickupHistory={view.pickupHistory}
         aiStatus={null}
         aiThinking={false}
+        bios={bioBySeatId}
       />
 
       {g.error && <p className="text-sm text-[var(--danger)]">{g.error}</p>}

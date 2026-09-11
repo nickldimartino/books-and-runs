@@ -251,6 +251,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0018 | `daily_deal_scores` (owner-only) + `daily_deal_submit()` / `daily_deal_friend_scores()` — per-deal friend leaderboard on the Daily Deal game-over screen. |
 | 0019 | `favorite_game_configs` (owner-only) — syncs "my usual" solo/pass-and-play setup across devices. |
 | 0020 | `push_subscriptions` (owner-only) — Web Push endpoints; sent from the `mp` function's `addEvent()` via VAPID (`your_turn`/`game_request`/`nudge` only). |
+| 0021 | `bio` column on `leaderboard_entries` (140 chars, same shape as `display_name`) — set on Account, shown in OpponentStrip's popover for a multiplayer opponent (fetched client-side via `mp_participants` + `leaderboardStore.fetchBiosFor`, no Edge Function change needed). |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -274,7 +275,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | Task | Command |
 |---|---|
 | Dev server | `npm run dev` |
-| Tests | `npm test` (vitest, 318 tests) |
+| Tests | `npm test` (vitest, 328 tests) |
 | E2E | `npm run test:e2e:ci` (Playwright — 5 browser projects; excludes `@visual` and self-skips the live 2-account MP test without `SUPABASE_SERVICE_ROLE_KEY`) |
 | Typecheck | `npx tsc --noEmit` |
 | Lint | `npm run lint` |

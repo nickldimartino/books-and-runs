@@ -22,6 +22,11 @@ interface OpponentStripProps {
    * still see the last play on the table. Null on your turn. */
   aiStatus: string | null;
   aiThinking: boolean;
+  /** Human players' bios, keyed by Player.id ("seat-N" in multiplayer) —
+   * the account-set text from Account page, shown the same place an AI
+   * persona's blurb is. Omitted (or missing a given id) shows nothing,
+   * same as an AI with no persona blurb. */
+  bios?: Record<string, string>;
 }
 
 function latestCardFor(history: DiscardEvent[], playerId: string) {
@@ -47,6 +52,7 @@ export function OpponentStrip({
   pickupHistory,
   aiStatus,
   aiThinking,
+  bios,
 }: OpponentStripProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const activeRef = useRef<HTMLButtonElement | null>(null);
@@ -159,6 +165,7 @@ export function OpponentStrip({
               {open.isAI && personaBlurbFor(open.name) && (
                 <p className="mt-1 text-[var(--faint)]">{personaBlurbFor(open.name)}</p>
               )}
+              {!open.isAI && bios?.[open.id] && <p className="mt-1 text-[var(--faint)]">{bios[open.id]}</p>}
             </div>
             <ActivityCard label="Last discard" card={latestCardFor(discardHistory, open.id)} />
             <ActivityCard label="Last pickup" card={latestCardFor(pickupHistory, open.id)} />

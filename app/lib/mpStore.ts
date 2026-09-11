@@ -109,6 +109,28 @@ export async function getMpState(supabase: SupabaseClient, gameId: string): Prom
   return callMp(supabase, "state", { game_id: gameId });
 }
 
+/**
+ * Seat → user id for every human seat in a game, queried straight from
+ * `mp_participants` (RLS: any participant can read a game's own rows) —
+ * unlike MpStateResponse.seats/participants above, this works for an
+ * active game too, not just a pending one. Used to look up opponents' bios
+ * for OpponentStrip's popover (see leaderboardStore.ts's fetchBiosFor);
+ * doesn't go through the `mp` Edge Function at all, so nothing here needed
+ * redeploying it.
+ */
+export async function getMpParticipantUserIds(
+  supabase: SupabaseClient,
+  gameId: string
+): Promise<Record<number, string>> {
+  const { data, error } = await supabase.from("mp_participants").select("user_id, seat").eq("game_id", gameId);
+  if (error) throw error;
+  const bySeat: Record<number, string> = {};
+  for (const row of (data ?? []) as { user_id: string; seat: number }[]) {
+    bySeat[row.seat] = row.user_id;
+  }
+  return bySeat;
+}
+
 export interface MpMoveResponse {
   status: "active" | "complete";
   view: RedactedView;
