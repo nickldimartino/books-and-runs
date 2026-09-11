@@ -44,7 +44,7 @@ jobs:
       # more reliable than chasing whatever setup-node's default drifts to.
       - run: npm install -g npm@11.19.0
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit firefox
       # Excludes e2e/visual.spec.ts — its baselines were made on macOS, and
       # Playwright's screenshot comparison is platform-sensitive (font
       # rasterization differs enough between macOS and this runner's Linux
