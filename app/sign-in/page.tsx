@@ -7,7 +7,8 @@ import { useAuth } from "../AuthContext";
 
 export default function SignInPage() {
   const router = useRouter();
-  const { configured, user, signInWithPassword, signUpWithPassword, resetPasswordForEmail } = useAuth();
+  const { configured, user, mfaPending, signInWithPassword, signUpWithPassword, resetPasswordForEmail, verifyMfaCode } =
+    useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot-password">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +16,9 @@ export default function SignInPage() {
   const [pending, setPending] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaSubmitting, setMfaSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -91,6 +95,17 @@ export default function SignInPage() {
     if (result.error) setError(result.error);
   }
 
+  async function handleMfaSubmit(e: FormEvent) {
+    e.preventDefault();
+    setMfaError(null);
+    setMfaSubmitting(true);
+    const result = await verifyMfaCode(mfaCode.trim());
+    setMfaSubmitting(false);
+    if (result.error) setMfaError(result.error);
+    // On success the session is upgraded to aal2 in place — AuthContext's
+    // own auth-state listener resolves `user`, and the effect above redirects.
+  }
+
   function switchMode(next: "sign-in" | "sign-up" | "forgot-password") {
     setMode(next);
     setError(null);
@@ -108,7 +123,33 @@ export default function SignInPage() {
       </Link>
       <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">Sign in</h1>
 
-      {checkEmail ? (
+      {mfaPending ? (
+        <form onSubmit={handleMfaSubmit} className="flex flex-col gap-3">
+          <p className="text-center text-sm text-[var(--muted)]">
+            Enter the 6-digit code from your authenticator app.
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+            autoFocus
+            placeholder="123456"
+            maxLength={6}
+            value={mfaCode}
+            onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ""))}
+            className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-lg tracking-[0.3em] text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+          />
+          {mfaError && <p className="text-center text-sm text-[var(--danger)]">{mfaError}</p>}
+          <button
+            type="submit"
+            disabled={mfaSubmitting || mfaCode.length !== 6}
+            className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+          >
+            {mfaSubmitting ? "Verifying…" : "Verify"}
+          </button>
+        </form>
+      ) : checkEmail ? (
         <>
           <p className="text-center text-sm text-[var(--muted)]">
             Check your email (including spam) to confirm your account, then come back and sign in.

@@ -28,21 +28,70 @@ interface SignUpResult extends AuthResult {
   confirmationRequired?: boolean;
 }
 
+export interface MfaFactor {
+  id: string;
+  friendlyName: string | null;
+}
+
+interface MfaEnrollResult extends AuthResult {
+  factorId?: string;
+  /** A data: URI, usable directly as an <img src> — not raw SVG markup. */
+  qrCodeSvg?: string;
+  /** Manual-entry fallback for an authenticator app that can't scan. */
+  secret?: string;
+}
+
 interface AuthContextValue {
   configured: boolean;
   loading: boolean;
   user: User | null;
+  /** True once signed in at aal1 but the account has a verified TOTP
+   * factor requiring aal2 this session — `user` stays null and the
+   * sign-in page shows a code-entry step instead of finishing until
+   * verifyMfaCode succeeds. Never true for an account with no factor
+   * enrolled — password alone is already its full sign-in. */
+  mfaPending: boolean;
   signInWithPassword: (email: string, password: string) => Promise<AuthResult>;
   signUpWithPassword: (email: string, password: string) => Promise<SignUpResult>;
   resetPasswordForEmail: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  /** Completes the pending MFA challenge from sign-in. */
+  verifyMfaCode: (code: string) => Promise<AuthResult>;
+  /** Verified TOTP factors on this account (Account settings). */
+  listMfaFactors: () => Promise<MfaFactor[]>;
+  /** Starts enrolling a new TOTP factor — present the QR/secret and collect
+   * a code, then call verifyMfaEnrollment with the returned factorId. */
+  enrollMfaFactor: () => Promise<MfaEnrollResult>;
+  /** Confirms a freshly-enrolled factor with a code from the authenticator
+   * app — this is what actually turns 2FA on for the account. */
+  verifyMfaEnrollment: (factorId: string, code: string) => Promise<AuthResult>;
+  /** Removes a factor — abandoning an in-progress (unverified) enrollment,
+   * or turning 2FA off entirely. */
+  unenrollMfaFactor: (factorId: string) => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// A session at aal1 with a verified TOTP factor still needs aal2 before
+// it's "signed in" as far as this app is concerned — resolves what to
+// actually expose as `user`/`mfaPending` for both the initial getSession()
+// read and every onAuthStateChange event, so the two can't drift apart.
+export async function resolveAuthState(
+  client: NonNullable<Awaited<ReturnType<typeof loadSupabase>>>,
+  session: Session | null
+): Promise<{ user: User | null; mfaPending: boolean }> {
+  if (!session) return { user: null, mfaPending: false };
+  const { data } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (data?.currentLevel === "aal1" && data?.nextLevel === "aal2") {
+    return { user: null, mfaPending: true };
+  }
+  return { user: session.user, mfaPending: false };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [mfaPending, setMfaPending] = useState(false);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   // Wire global error capture once, and keep the reporter's user id current.
@@ -66,12 +115,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-      client.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-        setUser(data.session?.user ?? null);
+      client.auth.getSession().then(async ({ data }: { data: { session: Session | null } }) => {
+        const resolved = await resolveAuthState(client, data.session);
+        if (cancelled) return;
+        setUser(resolved.user);
+        setMfaPending(resolved.mfaPending);
         setLoading(false);
       });
       const { data: subscription } = client.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
+        resolveAuthState(client, session).then((resolved) => {
+          if (cancelled) return;
+          setUser(resolved.user);
+          setMfaPending(resolved.mfaPending);
+        });
       });
       unsubscribe = () => subscription.subscription.unsubscribe();
     });
@@ -114,6 +170,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }, []);
 
+  const verifyMfaCode = useCallback(async (code: string) => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { data, error: listError } = await client.auth.mfa.listFactors();
+    if (listError) return { error: listError.message };
+    const factor = data?.totp?.[0];
+    if (!factor) return { error: "No authenticator app is set up on this account." };
+    const { error } = await client.auth.mfa.challengeAndVerify({ factorId: factor.id, code });
+    // Success updates the session in place — the onAuthStateChange listener
+    // above re-resolves user/mfaPending from it, nothing to set here.
+    return { error: error?.message ?? null };
+  }, []);
+
+  const listMfaFactors = useCallback(async (): Promise<MfaFactor[]> => {
+    const client = await loadSupabase();
+    if (!client) return [];
+    const { data, error } = await client.auth.mfa.listFactors();
+    if (error) throw error;
+    return (data?.totp ?? []).map((f) => ({ id: f.id, friendlyName: f.friendly_name ?? null }));
+  }, []);
+
+  const enrollMfaFactor = useCallback(async (): Promise<MfaEnrollResult> => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { data, error } = await client.auth.mfa.enroll({ factorType: "totp" });
+    if (error) return { error: error.message };
+    return { error: null, factorId: data.id, qrCodeSvg: data.totp.qr_code, secret: data.totp.secret };
+  }, []);
+
+  const verifyMfaEnrollment = useCallback(async (factorId: string, code: string) => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.mfa.challengeAndVerify({ factorId, code });
+    return { error: error?.message ?? null };
+  }, []);
+
+  const unenrollMfaFactor = useCallback(async (factorId: string) => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.mfa.unenroll({ factorId });
+    return { error: error?.message ?? null };
+  }, []);
+
   const signOut = useCallback(async () => {
     const client = await loadSupabase();
     if (!client) return;
@@ -129,13 +228,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured: isSupabaseConfigured,
       loading,
       user,
+      mfaPending,
       signInWithPassword,
       signUpWithPassword,
       resetPasswordForEmail,
       updatePassword,
       signOut,
+      verifyMfaCode,
+      listMfaFactors,
+      enrollMfaFactor,
+      verifyMfaEnrollment,
+      unenrollMfaFactor,
     }),
-    [loading, user, signInWithPassword, signUpWithPassword, resetPasswordForEmail, updatePassword, signOut]
+    [
+      loading,
+      user,
+      mfaPending,
+      signInWithPassword,
+      signUpWithPassword,
+      resetPasswordForEmail,
+      updatePassword,
+      signOut,
+      verifyMfaCode,
+      listMfaFactors,
+      enrollMfaFactor,
+      verifyMfaEnrollment,
+      unenrollMfaFactor,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
