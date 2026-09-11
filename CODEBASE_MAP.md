@@ -120,8 +120,10 @@ AuthProvider
 | `/account` | Display name, sign-out, danger zone. |
 | `/how-to-play` | Rules reference. `BackLink` returns to wherever you came from (`?from=game`). |
 | `/sign-in`, `/reset-password`, `/privacy`, `/terms` | Auth + legal. |
+| `/support` | Bug report / feature request form (type dropdown, subject, description, optional reply-to email, up to 5 attachments). Submits to the `contact` Edge Function, which emails it — the destination address is a Supabase secret, never shipped to the client. Works signed out. Linked from the Home footer and Settings' Help section. |
 | `layout.tsx`, `manifest.ts` | Root layout, PWA manifest. Loads `public/init.js` — a plain synchronous `<script src>` (not `next/script`, deliberately — see the file's own comment) that applies the saved theme/colorblind/card-back/intro-splash state before first paint, so there's no flash of the wrong theme. |
-| `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js`, **production only**. A dev-mode registration used to shadow local code changes with a stale cache — a confusing "why isn't my edit showing up" trap that can persist across dev-server restarts, since the cache lives in the browser, not the server. Offline shell caching — plain runtime caching, no build-time precache manifest. Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. |
+| `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js`, **production only**. A dev-mode registration used to shadow local code changes with a stale cache — a confusing "why isn't my edit showing up" trap that can persist across dev-server restarts, since the cache lives in the browser, not the server. Offline shell caching — plain runtime caching, no build-time precache manifest. Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. Also re-checks for a new deploy on every `visibilitychange` and fires `br:sw-update-available` once a newer service worker actually takes over — the standalone-app equivalent of a browser tab's reload button, since a home-screen install has no such button of its own. |
+| `UpdateAvailableBanner.tsx` | Mounted in the root layout; listens for `br:sw-update-available` and shows a dismissible "new version ready" banner with a Refresh button. Never auto-reloads — see `ServiceWorkerRegistrar.tsx`'s own doc for the detection side. |
 | `public/sw.js`, `public/offline.html` | The service worker itself (fetch caching + `push`/`notificationclick` handlers) and its precached offline fallback page — plain static files, not part of the Next build. |
 
 ### 3c. Components (`app/components/`)
@@ -272,6 +274,16 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
   `.ts` import extensions, produced by `scripts/bundle-mp-engine.mjs` (the
   Supabase deploy bundler ignores `deno.json` / extension-less imports).
 - Project ref: `wnhzcjfhnvvhsjrhapes`.
+
+### Edge Function (`supabase/functions/contact/`)
+
+- `index.ts` — Deno, single route. Takes the `/support` page's submission
+  and emails it via Resend. `SUPPORT_EMAIL` and `RESEND_API_KEY` are
+  Supabase secrets — the destination address never reaches the client.
+  Callable signed out (see the file's own doc for why that's fine). No
+  migration, no `_engine/` copy — self-contained.
+- Deploy: `npx supabase secrets set RESEND_API_KEY=... SUPPORT_EMAIL=...`
+  then `npx supabase functions deploy contact`.
 
 ---
 
