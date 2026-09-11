@@ -609,9 +609,16 @@ export default function GamePage() {
   const player = state.players[state.currentPlayerIndex];
 
   if (!player.isAI && awaitingReveal) {
+    // Same account-name override as playersForDisplay above, applied here
+    // directly rather than by swapping `player` itself — everything else
+    // below keeps comparing player.name against the literal "You" to
+    // decide "Your hand" vs. "X's hand" wording, which a swapped `player`
+    // would break for any signed-in account with a real display name.
+    const passGateName =
+      player.id === YOU_PLAYER_ID && yourNameLocked && accountDisplayName ? accountDisplayName : player.name;
     return (
       <>
-        <PassGate name={player.name} onReveal={revealHand} />
+        <PassGate name={passGateName} onReveal={revealHand} />
         {tutorialOverlayNode}
       </>
     );
@@ -1045,7 +1052,7 @@ export default function GamePage() {
     <section data-tutorial="hand">
       <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-          {player.name === "You" ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
+          {player.id === YOU_PLAYER_ID ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
           <span className="ml-2 font-normal normal-case text-[var(--muted)]">
             ({handPenalty(player.hand)} pts)
           </span>
@@ -1188,7 +1195,7 @@ export default function GamePage() {
             // than the single-line version this replaces.
             <>
               <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-                {player.name === "You" ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
+                {player.id === YOU_PLAYER_ID ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
               </p>
               <p className="text-lg font-bold leading-tight text-[var(--heading)]">
                 {handPenalty(player.hand)} pts
