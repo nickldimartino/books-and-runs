@@ -272,11 +272,13 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | Task | Command |
 |---|---|
 | Dev server | `npm run dev` |
-| Tests | `npm test` (vitest, 199 tests) |
+| Tests | `npm test` (vitest, 294 tests) |
+| E2E | `npm run test:e2e:ci` (Playwright — 5 browser projects; excludes `@visual` and self-skips the live 2-account MP test without `SUPABASE_SERVICE_ROLE_KEY`) |
 | Typecheck | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
 | Production build | `npm run build` (static export to `out/`) |
 | Headless engine sanity | `npm run demo` |
+| Load test | `k6 run scripts/load-test.js` — hits real Supabase, opt-in only, see the script's own setup comment |
 | iOS (Capacitor, not distributed) | `npm run ios:sync` / `npm run ios:open` |
 
 **Deploy the web app:** push to `main` → GitHub → Vercel →
