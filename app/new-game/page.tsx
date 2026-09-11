@@ -8,21 +8,40 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { markTutorialStarting } from "../lib/localSave";
+import {
+  contractsFor,
+  describeFavoriteGameConfig,
+  FavoriteGameConfig,
+  loadFavoriteGameConfig,
+  playerConfigsFor,
+} from "../lib/favoriteGameConfig";
 
 export default function NewGamePage() {
   const router = useRouter();
   const { configured, user } = useAuth();
-  const { startTutorialGame } = useGame();
+  const { startTutorialGame, startNewGame } = useGame();
   const [startingTutorial, setStartingTutorial] = useState(false);
+  const [favorite, setFavorite] = useState<FavoriteGameConfig | null>(null);
+
+  useEffect(() => {
+    setFavorite(loadFavoriteGameConfig());
+  }, []);
 
   function startTutorial() {
     setStartingTutorial(true);
     markTutorialStarting();
     startTutorialGame();
+    router.push("/game");
+  }
+
+  function playFavorite() {
+    if (!favorite) return;
+    const configs = playerConfigsFor(favorite.humanNames.slice(0, favorite.humanCount), favorite.aiDifficulties);
+    startNewGame(configs, contractsFor(favorite.roundMode, favorite.customRounds), true);
     router.push("/game");
   }
 
@@ -40,6 +59,19 @@ export default function NewGamePage() {
       <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
 
       <div className="flex flex-col gap-3">
+        {favorite && (
+          <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-5">
+            <p className="text-base font-semibold text-[var(--heading)]">Play my usual</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{describeFavoriteGameConfig(favorite)}</p>
+            <button
+              onClick={playFavorite}
+              className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            >
+              Deal it
+            </button>
+          </div>
+        )}
+
         <Link
           href="/new-game/local"
           className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 transition hover:bg-[var(--panel-soft)]"

@@ -11,10 +11,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { useGame } from "../../GameContext";
-import { AI_PERSONAS, AI_THEORETICAL_LEVEL, pickAiPersonas } from "../../lib/aiPersonas";
+import { AI_PERSONAS, AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { loadLocalSettings } from "../../lib/settingsStore";
-import { PlayerConfig } from "@/gameEngine";
-import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
+import {
+  clearFavoriteGameConfig,
+  contractsFor,
+  describeFavoriteGameConfig,
+  FavoriteGameConfig,
+  loadFavoriteGameConfig,
+  playerConfigsFor,
+  saveFavoriteGameConfig,
+} from "../../lib/favoriteGameConfig";
+import { CONTRACTS, ContractRequirement, Difficulty } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
@@ -95,6 +103,11 @@ export default function NewLocalGamePage() {
   // Only meaningful once there's a second human at the table — see the note
   // and toggle rendered below the name inputs, both gated on humanCount >= 2.
   const [trackStatsOn, setTrackStatsOn] = useState(true);
+  // The saved "my usual" lineup, if any (localStorage, per-device). `saved`
+  // flips true briefly after the player taps "Save as my usual" for a bit of
+  // confirmation without a toast system.
+  const [favorite, setFavorite] = useState<FavoriteGameConfig | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
 
   // Pick up the house-rule default from Settings once mounted (before the
   // player has had a chance to touch the AI difficulty picker themselves).
@@ -102,16 +115,22 @@ export default function NewLocalGamePage() {
     const preferred = loadLocalSettings().preferredAiDifficulty;
     setDefaultDifficulty(preferred);
     setAiDifficulties([preferred]);
+    setFavorite(loadFavoriteGameConfig());
   }, []);
 
   const totalPlayers = humanCount + aiDifficulties.length;
-  const selectedContracts: ContractRequirement[] =
-    roundMode === "all"
-      ? CONTRACTS
-      : roundMode === "short"
-        ? SHORT_GAME_CONTRACTS
-        : CONTRACTS.filter((c) => customRounds.has(c.round));
+  const selectedContracts: ContractRequirement[] = contractsFor(roundMode, customRounds);
   const canStart = totalPlayers >= 2 && totalPlayers <= MAX_PLAYERS && selectedContracts.length > 0;
+
+  // The current form as a saveable config — also what "Save as my usual"
+  // snapshots.
+  const currentConfig: FavoriteGameConfig = {
+    humanCount,
+    humanNames,
+    aiDifficulties,
+    roundMode,
+    customRounds: [...customRounds].sort((a, b) => a - b),
+  };
 
   // Grows/shrinks the editable name list to match humanCount without
   // clobbering names already typed into the slots that stick around.
@@ -160,33 +179,42 @@ export default function NewLocalGamePage() {
     setAiDifficulties((prev) => prev.map((d, i) => (i === index ? difficulty : d)));
   }
 
-  function handleStart() {
-    if (!canStart) return;
-    // A persona (name + avatar, e.g. "🦉 Hedda") per AI, picked fresh each
-    // game — see pickAiPersonas' own doc for why this beats a plain
-    // "Medium AI 1"/"Medium AI 2" label: with no live opponents, the AI is
-    // the only "other player" this game has, and a face is worth more than
-    // a difficulty count.
-    const personas = pickAiPersonas(aiDifficulties);
-    const configs: PlayerConfig[] = [
-      ...humanNames.map((name, i) => ({
-        id: `human-${i}`,
-        name: name.trim() || (i === 0 ? "You" : `Player ${i + 1}`),
-        isAI: false,
-      })),
-      ...aiDifficulties.map((difficulty, i) => ({
-        id: `ai-${i}`,
-        name: personas[i].displayName,
-        isAI: true,
-        difficulty,
-      })),
-    ];
+  // A persona (name + avatar, e.g. "🦉 Hedda") per AI, picked fresh each
+  // game — see pickAiPersonas' own doc for why this beats a plain
+  // "Medium AI 1"/"Medium AI 2" label: with no live opponents, the AI is
+  // the only "other player" this game has, and a face is worth more than
+  // a difficulty count.
+  function dealAndGo(cfg: FavoriteGameConfig, humansForCount: number, trackStats: boolean) {
+    const configs = playerConfigsFor(cfg.humanNames.slice(0, cfg.humanCount), cfg.aiDifficulties);
     // The toggle only ever renders (and so can only ever have been touched)
     // once there are 2+ human players — below that, tracking always stays
     // on, regardless of whatever trackStatsOn happens to still hold from a
     // player count that was previously higher and has since been reduced.
-    startNewGame(configs, selectedContracts, humanCount >= 2 ? trackStatsOn : true);
+    startNewGame(configs, contractsFor(cfg.roundMode, cfg.customRounds), humansForCount >= 2 ? trackStats : true);
     router.push("/game");
+  }
+
+  function handleStart() {
+    if (!canStart) return;
+    dealAndGo(currentConfig, humanCount, trackStatsOn);
+  }
+
+  function handlePlayFavorite() {
+    if (!favorite) return;
+    dealAndGo(favorite, favorite.humanCount, true);
+  }
+
+  function handleSaveFavorite() {
+    if (!canStart) return;
+    saveFavoriteGameConfig(currentConfig);
+    setFavorite(currentConfig);
+    setJustSaved(true);
+    window.setTimeout(() => setJustSaved(false), 2000);
+  }
+
+  function handleForgetFavorite() {
+    clearFavoriteGameConfig();
+    setFavorite(null);
   }
 
   return (
@@ -199,6 +227,31 @@ export default function NewLocalGamePage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">Solo &amp; pass-and-play</h1>
+
+      {favorite && (
+        <section className="flex flex-col gap-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-[var(--heading)]">Your usual</h2>
+              <p className="mt-0.5 truncate text-xs text-[var(--muted)]">
+                {describeFavoriteGameConfig(favorite)}
+              </p>
+            </div>
+            <button
+              onClick={handlePlayFavorite}
+              className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            >
+              Play
+            </button>
+          </div>
+          <button
+            onClick={handleForgetFavorite}
+            className="self-start text-xs text-[var(--faint)] underline hover:text-[var(--muted)]"
+          >
+            Forget this setup
+          </button>
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
@@ -408,13 +461,22 @@ export default function NewLocalGamePage() {
         </p>
       )}
 
-      <button
-        onClick={handleStart}
-        disabled={!canStart}
-        className="mt-auto rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Start Game
-      </button>
+      <div className="mt-auto flex flex-col gap-2">
+        <button
+          onClick={handleStart}
+          disabled={!canStart}
+          className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Start Game
+        </button>
+        <button
+          onClick={handleSaveFavorite}
+          disabled={!canStart}
+          className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-40"
+        >
+          {justSaved ? "Saved ✓" : favorite ? "Update my usual to this setup" : "Save this setup as my usual"}
+        </button>
+      </div>
 
       <AiBiosSection />
 
