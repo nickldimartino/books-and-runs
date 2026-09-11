@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 // Exercises ambience.ts against a fake AudioContext (jsdom has no real Web
-// Audio implementation) — mainly that start/stop/idempotency and the
-// supported-browser check behave, not the actual sound.
+// Audio implementation) — mainly that start/stop/idempotency, the
+// supported-browser check, and the arpeggio/chord/sparkle scheduling
+// behave, not the actual sound.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -48,6 +49,11 @@ class FakeFilter {
   connect = vi.fn(() => fakeNode());
 }
 
+class FakeDelay {
+  delayTime = fakeParam();
+  connect = vi.fn(() => fakeNode());
+}
+
 class FakeAudioContext {
   state: "running" | "suspended" = "running";
   currentTime = 0;
@@ -56,10 +62,7 @@ class FakeAudioContext {
   createOscillator = vi.fn(() => new FakeOscillator());
   createGain = vi.fn(() => new FakeGain());
   createBiquadFilter = vi.fn(() => new FakeFilter());
-  createConvolver = vi.fn(() => ({ buffer: null, connect: vi.fn(() => fakeNode()) }));
-  createBuffer = vi.fn((_channels: number, length: number) => ({
-    getChannelData: () => new Float32Array(length),
-  }));
+  createDelay = vi.fn(() => new FakeDelay());
   resume = vi.fn(async () => {
     this.state = "running";
   });
@@ -91,7 +94,7 @@ describe("ambience", () => {
     expect(reimported.isAmbienceSupported()).toBe(false);
   });
 
-  it("starts the pad, building the oscillator graph", async () => {
+  it("starts the loop, building the bass root + the first arpeggio note", async () => {
     const { startAmbience, isAmbiencePlaying } = await import("./ambience");
     expect(isAmbiencePlaying()).toBe(false);
 
@@ -99,53 +102,70 @@ describe("ambience", () => {
 
     expect(isAmbiencePlaying()).toBe(true);
     expect(lastContext).not.toBeNull();
-    // One oscillator + one detune LFO per chord voice (4 voices), plus the
-    // filter's own sweep LFO.
-    expect(lastContext!.createOscillator).toHaveBeenCalledTimes(9);
+    // The sustained bass root, plus the very first arpeggio note (it plays
+    // immediately rather than waiting a full interval).
+    expect(lastContext!.createOscillator).toHaveBeenCalledTimes(2);
     expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
-    // The synthetic reverb — one impulse-response buffer fed to one
-    // ConvolverNode, built once at start.
-    expect(lastContext!.createConvolver).toHaveBeenCalledTimes(1);
-    expect(lastContext!.createBuffer).toHaveBeenCalledTimes(1);
+    // The slap-delay standing in for reverb, built once at start.
+    expect(lastContext!.createDelay).toHaveBeenCalledTimes(1);
   });
 
-  it("glides every pad voice to the next chord once the hold period elapses", async () => {
-    vi.useFakeTimers();
-    try {
-      const { startAmbience } = await import("./ambience");
-      startAmbience();
-      const oscillatorsAtStart = lastContext!.createOscillator.mock.results.map((r) => r.value as FakeOscillator);
-
-      // Hold (9s) + morph (2.5s), from the module's own constants — none of
-      // these oscillators' frequencies have been touched since creation.
-      await vi.advanceTimersByTimeAsync(11_600);
-
-      const glided = oscillatorsAtStart.filter((osc) => osc.frequency.linearRampToValueAtTime.mock.calls.length > 0);
-      // Exactly the 4 pad voices glide on a chord change — their detune
-      // LFOs and the filter-sweep LFO never touch .frequency.
-      expect(glided).toHaveLength(4);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("occasionally drops in a sparse melody note", async () => {
+  it("plays a new arpeggio note roughly every 380ms", async () => {
     vi.useFakeTimers();
     try {
       const { startAmbience } = await import("./ambience");
       startAmbience();
       const oscillatorsAtStart = lastContext!.createOscillator.mock.calls.length;
 
-      // Comfortably past the module's own max melody-note delay (7s).
-      await vi.advanceTimersByTimeAsync(8_000);
+      await vi.advanceTimersByTimeAsync(1200); // ~3 more notes
 
-      expect(lastContext!.createOscillator.mock.calls.length).toBeGreaterThan(oscillatorsAtStart);
+      expect(lastContext!.createOscillator.mock.calls.length).toBeGreaterThanOrEqual(oscillatorsAtStart + 2);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("stop() cancels pending chord/melody timers — nothing fires afterward", async () => {
+  it("glides the bass root once a full chord's worth of arpeggio notes has played", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+      // Oscillator 0 is the sustained bass root (created before the first
+      // arpeggio note).
+      const bassOsc = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
+      expect(bassOsc.frequency.linearRampToValueAtTime.mock.calls.length).toBe(0);
+
+      // 4-note pattern × 3 repeats × 380ms, plus a safety margin.
+      await vi.advanceTimersByTimeAsync(4600);
+
+      expect(bassOsc.frequency.linearRampToValueAtTime.mock.calls.length).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("occasionally drops in a brighter sine sparkle note above the triangle arpeggio", async () => {
+    vi.useFakeTimers();
+    try {
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+
+      // Comfortably past the module's own max sparkle delay (9s) — one is
+      // guaranteed to have fired by now.
+      await vi.advanceTimersByTimeAsync(9500);
+
+      const sineOscillators = lastContext!.createOscillator.mock.results.filter(
+        (r) => (r.value as FakeOscillator).type === "sine"
+      );
+      // The sustained bass root is also a sine oscillator — a sparkle note
+      // means there's at least one more beyond it.
+      expect(sineOscillators.length).toBeGreaterThan(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stop() cancels pending arpeggio/sparkle timers — nothing fires afterward", async () => {
     vi.useFakeTimers();
     try {
       const { startAmbience, stopAmbience } = await import("./ambience");
