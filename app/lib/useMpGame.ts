@@ -29,6 +29,7 @@ import {
   submitMpMove,
 } from "./mpStore";
 import { loadAchievementProgressState } from "./loadAchievementProgress";
+import { parseRedactedView } from "./mpSchema";
 import { recordAchievementProgress } from "./recordAchievementProgress";
 import { recordMpGameResult } from "./recordMpGameResult";
 import { supabase } from "./supabaseClient";
@@ -122,7 +123,13 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const reactionIdRef = useRef(0);
   const loadedFor = useRef<string | null>(null);
 
-  const view = state?.view ?? null;
+  // Validate the server view before any component reads it (defense in
+  // depth — a malformed response becomes a clean error, not a deep crash).
+  const view = useMemo(() => {
+    if (!state?.view) return null;
+    return parseRedactedView(state.view);
+  }, [state?.view]);
+  const viewMalformed = !!state?.view && view === null;
   const snapKey = gameId ? `mp:achv:${gameId}` : null;
 
   const refresh = useCallback(() => {
@@ -475,10 +482,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
       : null;
 
   return {
-    status,
+    status: viewMalformed ? "error" : status,
     view,
     pending: status === "pending" ? state : null,
-    error,
+    error: viewMalformed ? "The game data looked wrong — try reloading." : error,
     busy,
     myTurn: !!view?.yourTurn,
     youHaveDrawn: !!view?.youHaveDrawn,
