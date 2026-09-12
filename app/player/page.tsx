@@ -26,6 +26,8 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
+  AchievementCategory,
+  AchievementInstance,
   AchievementProgressState,
   AchievementTier,
   allAchievements,
@@ -41,7 +43,13 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
-import { COLOR_OPTIONS, EMOJI_OPTIONS } from "../lib/avatarPresets";
+import {
+  COLOR_OPTIONS,
+  EMOJI_OPTIONS,
+  isPremiumEmojiUnlocked,
+  PREMIUM_EMOJI_OPTIONS,
+  premiumEmojiRequirementLabel,
+} from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
@@ -52,15 +60,19 @@ import {
   MAX_BIO_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
   MAX_REPORT_REASON_LENGTH,
+  MAX_SHOWCASE_ITEMS,
+  PremiumEmojiLockedError,
   displayNameFor,
   isDisplayNameAvailable,
   reportProfilePhoto,
   revertToEmojiAvatar,
+  showcaseKeyFor,
   syncLeaderboardStats,
   updateLeaderboardAvatarEmoji,
   updateLeaderboardAvatarPhoto,
   updateLeaderboardBio,
   updateLeaderboardDisplayName,
+  updateLeaderboardShowcase,
 } from "../lib/leaderboardStore";
 import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
@@ -76,6 +88,41 @@ const TIER_LABEL: Record<AchievementTier, string> = {
 };
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
 const PAST_GAMES_LIMIT = 10;
+
+// Medal-ring colors for the trophy case — bronze/silver/gold/platinum/
+// diamond, matching the beginner→expert tier language used everywhere else
+// in the achievement system.
+const TIER_RING_COLOR: Record<AchievementTier, string> = {
+  beginner: "#CD7F32",
+  easy: "#B0B8C1",
+  medium: "#F5C518",
+  hard: "#4FD1C5",
+  expert: "#38BDF8",
+};
+
+const FAMILY_BY_ID = new Map(ACHIEVEMENT_FAMILIES.map((f) => [f.id, f]));
+
+interface ShowcaseItem {
+  key: string;
+  familyId: string;
+  familyTitle: string;
+  category: AchievementCategory;
+  tier: AchievementTier;
+}
+
+/** Parses a "familyId:tier" showcase entry against the live family list —
+ * returns null for anything that no longer resolves (a family renamed or
+ * removed since the account pinned it), so a stale entry just quietly
+ * doesn't render instead of crashing the page. */
+function resolveShowcaseItem(key: string): ShowcaseItem | null {
+  const sep = key.lastIndexOf(":");
+  if (sep === -1) return null;
+  const familyId = key.slice(0, sep);
+  const tier = key.slice(sep + 1) as AchievementTier;
+  const family = FAMILY_BY_ID.get(familyId);
+  if (!family || !ACHIEVEMENT_TIERS.includes(tier)) return null;
+  return { key, familyId, familyTitle: family.title, category: family.category, tier };
+}
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -162,6 +209,39 @@ function Highlight({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+/** One pinned achievement, rendered as a medal: the achievement system's
+ * existing category icon, framed in a ring colored for the tier it was
+ * earned at (bronze beginner → diamond expert). */
+function TrophyBadge({ item, size = 56 }: { item: ShowcaseItem; size?: number }) {
+  return (
+    <div className="flex flex-col items-center gap-1" title={`${item.familyTitle} · ${TIER_LABEL[item.tier]}`}>
+      <div
+        className="grid place-items-center rounded-full p-[3px]"
+        style={{ width: size, height: size, backgroundColor: TIER_RING_COLOR[item.tier] }}
+      >
+        <div className="grid h-full w-full place-items-center rounded-full bg-[var(--panel)]">
+          <AchievementIcon category={item.category} className="h-1/2 w-1/2 text-[var(--heading)]" />
+        </div>
+      </div>
+      <p className="max-w-[4.5rem] truncate text-[10px] text-[var(--faint)]">{item.familyTitle}</p>
+    </div>
+  );
+}
+
+/** An unfilled trophy slot — self-view only, a quiet invite to pin one via
+ * Edit profile rather than an empty gap. */
+function EmptyTrophySlot({ size = 56 }: { size?: number }) {
+  return (
+    <div
+      className="grid shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--border)] text-[var(--faint)]"
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      +
+    </div>
+  );
+}
+
 /** A blank placeholder for a real account that hasn't synced a
  * leaderboard_entries row yet (never finished a tracked game or Daily Deal
  * — see migration 0006) — a friend can exist, and be viewable, before
@@ -175,6 +255,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
     avatar_emoji: null,
     avatar_color: null,
     avatar_photo_path: null,
+    showcase: [],
     level: 0,
     total_xp: 0,
     achievements_unlocked: 0,
@@ -359,6 +440,7 @@ export default function PlayerProfilePage() {
   const [pendingEmoji, setPendingEmoji] = useState<string | null>(null);
   const [pendingColor, setPendingColor] = useState<string | null>(null);
   const [avatarSaveState, setAvatarSaveState] = useState<SaveState>("idle");
+  const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
   const [photoState, setPhotoState] = useState<"idle" | "uploading" | "error">("idle");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -373,6 +455,7 @@ export default function PlayerProfilePage() {
   async function saveEmojiAvatar() {
     if (!supabase || !user || !pendingEmoji || !pendingColor) return;
     setAvatarSaveState("saving");
+    setAvatarSaveError(null);
     try {
       await updateLeaderboardAvatarEmoji(supabase, user.id, pendingEmoji, pendingColor);
       setEntry((prev) =>
@@ -380,7 +463,11 @@ export default function PlayerProfilePage() {
       );
       setAvatarSaveState("saved");
     } catch (err) {
-      console.error("Failed to save avatar:", err);
+      if (err instanceof PremiumEmojiLockedError) {
+        setAvatarSaveError(err.message);
+      } else {
+        console.error("Failed to save avatar:", err);
+      }
       setAvatarSaveState("error");
     }
   }
@@ -509,6 +596,47 @@ export default function PlayerProfilePage() {
     return m;
   }, [unlocked]);
 
+  // ── Trophy case picker (self only) — the highest unlocked tier per
+  // family, so a family you've mastered doesn't also clutter the picker
+  // with its own already-superseded beginner/easy/etc. entries.
+  const pickableTrophies = useMemo(() => {
+    const bestPerFamily = new Map<string, AchievementInstance>();
+    for (const a of unlocked) {
+      const existing = bestPerFamily.get(a.familyId);
+      if (!existing || tierNumber(a.tier) > tierNumber(existing.tier)) bestPerFamily.set(a.familyId, a);
+    }
+    return [...bestPerFamily.values()].sort((a, b) => tierNumber(b.tier) - tierNumber(a.tier));
+  }, [unlocked]);
+
+  const [showcaseSelection, setShowcaseSelection] = useState<string[]>([]);
+  const [showcaseSaveState, setShowcaseSaveState] = useState<SaveState>("idle");
+
+  useEffect(() => {
+    if (entry && isSelf) setShowcaseSelection(entry.showcase);
+  }, [entry, isSelf]);
+
+  function toggleShowcaseItem(key: string) {
+    setShowcaseSelection((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      if (prev.length >= MAX_SHOWCASE_ITEMS) return prev;
+      return [...prev, key];
+    });
+    setShowcaseSaveState("idle");
+  }
+
+  async function saveShowcase() {
+    if (!supabase || !user) return;
+    setShowcaseSaveState("saving");
+    try {
+      await updateLeaderboardShowcase(supabase, user.id, showcaseSelection);
+      setEntry((prev) => (prev ? { ...prev, showcase: showcaseSelection } : prev));
+      setShowcaseSaveState("saved");
+    } catch (err) {
+      console.error("Failed to save trophy case:", err);
+      setShowcaseSaveState("error");
+    }
+  }
+
   if (!authLoading && !configured) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
@@ -573,7 +701,7 @@ export default function PlayerProfilePage() {
         <>
           <PageTip id="player-profile" title={isSelf ? "Your profile" : "Player profiles"}>
             {isSelf
-              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile to change your name, bio, or picture. Everything below the edit section (stats breakdown, achievements, game history) is only ever visible to you."
+              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile to change your name, bio, picture, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories also unlocks exclusive avatar emoji. Everything below the edit section (stats breakdown, achievements, game history) is only ever visible to you."
               : "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here."}
           </PageTip>
 
@@ -666,6 +794,24 @@ export default function PlayerProfilePage() {
             <StatTile label="MP streak" value={entry.mp_best_win_streak ?? 0} />
           </section>
 
+          {/* ── Trophy case — public; empty slots only shown to yourself ── */}
+          {(entry.showcase.length > 0 || isSelf) && (
+            <section>
+              <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                Trophy Case
+              </h2>
+              <div className="flex flex-wrap justify-center gap-3">
+                {entry.showcase.map(resolveShowcaseItem).map((item, i) =>
+                  item ? <TrophyBadge key={item.key} item={item} /> : <EmptyTrophySlot key={`stale-${i}`} />
+                )}
+                {isSelf &&
+                  Array.from({ length: Math.max(0, MAX_SHOWCASE_ITEMS - entry.showcase.length) }).map((_, i) => (
+                    <EmptyTrophySlot key={`empty-${i}`} />
+                  ))}
+              </div>
+            </section>
+          )}
+
           {/* ── Edit profile (self only, collapsed by default) ── */}
           {isSelf && editingProfile && (
             <>
@@ -702,6 +848,56 @@ export default function PlayerProfilePage() {
                         </button>
                       ))}
                     </div>
+
+                    <div>
+                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)]">
+                        Premium — earned, not picked
+                      </p>
+                      <div className="grid grid-cols-8 gap-1.5">
+                        {PREMIUM_EMOJI_OPTIONS.map((option) => {
+                          const unlocked = isPremiumEmojiUnlocked(option, level?.level ?? 0, progress);
+                          return (
+                            <button
+                              key={option.emoji}
+                              onClick={() => (unlocked ? setPendingEmoji(option.emoji) : undefined)}
+                              aria-label={
+                                unlocked
+                                  ? `Use ${option.emoji} as your avatar`
+                                  : `${option.emoji} locked — ${premiumEmojiRequirementLabel(option.unlock)}`
+                              }
+                              title={unlocked ? undefined : premiumEmojiRequirementLabel(option.unlock)}
+                              className={`relative grid aspect-square place-items-center rounded-lg text-lg transition ${
+                                !unlocked
+                                  ? "cursor-default bg-[var(--panel-soft)] opacity-40"
+                                  : pendingEmoji === option.emoji
+                                    ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
+                                    : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                              }`}
+                            >
+                              {option.emoji}
+                              {!unlocked && (
+                                <span
+                                  aria-hidden="true"
+                                  className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-[var(--bg)] text-[8px] leading-none"
+                                >
+                                  🔒
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {pendingEmoji && PREMIUM_EMOJI_OPTIONS.some((o) => o.emoji === pendingEmoji) && (
+                        <p className="mt-1.5 text-[10px] text-[var(--faint)]">
+                          {
+                            premiumEmojiRequirementLabel(
+                              PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === pendingEmoji)!.unlock
+                            )
+                          }
+                        </p>
+                      )}
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       {COLOR_OPTIONS.map((color) => (
                         <button
@@ -722,7 +918,9 @@ export default function PlayerProfilePage() {
                       {avatarSaveState === "saving" ? "Saving…" : "Save avatar"}
                     </button>
                     {avatarSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                    {avatarSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — try again.</p>}
+                    {avatarSaveState === "error" && (
+                      <p className="text-xs text-[var(--danger)]">{avatarSaveError ?? "Couldn't save — try again."}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
@@ -804,6 +1002,60 @@ export default function PlayerProfilePage() {
                 </form>
                 {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
+              </section>
+
+              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+                  Trophy case
+                  <span className="ml-2 font-normal normal-case text-[var(--faint)]">
+                    {showcaseSelection.length} / {MAX_SHOWCASE_ITEMS}
+                  </span>
+                </h2>
+                <p className="text-xs text-[var(--faint)]">
+                  Pick up to {MAX_SHOWCASE_ITEMS} achievements to feature at the top of your profile.
+                </p>
+                {privateLoading ? (
+                  <p className="text-xs text-[var(--faint)]">Loading your achievements…</p>
+                ) : pickableTrophies.length === 0 ? (
+                  <p className="text-xs text-[var(--faint)]">
+                    Nothing unlocked yet — play a game or two, then come back to pick your favorites.
+                  </p>
+                ) : (
+                  <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
+                    {pickableTrophies.map((a) => {
+                      const key = showcaseKeyFor(a.familyId, a.tier);
+                      const selected = showcaseSelection.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => toggleShowcaseItem(key)}
+                          disabled={!selected && showcaseSelection.length >= MAX_SHOWCASE_ITEMS}
+                          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                            selected ? "bg-[var(--accent)]/15 ring-1 ring-[var(--accent)]" : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                          }`}
+                        >
+                          <span
+                            className="grid h-6 w-6 shrink-0 place-items-center rounded-full"
+                            style={{ backgroundColor: TIER_RING_COLOR[a.tier] }}
+                          >
+                            <AchievementIcon category={a.category} className="h-3.5 w-3.5 text-[var(--bg)]" />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[var(--heading)]">{a.familyTitle}</span>
+                          <span className="shrink-0 text-xs text-[var(--faint)]">{TIER_LABEL[a.tier]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <button
+                  onClick={saveShowcase}
+                  disabled={showcaseSaveState === "saving"}
+                  className="self-start rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+                >
+                  {showcaseSaveState === "saving" ? "Saving…" : "Save trophy case"}
+                </button>
+                {showcaseSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {showcaseSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
               </section>
             </>
           )}

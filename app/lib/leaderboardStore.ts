@@ -34,6 +34,9 @@ export interface LeaderboardEntry {
   avatar_emoji: string | null;
   avatar_color: string | null;
   avatar_photo_path: string | null;
+  /** Pinned "familyId:tier" strings (e.g. "books_melded:hard") — up to 6,
+   * see migration 0026. Self-reported like everything else here. */
+  showcase: string[];
   level: number;
   total_xp: number;
   achievements_unlocked: number;
@@ -296,12 +299,28 @@ export interface AvatarInfo {
 
 const DEFAULT_AVATAR: AvatarInfo = { kind: "emoji", emoji: null, color: null, photoPath: null };
 
+/** Thrown by updateLeaderboardAvatarEmoji when migration 0026's trigger
+ * rejects a premium emoji the account hasn't earned yet — the client-side
+ * lock check (avatarPresets.ts's isPremiumEmojiUnlocked) should normally
+ * catch this before the request ever goes out, so seeing this in practice
+ * means that check and the server's own (re-derived from the same
+ * underlying stats) disagreed, most likely stale client-side progress
+ * data. */
+export class PremiumEmojiLockedError extends Error {
+  constructor() {
+    super("You haven't unlocked that avatar option yet.");
+    this.name = "PremiumEmojiLockedError";
+  }
+}
+
 /** Picks (or changes) the signed-in user's emoji+color avatar — switches
  * avatar_kind to "emoji" without touching avatar_photo_path, so a
  * previously-uploaded photo is still there if they switch back to it later
  * (see revertToPhotoAvatar). Both values are validated against the same
  * fixed lists the DB constrains them to (see migration 0024's own doc for
- * why the two must stay in sync). */
+ * why the two must stay in sync). Throws PremiumEmojiLockedError
+ * specifically when migration 0026's trigger rejects a locked premium
+ * emoji — every other failure rethrows as-is. */
 export async function updateLeaderboardAvatarEmoji(
   supabase: SupabaseClient,
   userId: string,
@@ -318,7 +337,10 @@ export async function updateLeaderboardAvatarEmoji(
     avatar_color: color,
     updated_at: new Date().toISOString(),
   });
-  if (error) throw error;
+  if (error) {
+    if (error.message?.includes("avatar_emoji_locked")) throw new PremiumEmojiLockedError();
+    throw error;
+  }
 }
 
 /** Records a freshly-uploaded photo as the signed-in user's avatar and
@@ -414,6 +436,34 @@ export async function fetchAvatarsFor(supabase: SupabaseClient, userIds: string[
 export function avatarPhotoUrlFor(supabase: SupabaseClient, path: string, version?: string | null): string {
   const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
   return version ? `${url}?v=${encodeURIComponent(version)}` : url;
+}
+
+/** Max pinned trophies (migration 0026's own CHECK). */
+export const MAX_SHOWCASE_ITEMS = 6;
+
+/** Encodes one achievement instance as the "familyId:tier" string
+ * showcase entries are stored as. */
+export function showcaseKeyFor(familyId: string, tier: string): string {
+  return `${familyId}:${tier}`;
+}
+
+/** Sets the signed-in user's pinned trophy case — up to MAX_SHOWCASE_ITEMS
+ * "familyId:tier" strings (see showcaseKeyFor). The app only ever offers
+ * the account's own already-unlocked achievements to pick from, but this
+ * itself doesn't re-verify that server-side (see migration 0026's own doc
+ * for why the showcase and the premium-emoji gate get different
+ * treatment). */
+export async function updateLeaderboardShowcase(
+  supabase: SupabaseClient,
+  userId: string,
+  items: string[]
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    showcase: items.slice(0, MAX_SHOWCASE_ITEMS),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
 }
 
 /** The URL to a given account's public profile page — the one place this
