@@ -14,7 +14,7 @@
 // The per-tier files decide which of these to use and how cautiously; this
 // file holds no strategy of its own.
 
-import { bookCandidates, layOffOptions, rankPositions, runCandidates, splitWildsAndNaturals } from "../meld";
+import { bookCandidates, layOffOptions, rankPositions, runCandidates, solveContract, splitWildsAndNaturals } from "../meld";
 import { cardPenalty } from "../scorer";
 import { Card, GameState, Meld, Player, Rank } from "../types";
 
@@ -250,3 +250,19 @@ export function dangerScore(state: GameState, player: Player, card: Card): numbe
  * it happens to have the highest raw penalty value in the pool.
  */
 export const WILD_DISCARD_RISK = 12;
+
+/**
+ * Would adding this card to the player's own hand let them complete this
+ * round's contract outright, right now? Used by hard/expert to override
+ * their usual "hold a wild back, don't reveal need" caution when drawing
+ * from the discard pile — a real strong player takes a card that finishes
+ * their hand no matter what it tips off, since going out ends the round
+ * before that information could ever be used against them. Only ever
+ * reasons about the player's own hand plus the one candidate card — no
+ * opponent hand contents involved, so this stays exactly as fair as every
+ * other read here (see also isCloseToOut/leaderPressure above).
+ */
+export function completesOwnContract(state: GameState, player: Player, card: Card): boolean {
+  const requirement = state.selectedContracts[state.round - 1];
+  return solveContract([...player.hand, card], requirement, player.id) !== null;
+}

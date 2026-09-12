@@ -3,13 +3,17 @@
 // sharply for an opponent who's themself closing in on going out — and
 // keeps its wilds well back (WILD_DISCARD_RISK) unless it's the one closing
 // in, at which point it stops hoarding and lays them off like anything else
-// (cautiousWildLayOffPlan). Only ~5% mistake rate, so its heuristic is on
-// show almost every turn.
+// (cautiousWildLayOffPlan). Also breaks its own "don't reveal need for a
+// wild" rule the instant doing so would complete its contract outright
+// (completesOwnContract) — finishing ends the round before that information
+// could ever be used against it. Only ~5% mistake rate, so its heuristic is
+// on show almost every turn.
 
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,
   cautiousWildLayOffPlan,
+  completesOwnContract,
   dangerScore,
   deadCards,
   highestPenaltyCard,
@@ -35,7 +39,13 @@ export const hardStrategy: AIStrategy = {
     if (!top) return false;
     const mistake = maybeMistakeBool(MISTAKE_CHANCE.hard, rng);
     if (mistake !== null) return mistake;
-    if (top.isWild) return false; // hold discard-pile wilds back for itself only if drawn blind; don't reveal need
+    if (top.isWild) {
+      // Still won't reveal need for a wild just because it's generically
+      // useful — but one that completes the contract outright is worth
+      // taking regardless of what it tips off, since going out ends the
+      // round before that information could matter.
+      return completesOwnContract(state, player, top);
+    }
     const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
     const runAdjacent = player.hand.some(
       (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1

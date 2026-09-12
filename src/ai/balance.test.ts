@@ -84,16 +84,24 @@ describe("AI balance — the difficulty ladder holds", () => {
     // almost never empties its hand; it should be at the bottom.
     for (let i = 1; i < 5; i++) expect(rate(i)).toBeGreaterThanOrEqual(rate(0));
     // Note (2026-09, updated): easy/medium still out-win hard/expert in raw
-    // AI-vs-AI win rate, but the gap narrowed substantially (expert roughly
-    // doubled, hard improved too) once hard/expert stopped hoarding every
-    // wild unconditionally and started weighting discard/demand scoring by
-    // how close each opponent is to going out (leaderPressure in
-    // strategy.ts) — the actual behavioral gap this test was flagging.
+    // AI-vs-AI win rate, and — measured across several seeds, not just this
+    // one — a follow-up change (hard/expert taking a discard-pile wild that
+    // completes their contract outright, completesOwnContract in
+    // strategy.ts) landed as a wash for expert and a modest help for hard,
+    // not the clean improvement the earlier leaderPressure/
+    // cautiousWildLayOffPlan change measured. Kept anyway: independently
+    // correct behavior (revealing need stops mattering once a card actually
+    // finishes your hand) regardless of its effect on this specific metric.
     // Fully inverting AI-vs-AI win rate isn't the target on its own (hard's
     // and expert's real job is being a tougher *human* opponent, which
     // playing better defense against pure-greedy easy/medium bots doesn't
-    // directly measure) — this still just guards against a regression, not
-    // that exact ordering.
+    // directly measure, and single-seed swings of 10+ points here are
+    // normal noise, not signal) — this still just guards against a
+    // regression, not that exact ordering. Reliably inverting it would
+    // likely need real search (simulating a few turns ahead over the AI's
+    // own hand and visible information, sampling plausible opponent hands
+    // rather than reading their actual ones) rather than more heuristic
+    // tuning — a materially bigger undertaking than anything here so far.
     for (let i = 1; i < 5; i++) {
       expect(rate(i)).toBeGreaterThan(0.04); // a tier hasn't become unplayable
       expect(rate(i)).toBeLessThan(0.7); // a tier isn't running away with it

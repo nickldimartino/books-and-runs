@@ -13,6 +13,7 @@ import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,
   cautiousWildLayOffPlan,
+  completesOwnContract,
   deadCards,
   highestPenaltyCard,
   leaderPressure,
@@ -98,13 +99,17 @@ export const expertStrategy: AIStrategy = {
     if (!top) return false;
     const mistake = maybeMistakeBool(MISTAKE_CHANCE.expert, rng);
     if (mistake !== null) return mistake;
-    const demand = opponentDemand(state, player.id, top);
     if (top.isWild) {
-      // Same "don't reveal need" principle as hard — but a flexible card
+      // A wild that completes the contract outright is worth taking no
+      // matter what it reveals — same reasoning as hard, going out ends the
+      // round before that information could matter. Otherwise, same
+      // "don't reveal need" principle as hard — but a flexible card
       // multiple opponents are clearly both hunting for is worth denying
-      // outright, even at the cost of showing what it was.
-      return demand >= DENY_OPPONENT_THRESHOLD_FOR_WILD;
+      // outright too, even at the cost of showing what it was.
+      if (completesOwnContract(state, player, top)) return true;
+      return opponentDemand(state, player.id, top) >= DENY_OPPONENT_THRESHOLD_FOR_WILD;
     }
+    const demand = opponentDemand(state, player.id, top);
     const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
     const runAdjacent = player.hand.some(
       (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1

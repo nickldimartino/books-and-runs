@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   cautiousWildLayOffPlan,
+  completesOwnContract,
   dangerScore,
   deadCards,
   isCloseToOut,
@@ -297,6 +298,47 @@ describe("cautiousWildLayOffPlan (hard/expert)", () => {
   });
 });
 
+describe("completesOwnContract", () => {
+  it("returns true when adding the card completes this round's contract (2 books)", () => {
+    const hand = [
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "diamonds"]]), // one book already complete
+      ...makeHand([["K", "diamonds"], ["K", "spades"]]), // one short of a second book
+    ];
+    const player = makePlayer({ hand });
+    const state = makeGameState({ round: 1, players: [player] }); // round 1: 2 books, size 3
+    const wildCard = makeCard("2", "hearts"); // completes the second book
+
+    expect(completesOwnContract(state, player, wildCard)).toBe(true);
+  });
+
+  it("returns false when the card doesn't complete anything", () => {
+    const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
+    const state = makeGameState({ round: 1, players: [player] });
+
+    expect(completesOwnContract(state, player, makeCard("2", "hearts"))).toBe(false);
+  });
+});
+
+describe("hardStrategy.wantsDiscardPileDraw — takes a wild that completes its contract outright", () => {
+  it("takes it even with zero opponent evidence, since finishing ends the round", () => {
+    const hand = [
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "diamonds"]]),
+      ...makeHand([["K", "diamonds"], ["K", "spades"]]),
+    ];
+    const player = makePlayer({ hand });
+    const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "hearts")] });
+
+    expect(hardStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
+  });
+
+  it("still declines a wild that doesn't complete anything", () => {
+    const player = makePlayer({ hand: makeHand(["9", "K", "3"]) });
+    const state = makeGameState({ round: 1, players: [player], discardPile: [makeCard("2", "hearts")] });
+
+    expect(hardStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(false);
+  });
+});
+
 describe("hardStrategy — ace-high run adjacency", () => {
   it("recognizes an Ace as run-adjacent to a King when deciding to take the discard", () => {
     const aceOfSpades = makeCard("A", "spades");
@@ -407,6 +449,21 @@ describe("hardStrategy.chooseDiscard — treats a wild as extra risky in the all
 });
 
 describe("expertStrategy.wantsDiscardPileDraw — holds wilds back like hard, with a calculated exception", () => {
+  it("takes a wild that completes its contract outright, even with zero opponent evidence", () => {
+    const hand = [
+      ...makeHand([["9", "hearts"], ["9", "clubs"], ["9", "diamonds"]]),
+      ...makeHand([["K", "diamonds"], ["K", "spades"]]),
+    ];
+    const player = makePlayer({ id: "self", hand });
+    const state = makeGameState({
+      round: 1,
+      players: [player, makePlayer({ id: "opponent" })],
+      discardPile: [makeCard("2", "hearts")],
+    });
+
+    expect(expertStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
+  });
+
   it("declines a wild with low opponent demand, same principle as hard", () => {
     const player = makePlayer({ id: "self", hand: makeHand(["9", "K", "3"]) });
     const state = makeGameState({
