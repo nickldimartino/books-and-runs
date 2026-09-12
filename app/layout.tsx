@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AccountSettingsSync } from "./AccountSettingsSync";
+import { AccountSwitchGuard } from "./AccountSwitchGuard";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
 import { LocalSaveSync } from "./LocalSaveSync";
@@ -103,6 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ServiceWorkerRegistrar />
         <UpdateAvailableBanner />
         <AuthProvider>
+          <AccountSwitchGuard />
           <AccountSettingsSync />
           <PlayerLevelProvider>
             <PendingSaveSync />

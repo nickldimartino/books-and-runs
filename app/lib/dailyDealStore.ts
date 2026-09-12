@@ -154,6 +154,16 @@ function saveDailyDealState(state: DailyDealState): void {
   }
 }
 
+/** Clears this device's local Daily Deal state entirely — used when a
+ * different account signs in on this device (see AccountSwitchGuard.tsx),
+ * so a new or different account doesn't inherit whatever streak the
+ * previous one had going. The normal cloud reconciliation
+ * (mergeCloudDailyDealState, called once this account actually plays)
+ * then correctly repopulates this account's own streak, if it has one. */
+export function resetDailyDealLocal(): void {
+  saveDailyDealState(EMPTY_STATE);
+}
+
 /** Whether today's deal has already been played (and so recorded) — Home
  * uses this to swap "Play today's deal" for a played/protected state, and
  * GameOverScreen uses it to avoid double-recording a replay of the same

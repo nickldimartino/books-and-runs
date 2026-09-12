@@ -11,6 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AccountSettingsRow,
   applyAccountSettings,
+  bootstrapMissingAccountSettings,
   onAccountSettingsSynced,
   pushAllDefaults,
   pushCardBack,
@@ -18,8 +19,9 @@ import {
   pushColorblindMode,
   pushHouseSettingsPatch,
   pushTheme,
+  resetLocalPreferencesToDefaults,
 } from "./accountSettingsSync";
-import { DEFAULT_THEME } from "./themeStore";
+import { DEFAULT_THEME, saveLocalTheme } from "./themeStore";
 
 function fakeSupabase() {
   const upserts: Record<string, unknown>[] = [];
@@ -180,6 +182,99 @@ describe("the small per-store push helpers", () => {
     expect(upserts).toHaveLength(4);
     expect(upserts.map((u) => Object.keys(u).find((k) => k !== "user_id" && k !== "updated_at")))
       .toEqual(["theme", "card_back", "card_face", "colorblind_mode"]);
+  });
+});
+
+describe("resetLocalPreferencesToDefaults", () => {
+  it("resets every local store and DOM attribute to its default, regardless of what was set", () => {
+    window.localStorage.setItem(
+      "booksAndRuns:settings",
+      JSON.stringify({
+        preferredAiDifficulty: "expert",
+        soundEnabled: true,
+        highlightLayoffs: true,
+        showWhoseTurn: true,
+        meldHints: true,
+        soundVolume: 0.9,
+        ambientMusicEnabled: true,
+        ambientVolume: 0.9,
+        ambientTrack: "bounce",
+      })
+    );
+    document.documentElement.setAttribute("data-theme", "sakura");
+    document.documentElement.setAttribute("data-cardback", "noir");
+    document.documentElement.setAttribute("data-colorblind", "protanopia");
+    window.localStorage.setItem("booksAndRuns:cardFace", "bold");
+
+    resetLocalPreferencesToDefaults();
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe(DEFAULT_THEME);
+    // "off" is the absence of the attribute, not a literal "off" value.
+    expect(document.documentElement.hasAttribute("data-colorblind")).toBe(false);
+    expect(window.localStorage.getItem("booksAndRuns:cardFace")).toBe("classic");
+    const settings = JSON.parse(window.localStorage.getItem("booksAndRuns:settings")!);
+    expect(settings).toMatchObject({
+      preferredAiDifficulty: "medium",
+      meldHints: false,
+      ambientMusicEnabled: false,
+      ambientTrack: "rotate",
+    });
+  });
+});
+
+describe("bootstrapMissingAccountSettings", () => {
+  it("pushes this device's current local value for every field the account has never set", async () => {
+    window.localStorage.setItem(
+      "booksAndRuns:settings",
+      JSON.stringify({
+        preferredAiDifficulty: "hard",
+        soundEnabled: true,
+        highlightLayoffs: true,
+        showWhoseTurn: true,
+        meldHints: false,
+        soundVolume: 0.6,
+        ambientMusicEnabled: false,
+        ambientVolume: 0.4,
+        ambientTrack: "skip",
+      })
+    );
+    saveLocalTheme("sakura");
+
+    const { client, upserts } = fakeSupabase();
+    bootstrapMissingAccountSettings(client, "u1", blankRow());
+    await Promise.resolve();
+
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]).toMatchObject({
+      user_id: "u1",
+      theme: "sakura",
+      preferred_ai_difficulty_default: "hard",
+      sound_volume: 0.6,
+      meld_hints: false,
+      ambient_track: "skip",
+    });
+  });
+
+  it("pushes nothing when the account has already set every field", async () => {
+    const { client, upserts } = fakeSupabase();
+    bootstrapMissingAccountSettings(client, "u1", {
+      ...blankRow(),
+      theme: "sakura",
+      card_back: "noir",
+      card_face: "bold",
+      colorblind_mode: "protanopia",
+      preferred_ai_difficulty_default: "hard",
+      sound_volume: 0.5,
+      meld_hints: true,
+      highlight_layoffs: false,
+      show_whose_turn: false,
+      ambient_music_enabled: true,
+      ambient_volume: 0.2,
+      ambient_track: "bounce",
+    });
+    await Promise.resolve();
+
+    expect(upserts).toHaveLength(0);
   });
 });
 

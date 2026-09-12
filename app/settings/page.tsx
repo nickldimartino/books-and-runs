@@ -15,6 +15,7 @@ import {
   pushAllDefaults,
   pushColorblindMode,
   pushHouseSettingsPatch,
+  resetLocalPreferencesToDefaults,
 } from "../lib/accountSettingsSync";
 import {
   applyCardBack,
@@ -348,19 +349,12 @@ export default function SettingsPage() {
   // resets the account's copy too (when signed in), so a reset here can't
   // get silently undone by a sync from another device later.
   function handleResetToDefaults() {
+    resetLocalPreferencesToDefaults();
     setSettings(DEFAULT_SETTINGS);
-    saveLocalSettings(DEFAULT_SETTINGS);
     setTheme(DEFAULT_THEME);
-    saveLocalTheme(DEFAULT_THEME);
-    applyTheme(DEFAULT_THEME);
     setCardBack(DEFAULT_CARD_BACK);
-    saveLocalCardBack(DEFAULT_CARD_BACK);
-    applyCardBack(DEFAULT_CARD_BACK, DEFAULT_THEME);
     setCardFace(DEFAULT_CARD_FACE);
-    saveLocalCardFace(DEFAULT_CARD_FACE);
     setColorblindMode(DEFAULT_COLORBLIND_MODE);
-    saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
-    applyColorblindMode(DEFAULT_COLORBLIND_MODE);
     setConfirmingReset(false);
     pushAllDefaults(supabase, user?.id ?? null, DEFAULT_THEME);
   }

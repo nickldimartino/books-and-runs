@@ -14,11 +14,23 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Difficulty } from "@/types";
-import { applyCardBack, CardBackId, DEFAULT_CARD_BACK, loadLocalCardBack, saveLocalCardBack } from "./cardBackStore";
-import { CardFaceId, DEFAULT_CARD_FACE, saveLocalCardFace } from "./cardFaceStore";
-import { applyColorblindMode, ColorblindMode, DEFAULT_COLORBLIND_MODE, saveLocalColorblindMode } from "./colorblindStore";
+import {
+  applyCardBack,
+  CardBackId,
+  DEFAULT_CARD_BACK,
+  loadLocalCardBack,
+  saveLocalCardBack,
+} from "./cardBackStore";
+import { CardFaceId, DEFAULT_CARD_FACE, loadLocalCardFace, saveLocalCardFace } from "./cardFaceStore";
+import {
+  applyColorblindMode,
+  ColorblindMode,
+  DEFAULT_COLORBLIND_MODE,
+  loadLocalColorblindMode,
+  saveLocalColorblindMode,
+} from "./colorblindStore";
 import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
-import { applyTheme, loadLocalTheme, saveLocalTheme, ThemeId } from "./themeStore";
+import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, ThemeId } from "./themeStore";
 
 export interface AccountSettingsRow {
   theme: string | null;
@@ -35,6 +47,27 @@ export interface AccountSettingsRow {
   ambient_volume: number | null;
   ambient_track: string | null;
 }
+
+/** Stand-in for "this account has no `settings` row at all yet" (a brand
+ * new account, or one that's never had any preference synced) — every
+ * field reads as unset, same as a real row where nothing's ever been
+ * pushed. Lets bootstrapMissingAccountSettings treat "no row" and "a row
+ * full of nulls" identically. */
+export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
+  theme: null,
+  card_back: null,
+  card_face: null,
+  colorblind_mode: null,
+  preferred_ai_difficulty_default: null,
+  sound_on: true,
+  sound_volume: null,
+  meld_hints: null,
+  highlight_layoffs: null,
+  show_whose_turn: null,
+  ambient_music_enabled: null,
+  ambient_volume: null,
+  ambient_track: null,
+};
 
 const SELECT_COLUMNS =
   "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, sound_volume, meld_hints, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
@@ -105,6 +138,73 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
 export function onAccountSettingsSynced(cb: () => void): () => void {
   window.addEventListener(SYNCED_EVENT, cb);
   return () => window.removeEventListener(SYNCED_EVENT, cb);
+}
+
+/**
+ * Resets every local Settings/Theme/Card back/Card face store to its
+ * default — the *local-only* half of "Reset to defaults" on the Settings
+ * page, factored out so AccountSwitchGuard.tsx can also call it when a
+ * genuinely different account signs in on this device, before that
+ * account's own AccountSettingsSync pull has a chance to run. Deliberately
+ * never pushes anything to the cloud (unlike the Settings page's own
+ * button, via pushAllDefaults) — the point here is only to stop the
+ * *previous* account's local values from leaking into the new account's
+ * session; what the new account's own pull then applies on top of these
+ * defaults is real data it already has, not something this function
+ * should overwrite in Supabase.
+ */
+export function resetLocalPreferencesToDefaults(): void {
+  saveLocalSettings(DEFAULT_SETTINGS);
+  saveLocalTheme(DEFAULT_THEME);
+  applyTheme(DEFAULT_THEME);
+  saveLocalCardBack(DEFAULT_CARD_BACK);
+  applyCardBack(DEFAULT_CARD_BACK, DEFAULT_THEME);
+  saveLocalCardFace(DEFAULT_CARD_FACE);
+  saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
+  applyColorblindMode(DEFAULT_COLORBLIND_MODE);
+}
+
+/**
+ * For any field the account has never set (null in the just-fetched row),
+ * pushes this device's own current local value up as a baseline. Without
+ * this, a value that was only ever set locally — typically: chosen before
+ * this sync feature existed, or on a device that's never triggered a push
+ * of its own — stays null in the cloud forever, so a second, later device
+ * signing into the same account never has anything to pull and the two
+ * permanently disagree despite the sync feature being in place (the actual
+ * cause of a since-reported "my theme doesn't match between my phone's
+ * browser and its home-screen install" bug — both are the same account,
+ * but whichever one was set up first never pushed anything, since a push
+ * only ever fires on a *new* change, not retroactively for whatever was
+ * already selected). Whichever device happens to call this first "wins"
+ * and becomes every other device's value going forward — the same
+ * self-reported-snapshot model every other sync in this app already uses
+ * (see e.g. favoriteGameConfig.ts's own doc), just applied retroactively
+ * here instead of only for new changes.
+ */
+export function bootstrapMissingAccountSettings(
+  supabase: SupabaseClient,
+  userId: string,
+  row: AccountSettingsRow
+): void {
+  const local = loadLocalSettings();
+  const patch: SettingsPatch = {};
+  if (row.theme === null) patch.theme = loadLocalTheme();
+  if (row.card_back === null) patch.card_back = loadLocalCardBack();
+  if (row.card_face === null) patch.card_face = loadLocalCardFace();
+  if (row.colorblind_mode === null) patch.colorblind_mode = loadLocalColorblindMode();
+  if (row.preferred_ai_difficulty_default === null) patch.preferred_ai_difficulty_default = local.preferredAiDifficulty;
+  if (row.sound_volume === null) patch.sound_volume = local.soundVolume;
+  if (row.meld_hints === null) patch.meld_hints = local.meldHints;
+  if (row.highlight_layoffs === null) patch.highlight_layoffs = local.highlightLayoffs;
+  if (row.show_whose_turn === null) patch.show_whose_turn = local.showWhoseTurn;
+  if (row.ambient_music_enabled === null) patch.ambient_music_enabled = local.ambientMusicEnabled;
+  if (row.ambient_volume === null) patch.ambient_volume = local.ambientVolume;
+  if (row.ambient_track === null) patch.ambient_track = local.ambientTrack;
+  if (Object.keys(patch).length === 0) return;
+  upsertSettingsPatch(supabase, userId, patch).catch((err) =>
+    console.error("Failed to bootstrap account settings from this device:", err.message)
+  );
 }
 
 type SettingsPatch = Partial<{
