@@ -19,7 +19,7 @@ import { PageTip } from "./components/PageTip";
 import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
 import { pullDailyDealStreak } from "./lib/leaderboardStore";
-import { loadSavedGame } from "./lib/localSave";
+import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame } from "./lib/localSave";
 import { loadSupabase, supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
 import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
@@ -297,6 +297,7 @@ function HomeGames({
   savedSummary,
   savedMode,
   onResumeLocal,
+  resuming,
   notifications,
   userId,
 }: {
@@ -304,6 +305,7 @@ function HomeGames({
   savedSummary: string | null;
   savedMode: string | null;
   onResumeLocal: () => void;
+  resuming: boolean;
   notifications: ReturnType<typeof useNotifications>;
   userId: string | undefined;
 }) {
@@ -368,7 +370,8 @@ function HomeGames({
       {hasSavedGame && (
         <button
           onClick={onResumeLocal}
-          className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)]"
+          disabled={resuming}
+          className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left transition hover:bg-[var(--panel-soft)] disabled:opacity-60"
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[var(--accent)]/15 text-[var(--accent)]">
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
@@ -377,14 +380,14 @@ function HomeGames({
           </span>
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-base font-semibold text-[var(--heading)]">
-              Resume game
-              {savedMode && (
+              {resuming ? "Checking for the latest save…" : "Resume game"}
+              {!resuming && savedMode && (
                 <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
                   {savedMode}
                 </span>
               )}
             </span>
-            {savedSummary && (
+            {!resuming && savedSummary && (
               <span className="block truncate text-xs text-[var(--faint)]">{savedSummary}</span>
             )}
           </span>
@@ -404,7 +407,7 @@ function HomeGames({
 export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
-  const { hasSavedGame, continueGame, startDailyDeal, state } = useGame();
+  const { hasSavedGame, continueGame, startDailyDeal, continueDailyDeal, state } = useGame();
   const { level, progress } = usePlayerLevel();
   const notifications = useNotifications();
   // Covers both Continue and Daily Deal — either one commits GameContext's
@@ -412,9 +415,18 @@ export default function HomePage() {
   // guaranteed to see that update yet (see the effect below), so both wait
   // for `state` to actually show up here before navigating.
   const [navigatingToGame, setNavigatingToGame] = useState(false);
+  const [checkingForNewerSave, setCheckingForNewerSave] = useState(false);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedMode, setSavedMode] = useState<string | null>(null);
   const [dailyDeal, setDailyDeal] = useState<DailyDealState | null>(null);
+  // Whether today's deal has an in-progress save to resume — see
+  // GameContext.tsx's continueDailyDeal. Read once on mount, same as
+  // `dailyDeal` above: this page fully remounts on every visit, and nothing
+  // else on Home changes this mid-visit.
+  const [hasDailyDealSave, setHasDailyDealSave] = useState(false);
+  useEffect(() => {
+    setHasDailyDealSave(loadDailyDealSave() !== null);
+  }, []);
 
   // Re-reads on every hasSavedGame flip (a game starting, finishing, or
   // being quit) rather than once on mount, so this stays in sync with the
@@ -454,13 +466,33 @@ export default function HomePage() {
     if (navigatingToGame && state) router.push("/game");
   }, [navigatingToGame, state, router]);
 
-  function handleContinue() {
+  // LocalSaveSync's own reconcile only ever runs once per sign-in and only
+  // when nothing's loaded yet (see its own doc) — easy to lose the race
+  // against a quick tap here right after opening the app, and it never
+  // re-checks again for the rest of this session even if a *different*
+  // device saves something newer in the meantime. Re-checking the cloud
+  // right here, at the actual moment of resuming, is what makes two
+  // devices signed into the same account reliably agree on which game is
+  // current instead of each just trusting its own local cache.
+  async function handleContinue() {
+    if (supabase && user) {
+      setCheckingForNewerSave(true);
+      try {
+        const cloud = await loadCloudSave(supabase, user.id);
+        const local = loadSavedGame();
+        if (cloud && (!local || cloud.savedAt > local.savedAt)) applyCloudSave(cloud);
+      } catch (err) {
+        console.error("Failed to check for a newer solo save before continuing:", err);
+      }
+      setCheckingForNewerSave(false);
+    }
     continueGame();
     setNavigatingToGame(true);
   }
 
   function handleDailyDeal() {
-    startDailyDeal();
+    if (hasDailyDealSave) continueDailyDeal();
+    else startDailyDeal();
     setNavigatingToGame(true);
   }
 
@@ -506,6 +538,7 @@ export default function HomePage() {
           savedSummary={savedSummary}
           savedMode={savedMode}
           onResumeLocal={handleContinue}
+          resuming={checkingForNewerSave}
           notifications={notifications}
           userId={user?.id}
         />
@@ -526,12 +559,15 @@ export default function HomePage() {
             {dailyDealPlayedToday && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">Streak protected for today.</p>
             )}
+            {!dailyDealPlayedToday && hasDailyDealSave && (
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">You left this one in progress.</p>
+            )}
           </div>
           <button
             onClick={handleDailyDeal}
             className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
           >
-            {dailyDealPlayedToday ? "Play again" : "Play today's deal"}
+            {dailyDealPlayedToday ? "Play again" : hasDailyDealSave ? "Continue today's deal" : "Play today's deal"}
           </button>
         </section>
 

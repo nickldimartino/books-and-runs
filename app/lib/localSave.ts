@@ -4,6 +4,16 @@ import { RoundHistoryEntry } from "./recordGameResult";
 
 const SAVE_KEY = "booksAndRuns:savedGame";
 
+// A Daily Deal in progress gets its own slot, entirely separate from
+// SAVE_KEY: the two can be in flight at once (a real solo/pass-and-play game
+// paused while today's deal is played), and neither should be able to
+// clobber the other. Deliberately local-only, unlike SAVE_KEY — it's never
+// wired into LocalSaveSync's cloud push — Daily Deal already isn't tracked
+// across devices (see dailyDealStore.ts), and an in-progress one-round
+// challenge isn't worth the extra sync surface; exiting early just means
+// resuming on the same device you left it on.
+const DAILY_DEAL_SAVE_KEY = "booksAndRuns:dailyDealSave";
+
 // Fired after the local saved game is written / cleared, so LocalSaveSync
 // can mirror it to the account (see LocalSaveSync.tsx). `br:solo-synced`
 // goes the other way — LocalSaveSync fires it after pulling a newer save
@@ -97,6 +107,42 @@ export function clearSavedGame(): void {
     // ignore
   }
   emit(SOLO_CLEAR_EVENT);
+}
+
+/** Same shape and validity check as the real saved game, just a different
+ * slot — see DAILY_DEAL_SAVE_KEY's own doc for why these are kept separate. */
+export function loadDailyDealSave(): SavedGame | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DAILY_DEAL_SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!looksLikeSavedGame(parsed)) {
+      clearDailyDealSave();
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDailyDealGame(data: Omit<SavedGame, "savedAt">): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DAILY_DEAL_SAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
+  } catch {
+    // storage unavailable/full — local persistence is a nicety, not required
+  }
+}
+
+export function clearDailyDealSave(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(DAILY_DEAL_SAVE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 /**

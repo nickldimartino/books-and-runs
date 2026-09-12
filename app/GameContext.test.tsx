@@ -200,6 +200,28 @@ describe("GameContext — persistence", () => {
     expect(localStorage.getItem("booksAndRuns:savedGame")).toBeNull();
   });
 
+  it("a Daily Deal exited early can be resumed with continueDailyDeal()", () => {
+    mount();
+    act(() => api.startDailyDeal());
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    const discarded = api.state!.players[0].hand[0].id;
+    act(() => api.discard(discarded));
+
+    const saved = localStorage.getItem("booksAndRuns:dailyDealSave");
+    expect(saved).toBeTruthy();
+    act(() => api.quitToHome());
+
+    // Fresh provider — nothing in memory — then resume.
+    mount();
+    expect(api.state).toBeNull();
+    act(() => api.continueDailyDeal());
+
+    expect(api.state).not.toBeNull();
+    expect(api.isDailyDeal).toBe(true);
+    expect(api.state!.discardPile.some((c) => c.id === discarded)).toBe(true);
+  });
+
   it("quitToHome() drops the game and clears the saved slot", () => {
     mount();
     act(() => api.startNewGame(TWO_PLAYERS, SHORT_GAME_CONTRACTS));

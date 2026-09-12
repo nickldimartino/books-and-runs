@@ -1072,9 +1072,14 @@ export default function GamePage() {
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <button
           onClick={() => {
-            // Unlike a real game, neither a tutorial nor a Daily Deal can be
-            // resumed later — clear it outright instead of leaving it
-            // dangling in memory.
+            // A real game's in-memory state (and its saved-game slot) is
+            // left alone — routing away and back to /game just picks it
+            // back up. A tutorial or Daily Deal never sits in the real
+            // saved-game slot, so leaving those in memory here would just
+            // dangle; quitToHome() resets them properly. Daily Deal's own
+            // separate in-progress save (see GameContext.tsx's
+            // continueDailyDeal) is untouched either way — that's what
+            // makes it resumable from Home.
             if (isTutorial || isDailyDeal) quitToHome();
             router.push("/");
           }}

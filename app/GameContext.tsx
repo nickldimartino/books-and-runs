@@ -34,7 +34,14 @@ import { createTutorialGame } from "@/tutorial";
 import { createDailyDealGame } from "./lib/dailyDealStore";
 import { track } from "./lib/analytics";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
-import { clearSavedGame, loadSavedGame, saveGame } from "./lib/localSave";
+import {
+  clearDailyDealSave,
+  clearSavedGame,
+  loadDailyDealSave,
+  loadSavedGame,
+  saveDailyDealGame,
+  saveGame,
+} from "./lib/localSave";
 import { playCardSlide, playCardTap, playMeld, playUndo, setTutorialSoundOverride } from "./lib/sound";
 import { hapticLight, hapticMedium } from "./lib/haptics";
 import {
@@ -90,9 +97,11 @@ interface GameContextValue {
   startTutorialGame: () => void;
   isTutorial: boolean;
   /** Today's single-round, date-seeded challenge (see dailyDealStore.ts) —
-   * same "never touches the real saved-game slot, Supabase stats, or
-   * achievements" treatment as the tutorial; its own local streak is
-   * recorded separately, from GameOverScreen. */
+   * never touches the real saved-game slot (that's the tutorial's own
+   * treatment), but does get its own separate in-progress save so exiting
+   * before it's over doesn't lose the one shot at today's deal — see
+   * continueDailyDeal. Its own local streak is recorded separately, from
+   * GameOverScreen. */
   startDailyDeal: () => void;
   isDailyDeal: boolean;
   /** Whether this game's results are being recorded to the signed-in
@@ -100,6 +109,10 @@ interface GameContextValue {
    * (moot either way; isTutorial already gates every write on its own). */
   trackStats: boolean;
   continueGame: () => void;
+  /** Resumes an in-progress Daily Deal saved by continueDailyDeal's own
+   * persist() calls (see localSave.ts's DAILY_DEAL_SAVE_KEY) — a no-op if
+   * there's nothing to resume. */
+  continueDailyDeal: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
   confirmMeld: (groups: string[][], preferredRunStarts?: (number | undefined)[]) => boolean;
@@ -330,13 +343,29 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const persist = useCallback(() => {
     // Tutorial games are scripted practice, not a real game — never touch
-    // the real saved-game slot, in either direction. Whatever real save
-    // existed before the tutorial started is left completely alone. Daily
-    // Deal gets the exact same treatment: it's a fixed, once-a-day
-    // challenge, not something "Continue Local Game" should ever surface or
-    // silently replace a real in-progress game with.
-    if (isTutorialRef.current || isDailyDealRef.current) return;
+    // any saved-game slot, in either direction.
+    if (isTutorialRef.current) return;
     const s = stateRef.current;
+    // Daily Deal gets its own separate slot (never the real SAVE_KEY,
+    // "Continue Local Game" should never surface it or have it silently
+    // replace a real in-progress game) — see localSave.ts's
+    // DAILY_DEAL_SAVE_KEY doc for why exiting early still needs to be
+    // resumable: it's a once-a-day challenge, not something to just restart.
+    if (isDailyDealRef.current) {
+      if (!s || s.gameOver) {
+        clearDailyDealSave();
+        return;
+      }
+      saveDailyDealGame({
+        state: s,
+        hasDrawn: hasDrawnRef.current,
+        roundStartScores: roundStartScoresRef.current,
+        roundHistory: roundHistoryRef.current,
+        sessionCounters: sessionCountersRef.current,
+        trackStats: trackStatsRef.current,
+      });
+      return;
+    }
     if (!s || s.gameOver) {
       clearSavedGame();
       setHasSavedGame(false);
@@ -621,9 +650,43 @@ export function GameProvider({ children }: { children: ReactNode }) {
     buyQueueRef.current = [];
     sessionCountersRef.current = {};
     track("game_started", { mode: "daily", players: state.players.length, ais: state.players.length - 1, difficulty: "mixed", rounds: 1 });
-    // No persist() — see the isDailyDealRef guard at the top of persist().
+    // A fresh deal always replaces whatever in-progress one was there —
+    // this is a deliberate restart (see continueDailyDeal for resuming
+    // instead), so any stale save shouldn't linger under it.
+    persist();
     if (state.players[state.currentPlayerIndex].isAI) {
       runAiLoop();
+    }
+  }, [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
+
+  const continueDailyDeal = useCallback(() => {
+    const saved = loadDailyDealSave();
+    if (!saved) return;
+    isTutorialRef.current = false;
+    setIsTutorial(false);
+    isDailyDealRef.current = true;
+    setIsDailyDeal(true);
+    setTutorialSoundOverride(false);
+    clearUndoState();
+    setTrackStatsBoth(saved.trackStats ?? true);
+    stateRef.current = saved.state;
+    setSnapshot({ ...saved.state });
+    setHasDrawnBoth(saved.hasDrawn);
+    setAiThinking(false);
+    setRoundStartScoresBoth(saved.roundStartScores);
+    roundHistoryRef.current = saved.roundHistory;
+    setRoundHistory(saved.roundHistory);
+    recordedRoundsRef.current = new Set(saved.roundHistory.map((r) => r.round));
+    setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
+    sessionCountersRef.current = saved.sessionCounters ?? {};
+
+    const current = saved.state.players[saved.state.currentPlayerIndex];
+    if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
+      runAiLoop();
+    } else {
+      setAwaitingReveal(true);
     }
   }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
@@ -1022,6 +1085,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isDailyDeal,
       trackStats,
       continueGame,
+      continueDailyDeal,
       revealHand,
       draw,
       confirmMeld,
@@ -1056,6 +1120,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isDailyDeal,
       trackStats,
       continueGame,
+      continueDailyDeal,
       revealHand,
       draw,
       confirmMeld,
