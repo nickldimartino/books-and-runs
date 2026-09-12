@@ -8,7 +8,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchBiosFor, fetchOwnBio, MAX_BIO_LENGTH, updateLeaderboardBio } from "./leaderboardStore";
+import { fetchBiosFor, fetchDisplayNamesFor, fetchOwnBio, MAX_BIO_LENGTH, updateLeaderboardBio } from "./leaderboardStore";
 
 function fakeSupabase(overrides: {
   upsert?: (payload: unknown) => { error: null | { message: string } };
@@ -91,6 +91,37 @@ describe("fetchBiosFor", () => {
     const { client, upsert: _unused } = fakeSupabase({});
     const from = client.from as ReturnType<typeof vi.fn>;
     expect(await fetchBiosFor(client, [])).toEqual({});
+    expect(from).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchDisplayNamesFor", () => {
+  it("returns a name for every requested id — the account's own name when set, a generated placeholder otherwise", async () => {
+    // displayNameFor's placeholder is derived from the id's own trailing hex
+    // digits, so these need to actually look like real UUIDs (fetchBiosFor's
+    // "u1"/"u2" shorthand above doesn't parse as hex) for the fallback to
+    // come out as "Player <number>" instead of "Player NaN".
+    const named = "11111111-1111-1111-1111-111111111111";
+    const unnamed = "22222222-2222-2222-2222-222222222222";
+    const missing = "33333333-3333-3333-3333-333333333333";
+    const { client } = fakeSupabase({
+      selectMany: [
+        { user_id: named, display_name: "Nick" },
+        { user_id: unnamed, display_name: null },
+      ],
+    });
+    // `missing` isn't in the query result at all (no leaderboard_entries
+    // row) — every multiplayer seat still needs *some* name shown regardless.
+    const names = await fetchDisplayNamesFor(client, [named, unnamed, missing]);
+    expect(names[named]).toBe("Nick");
+    expect(names[unnamed]).toMatch(/^Player \d+$/);
+    expect(names[missing]).toMatch(/^Player \d+$/);
+  });
+
+  it("short-circuits to {} for an empty id list without querying", async () => {
+    const { client } = fakeSupabase({});
+    const from = client.from as ReturnType<typeof vi.fn>;
+    expect(await fetchDisplayNamesFor(client, [])).toEqual({});
     expect(from).not.toHaveBeenCalled();
   });
 });

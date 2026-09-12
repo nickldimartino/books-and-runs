@@ -20,7 +20,7 @@ import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { useMpGame } from "../../lib/useMpGame";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
-import { fetchBiosFor } from "../../lib/leaderboardStore";
+import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
 import { getMpParticipantUserIds } from "../../lib/mpStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -66,7 +66,7 @@ export default function MultiplayerPlayPage() {
   const gameId = useGameId();
   const { loading: authLoading, user } = useAuth();
   const g = useMpGame(user ? gameId : null);
-  const { view } = g;
+  const { view: rawView } = g;
 
   const [rematchBusy, setRematchBusy] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -77,6 +77,45 @@ export default function MultiplayerPlayPage() {
   // dealt (mp_participants has real seat assignments by then) — a pending
   // game has no OpponentStrip on screen yet anyway.
   const [bioBySeatId, setBioBySeatId] = useState<Record<string, string>>({});
+  // user_id -> current display name. mp_games.seats bakes in whatever each
+  // player's name was AT INVITE TIME and never updates it, so without this
+  // override, changing your display name after the invite went out leaves
+  // both the pending "waiting for players" list and the active game itself
+  // showing the stale one for that game's whole lifetime. Fetched for
+  // pending games too (unlike bios above), since that's exactly the screen
+  // this was reported stale on.
+  const [namesByUserId, setNamesByUserId] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !gameId) return;
+    let cancelled = false;
+    getMpParticipantUserIds(client, gameId)
+      .then(async (seatToUserId) => {
+        const names = await fetchDisplayNamesFor(client, Object.values(seatToUserId));
+        if (!cancelled) setNamesByUserId(names);
+      })
+      .catch((err) => console.error("Failed to load current display names:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId]);
+
+  // Every downstream read of a player's name — standings, "X's turn",
+  // table melds, the win banner — goes through view.players, so overriding
+  // names once here (same technique game/page.tsx's stateForDisplay uses
+  // for the solo game) fixes all of them at once instead of patching each
+  // call site. Only ever touches .name; ids/scores/hand counts are
+  // untouched, so every existing seat-keyed lookup still works.
+  const view = useMemo(() => {
+    if (!rawView) return rawView;
+    return {
+      ...rawView,
+      players: rawView.players.map((p) =>
+        p.userId && namesByUserId[p.userId] ? { ...p, name: namesByUserId[p.userId] } : p
+      ),
+    };
+  }, [rawView, namesByUserId]);
 
   useEffect(() => {
     const client = supabase;
@@ -170,7 +209,9 @@ export default function MultiplayerPlayPage() {
   }
 
   if (g.status === "pending" || g.status === "dealing") {
-    const pendingSeats = (g.pending?.seats ?? []) as MpSeatMeta[];
+    const pendingSeats = ((g.pending?.seats ?? []) as MpSeatMeta[]).map((s) =>
+      s.userId && namesByUserId[s.userId] ? { ...s, name: namesByUserId[s.userId] } : s
+    );
     const pendingParticipants = g.pending?.participants ?? [];
     const isHost = !!user && g.pending?.host_id === user.id;
 

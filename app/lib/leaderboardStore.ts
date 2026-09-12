@@ -258,6 +258,35 @@ export async function fetchBiosFor(supabase: SupabaseClient, userIds: string[]):
 }
 
 /**
+ * Current display names for a set of accounts, keyed by user_id — every
+ * multiplayer screen's fix for the same underlying gap: `mp_games.seats`
+ * (and mp_history's own seats snapshot) bake in whatever each player's name
+ * was at invite/creation time and never update it, so without a live
+ * override here, changing your display name after a game already exists
+ * leaves every screen for that game — the pending "waiting for players"
+ * list, the active game itself, and its post-game history entry — showing
+ * the stale one forever. Unlike fetchBiosFor, every requested id gets an
+ * entry back (via displayNameFor's "Player 4821" fallback), since a seat
+ * always needs *some* name shown.
+ */
+export async function fetchDisplayNamesFor(supabase: SupabaseClient, userIds: string[]): Promise<Record<string, string>> {
+  if (userIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("user_id, display_name")
+    .in("user_id", userIds);
+  if (error) throw error;
+  const found = new Map(
+    ((data ?? []) as { user_id: string; display_name: string | null }[]).map((row) => [row.user_id, row.display_name])
+  );
+  const names: Record<string, string> = {};
+  for (const id of userIds) {
+    names[id] = displayNameFor({ user_id: id, display_name: found.get(id) ?? null });
+  }
+  return names;
+}
+
+/**
  * Broadcasts the signed-in user's current Daily Deal streak (see
  * dailyDealStore.ts) to their leaderboard row — called right after
  * GameOverScreen records a Daily Deal result locally, not from
