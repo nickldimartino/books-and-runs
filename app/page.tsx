@@ -445,9 +445,18 @@ export default function HomePage() {
   // device the account has played on, not just this one — see
   // dailyDealStore.ts's mergeCloudDailyDealState for why this is the fix
   // for Daily Deal not syncing across an iPhone/laptop/iPad.
+  //
+  // Signed out, this deliberately never reads the local store at all: the
+  // streak is tied to the signed-in account (see GameOverScreen.tsx's own
+  // Daily Deal effect), not the device, so a guest — or whoever's holding
+  // the device after someone else signed out of it — shouldn't see a
+  // streak that isn't theirs.
   useEffect(() => {
+    if (!supabase || !user) {
+      setDailyDeal(null);
+      return;
+    }
     setDailyDeal(loadDailyDealState());
-    if (!supabase || !user) return;
     pullDailyDealStreak(supabase, user.id)
       .then((cloud) => {
         if (cloud) setDailyDeal(mergeCloudDailyDealState(cloud));
@@ -552,7 +561,9 @@ export default function HomePage() {
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-[var(--heading)]">Daily Deal</h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
-              {dailyDeal && dailyDeal.streak > 0
+              {!configured || !user
+                ? "Sign in to keep a streak — anyone can still play today's deal."
+                : dailyDeal && dailyDeal.streak > 0
                 ? `🔥 ${dailyDeal.streak}-day streak`
                 : "One seeded round — the same deal for everyone today."}
             </p>

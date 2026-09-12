@@ -26,10 +26,16 @@ import { resetSeenTips } from "./lib/tipsStore";
  * write the OLD account's leftover game/streak/config into the NEW
  * account's own cloud rows, not just display it locally.
  *
- * Also clears favorite game config specifically on sign-out (the opposite
- * direction) — otherwise a signed-in account's curated "usual" lineup stays
- * sitting in local storage, one tap away for whoever picks up the device
- * next, signed in or not.
+ * Also clears favorite game config and the Daily Deal streak specifically
+ * on sign-out (the opposite direction). Favorite game config: otherwise a
+ * signed-in account's curated "usual" lineup stays sitting in local
+ * storage, one tap away for whoever picks up the device next, signed in or
+ * not. Daily Deal streak: unlike the solo save, which really is "whatever's
+ * on this device" and stays put across a sign-out, the streak is meant to
+ * belong to the account (see GameOverScreen.tsx's own Daily Deal effect,
+ * which now only records a result at all when signed in) — showing the
+ * previous account's streak to a signed-out guest is exactly the bug this
+ * fixes.
  *
  * Mounted once in the root layout, ahead of every other sync component
  * (AccountSettingsSync, LocalSaveSync, etc.) — React runs effects in tree
@@ -57,16 +63,16 @@ export function AccountSwitchGuard() {
 
     // Signing out, specifically (not "never signed in this session" — a
     // guest who never had an account here has nothing of an account's to
-    // leave behind). Deliberately narrow to favorite game config: it's a
-    // curated personal setup (player names, difficulty picks) that stays
-    // usable with one tap, unlike the solo save or Daily Deal streak, which
-    // read more like "whatever's currently on this device" than personal
-    // identity — clearing those on every sign-out would just be annoying
-    // without the same privacy upside. Safe either way: it's cloud-synced,
-    // so signing back into the same account just pulls it straight back.
+    // leave behind). The solo save is deliberately left alone here — it
+    // really does read as "whatever's currently on this device" rather than
+    // personal identity, and clearing it on every sign-out would just be
+    // annoying without a privacy upside. Favorite game config and the Daily
+    // Deal streak are both cloud-synced, so this is safe either way —
+    // signing back into the same account just pulls them straight back.
     if (wasSignedIn.current) {
       wasSignedIn.current = false;
       clearFavoriteGameConfig();
+      resetDailyDealLocal();
     }
   }, [user]);
 

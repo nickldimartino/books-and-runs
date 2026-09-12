@@ -222,6 +222,13 @@ export function mergeCloudDailyDealState(cloud: {
  * (see leaderboardStore.ts's syncDailyDealStreak) — that's the one place
  * Daily Deal is visible outside this device, and it's a report of this
  * function's own output, not a second source of truth it reads from.
+ *
+ * This function itself doesn't know or care whether anyone's signed in —
+ * that gate lives entirely at the call site. GameOverScreen only calls this
+ * at all when there's a signed-in account, since the streak is meant to
+ * belong to the account rather than the device: a guest can still play
+ * today's deal, but nothing about doing so ever reaches this function, so
+ * it can't start, extend, or reset a streak that isn't theirs.
  */
 export function recordDailyDealResult(state: GameState): DailyDealState {
   const current = loadDailyDealState();

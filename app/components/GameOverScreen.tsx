@@ -293,29 +293,35 @@ export function GameOverScreen({ state }: { state: GameState }) {
   useEffect(() => {
     if (!isDailyDeal || dailyDealRecordedRef.current) return;
     dailyDealRecordedRef.current = true;
+    // The streak is tied to the signed-in account, not the device — a guest
+    // can still play today's deal (createDailyDealGame doesn't check auth),
+    // but nothing about it gets recorded locally or in the cloud, so
+    // playing signed out never starts, extends, or breaks a streak, and a
+    // guest can replay today's deal as many times as they like with none of
+    // it counting. See dailyDealStore.ts's own doc for the local side of
+    // this, and AccountSwitchGuard.tsx for why the local copy is also
+    // cleared on sign-out (it belongs to whichever account was signed in
+    // when it was written, not to whoever's using the device now).
+    if (!supabase || !user) return;
+    const client = supabase;
+    const uid = user.id;
     (async () => {
       // Pull the account's cloud record *before* computing today's result —
       // this is the actual cross-device fix: without it, this device would
       // only ever know about days *it* played, the exact bug where an
-      // iPhone/laptop/iPad each kept their own separate streak. Best-effort
-      // and signed-in-only; a guest (or a failed pull) just falls back to
-      // whatever this device already has locally, same as before.
-      if (supabase && user) {
-        try {
-          const cloud = await pullDailyDealStreak(supabase, user.id);
-          if (cloud) mergeCloudDailyDealState(cloud);
-        } catch (err) {
-          console.error("Failed to pull Daily Deal streak from cloud:", err);
-        }
+      // iPhone/laptop/iPad each kept their own separate streak.
+      try {
+        const cloud = await pullDailyDealStreak(client, uid);
+        if (cloud) mergeCloudDailyDealState(cloud);
+      } catch (err) {
+        console.error("Failed to pull Daily Deal streak from cloud:", err);
       }
       const result = recordDailyDealResult(state);
       setDailyDealState(result);
-      if (supabase && user && result.lastPlayedDate) {
-        syncDailyDealStreak(supabase, user.id, result.streak, result.bestStreak, result.lastPlayedDate).catch(
-          (err) => {
-            console.error("Failed to sync Daily Deal streak:", err);
-          }
-        );
+      if (result.lastPlayedDate) {
+        syncDailyDealStreak(client, uid, result.streak, result.bestStreak, result.lastPlayedDate).catch((err) => {
+          console.error("Failed to sync Daily Deal streak:", err);
+        });
         // Record this account's score for today's deal, then pull the
         // friend leaderboard for it. Best-effort: a project without
         // migration 0018 just won't show the panel. `history[0]` is the
@@ -325,8 +331,8 @@ export function GameOverScreen({ state }: { state: GameState }) {
         if (todays) {
           (async () => {
             try {
-              await submitDailyDealScore(supabase!, todays.date, todays.yourScore, todays.won);
-              setDailyDealFriendScores(await fetchDailyDealFriendScores(supabase!, todays.date));
+              await submitDailyDealScore(client, todays.date, todays.yourScore, todays.won);
+              setDailyDealFriendScores(await fetchDailyDealFriendScores(client, todays.date));
             } catch (err) {
               console.error("Daily Deal friend scores unavailable (run migration 0018):", err);
             }
@@ -535,6 +541,16 @@ export function GameOverScreen({ state }: { state: GameState }) {
           </p>
           <p className="mt-1 text-xs text-[var(--faint)]">
             Best streak: {dailyDealState.bestStreak}. Come back tomorrow for the next one.
+          </p>
+        </div>
+      )}
+
+      {/* Signed out — the streak effect above never ran, so there's nothing
+          to show but the nudge to actually get one going. */}
+      {isDailyDeal && !user && (
+        <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-center">
+          <p className="text-sm text-[var(--muted)]">
+            Sign in to start a streak — it&apos;s tied to your account, so playing signed out won&apos;t count.
           </p>
         </div>
       )}
