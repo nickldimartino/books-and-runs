@@ -18,7 +18,7 @@ import { IntroSplash } from "./components/IntroSplash";
 import { PageTip } from "./components/PageTip";
 import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
-import { pullDailyDealStreak } from "./lib/leaderboardStore";
+import { playerProfileHref, pullDailyDealStreak } from "./lib/leaderboardStore";
 import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame } from "./lib/localSave";
 import { loadSupabase, supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
@@ -515,7 +515,7 @@ export default function HomePage() {
         <CardFanHero />
         {configured && user && level && (
           <Link
-            href="/stats"
+            href={playerProfileHref(user.id)}
             className="mb-3 inline-block rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
             title={`${level.xpIntoLevel} / ${level.xpSpanForLevel} XP to level ${level.level + 1}`}
           >
@@ -583,7 +583,7 @@ export default function HomePage() {
         </section>
 
         <section className="grid grid-cols-3 gap-2">
-          <ProgressTile href="/stats" label="Profile">
+          <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label="Profile">
             <StatsIcon />
           </ProgressTile>
           <ProgressTile href="/achievements" label="Achievements">

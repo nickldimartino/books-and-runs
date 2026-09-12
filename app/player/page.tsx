@@ -1,33 +1,49 @@
 "use client";
 
-// A player's public profile — reachable by clicking a name on the
-// Leaderboard or Friends page (see leaderboardStore.ts's playerProfileHref).
-// Shows the same public snapshot the Leaderboard already exposes
-// (leaderboard_entries — any signed-in account can read any row, see
-// migration 0006) as a proper profile card instead of a table row: avatar,
-// display name, bio, level, and every stat column. Viewing your own profile
-// (?id matches the signed-in user) additionally shows the editor for all of
-// it — display name, bio, and avatar (emoji+color, or an uploaded photo) —
-// which is why this page, not the Account page, is where those live now.
+// A player's profile — reachable by clicking a name on the Leaderboard or
+// Friends page (see leaderboardStore.ts's playerProfileHref), or from
+// Home's own "Profile" tile/level badge for your own. One page, in two
+// parts:
+//
+//  - The top is public: the same snapshot the Leaderboard already exposes
+//    (leaderboard_entries — any signed-in account can read any row, see
+//    migration 0006) as a proper profile card — avatar, display name, bio,
+//    level, and every public stat column. This part renders identically
+//    whether you're looking at your own profile or someone else's.
+//  - Viewing your own additionally shows "Edit profile" (avatar, display
+//    name, bio — which is why those live here now, not the Account page)
+//    and, below that, a private section only you can see: the detailed
+//    stats breakdown, achievement showcase, and game history that used to
+//    live on its own separate /stats page. Merged here instead of kept
+//    apart — a player only ever has the one profile.
 //
 // A query param, not a dynamic route segment: this app is a static export
 // (next.config.ts), and the Friends page's own `?add=CODE` link already
 // uses the same pattern.
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
+  AchievementProgressState,
+  AchievementTier,
+  allAchievements,
+  EMPTY_PROGRESS_STATE,
   MP_WIN_RATE_MIN_GAMES,
+  tierNumber,
   WIN_RATE_MIN_GAMES,
 } from "@/achievements";
 import { useAuth } from "../AuthContext";
+import { usePlayerLevel } from "../PlayerLevelContext";
+import { AchievementIcon } from "../components/AchievementIcons";
+import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { COLOR_OPTIONS, EMOJI_OPTIONS } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
+import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
 import {
   AvatarInfo,
@@ -46,12 +62,56 @@ import {
   updateLeaderboardBio,
   updateLeaderboardDisplayName,
 } from "../lib/leaderboardStore";
-import { formatScore } from "../lib/formatScore";
+import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
+import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
+const TIER_LABEL: Record<AchievementTier, string> = {
+  beginner: "Beginner",
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+  expert: "Expert",
+};
+const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
+const PAST_GAMES_LIMIT = 10;
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+interface PlayerStats {
+  games_played: number;
+  games_won: number;
+  games_tied: number;
+  best_score: number | null;
+  worst_score: number | null;
+  average_score: number | null;
+  wins_by_difficulty: Record<string, number>;
+}
+
+interface GameHistoryRow {
+  id: string;
+  opponents: { name: string; difficulty: string | null }[];
+  winner: string;
+  winner_score: number | null;
+  rounds: RoundHistoryEntry[] | null;
+  played_at: string;
+}
+
+/**
+ * Your final score for this game, or null if it can't be determined (a row
+ * from before the `rounds` column existed, or your seat's name colliding
+ * with an opponent's). The last entry in `rounds` has every player's final
+ * cumulative total keyed by name — "your" name is whichever key isn't a
+ * recorded opponent's.
+ */
+function yourScoreFor(g: GameHistoryRow): number | null {
+  if (!g.rounds || g.rounds.length === 0) return null;
+  const lastRound = g.rounds[g.rounds.length - 1];
+  const opponentNames = new Set(g.opponents.map((o) => o.name));
+  const candidates = Object.keys(lastRound.totals).filter((name) => !opponentNames.has(name));
+  return candidates.length === 1 ? lastRound.totals[candidates[0]] : null;
+}
 
 function PersonAddIcon() {
   return (
@@ -83,11 +143,21 @@ function formatMpWinRate(mpPlayed: number, mpWon: number): string {
   return `${Math.round((100 * mpWon) / mpPlayed)}%`;
 }
 
-function StatTile({ label, value }: { label: string; value: string | number }) {
+function StatTile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2.5 text-center">
       <p className="text-lg font-bold tabular-nums text-[var(--heading)]">{value}</p>
       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-[var(--faint)]">{label}</p>
+      {sub && <p className="text-[10px] text-[var(--faint)]">{sub}</p>}
+    </div>
+  );
+}
+
+function Highlight({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl bg-[var(--panel)] p-4">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--faint)]">{label}</p>
+      <div className="mt-1 text-sm font-semibold text-[var(--heading)]">{children}</div>
     </div>
   );
 }
@@ -123,6 +193,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
 
 export default function PlayerProfilePage() {
   const { configured, loading: authLoading, user } = useAuth();
+  const { level } = usePlayerLevel();
   const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -201,6 +272,9 @@ export default function PlayerProfilePage() {
       setReportState("error");
     }
   }
+
+  // ── Edit profile (self only) — collapsed until asked for ───────────────
+  const [editingProfile, setEditingProfile] = useState(false);
 
   // ── Self-editing: display name ────────────────────────────────────────
   const [nameInput, setNameInput] = useState("");
@@ -340,6 +414,101 @@ export default function PlayerProfilePage() {
     }
   }
 
+  // ── Private section (self only): the old /stats page's own data ────────
+  const [privateStats, setPrivateStats] = useState<PlayerStats | null>(null);
+  const [history, setHistory] = useState<GameHistoryRow[]>([]);
+  const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
+  const [dailyDealBestStreak, setDailyDealBestStreak] = useState<number | null>(null);
+  const [mpStats, setMpStats] = useState<MpStats | null>(null);
+  const [mpHistory, setMpHistory] = useState<MpHistoryEntry[]>([]);
+  const [privateLoading, setPrivateLoading] = useState(true);
+  // Distinct from "privateStats is null because you haven't played yet" — a
+  // query error (e.g. an unapplied migration) also leaves it null.
+  const [privateStatsError, setPrivateStatsError] = useState(false);
+
+  useEffect(() => {
+    if (!supabase || !user || !isSelf) {
+      setPrivateLoading(false);
+      return;
+    }
+    const client = supabase;
+    setPrivateLoading(true);
+    setPrivateStatsError(false);
+    Promise.all([
+      client
+        .from("player_stats")
+        .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty")
+        .eq("user_id", user.id)
+        .maybeSingle<PlayerStats>(),
+      client
+        .from("game_history")
+        .select("id, opponents, winner, winner_score, rounds, played_at")
+        .eq("user_id", user.id)
+        .order("played_at", { ascending: false })
+        .limit(PAST_GAMES_LIMIT),
+      client
+        .from("achievement_counters")
+        .select("counters")
+        .eq("user_id", user.id)
+        .maybeSingle<{ counters: Record<string, number> }>(),
+      client
+        .from("leaderboard_entries")
+        .select("daily_deal_best_streak")
+        .eq("user_id", user.id)
+        .maybeSingle<{ daily_deal_best_streak: number }>(),
+      // Best-effort (needs migrations 0010/0011).
+      getMyMpStats(client).catch(() => ({ ...EMPTY_MP_STATS })),
+    ]).then(([statsRes, historyRes, countersRes, dailyDealRes, mp]) => {
+      if (statsRes.error) {
+        setPrivateStatsError(true);
+      } else {
+        setPrivateStats(statsRes.data);
+      }
+      setHistory((historyRes.data as GameHistoryRow[]) ?? []);
+      setMpStats(mp);
+      setProgress({
+        counters: countersRes.data?.counters ?? {},
+        gamesPlayed: statsRes.data?.games_played ?? 0,
+        gamesWon: statsRes.data?.games_won ?? 0,
+        bestScore: statsRes.data?.best_score ?? null,
+        winsByDifficulty: statsRes.data?.wins_by_difficulty ?? {},
+        mpGamesPlayed: mp.played,
+        mpGamesWon: mp.won,
+        mpBestWinStreak: mp.bestWinStreak,
+      });
+      setDailyDealBestStreak(dailyDealRes.data?.daily_deal_best_streak ?? 0);
+      setPrivateLoading(false);
+    });
+
+    getMyMpHistory(client, 20).then(setMpHistory).catch(() => setMpHistory([]));
+  }, [user, isSelf]);
+
+  const achievements = useMemo(() => allAchievements(progress), [progress]);
+  const unlocked = useMemo(() => achievements.filter((a) => a.unlocked), [achievements]);
+  const masteredFamilies = useMemo(() => {
+    const per = new Map<string, number>();
+    for (const a of unlocked) per.set(a.familyId, (per.get(a.familyId) ?? 0) + 1);
+    return [...per.values()].filter((n) => n === ACHIEVEMENT_TIERS.length).length;
+  }, [unlocked]);
+  const rarest = useMemo(() => {
+    for (const tier of [...ACHIEVEMENT_TIERS].reverse()) {
+      const hit = unlocked.find((a) => a.tier === tier);
+      if (hit) return hit;
+    }
+    return null;
+  }, [unlocked]);
+  const toughestBeaten = useMemo(() => {
+    for (const d of [...DIFFICULTIES].reverse()) {
+      if ((privateStats?.wins_by_difficulty?.[d] ?? 0) > 0) return d;
+    }
+    return null;
+  }, [privateStats]);
+  const unlockedByTier = useMemo(() => {
+    const m = Object.fromEntries(ACHIEVEMENT_TIERS.map((t) => [t, 0])) as Record<AchievementTier, number>;
+    for (const a of unlocked) m[a.tier] += 1;
+    return m;
+  }, [unlocked]);
+
   if (!authLoading && !configured) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
@@ -402,12 +571,13 @@ export default function PlayerProfilePage() {
         <p className="text-sm text-[var(--danger)]">Couldn&apos;t load this profile — check your connection.</p>
       ) : (
         <>
-          <PageTip id="player-profile" title="Your public profile">
+          <PageTip id="player-profile" title={isSelf ? "Your profile" : "Player profiles"}>
             {isSelf
-              ? "This is what other players see on the Leaderboard and Friends list. Pick an emoji-and-color avatar or upload a photo, add a bio, and set a display name below — names are unique, so the game checks it's not already taken before saving."
+              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile to change your name, bio, or picture. Everything below the edit section (stats breakdown, achievements, game history) is only ever visible to you."
               : "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here."}
           </PageTip>
 
+          {/* ── Public — same for everyone, including your own view ── */}
           <section className="flex flex-col items-center gap-2 text-center">
             <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
             <h1 className="text-xl font-bold text-[var(--heading)]">{displayNameFor(entry)}</h1>
@@ -437,6 +607,14 @@ export default function PlayerProfilePage() {
                   </button>
                 )}
               </div>
+            )}
+            {isSelf && (
+              <button
+                onClick={() => setEditingProfile((v) => !v)}
+                className="mt-2 rounded-lg border border-[var(--accent)]/60 px-4 py-1.5 text-xs font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+              >
+                {editingProfile ? "Done editing" : "Edit profile"}
+              </button>
             )}
 
             {(reportState === "open" || reportState === "sending") && (
@@ -488,9 +666,10 @@ export default function PlayerProfilePage() {
             <StatTile label="MP streak" value={entry.mp_best_win_streak ?? 0} />
           </section>
 
-          {isSelf && (
+          {/* ── Edit profile (self only, collapsed by default) ── */}
+          {isSelf && editingProfile && (
             <>
-              <section className="flex flex-col gap-3 border-t border-[var(--border)] pt-6">
+              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Profile picture</h2>
                 <div className="flex gap-2">
                   <button
@@ -572,7 +751,7 @@ export default function PlayerProfilePage() {
                 )}
               </section>
 
-              <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
+              <section className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Display name</h2>
                 <p className="text-xs text-[var(--faint)]">
                   Shown here and on the Leaderboard — unique across every player, so it may already be taken.
@@ -604,7 +783,7 @@ export default function PlayerProfilePage() {
                 {nameSaveState === "error" && !nameError && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
               </section>
 
-              <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
+              <section className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Bio</h2>
                 <p className="text-xs text-[var(--faint)]">A short line other players see on your profile. Optional.</p>
                 <form onSubmit={handleSaveBio} className="flex flex-col gap-2">
@@ -626,6 +805,267 @@ export default function PlayerProfilePage() {
                 {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
               </section>
+            </>
+          )}
+
+          {/* ── Private — only you can see this ── */}
+          {isSelf && (
+            <>
+              <div className="flex items-center gap-3 border-t border-[var(--border)] pt-6">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your activity</h2>
+                <span className="text-[10px] text-[var(--faint)]">Only you can see what&apos;s below here</span>
+              </div>
+
+              {privateLoading ? (
+                <LoadingSpinner />
+              ) : privateStatsError ? (
+                <p className="text-sm text-[var(--danger)]">
+                  Couldn&apos;t load your stats — check your connection, or that this Supabase project has
+                  every migration in <code>supabase/migrations/</code> applied.
+                </p>
+              ) : privateStats ? (
+                <>
+                  {/* Level */}
+                  <section className="flex items-center gap-4 rounded-2xl bg-[var(--panel)] p-5">
+                    <div className="relative grid h-20 w-20 shrink-0 place-items-center">
+                      <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90">
+                        <circle cx="20" cy="20" r="17" fill="none" stroke="var(--panel-soft)" strokeWidth="4" />
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r="17"
+                          fill="none"
+                          stroke="var(--accent)"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 17}`}
+                          strokeDashoffset={`${2 * Math.PI * 17 * (1 - (level?.progressFraction ?? 0))}`}
+                        />
+                      </svg>
+                      <span className="text-2xl font-extrabold text-[var(--heading)]">{level?.level ?? 0}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Level progress</p>
+                      {level && (
+                        <p className="text-xs text-[var(--faint)]">
+                          {level.xpIntoLevel} / {level.xpSpanForLevel} XP to level {level.level + 1} · {level.totalXp} total
+                        </p>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* Highlights */}
+                  <section className="grid grid-cols-2 gap-3">
+                    <Highlight label="Rarest unlock">
+                      {rarest ? (
+                        <span className="flex items-center gap-1.5">
+                          <AchievementIcon category={rarest.category} className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+                          <span className="truncate">
+                            {rarest.familyTitle} {tierNumber(rarest.tier)}
+                          </span>
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">
+                        {rarest ? `${TIER_LABEL[rarest.tier]} tier` : "nothing unlocked yet"}
+                      </span>
+                    </Highlight>
+                    <Highlight label="Toughest AI beaten">
+                      <span className="capitalize">{toughestBeaten ?? "—"}</span>
+                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">
+                        {toughestBeaten
+                          ? `${privateStats.wins_by_difficulty?.[toughestBeaten] ?? 0} win${
+                              (privateStats.wins_by_difficulty?.[toughestBeaten] ?? 0) === 1 ? "" : "s"
+                            }`
+                          : "no wins recorded"}
+                      </span>
+                    </Highlight>
+                    <Highlight label="Best Daily Deal streak">
+                      {(dailyDealBestStreak ?? 0) > 0 ? `🔥 ${dailyDealBestStreak}` : "—"}
+                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">days in a row</span>
+                    </Highlight>
+                    <Highlight label="Best game">
+                      {formatScore(privateStats.best_score)}
+                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">lowest final score</span>
+                    </Highlight>
+                  </section>
+
+                  {/* The two figures not already shown in the public tiles above
+                      (which cover games played/win rate/avg/worst already). */}
+                  <section className="grid grid-cols-2 gap-3">
+                    <StatTile label="Games won" value={privateStats.games_won} />
+                    <StatTile label="Games tied" value={privateStats.games_tied} sub="a rare result" />
+                  </section>
+
+                  {/* Wins by difficulty */}
+                  <section>
+                    <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                      Wins by AI difficulty faced
+                    </h2>
+                    <div className="flex flex-wrap gap-2">
+                      {DIFFICULTIES.map((d) => (
+                        <div key={d} className="rounded-lg bg-[var(--panel)] px-3 py-2 text-center text-sm capitalize">
+                          <div className="font-semibold text-[var(--heading)]">{privateStats.wins_by_difficulty[d] ?? 0}</div>
+                          <div className="text-xs text-[var(--faint)]">{d}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Multiplayer — vs. real people only (these games also feed
+                      the overall stats above). */}
+                  {mpStats && mpStats.played > 0 && (
+                    <section>
+                      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                        Multiplayer (vs. people)
+                      </h2>
+                      <div className="grid grid-cols-3 gap-3">
+                        <StatTile label="Played" value={mpStats.played} />
+                        <StatTile
+                          label="Win streak"
+                          value={mpStats.currentWinStreak}
+                          sub={mpStats.bestWinStreak > 0 ? `best ${mpStats.bestWinStreak}` : undefined}
+                        />
+                        <StatTile label="Podium finishes" value={mpStats.podiums} sub="top half of the table" />
+                        {mpStats.biggestTableBeaten > 0 && (
+                          <StatTile label="Biggest table won" value={`${mpStats.biggestTableBeaten}p`} />
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Achievement showcase */}
+                  <section className="rounded-2xl bg-[var(--panel)] p-5">
+                    <div className="flex items-baseline justify-between">
+                      <h2 className="text-sm font-semibold text-[var(--heading)]">Achievements</h2>
+                      <Link href="/achievements" className="text-xs font-medium text-[var(--accent)] hover:underline">
+                        View all →
+                      </Link>
+                    </div>
+                    <p className="mt-1 text-2xl font-extrabold text-[var(--heading)]">
+                      {unlocked.length}
+                      <span className="text-base font-medium text-[var(--faint)]"> / {TOTAL_ACHIEVEMENTS}</span>
+                    </p>
+                    <p className="text-xs text-[var(--faint)]">
+                      {masteredFamilies} of {ACHIEVEMENT_FAMILIES.length} families mastered
+                    </p>
+                    <div className="mt-3 flex gap-1.5">
+                      {ACHIEVEMENT_TIERS.map((t) => {
+                        const n = unlockedByTier[t];
+                        const max = ACHIEVEMENT_FAMILIES.length;
+                        return (
+                          <div key={t} className="flex-1 text-center">
+                            <div className="flex h-16 w-full items-end overflow-hidden rounded-md bg-[var(--panel-soft)]">
+                              <div className="w-full rounded-t-[3px] bg-[var(--accent)]" style={{ height: `${(n / max) * 100}%` }} />
+                            </div>
+                            <p className="mt-1 text-[10px] text-[var(--faint)]">{TIER_LABEL[t]}</p>
+                            <p className="text-[10px] font-semibold text-[var(--muted)]">{n}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  {/* Past games — collapsed; it's the longest thing on the page */}
+                  <details className="group rounded-lg border border-[var(--border)]">
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--faint)] [&::-webkit-details-marker]:hidden">
+                      <span>
+                        Past games
+                        <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">
+                          last {Math.min(history.length, PAST_GAMES_LIMIT)}
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="text-[var(--faint)] transition group-open:rotate-180">
+                        ▼
+                      </span>
+                    </summary>
+                    {history.length === 0 ? (
+                      <p className="border-t border-[var(--border)] px-4 py-3 text-sm text-[var(--faint)]">
+                        No games recorded yet.
+                      </p>
+                    ) : (
+                      <ul className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
+                        {history.map((g) => {
+                          const yourScore = yourScoreFor(g);
+                          const wonOrTied = yourScore !== null && g.winner_score != null && yourScore === g.winner_score;
+                          return (
+                            <li key={g.id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className={`font-medium ${wonOrTied ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}>
+                                  Winner: {g.winner}
+                                  {g.winner_score != null && (
+                                    <span className={`font-normal ${wonOrTied ? "" : "text-[var(--faint)]"}`}> ({g.winner_score} pts)</span>
+                                  )}
+                                </span>
+                                <span className="text-xs text-[var(--faint)]">
+                                  {new Date(g.played_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                                </span>
+                              </div>
+                              {yourScore !== null && !wonOrTied && (
+                                <p className="mt-0.5 text-xs text-[var(--muted)]">Your score: {yourScore} pts</p>
+                              )}
+                              <p className="mt-1 text-xs text-[var(--faint)]">vs. {g.opponents.map((o) => o.name).join(", ")}</p>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </details>
+
+                  {mpHistory.length > 0 && (
+                    <details className="group rounded-lg border border-[var(--border)]">
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--faint)] [&::-webkit-details-marker]:hidden">
+                        <span>
+                          Past multiplayer games
+                          <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">last {mpHistory.length}</span>
+                        </span>
+                        <span aria-hidden="true" className="text-[var(--faint)] transition group-open:rotate-180">
+                          ▼
+                        </span>
+                      </summary>
+                      <ul className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
+                        {mpHistory.map((mg) => {
+                          const mySeat = mg.seats.find((s) => s.userId === user?.id)?.seat;
+                          const myScore = mySeat != null ? mg.cumulative_scores[String(mySeat)] : undefined;
+                          const winnerName = mg.winner_user_id
+                            ? mg.seats.find((s) => s.userId === mg.winner_user_id)?.name ?? "Someone"
+                            : "an AI";
+                          const won = mg.your_outcome === "won";
+                          return (
+                            <li key={mg.game_id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className={`font-medium ${won ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}>
+                                  {won ? "You won" : mg.your_outcome === "resigned" ? "You left" : `Lost — ${winnerName} won`}
+                                </span>
+                                <span className="text-xs text-[var(--faint)]">
+                                  {mg.completed_at ? new Date(mg.completed_at).toLocaleDateString(undefined, { dateStyle: "medium" }) : ""}
+                                </span>
+                              </div>
+                              {myScore != null && <p className="mt-0.5 text-xs text-[var(--muted)]">Your score: {myScore} pts</p>}
+                              <p className="mt-1 text-xs text-[var(--faint)]">
+                                vs. {mg.seats.filter((s) => s.userId !== user?.id).map((s) => s.name).join(", ")}
+                              </p>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </details>
+                  )}
+                </>
+              ) : (
+                <EmptyState
+                  icon="📊"
+                  action={
+                    <Link href="/new-game" className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
+                      New Game
+                    </Link>
+                  }
+                >
+                  No games recorded yet — play one to see your stats here. Your level still counts every
+                  achievement you unlock along the way.
+                </EmptyState>
+              )}
             </>
           )}
         </>

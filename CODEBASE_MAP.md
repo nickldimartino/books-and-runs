@@ -109,15 +109,15 @@ AuthProvider
 | `/new-game/multiplayer` | MP game setup — pick friends + AI seats, choose rounds, send invites. |
 | `/game` | **The solo game screen.** ~1400 lines. Renders `GameContext`'s state: hand drawer, table melds, piles, `OpponentStrip`, meld builder, tutorial overlay, card-flight layer. |
 | `/multiplayer/play?g=<id>` | **The MP game screen.** Driven by `useMpGame`; two-round-trip turns (draw, then commit). |
-| `/multiplayer`, `/multiplayer/new` | Client redirect stubs for old links (hub was folded into `/` and `/new-game`). |
-| `/stats` | Profile: lifetime stats, per-difficulty breakdown, MP record, game history. |
+| `/multiplayer`, `/multiplayer/new`, `/stats` | Client redirect stubs for old links (hub was folded into `/` and `/new-game`; `/stats` was merged into `/player`). |
+| `/player?id=<uuid>` | **Profile page**, public top + private bottom. Top (avatar, display name, bio, level, public stat tiles from `leaderboard_entries`) renders the same for anyone; reachable by clicking a name on the Leaderboard/Friends page. Your own additionally shows "Edit profile" (avatar/name/bio, with live display-name-uniqueness checking) and, below that, a private section only you see — the old `/stats` page's detailed stats breakdown, achievement showcase, and game/MP history. |
 | `/achievements` | All 220 achievements by family, unlocked state, progress. |
-| `/leaderboard` | One row per account (self-reported snapshot). Sortable. Add-friend button per row. |
-| `/friends` | Friend list, incoming/outgoing requests, friend code + share link (`?add=BR-XXXXX`). |
+| `/leaderboard` | One row per account (self-reported snapshot). Sortable. Add-friend button per row; names link to `/player`. |
+| `/friends` | Friend list, incoming/outgoing requests, friend code + share link (`?add=BR-XXXXX`); names link to `/player`. |
 | `/history` | Local (device) game history. |
 | `/scorecard` | Standalone pen-and-paper scorekeeper (no engine — just a score grid). |
 | `/settings`, `/settings/theme`, `/settings/card-back`, `/settings/card-face` | House rules, theme picker (38 themes), card-back picker, card-face picker (6 styles). Every preference here syncs to the account when signed in — see `accountSettingsSync.ts`. |
-| `/account` | Display name, sign-out, danger zone. |
+| `/account` | Email/password, 2FA, data export, danger zone. Links out to `/player` for display name/bio/avatar, which live there now. |
 | `/how-to-play` | Rules reference. `BackLink` returns to wherever you came from (`?from=game`). |
 | `/sign-in`, `/reset-password`, `/privacy`, `/terms` | Auth + legal. |
 | `/support` | Bug report / feature request form (type dropdown, subject, description, optional reply-to email, up to 5 attachments). Submits to the `contact` Edge Function, which emails it — the destination address is a Supabase secret, never shipped to the client. Works signed out. Linked from the Home footer and Settings' Help section. |

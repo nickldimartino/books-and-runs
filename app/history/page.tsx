@@ -1,7 +1,7 @@
 // A static prose page on the history/origins of the Contract Rummy variant
 // this game implements. Server component (no "use client") — pure content,
-// mainly here for SEO. Not to be confused with /stats' game history or
-// the local device game log.
+// mainly here for SEO. Not to be confused with the profile page's own game
+// history (app/player/page.tsx) or the local device game log.
 
 import Link from "next/link";
 
