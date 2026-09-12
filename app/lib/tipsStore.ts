@@ -13,7 +13,8 @@ export type TipId =
   | "new-game-multiplayer"
   | "multiplayer-play"
   | "settings"
-  | "achievements";
+  | "achievements"
+  | "player-profile";
 
 const KEY = "booksAndRuns:seenTips";
 

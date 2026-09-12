@@ -12,6 +12,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PlayerAvatar } from "../components/PlayerAvatar";
 import {
   addFriendByCode,
   Friend,
@@ -24,7 +25,7 @@ import {
   respondToFriendRequest,
   sendFriendRequest,
 } from "../lib/friendsStore";
-import { displayNameFor } from "../lib/leaderboardStore";
+import { AvatarInfo, displayNameFor, fetchAvatarsFor, playerProfileHref } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 function nameOf(userId: string, displayName: string | null): string {
@@ -54,6 +55,7 @@ export default function FriendsPage() {
   const [code, setCode] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [avatars, setAvatars] = useState<Record<string, AvatarInfo>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -78,6 +80,14 @@ export default function FriendsPage() {
       setFriends(f);
       setRequests(r);
       setLoadError(false);
+      // The friend RPCs' own left-join only returns display_name — a
+      // separate bulk read of the public leaderboard_entries table (same
+      // shape as fetchBiosFor) is what fills in avatars for everyone shown
+      // here, without needing to touch the RPCs themselves.
+      const ids = [...new Set([...f.map((x) => x.userId), ...r.map((x) => x.otherUserId)])];
+      fetchAvatarsFor(supabase, ids)
+        .then(setAvatars)
+        .catch((err) => console.error("Failed to load friend avatars:", err));
     } catch (err) {
       console.error("Failed to load friends:", err);
       setLoadError(true);
@@ -434,9 +444,13 @@ export default function FriendsPage() {
                     key={r.id}
                     className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3"
                   >
-                    <span className="min-w-0 truncate text-sm font-medium text-[var(--heading)]">
-                      {nameOf(r.otherUserId, r.displayName)}
-                    </span>
+                    <Link
+                      href={playerProfileHref(r.otherUserId)}
+                      className="flex min-w-0 items-center gap-2 truncate text-sm font-medium text-[var(--heading)] hover:underline"
+                    >
+                      <PlayerAvatar avatar={avatars[r.otherUserId]} size={28} />
+                      <span className="truncate">{nameOf(r.otherUserId, r.displayName)}</span>
+                    </Link>
                     <span className="flex shrink-0 gap-2">
                       <button
                         onClick={() => respond(r.id, true)}
@@ -473,9 +487,13 @@ export default function FriendsPage() {
                     key={f.userId}
                     className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-4 py-3"
                   >
-                    <span className="min-w-0 truncate text-sm font-medium text-[var(--heading)]">
-                      {nameOf(f.userId, f.displayName)}
-                    </span>
+                    <Link
+                      href={playerProfileHref(f.userId)}
+                      className="flex min-w-0 items-center gap-2 truncate text-sm font-medium text-[var(--heading)] hover:underline"
+                    >
+                      <PlayerAvatar avatar={avatars[f.userId]} size={28} />
+                      <span className="truncate">{nameOf(f.userId, f.displayName)}</span>
+                    </Link>
                     <button
                       onClick={() => cancelOrRemove(f.userId)}
                       disabled={busyId === f.userId}
@@ -501,7 +519,13 @@ export default function FriendsPage() {
                     key={r.id}
                     className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-[var(--muted)]"
                   >
-                    <span className="min-w-0 truncate text-sm">{nameOf(r.otherUserId, r.displayName)}</span>
+                    <Link
+                      href={playerProfileHref(r.otherUserId)}
+                      className="flex min-w-0 items-center gap-2 truncate text-sm hover:underline"
+                    >
+                      <PlayerAvatar avatar={avatars[r.otherUserId]} size={28} />
+                      <span className="truncate">{nameOf(r.otherUserId, r.displayName)}</span>
+                    </Link>
                     <button
                       onClick={() => cancelOrRemove(r.otherUserId)}
                       disabled={busyId === r.otherUserId}

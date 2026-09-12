@@ -10,6 +10,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { levelProgress } from "@/leveling";
+import { isValidColor, isValidEmoji } from "./avatarPresets";
 import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";
 
 interface PlayerStatsRow {
@@ -29,6 +30,10 @@ export interface LeaderboardEntry {
   user_id: string;
   display_name: string | null;
   bio: string | null;
+  avatar_kind: "emoji" | "photo";
+  avatar_emoji: string | null;
+  avatar_color: string | null;
+  avatar_photo_path: string | null;
   level: number;
   total_xp: number;
   achievements_unlocked: number;
@@ -181,8 +186,53 @@ export async function fetchOwnDisplayName(supabase: SupabaseClient, userId: stri
   return data?.display_name?.trim() || null;
 }
 
+/** Thrown by updateLeaderboardDisplayName when migration 0024's unique
+ * constraint rejects the name (Postgres code 23505) — callers should catch
+ * this specifically to show "that name's taken" rather than a generic
+ * save-failed error. */
+export class DisplayNameTakenError extends Error {
+  constructor() {
+    super("That name is already taken.");
+    this.name = "DisplayNameTakenError";
+  }
+}
+
+// % and _ are ilike wildcards — escaped so a name containing either is
+// matched literally instead of as a pattern.
+function escapeIlikePattern(s: string): string {
+  return s.replace(/[%_\\]/g, (m) => `\\${m}`);
+}
+
+/**
+ * Best-effort, case-insensitive pre-check for the Account page to show an
+ * immediate "taken" message before the user even hits Save — not the source
+ * of truth. Two clients checking and saving at the same instant can both see
+ * "available" here; migration 0024's unique constraint is what actually
+ * decides, and updateLeaderboardDisplayName surfaces that as
+ * DisplayNameTakenError.
+ */
+export async function isDisplayNameAvailable(
+  supabase: SupabaseClient,
+  name: string,
+  excludeUserId: string
+): Promise<boolean> {
+  const cleaned = name.trim();
+  if (!cleaned) return true;
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("user_id")
+    .ilike("display_name", escapeIlikePattern(cleaned))
+    .neq("user_id", excludeUserId)
+    .maybeSingle();
+  if (error) throw error;
+  return !data;
+}
+
 /** Sets (or clears, with null) just the signed-in user's own display name —
- * never touches the stat columns, so it can't undo a sync still in flight. */
+ * never touches the stat columns, so it can't undo a sync still in flight.
+ * Throws DisplayNameTakenError specifically when the name's already claimed
+ * (see migration 0024's unique constraint) — every other failure rethrows
+ * as-is. */
 export async function updateLeaderboardDisplayName(
   supabase: SupabaseClient,
   userId: string,
@@ -193,7 +243,10 @@ export async function updateLeaderboardDisplayName(
     display_name: sanitizeDisplayName(displayName),
     updated_at: new Date().toISOString(),
   });
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") throw new DisplayNameTakenError();
+    throw error;
+  }
 }
 
 /** Max stored bio length (migration 0021). Matches the DB CHECK and the
@@ -232,6 +285,144 @@ export async function updateLeaderboardBio(supabase: SupabaseClient, userId: str
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
+}
+
+export interface AvatarInfo {
+  kind: "emoji" | "photo";
+  emoji: string | null;
+  color: string | null;
+  photoPath: string | null;
+}
+
+const DEFAULT_AVATAR: AvatarInfo = { kind: "emoji", emoji: null, color: null, photoPath: null };
+
+/** Picks (or changes) the signed-in user's emoji+color avatar — switches
+ * avatar_kind to "emoji" without touching avatar_photo_path, so a
+ * previously-uploaded photo is still there if they switch back to it later
+ * (see revertToPhotoAvatar). Both values are validated against the same
+ * fixed lists the DB constrains them to (see migration 0024's own doc for
+ * why the two must stay in sync). */
+export async function updateLeaderboardAvatarEmoji(
+  supabase: SupabaseClient,
+  userId: string,
+  emoji: string,
+  color: string
+): Promise<void> {
+  if (!isValidEmoji(emoji) || !isValidColor(color)) {
+    throw new Error("That avatar choice isn't one of the presets.");
+  }
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    avatar_kind: "emoji",
+    avatar_emoji: emoji,
+    avatar_color: color,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Records a freshly-uploaded photo as the signed-in user's avatar and
+ * switches avatar_kind to "photo" — called after the file itself has
+ * already landed in the "avatars" Storage bucket (see avatarUpload.ts). */
+export async function updateLeaderboardAvatarPhoto(
+  supabase: SupabaseClient,
+  userId: string,
+  photoPath: string
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    avatar_kind: "photo",
+    avatar_photo_path: photoPath,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Switches back to whichever emoji+color was last chosen, without
+ * discarding the uploaded photo (avatar_photo_path is left as-is — a later
+ * "use my photo" just flips avatar_kind back, no re-upload needed). */
+export async function revertToEmojiAvatar(supabase: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    avatar_kind: "emoji",
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** The signed-in account's own current avatar choice — used to preload the
+ * profile page's editor with whatever's already saved. */
+export async function fetchOwnAvatar(supabase: SupabaseClient, userId: string): Promise<AvatarInfo> {
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("avatar_kind, avatar_emoji, avatar_color, avatar_photo_path")
+    .eq("user_id", userId)
+    .maybeSingle<{
+      avatar_kind: "emoji" | "photo" | null;
+      avatar_emoji: string | null;
+      avatar_color: string | null;
+      avatar_photo_path: string | null;
+    }>();
+  if (error) throw error;
+  if (!data) return DEFAULT_AVATAR;
+  return {
+    kind: data.avatar_kind ?? "emoji",
+    emoji: data.avatar_emoji,
+    color: data.avatar_color,
+    photoPath: data.avatar_photo_path,
+  };
+}
+
+/**
+ * Avatars for a set of other accounts, keyed by user_id — same shape and
+ * reasoning as fetchBiosFor below (a direct read of the public table rather
+ * than a dedicated RPC), used anywhere a list of other players needs their
+ * avatar without a full profile fetch each (Leaderboard, Friends).
+ */
+export async function fetchAvatarsFor(supabase: SupabaseClient, userIds: string[]): Promise<Record<string, AvatarInfo>> {
+  if (userIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("user_id, avatar_kind, avatar_emoji, avatar_color, avatar_photo_path")
+    .in("user_id", userIds);
+  if (error) throw error;
+  const avatars: Record<string, AvatarInfo> = {};
+  for (const row of (data ?? []) as {
+    user_id: string;
+    avatar_kind: "emoji" | "photo" | null;
+    avatar_emoji: string | null;
+    avatar_color: string | null;
+    avatar_photo_path: string | null;
+  }[]) {
+    avatars[row.user_id] = {
+      kind: row.avatar_kind ?? "emoji",
+      emoji: row.avatar_emoji,
+      color: row.avatar_color,
+      photoPath: row.avatar_photo_path,
+    };
+  }
+  return avatars;
+}
+
+/** The public URL for an uploaded avatar photo, from its Storage path — see
+ * migration 0024's own doc for why the path (not a full URL) is what's
+ * stored: this can be recomputed any time, so nothing goes stale. Every
+ * re-upload overwrites the same fixed path (see avatarUpload.ts), so a
+ * `version` (pass the row's own `updated_at`) is appended as a cache-buster
+ * — without it, a browser or CDN that already cached the old image at that
+ * URL would keep serving it after a new photo replaces it. */
+export function avatarPhotoUrlFor(supabase: SupabaseClient, path: string, version?: string | null): string {
+  const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+  return version ? `${url}?v=${encodeURIComponent(version)}` : url;
+}
+
+/** The URL to a given account's public profile page — the one place this
+ * path is spelled out, so every "click a name" link (Leaderboard, Friends)
+ * stays consistent. A query param, not a dynamic route segment: this app is
+ * a static export (see next.config.ts), and the Friends page's own
+ * `?add=CODE` link already uses the same pattern. */
+export function playerProfileHref(userId: string): string {
+  return `/player?id=${encodeURIComponent(userId)}`;
 }
 
 /**
@@ -354,4 +545,33 @@ export async function pullDailyDealStreak(
     bestStreak: data.daily_deal_best_streak,
     lastPlayedDate: data.daily_deal_last_played,
   };
+}
+
+/** Max stored report reason length (migration 0025). */
+export const MAX_REPORT_REASON_LENGTH = 280;
+
+/**
+ * Flags `reportedUserId`'s current profile photo for manual review (see
+ * migration 0025 — there's no in-app read path for these, only the
+ * Supabase dashboard/service role). `on conflict do nothing` (via
+ * `ignoreDuplicates`) makes reporting the same account twice a harmless
+ * no-op rather than an error, matching the DB's own one-report-per-pair
+ * constraint.
+ */
+export async function reportProfilePhoto(
+  supabase: SupabaseClient,
+  reporterUserId: string,
+  reportedUserId: string,
+  reason: string | null
+): Promise<void> {
+  const cleanedReason = reason ? stripControlAndBidiChars(reason).trim().slice(0, MAX_REPORT_REASON_LENGTH) : null;
+  const { error } = await supabase.from("profile_photo_reports").upsert(
+    {
+      reporter_id: reporterUserId,
+      reported_user_id: reportedUserId,
+      reason: cleanedReason || null,
+    },
+    { onConflict: "reporter_id,reported_user_id", ignoreDuplicates: true }
+  );
+  if (error) throw error;
 }

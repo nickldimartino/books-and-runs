@@ -17,9 +17,10 @@ import {
 import { useAuth } from "../AuthContext";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PlayerAvatar } from "../components/PlayerAvatar";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
-import { displayNameFor, LeaderboardEntry, syncLeaderboardStats } from "../lib/leaderboardStore";
+import { displayNameFor, LeaderboardEntry, playerProfileHref, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
@@ -367,9 +368,23 @@ export default function LeaderboardPage() {
                       <td
                         className={`sticky left-0 px-3 py-2 font-medium ${isYou ? "bg-[var(--panel)] text-[var(--accent)]" : "bg-[var(--bg)] text-[var(--heading)]"}`}
                       >
-                        <span className="whitespace-nowrap">
-                          <span className="text-[var(--faint)]">{i + 1}.</span> {displayNameFor(entry)}
-                        </span>
+                        <Link
+                          href={playerProfileHref(entry.user_id)}
+                          className="inline-flex items-center gap-1.5 whitespace-nowrap hover:underline"
+                        >
+                          <span className="text-[var(--faint)]">{i + 1}.</span>
+                          <PlayerAvatar
+                            avatar={{
+                              kind: entry.avatar_kind,
+                              emoji: entry.avatar_emoji,
+                              color: entry.avatar_color,
+                              photoPath: entry.avatar_photo_path,
+                            }}
+                            updatedAt={entry.updated_at}
+                            size={22}
+                          />
+                          {displayNameFor(entry)}
+                        </Link>
                         {user && !isYou && !relatedIds.has(entry.user_id) && (
                           <button
                             onClick={() => addFriend(entry.user_id)}

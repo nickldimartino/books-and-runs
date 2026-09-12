@@ -9,14 +9,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
-import {
-  displayNameFor,
-  MAX_BIO_LENGTH,
-  MAX_DISPLAY_NAME_LENGTH,
-  syncLeaderboardStats,
-  updateLeaderboardBio,
-  updateLeaderboardDisplayName,
-} from "../lib/leaderboardStore";
+import { playerProfileHref, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -60,13 +53,6 @@ export default function AccountPage() {
   } = useAuth();
 
   const [loading, setLoading] = useState(true);
-  const [displayName, setDisplayName] = useState("");
-  const [nameSaveState, setNameSaveState] = useState<SaveState>("idle");
-  const [nameError, setNameError] = useState<string | null>(null);
-
-  const [bioText, setBioText] = useState("");
-  const [bioSaveState, setBioSaveState] = useState<SaveState>("idle");
-  const [bioError, setBioError] = useState<string | null>(null);
 
   const [newEmail, setNewEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
@@ -105,19 +91,9 @@ export default function AccountPage() {
     // leaderboard (a past sync failure, or an account that predates this
     // feature entirely) — cheap, and this page is a natural place someone
     // lands specifically because they care what the leaderboard shows them.
-    syncLeaderboardStats(supabase, user.id).catch((err) => {
-      console.error("Failed to sync leaderboard entry:", err);
-    });
-    supabase
-      .from("leaderboard_entries")
-      .select("display_name, bio")
-      .eq("user_id", user.id)
-      .maybeSingle<{ display_name: string | null; bio: string | null }>()
-      .then(({ data }) => {
-        setDisplayName(data?.display_name ?? "");
-        setBioText(data?.bio ?? "");
-        setLoading(false);
-      });
+    syncLeaderboardStats(supabase, user.id)
+      .catch((err) => console.error("Failed to sync leaderboard entry:", err))
+      .finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => {
@@ -164,42 +140,6 @@ export default function AccountPage() {
         </Link>
       </main>
     );
-  }
-
-  async function handleSaveName(e: FormEvent) {
-    e.preventDefault();
-    if (!supabase || !user) return;
-    setNameError(null);
-    const trimmed = displayName.trim();
-    if (trimmed.length === 0) {
-      setNameError("Enter a name — leave it blank and pick one later if you're not sure yet.");
-      return;
-    }
-    setNameSaveState("saving");
-    try {
-      await updateLeaderboardDisplayName(supabase, user.id, trimmed);
-      setDisplayName(trimmed);
-      setNameSaveState("saved");
-    } catch (err) {
-      console.error("Failed to save display name:", err);
-      setNameSaveState("error");
-    }
-  }
-
-  async function handleSaveBio(e: FormEvent) {
-    e.preventDefault();
-    if (!supabase || !user) return;
-    setBioError(null);
-    setBioSaveState("saving");
-    try {
-      const trimmed = bioText.trim();
-      await updateLeaderboardBio(supabase, user.id, trimmed.length > 0 ? trimmed : null);
-      setBioText(trimmed);
-      setBioSaveState("saved");
-    } catch (err) {
-      console.error("Failed to save bio:", err);
-      setBioSaveState("error");
-    }
   }
 
   async function handleChangeEmail(e: FormEvent) {
@@ -329,72 +269,18 @@ export default function AccountPage() {
       ) : (
         <>
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Display name</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Public profile</h2>
             <p className="text-xs text-[var(--faint)]">
-              Shown on the Leaderboard — not your email, and not tied to your pass-and-play name on
-              any one device.{" "}
-              {user && !displayName && (
-                <>Until you set one, you show up as “{displayNameFor({ user_id: user.id, display_name: null })}”.</>
-              )}
+              Your display name, bio, and profile picture — visible to other players on the
+              Leaderboard and Friends list. Display names are unique across every player.
             </p>
-            <form onSubmit={handleSaveName} className="flex gap-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name on the Leaderboard"
-                maxLength={MAX_DISPLAY_NAME_LENGTH}
-                className="flex-1 rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-              />
-              <button
-                type="submit"
-                disabled={nameSaveState === "saving"}
-                className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+            {user && (
+              <Link
+                href={playerProfileHref(user.id)}
+                className="self-start rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
               >
-                Save
-              </button>
-            </form>
-            {nameError && <p className="text-xs text-[var(--danger)]">{nameError}</p>}
-            {nameSaveState === "saved" && !nameError && (
-              <p className="text-xs text-[var(--muted)]">Saved.</p>
-            )}
-            {nameSaveState === "error" && !nameError && (
-              <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Bio</h2>
-            <p className="text-xs text-[var(--faint)]">
-              A short line other players can see when they tap your chip in a multiplayer game.
-              Optional.
-            </p>
-            <form onSubmit={handleSaveBio} className="flex flex-col gap-2">
-              <textarea
-                value={bioText}
-                onChange={(e) => setBioText(e.target.value)}
-                placeholder="Say something about yourself…"
-                maxLength={MAX_BIO_LENGTH}
-                rows={2}
-                className="resize-none rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-              />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-[var(--faint)]">
-                  {bioText.length} / {MAX_BIO_LENGTH}
-                </span>
-                <button
-                  type="submit"
-                  disabled={bioSaveState === "saving"}
-                  className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-            {bioError && <p className="text-xs text-[var(--danger)]">{bioError}</p>}
-            {bioSaveState === "saved" && !bioError && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-            {bioSaveState === "error" && !bioError && (
-              <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>
+                Edit your profile →
+              </Link>
             )}
           </section>
 
