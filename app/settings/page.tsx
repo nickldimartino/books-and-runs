@@ -23,7 +23,7 @@ import {
   loadLocalCardBack,
   saveLocalCardBack,
 } from "../lib/cardBackStore";
-import { setAmbienceVolume } from "../lib/ambience";
+import { AMBIENT_SONGS, isPreviewing, previewSong, setAmbienceVolume, stopPreview } from "../lib/ambience";
 import {
   CARD_FACES,
   CardFaceId,
@@ -289,6 +289,24 @@ export default function SettingsPage() {
   const [tipsReset, setTipsReset] = useState(false);
   const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
   const [pushError, setPushError] = useState<string | null>(null);
+  const [previewingId, setPreviewingId] = useState<(typeof AMBIENT_SONGS)[number]["id"] | null>(null);
+
+  // Never leave a preview playing behind after navigating away — nothing
+  // else would stop it, since it's entirely independent of the real
+  // game-screen startAmbience/stopAmbience lifecycle.
+  useEffect(() => {
+    return () => stopPreview();
+  }, []);
+
+  function togglePreview(id: (typeof AMBIENT_SONGS)[number]["id"]) {
+    if (isPreviewing(id)) {
+      stopPreview();
+      setPreviewingId(null);
+    } else {
+      previewSong(id);
+      setPreviewingId(id);
+    }
+  }
 
   // Re-reads every local store — called on mount, and again whenever
   // AccountSettingsSync pulls the account's copy down while this page is
@@ -500,6 +518,48 @@ export default function SettingsPage() {
             description="How loud the background pad is. Kept subtle even at 100% — it's meant to sit behind everything else."
             ariaLabel="Ambient music volume"
           />
+          <section className="flex flex-col gap-2">
+            <InfoDetails label="Ambient song">
+              Rotate through all three every 3 minutes (blending into each other), or pin it to just
+              one.
+            </InfoDetails>
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => updateSettings({ ambientTrack: "rotate" })}
+                disabled={!settings.ambientMusicEnabled}
+                className={`rounded-md px-3 py-2 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                  settings.ambientTrack === "rotate"
+                    ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                    : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                }`}
+              >
+                Rotate all 3
+              </button>
+              {AMBIENT_SONGS.map((song) => (
+                <div key={song.id} className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateSettings({ ambientTrack: song.id })}
+                    disabled={!settings.ambientMusicEnabled}
+                    className={`flex-1 rounded-md px-3 py-2 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                      settings.ambientTrack === song.id
+                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    {song.label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => togglePreview(song.id)}
+                    aria-label={previewingId === song.id ? `Stop listening to ${song.label}` : `Listen to ${song.label}`}
+                    className="shrink-0 rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                  >
+                    {previewingId === song.id ? "⏸" : "▶"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
           </SettingsSection>
 
           <SettingsSection title="Gameplay">

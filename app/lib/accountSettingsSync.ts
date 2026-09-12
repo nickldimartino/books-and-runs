@@ -17,7 +17,7 @@ import { Difficulty } from "@/types";
 import { applyCardBack, CardBackId, DEFAULT_CARD_BACK, loadLocalCardBack, saveLocalCardBack } from "./cardBackStore";
 import { CardFaceId, DEFAULT_CARD_FACE, saveLocalCardFace } from "./cardFaceStore";
 import { applyColorblindMode, ColorblindMode, DEFAULT_COLORBLIND_MODE, saveLocalColorblindMode } from "./colorblindStore";
-import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
+import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
 import { applyTheme, loadLocalTheme, saveLocalTheme, ThemeId } from "./themeStore";
 
 export interface AccountSettingsRow {
@@ -33,10 +33,11 @@ export interface AccountSettingsRow {
   show_whose_turn: boolean | null;
   ambient_music_enabled: boolean | null;
   ambient_volume: number | null;
+  ambient_track: string | null;
 }
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, sound_volume, meld_hints, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume";
+  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, sound_volume, meld_hints, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -92,6 +93,7 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     soundVolume: row.sound_volume ?? current.soundVolume,
     ambientMusicEnabled: row.ambient_music_enabled ?? current.ambientMusicEnabled,
     ambientVolume: row.ambient_volume ?? current.ambientVolume,
+    ambientTrack: (row.ambient_track as AmbientTrackChoice | null) ?? current.ambientTrack,
   });
 
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SYNCED_EVENT));
@@ -118,6 +120,7 @@ type SettingsPatch = Partial<{
   show_whose_turn: boolean;
   ambient_music_enabled: boolean;
   ambient_volume: number;
+  ambient_track: string;
 }>;
 
 async function upsertSettingsPatch(supabase: SupabaseClient, userId: string, patch: SettingsPatch): Promise<void> {
@@ -154,6 +157,7 @@ export function pushHouseSettingsPatch(supabase: SupabaseClient | null, userId: 
   if (patch.showWhoseTurn !== undefined) immediate.show_whose_turn = patch.showWhoseTurn;
   if (patch.meldHints !== undefined) immediate.meld_hints = patch.meldHints;
   if (patch.ambientMusicEnabled !== undefined) immediate.ambient_music_enabled = patch.ambientMusicEnabled;
+  if (patch.ambientTrack !== undefined) immediate.ambient_track = patch.ambientTrack;
   if (Object.keys(immediate).length > 0) {
     upsertSettingsPatch(supabase, userId, immediate).catch((err) =>
       console.error("Failed to sync settings to account:", err.message)
@@ -223,5 +227,6 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     show_whose_turn: DEFAULT_SETTINGS.showWhoseTurn,
     ambient_music_enabled: DEFAULT_SETTINGS.ambientMusicEnabled,
     ambient_volume: DEFAULT_SETTINGS.ambientVolume,
+    ambient_track: DEFAULT_SETTINGS.ambientTrack,
   }).catch((err) => console.error("Failed to sync reset settings to account:", err.message));
 }

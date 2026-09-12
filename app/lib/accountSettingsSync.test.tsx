@@ -48,6 +48,7 @@ function blankRow(): AccountSettingsRow {
     show_whose_turn: null,
     ambient_music_enabled: null,
     ambient_volume: null,
+    ambient_track: null,
   };
 }
 

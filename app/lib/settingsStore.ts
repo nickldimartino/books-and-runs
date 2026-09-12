@@ -7,6 +7,13 @@ import { Difficulty } from "@/types";
 
 const KEY = "booksAndRuns:settings";
 
+// "rotate" cycles through every song in ambience.ts's SONGS, crossfading
+// between them; any other value pins ambience.ts to just that one song
+// (still looping it) — see ambience.ts's own AMBIENT_SONGS for the list.
+// Defined here (not in ambience.ts) so this file, which ambience.ts already
+// imports from, stays dependency-free.
+export type AmbientTrackChoice = "rotate" | "arpeggio" | "bounce" | "skip";
+
 export interface HouseSettings {
   preferredAiDifficulty: Difficulty;
   // Local-only, like theme — not synced to the account (see settings/page.tsx's
@@ -33,6 +40,9 @@ export interface HouseSettings {
   // should be opted into, not sprung on someone.
   ambientMusicEnabled: boolean;
   ambientVolume: number;
+  // Which song(s) ambience.ts plays. "rotate" (default) cycles through all
+  // three, crossfading; any other value pins it to just that one.
+  ambientTrack: AmbientTrackChoice;
   // "Player activity", "Group melds by type", and "Expandable hand drawer"
   // used to live here as toggles. All three are gone now: the always-on
   // opponent strip (OpponentStrip.tsx) replaced Player activity, grouping
@@ -50,6 +60,7 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   soundVolume: 0.7,
   ambientMusicEnabled: false,
   ambientVolume: 0.4,
+  ambientTrack: "rotate",
 };
 
 export function loadLocalSettings(): HouseSettings {
