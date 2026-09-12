@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { accountSwitched } from "./lib/accountScope";
 import { resetLocalPreferencesToDefaults } from "./lib/accountSettingsSync";
 import { resetDailyDealLocal } from "./lib/dailyDealStore";
 import { clearFavoriteGameConfig } from "./lib/favoriteGameConfig";
-import { clearSavedGame } from "./lib/localSave";
+import { clearDailyDealSave, clearSavedGame } from "./lib/localSave";
 import { resetSeenTips } from "./lib/tipsStore";
 
 /**
@@ -14,8 +14,9 @@ import { resetSeenTips } from "./lib/tipsStore";
  * has another account's local data on it — a shared computer, or simply
  * the same person's own device after someone else (or a second account of
  * theirs) used it. Without this, every "local cache, synced lazily" store
- * in the app — solo save, Daily Deal streak, favorite game config,
- * first-visit tips, and every Settings/Theme/Card back/Card face
+ * in the app — solo save, Daily Deal streak (and its own separate
+ * in-progress save, see localSave.ts's DAILY_DEAL_SAVE_KEY), favorite game
+ * config, first-visit tips, and every Settings/Theme/Card back/Card face
  * preference — would show the PREVIOUS account's leftover values to the
  * new one. Worse than just a display bug: several of those stores' own
  * sync functions treat "local has something, cloud doesn't yet" as "this
@@ -24,6 +25,11 @@ import { resetSeenTips } from "./lib/tipsStore";
  * without a reset first, the new account's very first sync could actively
  * write the OLD account's leftover game/streak/config into the NEW
  * account's own cloud rows, not just display it locally.
+ *
+ * Also clears favorite game config specifically on sign-out (the opposite
+ * direction) — otherwise a signed-in account's curated "usual" lineup stays
+ * sitting in local storage, one tap away for whoever picks up the device
+ * next, signed in or not.
  *
  * Mounted once in the root layout, ahead of every other sync component
  * (AccountSettingsSync, LocalSaveSync, etc.) — React runs effects in tree
@@ -34,16 +40,34 @@ import { resetSeenTips } from "./lib/tipsStore";
  */
 export function AccountSwitchGuard() {
   const { user } = useAuth();
+  const wasSignedIn = useRef(false);
 
   useEffect(() => {
-    if (!user) return;
-    if (!accountSwitched(user.id)) return;
+    if (user) {
+      wasSignedIn.current = true;
+      if (!accountSwitched(user.id)) return;
+      clearSavedGame();
+      clearDailyDealSave();
+      resetDailyDealLocal();
+      clearFavoriteGameConfig();
+      resetSeenTips();
+      resetLocalPreferencesToDefaults();
+      return;
+    }
 
-    clearSavedGame();
-    resetDailyDealLocal();
-    clearFavoriteGameConfig();
-    resetSeenTips();
-    resetLocalPreferencesToDefaults();
+    // Signing out, specifically (not "never signed in this session" — a
+    // guest who never had an account here has nothing of an account's to
+    // leave behind). Deliberately narrow to favorite game config: it's a
+    // curated personal setup (player names, difficulty picks) that stays
+    // usable with one tap, unlike the solo save or Daily Deal streak, which
+    // read more like "whatever's currently on this device" than personal
+    // identity — clearing those on every sign-out would just be annoying
+    // without the same privacy upside. Safe either way: it's cloud-synced,
+    // so signing back into the same account just pulls it straight back.
+    if (wasSignedIn.current) {
+      wasSignedIn.current = false;
+      clearFavoriteGameConfig();
+    }
   }, [user]);
 
   return null;
