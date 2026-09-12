@@ -1,4 +1,4 @@
-import { loadLocalSettings } from "./settingsStore";
+import { AmbientTrackChoice, loadLocalSettings } from "./settingsStore";
 
 /**
  * Optional generative background music for the game screens — synthesized
@@ -14,13 +14,14 @@ import { loadLocalSettings } from "./settingsStore";
  * enough space to not sound dry, not enough to read as a cathedral. Calm,
  * not dance-tempo, but constantly moving rather than held.
  *
- * Three songs (SONGS below) rotate through, 3–5 minutes each, so a long
- * session doesn't loop the same ~35s progression for the whole game. All
- * three stay in C major (or its closely related ii/vi chords) specifically
- * so any two can overlap during a crossfade without clashing — the same
- * reason each song's own chord cycle is built to end on the dominant (G)
- * right before wrapping, an authentic cadence landing exactly on its own
- * loop point. Rotation crossfades the outgoing song out and the incoming
+ * Three songs (SONGS/AMBIENT_SONGS below) — by default they rotate, 3
+ * minutes each, so a long session doesn't loop the same ~35s progression
+ * for the whole game; Settings can also pin playback to just one of them
+ * (settingsStore.ts's ambientTrack). All three stay in C major (or its
+ * closely related ii/vi chords) specifically so any two can overlap during
+ * a crossfade without clashing — the same reason each song's own chord
+ * cycle is built to resolve smoothly right before wrapping back to its own
+ * first chord. Rotation crossfades the outgoing song out and the incoming
  * one in together (see startVoice/stopVoice) rather than a hard cut, on
  * every transition including the wrap from the last song back to the
  * first. Entirely separate from sound.ts's own AudioContext/volume — see
@@ -39,6 +40,8 @@ interface ChordSpec {
 }
 
 interface Song {
+  id: Exclude<AmbientTrackChoice, "rotate">;
+  label: string;
   /** ms between arpeggio notes — the main tempo/energy knob per song. */
   noteMs: number;
   waveform: OscillatorType;
@@ -46,13 +49,15 @@ interface Song {
   chords: ChordSpec[];
 }
 
-// Song 1 "Arpeggio" — the original. Phrase A (I–V–vi–IV) is a simple
-// root-third-fifth-third bounce; phrase B (ii–vi–IV–V) is a busier
-// root-fifth-third-octave-fifth-third shape, real melodic contrast rather
-// than just different chords, briefly reaching a full octave higher (A5)
-// at its peak before its final chord (G, the dominant) resolves back to
-// phrase A's C.
+// Song 1 "Arpeggio" — the original, deliberately unchanged. Phrase A
+// (I–V–vi–IV) is a simple root-third-fifth-third bounce; phrase B
+// (ii–vi–IV–V) is a busier root-fifth-third-octave-fifth-third shape, real
+// melodic contrast rather than just different chords, briefly reaching a
+// full octave higher (A5) at its peak before its final chord (G, the
+// dominant) resolves back to phrase A's C.
 const SONG_ARPEGGIO: Song = {
+  id: "arpeggio",
+  label: "Arpeggio",
   noteMs: 380,
   waveform: "triangle",
   filterHz: 3500,
@@ -68,49 +73,61 @@ const SONG_ARPEGGIO: Song = {
   ],
 };
 
-// Song 2 "Pop Run" — vi–IV–I–V (Am–F–C–G, the classic "pop" progression),
-// played twice. A softer sine voice (rather than song 1's triangle) and a
-// strictly ascending root-third-fifth-octave run each bar — no bounce-back
-// — give it a lighter, more twinkling character; a touch faster than song 1
-// for a little extra lift.
-const SONG_POP_RUN: Song = {
-  noteMs: 340,
-  waveform: "sine",
-  filterHz: 4200,
-  chords: [
-    { root: 220.0, arp: [440.0, 523.25, 659.25, 880.0], repeats: 3 }, // Am — A3 root, A4 C5 E5 A5
-    { root: 174.61, arp: [349.23, 440.0, 523.25, 698.46], repeats: 3 }, // F  — F3 root, F4 A4 C5 F5
-    { root: 130.81, arp: [261.63, 329.63, 392.0, 523.25], repeats: 3 }, // C  — C3 root, C4 E4 G4 C5
-    { root: 196.0, arp: [392.0, 493.88, 587.33, 783.99], repeats: 3 }, // G  — G3 root, G4 B4 D5 G5
-    { root: 220.0, arp: [440.0, 523.25, 659.25, 880.0], repeats: 3 }, // Am
-    { root: 174.61, arp: [349.23, 440.0, 523.25, 698.46], repeats: 3 }, // F
-    { root: 130.81, arp: [261.63, 329.63, 392.0, 523.25], repeats: 3 }, // C
-    { root: 196.0, arp: [392.0, 493.88, 587.33, 783.99], repeats: 3 }, // G — dominant, resolves the wrap
-  ],
-};
-
-// Song 3 "Skip" — ii–V–I–vi (Dm–G–C–Am), played twice. A zigzagging
-// root-octave-third-fifth shape (jump up an octave, then step back down
-// through the chord) reads as syncopated/skipping rather than either song's
-// smooth contour; a touch slower and back to triangle, but a slightly
-// brighter filter for a bit more shimmer.
-const SONG_SKIP: Song = {
-  noteMs: 420,
+// Song 2 "Bounce" — IV–I–vi–V (F–C–Am–G), played twice. Rebuilt after the
+// original "Pop Run" (a soft sine voice on a smooth ascending run) read as
+// too mellow/ambient rather than upbeat — back to song 1's triangle voice
+// and bounce-family energy, but its own root-fifth-third-fifth contour and
+// a peppier tempo keep it from just being song 1 again.
+const SONG_BOUNCE: Song = {
+  id: "bounce",
+  label: "Bounce",
+  noteMs: 330,
   waveform: "triangle",
   filterHz: 3800,
   chords: [
-    { root: 146.83, arp: [293.66, 587.33, 349.23, 440.0], repeats: 3 }, // Dm — D3 root, D4 D5 F4 A4
-    { root: 196.0, arp: [392.0, 783.99, 493.88, 587.33], repeats: 3 }, // G   — G3 root, G4 G5 B4 D5
-    { root: 130.81, arp: [261.63, 523.25, 329.63, 392.0], repeats: 3 }, // C   — C3 root, C4 C5 E4 G4
-    { root: 220.0, arp: [440.0, 880.0, 523.25, 659.25], repeats: 3 }, // Am    — A3 root, A4 A5 C5 E5
-    { root: 146.83, arp: [293.66, 587.33, 349.23, 440.0], repeats: 3 }, // Dm
-    { root: 196.0, arp: [392.0, 783.99, 493.88, 587.33], repeats: 3 }, // G
-    { root: 130.81, arp: [261.63, 523.25, 329.63, 392.0], repeats: 3 }, // C
-    { root: 220.0, arp: [440.0, 880.0, 523.25, 659.25], repeats: 3 }, // Am — resolves the wrap back to Dm/song 1's C
+    { root: 174.61, arp: [349.23, 523.25, 440.0, 523.25], repeats: 3 }, // F  — F3 root, F4 C5 A4 C5
+    { root: 130.81, arp: [261.63, 392.0, 329.63, 392.0], repeats: 3 }, // C  — C3 root, C4 G4 E4 G4
+    { root: 220.0, arp: [440.0, 659.25, 523.25, 659.25], repeats: 3 }, // Am — A3 root, A4 E5 C5 E5
+    { root: 196.0, arp: [392.0, 587.33, 493.88, 587.33], repeats: 3 }, // G  — G3 root, G4 D5 B4 D5 — dominant, resolves the wrap
+    { root: 174.61, arp: [349.23, 523.25, 440.0, 523.25], repeats: 3 }, // F
+    { root: 130.81, arp: [261.63, 392.0, 329.63, 392.0], repeats: 3 }, // C
+    { root: 220.0, arp: [440.0, 659.25, 523.25, 659.25], repeats: 3 }, // Am
+    { root: 196.0, arp: [392.0, 587.33, 493.88, 587.33], repeats: 3 }, // G
   ],
 };
 
-const SONGS: Song[] = [SONG_ARPEGGIO, SONG_POP_RUN, SONG_SKIP];
+// Song 3 "Skip" — V–vi–IV–I (G–Am–F–C), played twice. A zigzagging
+// root-octave-third-fifth shape (jump up an octave, then step back down
+// through the chord) reads as syncopated/skipping rather than either other
+// song's contour; quicker than its old ii–V–I–vi version (this was the
+// song there wasn't time to confirm hearing — sped up and reordered to
+// start on the bright dominant rather than the minor ii, so it reads as
+// upbeat from its very first chord).
+const SONG_SKIP: Song = {
+  id: "skip",
+  label: "Skip",
+  noteMs: 350,
+  waveform: "triangle",
+  filterHz: 4000,
+  chords: [
+    { root: 196.0, arp: [392.0, 783.99, 493.88, 587.33], repeats: 3 }, // G  — G3 root, G4 G5 B4 D5
+    { root: 220.0, arp: [440.0, 880.0, 523.25, 659.25], repeats: 3 }, // Am — A3 root, A4 A5 C5 E5
+    { root: 174.61, arp: [349.23, 698.46, 440.0, 523.25], repeats: 3 }, // F  — F3 root, F4 F5 A4 C5
+    { root: 130.81, arp: [261.63, 523.25, 329.63, 392.0], repeats: 3 }, // C  — C3 root, C4 C5 E4 G4 — tonic, resolves the wrap
+    { root: 196.0, arp: [392.0, 783.99, 493.88, 587.33], repeats: 3 }, // G
+    { root: 220.0, arp: [440.0, 880.0, 523.25, 659.25], repeats: 3 }, // Am
+    { root: 174.61, arp: [349.23, 698.46, 440.0, 523.25], repeats: 3 }, // F
+    { root: 130.81, arp: [261.63, 523.25, 329.63, 392.0], repeats: 3 }, // C
+  ],
+};
+
+/** In rotation order — the order "rotate" cycles through, wrapping from the
+ * last back to the first. Also what Settings' song picker lists. */
+export const AMBIENT_SONGS: Song[] = [SONG_ARPEGGIO, SONG_BOUNCE, SONG_SKIP];
+
+function songIndexFor(id: Exclude<AmbientTrackChoice, "rotate">): number {
+  return AMBIENT_SONGS.findIndex((s) => s.id === id);
+}
 
 // C major pentatonic, an octave above the arpeggios' own register — the
 // occasional bright "sparkle" note's pool. Every chord in every song above
@@ -121,10 +138,9 @@ const SPARKLE_SCALE = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
 const SPARKLE_MIN_DELAY_MS = 4000;
 const SPARKLE_MAX_DELAY_MS = 9000;
 
-// How long one song plays before crossfading into the next — randomized
-// within the range so the rotation doesn't feel like a metronome.
-const MIN_SONG_MS = 3 * 60 * 1000;
-const MAX_SONG_MS = 5 * 60 * 1000;
+// How long one song plays before crossfading into the next, in "rotate"
+// mode.
+const SONG_DURATION_MS = 3 * 60 * 1000;
 // How long the outgoing/incoming songs overlap during a rotation — long
 // enough to read as a deliberate blend, not a cut. Also reused as the
 // "leaving a game screen" fade-out length (see stopAmbience) — the same
@@ -149,6 +165,9 @@ let voices: Voice[] = [];
 let rotationTimer: number | null = null;
 let sparkleTimers: number[] = [];
 let sparkleSessionId = 0;
+
+let previewMasterGain: GainNode | null = null;
+let previewVoice: Voice | null = null;
 
 function clampVolume(v: number): number {
   // Capped well below sound.ts's own ceiling — even "100%" on this slider
@@ -198,7 +217,8 @@ function playArpeggioNote(c: AudioContext, voice: Voice, waveform: OscillatorTyp
 // distinct from any song's own arpeggio voice so it reads as a highlight
 // rather than another arpeggio note. Runs as one continuous layer straight
 // into masterGain, independent of which song (or songs, mid-crossfade) are
-// currently playing underneath it.
+// currently playing underneath it. Never plays during a preview (masterGain
+// is null then) — a preview is meant to be just that one song.
 function playSparkleNote(c: AudioContext): void {
   if (!masterGain) return;
   const freq = SPARKLE_SCALE[Math.floor(Math.random() * SPARKLE_SCALE.length)];
@@ -251,15 +271,18 @@ function scheduleNextSparkle(c: AudioContext, mySession: number): void {
   sparkleTimers.push(id);
 }
 
-// Builds one song's own audio graph (arp + filter + slap-delay + bass) and
-// fades its dedicated gain node in over fadeInMs. Multiple voices exist
-// simultaneously only during a crossfade — see rotate() below.
-function startVoice(c: AudioContext, songIndex: number, fadeInMs: number): Voice {
-  const song = SONGS[songIndex];
+// Builds one song's own audio graph (arp + filter + slap-delay + bass) into
+// `destination` and fades its dedicated gain node in over fadeInMs.
+// `destination` is masterGain for the real in-game rotation, or a preview's
+// own standalone gain node — either way this function doesn't know or care
+// which. Multiple voices exist simultaneously only during a crossfade — see
+// rotate() below.
+function startVoice(c: AudioContext, songIndex: number, fadeInMs: number, destination: GainNode): Voice {
+  const song = AMBIENT_SONGS[songIndex];
 
   const gain = c.createGain();
   gain.gain.value = 0;
-  gain.connect(masterGain!);
+  gain.connect(destination);
 
   const mixBus = c.createGain();
   mixBus.gain.value = 1;
@@ -341,24 +364,26 @@ function stopVoice(c: AudioContext, voice: Voice, fadeOutMs: number): void {
 }
 
 function scheduleRotation(c: AudioContext): void {
-  const duration = MIN_SONG_MS + Math.random() * (MAX_SONG_MS - MIN_SONG_MS);
   rotationTimer = window.setTimeout(() => {
     if (!running) return;
     const current = voices[voices.length - 1];
-    const nextIndex = (current.songIndex + 1) % SONGS.length;
-    const incoming = startVoice(c, nextIndex, CROSSFADE_MS);
+    const nextIndex = (current.songIndex + 1) % AMBIENT_SONGS.length;
+    const incoming = startVoice(c, nextIndex, CROSSFADE_MS, masterGain!);
     voices.push(incoming);
     stopVoice(c, current, CROSSFADE_MS);
     voices = voices.filter((v) => v === incoming || !v.stopped);
     scheduleRotation(c);
-  }, duration);
+  }, SONG_DURATION_MS);
 }
 
-/** Starts the loop (fades in over ~2s) and begins the song rotation. A
- * no-op if already playing, or if the browser has no Web Audio support at
- * all. Safe to call from a page mount effect — if the AudioContext comes up
- * suspended (no user gesture yet), it quietly retries on the next
- * tap/keypress rather than erroring. */
+/** Starts the loop (fades in over ~2s) at whatever settingsStore's
+ * ambientTrack currently says — "rotate" begins the 3-minute rotation
+ * through every song; anything else pins playback to just that one song
+ * (still looping it) with no rotation timer at all. A no-op if already
+ * playing, or if the browser has no Web Audio support at all. Safe to call
+ * from a page mount effect — if the AudioContext comes up suspended (no
+ * user gesture yet), it quietly retries on the next tap/keypress rather
+ * than erroring. */
 export function startAmbience(): void {
   if (running) return;
   const c = ensureContext();
@@ -370,11 +395,14 @@ export function startAmbience(): void {
   masterGain.gain.value = 0;
   masterGain.connect(c.destination);
 
+  const track = loadLocalSettings().ambientTrack;
+  const startIndex = track === "rotate" ? 0 : Math.max(0, songIndexFor(track));
+
   // The very first voice's own gain fades in near-instantly — masterGain's
   // ramp just below is what actually provides the perceptible fade-in, so
   // stacking a second slow fade on top of it would just make the opening
   // feel muted for longer than intended.
-  voices.push(startVoice(c, 0, 50));
+  voices.push(startVoice(c, startIndex, 50, masterGain));
 
   const vol = clampVolume(loadLocalSettings().ambientVolume);
   const now = c.currentTime;
@@ -383,7 +411,7 @@ export function startAmbience(): void {
 
   sparkleSessionId += 1;
   scheduleNextSparkle(c, sparkleSessionId);
-  scheduleRotation(c);
+  if (track === "rotate") scheduleRotation(c);
 
   if (c.state === "suspended") {
     const retry = () => c.resume().catch(() => {});
@@ -441,4 +469,51 @@ export function stopAmbience(): void {
 export function setAmbienceVolume(volume: number): void {
   if (!masterGain || !ctx) return;
   masterGain.gain.setTargetAtTime(clampVolume(volume), ctx.currentTime, 0.3);
+}
+
+/** Plays just one song on its own, independent of the real startAmbience/
+ * stopAmbience lifecycle (and safe to call even while that's separately
+ * running elsewhere, however unlikely — this uses its own gain node, never
+ * masterGain) — the "listen" button next to each song on the Settings
+ * picker. Calling it again (with the same or a different song) tears down
+ * whatever preview was already playing first, so only one ever sounds at a
+ * time. */
+export function previewSong(id: Exclude<AmbientTrackChoice, "rotate">): void {
+  const c = ensureContext();
+  if (!c) return;
+  stopPreview();
+
+  previewMasterGain = c.createGain();
+  previewMasterGain.gain.value = 0;
+  previewMasterGain.connect(c.destination);
+  previewVoice = startVoice(c, songIndexFor(id), 300, previewMasterGain);
+
+  const vol = clampVolume(loadLocalSettings().ambientVolume || 0.4);
+  const now = c.currentTime;
+  previewMasterGain.gain.setValueAtTime(0, now);
+  previewMasterGain.gain.linearRampToValueAtTime(vol, now + 0.5);
+}
+
+/** Stops whatever previewSong() started. Safe to call even if nothing's
+ * previewing (e.g. an unconditional cleanup on the Settings page unmount). */
+export function stopPreview(): void {
+  if (!previewVoice || !ctx || !previewMasterGain) {
+    previewVoice = null;
+    previewMasterGain = null;
+    return;
+  }
+  const c = ctx;
+  stopVoice(c, previewVoice, 300);
+  const gain = previewMasterGain;
+  const now = c.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(gain.gain.value, now);
+  gain.gain.linearRampToValueAtTime(0, now + 0.3);
+  previewVoice = null;
+  previewMasterGain = null;
+}
+
+export function isPreviewing(id?: Exclude<AmbientTrackChoice, "rotate">): boolean {
+  if (!previewVoice) return false;
+  return id === undefined || previewVoice.songIndex === songIndexFor(id);
 }

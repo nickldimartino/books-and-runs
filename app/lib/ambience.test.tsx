@@ -73,6 +73,7 @@ let lastContext: FakeAudioContext | null = null;
 beforeEach(() => {
   vi.resetModules();
   lastContext = null;
+  window.localStorage.clear();
   (window as unknown as { AudioContext: unknown }).AudioContext = vi.fn(function AudioContextCtor() {
     lastContext = new FakeAudioContext();
     return lastContext;
@@ -81,6 +82,7 @@ beforeEach(() => {
 
 afterEach(() => {
   Reflect.deleteProperty(window as unknown as Record<string, unknown>, "AudioContext");
+  window.localStorage.clear();
 });
 
 describe("ambience", () => {
@@ -164,7 +166,7 @@ describe("ambience", () => {
     }
   });
 
-  it("rotates into a new song within 5 minutes, crossfading rather than cutting the old one off", async () => {
+  it("rotates into a new song every 3 minutes, crossfading rather than cutting the old one off", async () => {
     vi.useFakeTimers();
     try {
       const { startAmbience } = await import("./ambience");
@@ -173,9 +175,9 @@ describe("ambience", () => {
       expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
       expect(firstBass.stop).not.toHaveBeenCalled();
 
-      // Comfortably past the module's own 5-minute rotation ceiling, plus
+      // Comfortably past the module's own 3-minute rotation interval, plus
       // the crossfade length that follows it.
-      await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 5000);
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 5000);
 
       // A second voice — its own filter/delay graph — has started for the
       // incoming song, and the outgoing one's bass root has actually been
@@ -193,7 +195,7 @@ describe("ambience", () => {
       const { startAmbience } = await import("./ambience");
       startAmbience();
 
-      await vi.advanceTimersByTimeAsync(3 * (5 * 60 * 1000 + 5000));
+      await vi.advanceTimersByTimeAsync(3 * (3 * 60 * 1000 + 5000));
 
       // Every song's bass root sits at or below 220Hz (A3); every arpeggio
       // note and sparkle sits at C4 (261.63Hz) or higher — so filtering by
@@ -202,15 +204,83 @@ describe("ambience", () => {
         .map((r) => (r.value as FakeOscillator).frequency.value)
         .filter((f) => f > 0 && f <= 220);
 
-      // Song 1 ("Arpeggio")'s own first chord root (C3, 130.81Hz) is used
-      // by both the very first voice and the voice three rotations later
-      // (song 0 -> 1 -> 2 -> 0) — it should show up at least twice, not
-      // just once from the initial start.
+      // Song 1 ("Arpeggio")'s own first chord root (C3, 130.81Hz) is unique
+      // to it — neither "Bounce" nor "Skip" starts on C — so it reappearing
+      // is proof the rotation wrapped song 0 -> 1 -> 2 -> back to 0, not
+      // just proof of the very first voice at start.
       const song1RootCount = bassRoots.filter((f) => f === 130.81).length;
       expect(song1RootCount).toBeGreaterThanOrEqual(2);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("pins to just one song (no rotation) when Settings has chosen one instead of \"rotate\"", async () => {
+    vi.useFakeTimers();
+    try {
+      window.localStorage.setItem("booksAndRuns:settings", JSON.stringify({ ambientTrack: "bounce" }));
+      const { startAmbience } = await import("./ambience");
+      startAmbience();
+
+      // Past what would have been a full rotation interval, had one been
+      // scheduled.
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 5000);
+
+      // Still exactly one voice's worth of filter/delay graph — no second
+      // song ever started.
+      expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
+      const firstBass = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
+      expect(firstBass.stop).not.toHaveBeenCalled();
+      // "Bounce" was the one actually requested, not the rotation's default
+      // starting point (song 0, "Arpeggio").
+      expect(firstBass.frequency.value).toBe(174.61);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  describe("previewSong / stopPreview", () => {
+    it("plays a specific song independent of the real startAmbience/isAmbiencePlaying state", async () => {
+      const { previewSong, isAmbiencePlaying, isPreviewing } = await import("./ambience");
+      expect(isAmbiencePlaying()).toBe(false);
+
+      previewSong("skip");
+
+      expect(isPreviewing("skip")).toBe(true);
+      expect(isPreviewing("bounce")).toBe(false);
+      // A preview is deliberately not "ambience playing" — it's a Settings-
+      // page audition, not the real in-game loop.
+      expect(isAmbiencePlaying()).toBe(false);
+      // Its own gain node (destination) plus the voice's own graph — same
+      // shape as a real voice, just not routed through masterGain.
+      expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
+    });
+
+    it("switching to a different preview tears down the first one", async () => {
+      vi.useFakeTimers();
+      try {
+        const { previewSong, isPreviewing } = await import("./ambience");
+        previewSong("bounce");
+        const firstBass = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
+
+        previewSong("skip");
+        expect(isPreviewing("skip")).toBe(true);
+        expect(isPreviewing("bounce")).toBe(false);
+
+        // The outgoing preview's own short fade-out (300ms) plus its
+        // buffer before the oscillator is actually stopped.
+        await vi.advanceTimersByTimeAsync(500);
+        expect(firstBass.stop).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("stopPreview is a harmless no-op when nothing is previewing", async () => {
+      const { stopPreview, isPreviewing } = await import("./ambience");
+      expect(() => stopPreview()).not.toThrow();
+      expect(isPreviewing()).toBe(false);
+    });
   });
 
   it("occasionally drops in a brighter sine sparkle note above the triangle arpeggio", async () => {
