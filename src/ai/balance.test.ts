@@ -97,11 +97,29 @@ describe("AI balance — the difficulty ladder holds", () => {
     // playing better defense against pure-greedy easy/medium bots doesn't
     // directly measure, and single-seed swings of 10+ points here are
     // normal noise, not signal) — this still just guards against a
-    // regression, not that exact ordering. Reliably inverting it would
-    // likely need real search (simulating a few turns ahead over the AI's
-    // own hand and visible information, sampling plausible opponent hands
-    // rather than reading their actual ones) rather than more heuristic
-    // tuning — a materially bigger undertaking than anything here so far.
+    // regression, not that exact ordering.
+    //
+    // Expert now does that real search (determinize.ts: layOffRisk is a
+    // deterministic public-information check — is this card lay-off
+    // eligible for an opponent who's already melded — and
+    // estimateCompletionChance Monte Carlo samples a plausible hand,
+    // consistent with public deck composition, for the rarer case of
+    // someone who hasn't melded yet). Measured across several seeds again:
+    // no clear win on THIS metric either, statistically indistinguishable
+    // from flat given the noise floor above. Isolating each half (the
+    // draw/buy-side denial check vs. the discard-scoring side) separately
+    // didn't recover anything — both land in the same range as the
+    // combined feature, suggesting this isn't a bug in either half so much
+    // as a real, recurring tension: any turn spent drawing purely to deny
+    // an opponent is a turn not spent advancing your own hand, and this
+    // game's win condition rewards raw pace in a multi-way free-for-all
+    // more directly than it rewards defense — exactly the dynamic the
+    // note above already flagged, now reappearing through a different
+    // mechanism. Kept anyway: it's a real, fair (no hidden information),
+    // thoroughly tested capability upgrade — Expert simulating outcomes
+    // rather than only reading history — and denying the one clear leader
+    // matters more directly at a real (non-5-way-free-for-all) table than
+    // this specific metric can show.
     for (let i = 1; i < 5; i++) {
       expect(rate(i)).toBeGreaterThan(0.04); // a tier hasn't become unplayable
       expect(rate(i)).toBeLessThan(0.7); // a tier isn't running away with it

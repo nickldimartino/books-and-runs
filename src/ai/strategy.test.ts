@@ -514,6 +514,44 @@ describe("expertStrategy.wantsDiscardPileDraw — holds wilds back like hard, wi
     // from going out, is worth denying.
     expect(expertStrategy.wantsDiscardPileDraw(closeState, player, NEVER_MISTAKE)).toBe(true);
   });
+
+  it("takes a card purely on real simulated lay-off risk — zero pickup history, zero demand evidence", () => {
+    // A natural card with no rank/suit relation to self's own hand, and no
+    // pickupHistory at all — every heuristic path (rankMatch, runAdjacent,
+    // opponentDemand) reads as completely safe. Only the real check
+    // (layOffRisk, via closeOpponentCompletionRisk) has any way to know an
+    // already-melded opponent one card from winning could lay this exact
+    // card off and end the round.
+    const meld: Meld = {
+      id: "book1",
+      type: "book",
+      ownerId: "opponent",
+      cards: makeHand([["6", "hearts"], ["6", "clubs"], ["6", "spades"]]),
+    };
+    const player = makePlayer({ id: "self", hand: [...makeHand([["3", "hearts"], ["5", "clubs"], ["9", "spades"]])] });
+    const meldedOneLeft = makePlayer({ id: "opponent", hand: makeHand(["9"]), hasMeldedContract: true });
+    const top = makeCard("6", "diamonds"); // lays off onto book1 outright
+
+    const riskyState = makeGameState({
+      round: 1,
+      players: [player, meldedOneLeft],
+      melds: [meld],
+      discardPile: [top],
+    });
+    expect(expertStrategy.wantsDiscardPileDraw(riskyState, player, NEVER_MISTAKE)).toBe(true);
+
+    // Control: the same opponent, same card, but NOT yet melded — no real
+    // risk (see determinize.ts's own doc for why an unmelded small hand
+    // isn't a realistic "about to win" state in this game), and no
+    // heuristic evidence either. Should decline.
+    const safeState = makeGameState({
+      round: 1,
+      players: [player, makePlayer({ id: "opponent", hand: makeHand(["9"]), hasMeldedContract: false })],
+      melds: [meld],
+      discardPile: [top],
+    });
+    expect(expertStrategy.wantsDiscardPileDraw(safeState, player, NEVER_MISTAKE)).toBe(false);
+  });
 });
 
 describe("expertStrategy.chooseDiscard — treats a wild as extra costly in the all-live fallback", () => {
