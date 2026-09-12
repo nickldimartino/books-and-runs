@@ -156,6 +156,12 @@ export default function AccountPage() {
         >
           Sign in
         </Link>
+        <Link
+          href="/"
+          className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          Back to Home
+        </Link>
       </main>
     );
   }

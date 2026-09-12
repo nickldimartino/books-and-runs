@@ -124,6 +124,12 @@ export default function NewMultiplayerGamePage() {
         <Link href="/sign-in" className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
           Sign in
         </Link>
+        <Link
+          href="/new-game"
+          className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          ← New Game
+        </Link>
       </main>
     );
   }

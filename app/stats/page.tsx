@@ -504,15 +504,23 @@ function Gate({ title, children, cta }: { title: string; children?: React.ReactN
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="text-2xl font-bold text-[var(--heading)]">{title}</h1>
       {children && <p className="text-sm text-[var(--muted)]">{children}</p>}
+      {cta && (
+        <Link
+          href="/sign-in"
+          className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+        >
+          Sign in
+        </Link>
+      )}
       <Link
-        href={cta ? "/sign-in" : "/"}
+        href="/"
         className={
           cta
-            ? "mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            ? "rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
             : "mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         }
       >
-        {cta ? "Sign in" : "Back to Home"}
+        Back to Home
       </Link>
     </main>
   );

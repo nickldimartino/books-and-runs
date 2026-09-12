@@ -183,6 +183,7 @@ export default function MultiplayerPlayPage() {
         <Link href="/sign-in" className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow">
           Sign in
         </Link>
+        <BackLink />
       </Center>
     );
   }
