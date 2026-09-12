@@ -142,10 +142,13 @@ const SPARKLE_MAX_DELAY_MS = 9000;
 // mode.
 const SONG_DURATION_MS = 3 * 60 * 1000;
 // How long the outgoing/incoming songs overlap during a rotation — long
-// enough to read as a deliberate blend, not a cut. Also reused as the
-// "leaving a game screen" fade-out length (see stopAmbience) — the same
-// duration was reported as reading like an abrupt cut at its old 1s length.
+// enough to read as a deliberate blend, not a cut.
 const CROSSFADE_MS = 4000;
+// How long stopAmbience's own fade takes when leaving a game screen
+// entirely (Home, How to play, etc.) — shorter than CROSSFADE_MS so it
+// doesn't linger; still long enough to read as dying away rather than
+// cutting off, which is what its old 1s length was reported as doing.
+const STOP_FADE_MS = 3000;
 
 interface Voice {
   songIndex: number;
@@ -420,7 +423,7 @@ export function startAmbience(): void {
   }
 }
 
-/** Fades out over CROSSFADE_MS (~4s — long enough to read as the music
+/** Fades out over STOP_FADE_MS (~3s — long enough to read as the music
  * actually dying away, not cutting off, when leaving a game screen) and
  * tears down the graph. Safe to call even if nothing's playing. */
 export function stopAmbience(): void {
@@ -447,7 +450,7 @@ export function stopAmbience(): void {
   const now = c.currentTime;
   gain.gain.cancelScheduledValues(now);
   gain.gain.setValueAtTime(gain.gain.value, now);
-  gain.gain.linearRampToValueAtTime(0, now + CROSSFADE_MS / 1000);
+  gain.gain.linearRampToValueAtTime(0, now + STOP_FADE_MS / 1000);
 
   const bassOscs = voices.map((v) => v.bassOsc);
   setTimeout(() => {
@@ -458,7 +461,7 @@ export function stopAmbience(): void {
         /* already stopped */
       }
     });
-  }, CROSSFADE_MS + 100);
+  }, STOP_FADE_MS + 100);
 
   voices = [];
   running = false;
