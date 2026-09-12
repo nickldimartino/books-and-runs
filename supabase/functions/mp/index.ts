@@ -463,11 +463,43 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
     });
   }
 
-  const { data: stateRow } = await admin
-    .from("mp_game_state")
-    .select("engine")
-    .eq("game_id", gameId)
-    .maybeSingle();
+  let stateRow = (
+    await admin.from("mp_game_state").select("engine").eq("game_id", gameId).maybeSingle()
+  ).data;
+
+  if (!stateRow && game.status === "active") {
+    // handleRespond's pending -> active flip and the deal that should
+    // immediately follow it are two separate, non-atomic steps — a crash
+    // or transient error in between (dealGame throwing, the insert
+    // failing) leaves status already "active" with no state row ever
+    // written, and nothing was going to retry it: the flip's own
+    // `.eq("status", "pending")` guard means a later handleRespond call
+    // can never re-run this. Safe to repair here: dealGame is a pure
+    // function of the game's own already-fixed seats/contracts, and the
+    // insert's primary-key conflict (23505) means a concurrent poll from
+    // another participant already repaired it first — not a real error.
+    try {
+      const config = configOf(game);
+      const engine = dealGame(config);
+      const { error: insertError } = await admin
+        .from("mp_game_state")
+        .insert({ game_id: gameId, engine, version: 0 });
+      if (!insertError) {
+        await syncPublicColumns(gameId, engine, config);
+        await notifyTurn(gameId, null, engine, config);
+      } else if (insertError.code !== "23505") {
+        console.error("Failed to repair a stuck active game:", gameId, insertError);
+        return json({ status: "dealing" });
+      }
+    } catch (err) {
+      console.error("Failed to repair a stuck active game:", gameId, err);
+      return json({ status: "dealing" });
+    }
+    stateRow = (
+      await admin.from("mp_game_state").select("engine").eq("game_id", gameId).maybeSingle()
+    ).data;
+  }
+
   if (!stateRow) return json({ status: "dealing" });
 
   const engine = stateRow.engine as MpEngine;
