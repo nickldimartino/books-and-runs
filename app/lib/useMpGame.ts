@@ -19,7 +19,7 @@ import { ACHIEVEMENT_TIER_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import type { AchievementUnlockItem } from "../components/AchievementUnlock";
 import { hapticLight, hapticMedium, hapticSuccess } from "../lib/haptics";
-import { playCardTap, playGameWin, playMeld, playReaction, playRoundWin } from "../lib/sound";
+import { playCardTap, playGameWin, playMeld, playRoundWin } from "../lib/sound";
 import {
   cancelMpGame,
   getMpState,
@@ -102,10 +102,6 @@ export interface UseMpGame {
   /** Start a fresh game with the same players + rounds. Resolves to the new
    * game id, or null on failure. */
   rematch: () => Promise<string | null>;
-  /** Broadcast an emoji to the other players in this game. */
-  sendReaction: (emoji: string) => void;
-  /** Reactions received in the last few seconds — each auto-expires. */
-  reactions: { id: number; emoji: string; seat: number }[];
 }
 
 /**
@@ -125,9 +121,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const [groupError, setGroupError] = useState<string | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
   const [nudgeState, setNudgeState] = useState<"idle" | "sent" | "error">("idle");
-  const [reactions, setReactions] = useState<{ id: number; emoji: string; seat: number }[]>([]);
-  const channelRef = useRef<ReturnType<NonNullable<typeof supabase>["channel"]> | null>(null);
-  const reactionIdRef = useRef(0);
   const loadedFor = useRef<string | null>(null);
 
   // Validate the server view before any component reads it (defense in
@@ -238,26 +231,14 @@ export function useMpGame(gameId: string | null): UseMpGame {
   useEffect(() => {
     if (!supabase || !gameId) return;
     const channel = supabase
-      .channel(`mp-game-${gameId}`, { config: { broadcast: { self: false } } })
+      .channel(`mp-game-${gameId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "mp_games", filter: `id=eq.${gameId}` },
         () => refresh()
       )
-      .on("broadcast", { event: "reaction" }, ({ payload }) => {
-        const id = ++reactionIdRef.current;
-        const emoji = String(payload?.emoji ?? "").slice(0, 8);
-        const seat = Number(payload?.seat ?? -1);
-        if (!emoji) return;
-        setReactions((r) => [...r, { id, emoji, seat }]);
-        setTimeout(() => setReactions((r) => r.filter((x) => x.id !== id)), 3200);
-        playReaction();
-        hapticLight();
-      })
       .subscribe();
-    channelRef.current = channel;
     return () => {
-      channelRef.current = null;
       supabase?.removeChannel(channel);
     };
   }, [gameId, refresh]);
@@ -520,20 +501,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
     }
   }, [gameId, view, user]);
 
-  const sendReaction = useCallback(
-    (emoji: string) => {
-      const seat = view?.yourSeat ?? -1;
-      channelRef.current?.send({ type: "broadcast", event: "reaction", payload: { emoji, seat } });
-      // Echo locally (self:false skips our own broadcast).
-      const id = ++reactionIdRef.current;
-      setReactions((r) => [...r, { id, emoji, seat }]);
-      setTimeout(() => setReactions((r) => r.filter((x) => x.id !== id)), 3200);
-      playReaction();
-      hapticLight();
-    },
-    [view?.yourSeat]
-  );
-
   const daysSinceMove =
     state?.updated_at != null
       ? (() => {
@@ -572,7 +539,5 @@ export function useMpGame(gameId: string | null): UseMpGame {
     nudge,
     nudgeState,
     rematch,
-    sendReaction,
-    reactions,
   };
 }

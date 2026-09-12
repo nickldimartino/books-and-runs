@@ -1933,17 +1933,3 @@ html[data-intro]::before {
     display: none;
   }
 }
-
-/* Multiplayer reaction bubble — rises and fades (components/../multiplayer/play). */
-@keyframes reaction-pop {
-  0% { opacity: 0; transform: translateY(10px) scale(0.6); }
-  15% { opacity: 1; transform: translateY(0) scale(1.1); }
-  30% { transform: translateY(-6px) scale(1); }
-  100% { opacity: 0; transform: translateY(-90px) scale(0.9); }
-}
-.reaction-pop {
-  animation: reaction-pop 3s ease-out forwards;
-}
-@media (prefers-reduced-motion: reduce) {
-  .reaction-pop { animation: reaction-pop 3s linear forwards; }
-}

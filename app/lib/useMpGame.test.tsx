@@ -17,12 +17,11 @@ const playCardTap = vi.fn();
 const playMeld = vi.fn();
 const playRoundWin = vi.fn();
 const playGameWin = vi.fn();
-const playReaction = vi.fn();
 const hapticLight = vi.fn();
 const hapticMedium = vi.fn();
 const hapticSuccess = vi.fn();
 
-vi.mock("./sound", () => ({ playCardTap, playMeld, playRoundWin, playGameWin, playReaction }));
+vi.mock("./sound", () => ({ playCardTap, playMeld, playRoundWin, playGameWin }));
 vi.mock("./haptics", () => ({ hapticLight, hapticMedium, hapticSuccess }));
 vi.mock("./loadAchievementProgress", () => ({
   loadAchievementProgressState: vi.fn().mockResolvedValue(EMPTY_PROGRESS_STATE),
@@ -322,7 +321,7 @@ describe("useMpGame — round and game over", () => {
   });
 });
 
-describe("useMpGame — nudge, cancel, reactions", () => {
+describe("useMpGame — nudge, cancel", () => {
   it("nudge() posts to the nudge RPC via supabase and gives feedback on success", async () => {
     installFetch({ state: () => ({ body: { status: "active", view: BASE_VIEW } }) });
     const rpc = vi.fn(async () => ({ error: null }));
@@ -357,17 +356,5 @@ describe("useMpGame — nudge, cancel, reactions", () => {
 
     expect(calls.some((c) => c.path === "cancel" && c.body.game_id === "game-1")).toBe(true);
     await waitFor(() => expect(result.current.status).toBe("cancelled"));
-  });
-
-  it("sendReaction broadcasts, echoes locally, and plays the reaction sound", async () => {
-    installFetch({ state: () => ({ body: { status: "active", view: BASE_VIEW } }) });
-    const { result } = renderHook(() => useMpGame("game-1"));
-    await waitFor(() => expect(result.current.status).toBe("active"));
-
-    act(() => result.current.sendReaction("🔥"));
-
-    expect(result.current.reactions).toHaveLength(1);
-    expect(result.current.reactions[0]).toMatchObject({ emoji: "🔥", seat: 0 });
-    expect(playReaction).toHaveBeenCalled();
   });
 });

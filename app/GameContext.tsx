@@ -33,6 +33,7 @@ import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
 import { createDailyDealGame } from "./lib/dailyDealStore";
 import { track } from "./lib/analytics";
+import { applyHandOrder, compareByMode, SortMode } from "./lib/handSort";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import {
   clearDailyDealSave,
@@ -207,32 +208,10 @@ interface UndoSnapshot {
   sessionCounters: Record<string, number>;
 }
 
-// Ace sorts high (after King), never low — wilds (2s and jokers) are always
-// bucketed to the end separately below, so their position here is moot; this
-// only governs where a natural Ace lands, and low would put it awkwardly
-// next to the wild bucket (since natural "2"s don't exist to sit between).
-const RANK_ORDER = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2", "JOKER"];
-// Alternates red/black so adjacent suits never share a color — easier to
-// scan than grouping both reds together, then both blacks.
-const SUIT_ORDER = ["hearts", "spades", "diamonds", "clubs", "joker"];
-
-export type SortMode = "suit" | "rank";
-
-/** Groups same-suit cards together, in sequence — good for spotting runs. */
-function compareBySuit(a: Card, b: Card): number {
-  if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
-  const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
-  if (suitDiff !== 0) return suitDiff;
-  return RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
-}
-
-/** Groups same-rank cards together — good for spotting books. */
-function compareByRank(a: Card, b: Card): number {
-  if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
-  const rankDiff = RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
-  if (rankDiff !== 0) return rankDiff;
-  return SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
-}
+// Re-exported so any existing `import { SortMode } from "./GameContext"`
+// keeps working — the type itself now lives in handSort.ts, shared with
+// useMpGame's own (purely local, non-persisted) hand sort.
+export type { SortMode };
 
 /**
  * If the current player has melded their contract and melding/laying off
@@ -795,7 +774,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!s) return;
       clearUndoState();
       const player = s.players[s.currentPlayerIndex];
-      player.hand = [...player.hand].sort(mode === "rank" ? compareByRank : compareBySuit);
+      player.hand = [...player.hand].sort(compareByMode(mode));
       playCardSlide();
       hapticLight();
       commit();
@@ -815,12 +794,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!s) return;
       clearUndoState();
       const player = s.players[s.currentPlayerIndex];
-      const orderIndex = new Map(cardIdsInOrder.map((id, i) => [id, i]));
-      const reordered = player.hand
-        .filter((c) => orderIndex.has(c.id))
-        .sort((a, b) => orderIndex.get(a.id)! - orderIndex.get(b.id)!);
-      let i = 0;
-      player.hand = player.hand.map((c) => (orderIndex.has(c.id) ? reordered[i++] : c));
+      player.hand = applyHandOrder(player.hand, cardIdsInOrder);
       playCardSlide();
       hapticLight();
       commit();
