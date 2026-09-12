@@ -1,15 +1,17 @@
 // Hard: scores every candidate discard by dangerScore — accumulated
-// evidence across the whole round of what each opponent wants (their pickup
-// history and which ranks/suits they've stopped discarding) — and keeps its
-// wilds well back (WILD_DISCARD_RISK). Only ~5% mistake rate, so its
-// heuristic is on show almost every turn.
+// evidence across the whole round of what each opponent wants, weighted up
+// sharply for an opponent who's themself closing in on going out — and
+// keeps its wilds well back (WILD_DISCARD_RISK) unless it's the one closing
+// in, at which point it stops hoarding and lays them off like anything else
+// (cautiousWildLayOffPlan). Only ~5% mistake rate, so its heuristic is on
+// show almost every turn.
 
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,
+  cautiousWildLayOffPlan,
   dangerScore,
   deadCards,
-  greedyLayOffPlan,
   highestPenaltyCard,
   maybeMistakeBool,
   maybeMistakeDiscard,
@@ -50,12 +52,5 @@ export const hardStrategy: AIStrategy = {
     const safest = ranked.filter((c) => riskScore(state, player, c) === riskScore(state, player, ranked[0]));
     return highestPenaltyCard(safest);
   },
-  planLayOffs(state: GameState, player: Player) {
-    // hold wild cards back rather than laying them off early, unless hand is otherwise empty of options
-    const plan = greedyLayOffPlan(state, player);
-    return plan.filter((move) => {
-      const card = player.hand.find((c) => c.id === move.cardId);
-      return !card?.isWild;
-    });
-  },
+  planLayOffs: cautiousWildLayOffPlan,
 };

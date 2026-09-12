@@ -5,7 +5,12 @@
 //   - deadCards / highestPenaltyCard / minRunDistance — reading a hand.
 //   - dangerScore / WILD_DISCARD_RISK — reading what opponents want, from
 //     discard and pickup history.
-//   - greedyLayOffPlan / selfWildLayOffPlan — choosing lay-offs.
+//   - isCloseToOut / leaderPressure — reading how close a player (opponent
+//     or self) is to going out, so a tier can weight danger toward whoever
+//     that's most urgent for, and stop playing defense on itself once
+//     there's no more "future" worth hoarding for.
+//   - greedyLayOffPlan / selfWildLayOffPlan / cautiousWildLayOffPlan —
+//     choosing lay-offs.
 // The per-tier files decide which of these to use and how cautiously; this
 // file holds no strategy of its own.
 
@@ -99,12 +104,36 @@ export function greedyLayOffPlan(state: GameState, player: Player): LayOffMove[]
  * themself owns — naturals are still offered to anyone's meld. Represents a
  * player who's generous with cards that only ever help their own hand size,
  * but a little protective of a flexible wild's value, without going as far
- * as holding every wild back (see the hard/expert strategies for that).
+ * as holding every wild back (see cautiousWildLayOffPlan below).
  */
 export function selfWildLayOffPlan(state: GameState, player: Player): LayOffMove[] {
   return layOffPlan(state, player, (card) =>
     card.isWild ? state.melds.filter((m) => m.ownerId === player.id) : state.melds
   );
+}
+
+/**
+ * Lays off every eligible natural, but a wild only when doing so completes a
+ * lay-off outright — no natural card remains in hand that could do the same
+ * job instead — UNLESS the player is themself closing in on going out
+ * (isCloseToOut), in which case every wild goes too, no restriction. Hard
+ * and expert both use this: hoarding a wild for hypothetical future
+ * flexibility only makes sense when there's a future turn actually worth
+ * planning for. A hand's own AI-balance test caught this the hard way —
+ * holding every wild back unconditionally (the tiers' original behavior)
+ * measurably slowed both tiers down in a race-to-empty-your-hand game,
+ * enough that easy/medium were out-winning them on pace despite playing
+ * worse defense.
+ */
+export function cautiousWildLayOffPlan(state: GameState, player: Player): LayOffMove[] {
+  const plan = greedyLayOffPlan(state, player);
+  if (isCloseToOut(player)) return plan;
+  return plan.filter((move) => {
+    const card = player.hand.find((c) => c.id === move.cardId);
+    if (!card?.isWild) return true;
+    const hasNaturalAlternative = player.hand.some((c) => !c.isWild && c.id !== card.id);
+    return !hasNaturalAlternative;
+  });
 }
 
 /**
@@ -160,18 +189,52 @@ export function highestPenaltyCard(cards: Card[]): Card {
   return [...cards].sort((a, b) => cardPenalty(b) - cardPenalty(a))[0];
 }
 
+/** Hand size at/below which a player reads as "closing in on going out" —
+ * the single biggest tell a real player watches the table for, and (via
+ * leaderPressure below) the thing every tier from medium up increasingly
+ * avoids feeding. Guarded against hand.length === 0 on its own: a player
+ * genuinely down to zero cards mid-decision either just ended the round (not
+ * a state anyone's still choosing a discard against) or, in a hand-built
+ * test fixture, simply never had a hand set at all — neither should read as
+ * "about to win." */
+export const CLOSE_TO_OUT_HAND_SIZE = 3;
+
+export function isCloseToOut(p: Player): boolean {
+  return p.hasMeldedContract || (p.hand.length > 0 && p.hand.length <= CLOSE_TO_OUT_HAND_SIZE);
+}
+
+/**
+ * How urgently a specific player should be read as "don't feed them" (an
+ * opponent) or "stop playing defense, just finish" (yourself) — 0 for
+ * anyone not yet close, scaling up sharply as their hand shrinks from
+ * CLOSE_TO_OUT_HAND_SIZE toward empty, with a further jump once they've
+ * already melded their contract (all that's left for them is emptying
+ * whatever remains via lay-offs/discards).
+ */
+export function leaderPressure(p: Player): number {
+  if (!isCloseToOut(p)) return 0;
+  const handUrgency = Math.max(0, CLOSE_TO_OUT_HAND_SIZE + 1 - p.hand.length);
+  return handUrgency + (p.hasMeldedContract ? 3 : 0);
+}
+
 /** Rough danger score for a rank/suit: how often opponents have picked up
- * near it. Shared by the hard and expert tiers — deadCards() already keeps
- * a wild out of the *normal* discard pool, so this only ever runs against a
- * wild in the rare fallback where literally everything else in hand is
- * still needed; it doesn't on its own account for a wild being valuable to
- * any opponent regardless of history — see WILD_DISCARD_RISK for that. */
+ * near it, weighted up sharply for whichever specific opponent contributed
+ * that evidence is themself closing in on going out (leaderPressure) — the
+ * same card reads as far riskier to hand to someone one card from winning
+ * than to someone just starting. Used by the hard tier; deadCards() already
+ * keeps a wild out of the *normal* discard pool, so this only ever runs
+ * against a wild in the rare fallback where literally everything else in
+ * hand is still needed; it doesn't on its own account for a wild being
+ * valuable to any opponent regardless of history — see WILD_DISCARD_RISK for
+ * that. */
 export function dangerScore(state: GameState, player: Player, card: Card): number {
   let score = 0;
   for (const pickup of state.pickupHistory) {
     if (pickup.playerId === player.id) continue;
-    if (pickup.card.rank === card.rank) score += 2;
-    if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) score += 1;
+    const opponent = state.players.find((p) => p.id === pickup.playerId);
+    const weight = 1 + (opponent ? leaderPressure(opponent) : 0);
+    if (pickup.card.rank === card.rank) score += 2 * weight;
+    if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) score += 1 * weight;
   }
   return score;
 }

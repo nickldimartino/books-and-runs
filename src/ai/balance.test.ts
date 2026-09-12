@@ -83,10 +83,17 @@ describe("AI balance — the difficulty ladder holds", () => {
     // Beginner is pure noise — it never lays off and discards wilds, so it
     // almost never empties its hand; it should be at the bottom.
     for (let i = 1; i < 5; i++) expect(rate(i)).toBeGreaterThanOrEqual(rate(0));
-    // Note (2026-09): easy/medium currently out-win hard/expert — the
-    // stronger tiers play better *defense* but go out slower, which loses a
-    // race-to-empty-your-hand game. This guards against a worse regression,
-    // not that exact ordering; see the AI-balance follow-up.
+    // Note (2026-09, updated): easy/medium still out-win hard/expert in raw
+    // AI-vs-AI win rate, but the gap narrowed substantially (expert roughly
+    // doubled, hard improved too) once hard/expert stopped hoarding every
+    // wild unconditionally and started weighting discard/demand scoring by
+    // how close each opponent is to going out (leaderPressure in
+    // strategy.ts) — the actual behavioral gap this test was flagging.
+    // Fully inverting AI-vs-AI win rate isn't the target on its own (hard's
+    // and expert's real job is being a tougher *human* opponent, which
+    // playing better defense against pure-greedy easy/medium bots doesn't
+    // directly measure) — this still just guards against a regression, not
+    // that exact ordering.
     for (let i = 1; i < 5; i++) {
       expect(rate(i)).toBeGreaterThan(0.04); // a tier hasn't become unplayable
       expect(rate(i)).toBeLessThan(0.7); // a tier isn't running away with it

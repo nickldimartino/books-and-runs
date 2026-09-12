@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { deadCards, maybeMistakeBool, maybeMistakeDiscard, minRunDistance, selfWildLayOffPlan } from "./strategy";
+import {
+  cautiousWildLayOffPlan,
+  dangerScore,
+  deadCards,
+  isCloseToOut,
+  leaderPressure,
+  maybeMistakeBool,
+  maybeMistakeDiscard,
+  minRunDistance,
+  selfWildLayOffPlan,
+} from "./strategy";
 import { easyStrategy } from "./easy";
 import { beginnerStrategy } from "./beginner";
 import { mediumStrategy } from "./medium";
@@ -188,6 +198,105 @@ describe("selfWildLayOffPlan (medium)", () => {
   });
 });
 
+describe("isCloseToOut / leaderPressure", () => {
+  it("reads a small non-empty hand as close, but not an empty one on its own", () => {
+    expect(isCloseToOut(makePlayer({ hand: makeHand(["9", "9"]) }))).toBe(true); // 2 cards
+    expect(isCloseToOut(makePlayer({ hand: makeHand(["9", "9", "9", "9"]) }))).toBe(false); // 4 cards
+    // An empty hand with no meld isn't a real "about to win" state (mid-round
+    // that would already be over) — it's what a test fixture gets by default
+    // when it never bothers to set one, and shouldn't silently read as urgent.
+    expect(isCloseToOut(makePlayer({ hand: [] }))).toBe(false);
+  });
+
+  it("already-melded reads as close regardless of remaining hand size", () => {
+    expect(isCloseToOut(makePlayer({ hand: makeHand(["9", "9", "9", "9", "9"]), hasMeldedContract: true }))).toBe(
+      true
+    );
+  });
+
+  it("scales up as a close hand shrinks, and jumps further once melded", () => {
+    const threeLeft = leaderPressure(makePlayer({ hand: makeHand(["9", "9", "9"]) }));
+    const oneLeft = leaderPressure(makePlayer({ hand: makeHand(["9"]) }));
+    const meldedOneLeft = leaderPressure(makePlayer({ hand: makeHand(["9"]), hasMeldedContract: true }));
+    expect(oneLeft).toBeGreaterThan(threeLeft);
+    expect(meldedOneLeft).toBeGreaterThan(oneLeft);
+  });
+
+  it("is 0 for anyone not close", () => {
+    expect(leaderPressure(makePlayer({ hand: makeHand(["9", "9", "9", "9", "9"]) }))).toBe(0);
+  });
+});
+
+describe("dangerScore — weights toward whoever's closing in on going out", () => {
+  it("scores the same pickup higher coming from a close opponent than a far one", () => {
+    const card = makeCard("7", "hearts");
+    const self = makePlayer({ id: "self", hand: makeHand(["9", "9"]) });
+    const farOpponent = makePlayer({ id: "far", hand: makeHand(["9", "9", "9", "9", "9", "9"]) });
+    const closeOpponent = makePlayer({ id: "close", hand: makeHand(["9"]) }); // 1 card left
+
+    const farScore = dangerScore(
+      makeGameState({ players: [self, farOpponent], pickupHistory: [{ playerId: "far", card: makeCard("7", "clubs") }] }),
+      self,
+      card
+    );
+    const closeScore = dangerScore(
+      makeGameState({
+        players: [self, closeOpponent],
+        pickupHistory: [{ playerId: "close", card: makeCard("7", "clubs") }],
+      }),
+      self,
+      card
+    );
+
+    expect(closeScore).toBeGreaterThan(farScore);
+  });
+});
+
+describe("cautiousWildLayOffPlan (hard/expert)", () => {
+  it("holds a wild back when a natural could do the same job and nobody's close to out", () => {
+    const ownMeld: Meld = {
+      id: "own-book",
+      type: "book",
+      ownerId: "self",
+      cards: makeHand([["6", "hearts"], ["6", "clubs"], ["6", "spades"]]),
+    };
+    const naturalSix = makeCard("6", "diamonds", { id: "natural-6" });
+    const wildJoker = makeCard("JOKER", "joker", { id: "wild-joker" });
+    // A big hand and not yet melded — well clear of isCloseToOut — so the
+    // "still holding back" branch is what's under test, not the
+    // close-to-out escalation (which triggers on either signal on its own).
+    const player = makePlayer({
+      id: "self",
+      hand: [naturalSix, wildJoker, ...makeHand(["2", "3", "4", "5", "8"])],
+    });
+    const state = makeGameState({ round: 1, players: [player], melds: [ownMeld] });
+
+    const moves = cautiousWildLayOffPlan(state, player);
+
+    expect(moves.some((m) => m.cardId === "wild-joker")).toBe(false);
+    expect(moves.some((m) => m.cardId === "natural-6")).toBe(true);
+  });
+
+  it("lays the wild off too once the player is themself closing in on going out", () => {
+    const ownMeld: Meld = {
+      id: "own-book",
+      type: "book",
+      ownerId: "self",
+      cards: makeHand([["6", "hearts"], ["6", "clubs"], ["6", "spades"]]),
+    };
+    const naturalSix = makeCard("6", "diamonds", { id: "natural-6" });
+    const wildJoker = makeCard("JOKER", "joker", { id: "wild-joker" });
+    // Only these two cards left — reads as close to going out even though a
+    // natural alternative for the book still technically exists in hand.
+    const player = makePlayer({ id: "self", hand: [naturalSix, wildJoker], hasMeldedContract: true });
+    const state = makeGameState({ round: 1, players: [player], melds: [ownMeld] });
+
+    const moves = cautiousWildLayOffPlan(state, player);
+
+    expect(moves.some((m) => m.cardId === "wild-joker")).toBe(true);
+  });
+});
+
 describe("hardStrategy — ace-high run adjacency", () => {
   it("recognizes an Ace as run-adjacent to a King when deciding to take the discard", () => {
     const aceOfSpades = makeCard("A", "spades");
@@ -255,6 +364,29 @@ describe("mediumStrategy.chooseDiscard — light opponent awareness", () => {
 
     expect(discard.id).toBe("three");
   });
+
+  it("avoids a rank a close-to-out opponent picked up a while ago, not just their latest pickup", () => {
+    const kingCard = makeCard("K", "hearts", { id: "king" });
+    const threeCard = makeCard("3", "diamonds", { id: "three" });
+    const player = makePlayer({ id: "self", hand: [kingCard, threeCard] });
+    const closeOpponent = makePlayer({ id: "opponent", hand: makeHand(["9"]) }); // 1 card left — visibly close
+    const state = makeGameState({
+      round: 1,
+      currentPlayerIndex: 0,
+      players: [player, closeOpponent],
+      // Not their most recent pickup (that's the clubs 9 below) — only
+      // medium's ordinary opponentJustPickedUpThisRank wouldn't catch this
+      // on its own; the close-opponent whole-history check is what should.
+      pickupHistory: [
+        { playerId: "opponent", card: makeCard("3", "clubs") },
+        { playerId: "opponent", card: makeCard("9", "clubs") },
+      ],
+    });
+
+    const discard = mediumStrategy.chooseDiscard(state, player, NEVER_MISTAKE);
+
+    expect(discard.id).toBe("king");
+  });
 });
 
 describe("hardStrategy.chooseDiscard — treats a wild as extra risky in the all-live fallback", () => {
@@ -300,6 +432,30 @@ describe("expertStrategy.wantsDiscardPileDraw — holds wilds back like hard, wi
       ],
     });
     expect(expertStrategy.wantsDiscardPileDraw(state, player, NEVER_MISTAKE)).toBe(true);
+  });
+
+  it("denies a wild over a single pickup that wouldn't otherwise clear the bar, once that opponent is close to out", () => {
+    const wildOnTop = makeCard("2", "diamonds");
+    const player = makePlayer({ id: "self", hand: makeHand(["9", "K", "3"]) });
+    const farState = makeGameState({
+      round: 1,
+      players: [player, makePlayer({ id: "opponent", hand: makeHand(["9", "9", "9", "9", "9", "9"]) })],
+      discardPile: [wildOnTop],
+      pickupHistory: [{ playerId: "opponent", card: makeCard("2", "diamonds") }],
+    });
+    // A single matching pickup, on its own, doesn't clear the deny bar for a
+    // wild — same as the "declines a wild with low opponent demand" case.
+    expect(expertStrategy.wantsDiscardPileDraw(farState, player, NEVER_MISTAKE)).toBe(false);
+
+    const closeState = makeGameState({
+      round: 1,
+      players: [player, makePlayer({ id: "opponent", hand: makeHand(["9"]) })], // 1 card left now
+      discardPile: [wildOnTop],
+      pickupHistory: [{ playerId: "opponent", card: makeCard("2", "diamonds") }],
+    });
+    // The exact same single pickup, from an opponent now visibly one card
+    // from going out, is worth denying.
+    expect(expertStrategy.wantsDiscardPileDraw(closeState, player, NEVER_MISTAKE)).toBe(true);
   });
 });
 

@@ -1,17 +1,21 @@
 // Expert: weighs each discard as (opponent demand) vs (residual usefulness
 // to its own hand) and takes the cheapest, will grab a card purely to deny
-// it when multiple opponents clearly want it (DENY_OPPONENT_THRESHOLD), and
-// only spends a wild on a lay-off when no natural could do the job instead.
-// ~2% mistake rate. opponentDemand is the sharpest read of the table any
-// tier does. (An earlier version wrapped the deterministic scoring in a
-// pointless 5-iteration "Monte Carlo" average — since removed.)
+// it when multiple opponents clearly want it (DENY_OPPONENT_THRESHOLD) or
+// one opponent both wants it and is closing in on going out, and only
+// spends a wild on a lay-off when no natural could do the job instead —
+// unless it's the one closing in, at which point it stops hoarding
+// (cautiousWildLayOffPlan). ~2% mistake rate. opponentDemand is the
+// sharpest read of the table any tier does. (An earlier version wrapped the
+// deterministic scoring in a pointless 5-iteration "Monte Carlo" average —
+// since removed.)
 
 import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,
+  cautiousWildLayOffPlan,
   deadCards,
-  greedyLayOffPlan,
   highestPenaltyCard,
+  leaderPressure,
   maybeMistakeBool,
   maybeMistakeDiscard,
   minRunDistance,
@@ -24,7 +28,10 @@ import {
  * Estimates how much each opponent likely wants this card, using both their
  * pickup history (direct evidence) and how far along they seem to be in
  * building their contract (fewer cards discarded from a rank/suit family =
- * more likely still hunting for it).
+ * more likely still hunting for it) — scaled up sharply for an opponent
+ * who's themself closing in on going out (leaderPressure): the same
+ * evidence should read as far more urgent to deny coming from someone one
+ * card from winning than from someone just starting.
  */
 function opponentDemand(state: GameState, selfId: string, card: Card): number {
   let demand = 0;
@@ -33,10 +40,11 @@ function opponentDemand(state: GameState, selfId: string, card: Card): number {
   for (const p of opponents) {
     const pickups = state.pickupHistory.filter((h) => h.playerId === p.id);
     const discards = state.discardHistory.filter((h) => h.playerId === p.id);
+    const weight = 1 + leaderPressure(p);
 
     for (const pickup of pickups) {
-      if (pickup.card.rank === card.rank) demand += 3;
-      if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) demand += 1.5;
+      if (pickup.card.rank === card.rank) demand += 3 * weight;
+      if (pickup.card.suit === card.suit && minRunDistance(pickup.card.rank, card.rank) <= 2) demand += 1.5 * weight;
     }
     // if this opponent has discarded this exact rank before, they likely don't need more of it
     if (discards.some((d) => d.card.rank === card.rank)) demand -= 2;
@@ -110,15 +118,5 @@ export const expertStrategy: AIStrategy = {
     const pool = dead.length > 0 ? dead : player.hand;
     return scoreBestDiscard(state, player, pool.length > 0 ? pool : [highestPenaltyCard(player.hand)]);
   },
-  planLayOffs(state: GameState, player: Player) {
-    // optimize wild allocation: only lay off wilds if doing so completes a
-    // meld outright (i.e. no natural cards of that meld remain in hand to use instead)
-    const plan = greedyLayOffPlan(state, player);
-    return plan.filter((move) => {
-      const card = player.hand.find((c) => c.id === move.cardId);
-      if (!card?.isWild) return true;
-      const hasNaturalAlternative = player.hand.some((c) => !c.isWild && c.id !== card.id);
-      return !hasNaturalAlternative;
-    });
-  },
+  planLayOffs: cautiousWildLayOffPlan,
 };
