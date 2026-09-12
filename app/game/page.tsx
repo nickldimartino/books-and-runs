@@ -37,7 +37,7 @@ import { useFocusTrap } from "../lib/useFocusTrap";
 import { playCardSlide, playGameWin, playRoundWin } from "../lib/sound";
 import { hapticLight, hapticSuccess } from "../lib/haptics";
 import { supabase } from "../lib/supabaseClient";
-import { layOffOptions, runCardRank, RUN_ORDER, solveContract, solveWholeHandContract, validateManualGroup } from "@/meld";
+import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
 import { Card, ContractRequirement, Meld } from "@/types";
@@ -235,8 +235,8 @@ export default function GamePage() {
   // Ambient pad (Settings → Ambient music, off by default) — starts once on
   // mount if enabled, stops on leaving this screen either way. Doesn't
   // react to the setting changing mid-game (Settings is a different route);
-  // consistent with how meldHints/highlightLayoffs etc. are also just read
-  // once per render rather than watched live.
+  // consistent with how highlightLayoffs etc. are also just read once per
+  // render rather than watched live.
   useEffect(() => {
     if (loadLocalSettings().ambientMusicEnabled) startAmbience();
     return () => stopAmbience();
@@ -654,7 +654,6 @@ export default function GamePage() {
   const savedSettings = loadLocalSettings();
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
-  const meldHintsEnabled = savedSettings.meldHints;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -854,37 +853,6 @@ export default function GamePage() {
     setPendingGroups((prev) => prev.filter((g) => g.id !== id));
   }
 
-  // "Show me a meld" (Settings → Meld hints, off by default): run the same
-  // solver the AI uses on the current hand and, if it finds a full
-  // contract, stage it as pending groups so the player just taps Confirm.
-  function showMeldHint() {
-    const melds = contract.wholeHandMeld
-      ? solveWholeHandContract(player.hand, contract, player.id)
-      : solveContract(player.hand, contract, player.id);
-    if (!melds) {
-      setGroupError(
-        `Nothing in your hand completes ${contractNeedLabel(contract.books, contract.runs)} yet — draw and check again.`
-      );
-      return;
-    }
-    setPendingGroupChoice(null);
-    setSelectedCardIds([]);
-    setGroupError(null);
-    setPendingGroups(
-      melds.map((m, i) => ({
-        id: `hint-${Date.now()}-${i}`,
-        type: m.type,
-        cardIds: m.cards.map((c) => c.id),
-        runStartIndex: m.runStartIndex,
-      }))
-    );
-    // The groups above are only staged, not committed — the same sweep
-    // sound reorderHand/sortHand use for "cards moving," not confirmMeld's
-    // heavier landing sound, since nothing's actually melded until Confirm.
-    playCardSlide();
-    hapticLight();
-  }
-
   function handleConfirmMeld() {
     const success = confirmMeld(
       pendingGroups.map((g) => g.cardIds),
@@ -973,23 +941,6 @@ export default function GamePage() {
       )}
 
       {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
-
-      {meldHintsEnabled && pendingGroups.length === 0 && (
-        <div className="flex flex-col items-center gap-1">
-          <button
-            onClick={showMeldHint}
-            disabled={!hasDrawn || !!pendingGroupChoice}
-            aria-label="Find a meld in your hand and stage it for you to review"
-            className="flex items-center gap-2 rounded-full border border-[var(--accent)]/50 bg-[var(--accent)]/10 py-2 pl-3 pr-4 text-sm font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[var(--accent)]/10"
-          >
-            <span aria-hidden="true" className="text-base leading-none">
-              💡
-            </span>
-            Show me a meld
-          </button>
-          {!hasDrawn && <p className="text-[11px] text-[var(--faint)]">Draw a card first — it needs your full hand.</p>}
-        </div>
-      )}
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button

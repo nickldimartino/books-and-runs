@@ -40,7 +40,6 @@ export interface AccountSettingsRow {
   preferred_ai_difficulty_default: string | null;
   sound_on: boolean;
   sound_volume: number | null;
-  meld_hints: boolean | null;
   highlight_layoffs: boolean | null;
   show_whose_turn: boolean | null;
   ambient_music_enabled: boolean | null;
@@ -61,7 +60,6 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
   preferred_ai_difficulty_default: null,
   sound_on: true,
   sound_volume: null,
-  meld_hints: null,
   highlight_layoffs: null,
   show_whose_turn: null,
   ambient_music_enabled: null,
@@ -70,7 +68,7 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
 };
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, sound_volume, meld_hints, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
+  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, sound_volume, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -122,7 +120,6 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     soundEnabled: row.sound_on,
     highlightLayoffs: row.highlight_layoffs ?? current.highlightLayoffs,
     showWhoseTurn: row.show_whose_turn ?? current.showWhoseTurn,
-    meldHints: row.meld_hints ?? current.meldHints,
     soundVolume: row.sound_volume ?? current.soundVolume,
     ambientMusicEnabled: row.ambient_music_enabled ?? current.ambientMusicEnabled,
     ambientVolume: row.ambient_volume ?? current.ambientVolume,
@@ -195,7 +192,6 @@ export function bootstrapMissingAccountSettings(
   if (row.colorblind_mode === null) patch.colorblind_mode = loadLocalColorblindMode();
   if (row.preferred_ai_difficulty_default === null) patch.preferred_ai_difficulty_default = local.preferredAiDifficulty;
   if (row.sound_volume === null) patch.sound_volume = local.soundVolume;
-  if (row.meld_hints === null) patch.meld_hints = local.meldHints;
   if (row.highlight_layoffs === null) patch.highlight_layoffs = local.highlightLayoffs;
   if (row.show_whose_turn === null) patch.show_whose_turn = local.showWhoseTurn;
   if (row.ambient_music_enabled === null) patch.ambient_music_enabled = local.ambientMusicEnabled;
@@ -215,7 +211,6 @@ type SettingsPatch = Partial<{
   preferred_ai_difficulty_default: string;
   sound_on: boolean;
   sound_volume: number;
-  meld_hints: boolean;
   highlight_layoffs: boolean;
   show_whose_turn: boolean;
   ambient_music_enabled: boolean;
@@ -255,7 +250,6 @@ export function pushHouseSettingsPatch(supabase: SupabaseClient | null, userId: 
   if (patch.soundEnabled !== undefined) immediate.sound_on = patch.soundEnabled;
   if (patch.highlightLayoffs !== undefined) immediate.highlight_layoffs = patch.highlightLayoffs;
   if (patch.showWhoseTurn !== undefined) immediate.show_whose_turn = patch.showWhoseTurn;
-  if (patch.meldHints !== undefined) immediate.meld_hints = patch.meldHints;
   if (patch.ambientMusicEnabled !== undefined) immediate.ambient_music_enabled = patch.ambientMusicEnabled;
   if (patch.ambientTrack !== undefined) immediate.ambient_track = patch.ambientTrack;
   if (Object.keys(immediate).length > 0) {
@@ -322,7 +316,6 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     preferred_ai_difficulty_default: DEFAULT_SETTINGS.preferredAiDifficulty,
     sound_on: DEFAULT_SETTINGS.soundEnabled,
     sound_volume: DEFAULT_SETTINGS.soundVolume,
-    meld_hints: DEFAULT_SETTINGS.meldHints,
     highlight_layoffs: DEFAULT_SETTINGS.highlightLayoffs,
     show_whose_turn: DEFAULT_SETTINGS.showWhoseTurn,
     ambient_music_enabled: DEFAULT_SETTINGS.ambientMusicEnabled,

@@ -576,13 +576,6 @@ export default function SettingsPage() {
           </section>
 
           <BoolToggle
-            label="Meld hints"
-            value={settings.meldHints}
-            onChange={(v) => updateSettings({ meldHints: v })}
-            description="Adds a “Show me a meld” button in the hand drawer that finds a set of cards completing the round’s contract and stages it for you. Off by default — training wheels, not the default game."
-          />
-
-          <BoolToggle
             label="Highlight possible lay-offs"
             value={settings.highlightLayoffs}
             onChange={(v) => updateSettings({ highlightLayoffs: v })}

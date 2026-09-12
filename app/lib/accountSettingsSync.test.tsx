@@ -45,7 +45,6 @@ function blankRow(): AccountSettingsRow {
     preferred_ai_difficulty_default: null,
     sound_on: true,
     sound_volume: null,
-    meld_hints: null,
     highlight_layoffs: null,
     show_whose_turn: null,
     ambient_music_enabled: null,
@@ -76,7 +75,6 @@ describe("applyAccountSettings", () => {
       preferred_ai_difficulty_default: "hard",
       sound_on: false,
       sound_volume: 0.5,
-      meld_hints: true,
       highlight_layoffs: false,
       show_whose_turn: false,
       ambient_music_enabled: true,
@@ -93,7 +91,6 @@ describe("applyAccountSettings", () => {
       preferredAiDifficulty: "hard",
       soundEnabled: false,
       soundVolume: 0.5,
-      meldHints: true,
       highlightLayoffs: false,
       showWhoseTurn: false,
       ambientMusicEnabled: true,
@@ -109,7 +106,6 @@ describe("applyAccountSettings", () => {
         soundEnabled: true,
         highlightLayoffs: true,
         showWhoseTurn: true,
-        meldHints: false,
         soundVolume: 0.9,
         ambientMusicEnabled: false,
         ambientVolume: 0.4,
@@ -140,10 +136,10 @@ describe("applyAccountSettings", () => {
 describe("pushHouseSettingsPatch", () => {
   it("pushes non-volume fields immediately", async () => {
     const { client, upserts } = fakeSupabase();
-    pushHouseSettingsPatch(client, "u1", { meldHints: true, showWhoseTurn: false });
+    pushHouseSettingsPatch(client, "u1", { highlightLayoffs: true, showWhoseTurn: false });
     await Promise.resolve();
     expect(upserts).toHaveLength(1);
-    expect(upserts[0]).toMatchObject({ user_id: "u1", meld_hints: true, show_whose_turn: false });
+    expect(upserts[0]).toMatchObject({ user_id: "u1", highlight_layoffs: true, show_whose_turn: false });
   });
 
   it("debounces sound/ambient volume — only the last value in a burst gets sent", async () => {
@@ -163,8 +159,8 @@ describe("pushHouseSettingsPatch", () => {
 
   it("is a no-op signed out", async () => {
     const { client, upserts } = fakeSupabase();
-    pushHouseSettingsPatch(client, null, { meldHints: true });
-    pushHouseSettingsPatch(null, "u1", { meldHints: true });
+    pushHouseSettingsPatch(client, null, { showWhoseTurn: true });
+    pushHouseSettingsPatch(null, "u1", { showWhoseTurn: true });
     await Promise.resolve();
     expect(upserts).toHaveLength(0);
   });
@@ -194,7 +190,6 @@ describe("resetLocalPreferencesToDefaults", () => {
         soundEnabled: true,
         highlightLayoffs: true,
         showWhoseTurn: true,
-        meldHints: true,
         soundVolume: 0.9,
         ambientMusicEnabled: true,
         ambientVolume: 0.9,
@@ -215,7 +210,6 @@ describe("resetLocalPreferencesToDefaults", () => {
     const settings = JSON.parse(window.localStorage.getItem("booksAndRuns:settings")!);
     expect(settings).toMatchObject({
       preferredAiDifficulty: "medium",
-      meldHints: false,
       ambientMusicEnabled: false,
       ambientTrack: "rotate",
     });
@@ -231,7 +225,6 @@ describe("bootstrapMissingAccountSettings", () => {
         soundEnabled: true,
         highlightLayoffs: true,
         showWhoseTurn: true,
-        meldHints: false,
         soundVolume: 0.6,
         ambientMusicEnabled: false,
         ambientVolume: 0.4,
@@ -250,7 +243,6 @@ describe("bootstrapMissingAccountSettings", () => {
       theme: "sakura",
       preferred_ai_difficulty_default: "hard",
       sound_volume: 0.6,
-      meld_hints: false,
       ambient_track: "skip",
     });
   });
@@ -265,7 +257,6 @@ describe("bootstrapMissingAccountSettings", () => {
       colorblind_mode: "protanopia",
       preferred_ai_difficulty_default: "hard",
       sound_volume: 0.5,
-      meld_hints: true,
       highlight_layoffs: false,
       show_whose_turn: false,
       ambient_music_enabled: true,
