@@ -1120,11 +1120,31 @@
    Both layers are deliberately subtle (the point is ambient depth, not a
    visible gradient) and generic across all 38 themes: color-mix() with
    --accent/black rather than a per-theme value, so this needed writing
-   exactly once instead of 38 times. background-attachment: fixed keeps the
-   glow anchored to the viewport rather than scrolling with the page, the
-   way a room's actual overhead lighting wouldn't move as you leaned over
-   different parts of a real table. */
+   exactly once instead of 38 times.
+   Carried on a ::before pseudo-element with its own position: fixed
+   (mirroring .game-felt::before below), NOT background-attachment: fixed
+   on body directly — that property on the actual scrolling element is a
+   well-documented iOS Safari bug trigger: it forces Safari to stop
+   compositing position: fixed descendants correctly during scroll, which
+   is exactly what made HandPreviewBar/the hand drawer (both position:
+   fixed) drift off-screen or hover mid-page while scrolling in a
+   home-screen-installed (standalone) app. A fixed pseudo-element behind
+   the content gives the same "glow anchored to the viewport" look without
+   ever setting that property on body itself. */
 body {
+  background: var(--bg);
+  color: var(--text);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     /* Fine two-way weave — reads as felt tooth, not a visible pattern. The
        white threads catch a little light on the dark themes; the dark
@@ -1133,14 +1153,7 @@ body {
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 4px),
     repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.022) 0 1px, transparent 1px 4px),
     radial-gradient(ellipse 120% 60% at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 65%),
-    radial-gradient(ellipse 140% 90% at 50% 115%, color-mix(in srgb, black 22%, transparent), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
-  color: var(--text);
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+    radial-gradient(ellipse 140% 90% at 50% 115%, color-mix(in srgb, black 22%, transparent), transparent 60%);
 }
 
 /* The game board's own play surface — a soft overhead "light on the
