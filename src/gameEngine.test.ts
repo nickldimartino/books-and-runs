@@ -11,6 +11,7 @@ import {
   meldChosenGroups,
   startNextRound,
 } from "./gameEngine";
+import { seededRng } from "./deck";
 import { CONTRACTS, GameState, Meld, SHORT_GAME_CONTRACTS } from "./types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "./testHelpers";
 
@@ -819,5 +820,23 @@ describe("startNextRound", () => {
 
     expect(next.selectedContracts).toBe(customContracts);
     expect(next.round).toBe(2);
+  });
+
+  it("deals reproducibly from a seeded rng — same seed always deals the same hands", () => {
+    const makeReadyState = () =>
+      makeGameState({
+        round: 1,
+        roundOver: true,
+        gameOver: false,
+        players: [makePlayer({ id: "p1" }), makePlayer({ id: "p2" })],
+      });
+
+    const dealA = startNextRound(makeReadyState(), seededRng(555));
+    const dealB = startNextRound(makeReadyState(), seededRng(555));
+    expect(dealA.players.map((p) => p.hand)).toEqual(dealB.players.map((p) => p.hand));
+    expect(dealA.drawPile).toEqual(dealB.drawPile);
+
+    const dealC = startNextRound(makeReadyState(), seededRng(556));
+    expect(dealA.players.map((p) => p.hand)).not.toEqual(dealC.players.map((p) => p.hand));
   });
 });

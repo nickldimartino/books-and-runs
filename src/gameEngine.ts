@@ -404,13 +404,19 @@ function endRound(state: GameState, winnerId: string | null) {
   }
 }
 
-/** Set up the next round after the current one has ended. Mutates and returns a fresh-ish state. */
-export function startNextRound(state: GameState): GameState {
+/**
+ * Set up the next round after the current one has ended. Mutates and
+ * returns a fresh-ish state. `rng` defaults to Math.random, same as
+ * createGame — pass the same seeded rng used to start the game so every
+ * round of a multi-round game reshuffles reproducibly from one seed, not
+ * just round 1.
+ */
+export function startNextRound(state: GameState, rng: () => number = Math.random): GameState {
   if (!state.roundOver || state.gameOver) return state;
 
   const nextRound = state.round + 1;
   const numDecks = decksForPlayerCount(state.players.length);
-  const deck = buildDeck(numDecks);
+  const deck = buildDeck(numDecks, rng);
   const { hands, drawPile, discardPile } = deal(deck, state.players.length);
 
   const players: Player[] = state.players.map((p, i) => ({

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MoveLogEntry } from "@/moveLog";
 import { GameState } from "@/types";
 import { RoundHistoryEntry } from "./recordGameResult";
 
@@ -43,6 +44,16 @@ export interface SavedGame {
   // Optional/defaults to true (tracking on) for saves made before this
   // field existed.
   trackStats?: boolean;
+  // The integer this game's whole deal (every round) is reproducible from
+  // — see deck.ts's roundSeed and GameContext.tsx's gameSeedRef. Optional/
+  // absent for a save made before this field existed; a game with no seed
+  // just can't be server-verified at game-over and falls back to the old
+  // direct-write stats path for that one game (see recordGameResult.ts).
+  seed?: number | null;
+  // Every draw/meld/lay-off/discard so far this game, alongside `seed` —
+  // together, everything a server-side replay needs. Same optionality
+  // reasoning as `seed`.
+  moveLog?: MoveLogEntry[];
   savedAt: number;
 }
 

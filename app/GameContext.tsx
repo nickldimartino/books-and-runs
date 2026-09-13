@@ -29,9 +29,11 @@ import {
 } from "@/gameEngine";
 import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
 import { layOffOptions } from "@/meld";
+import { roundSeed, seededRng } from "@/deck";
+import { MoveLogEntry } from "@/moveLog";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
-import { createDailyDealGame } from "./lib/dailyDealStore";
+import { createDailyDealGame, dateSeed, localDateKey } from "./lib/dailyDealStore";
 import { track } from "./lib/analytics";
 import { applyHandOrder, compareByMode, SortMode } from "./lib/handSort";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
@@ -206,6 +208,10 @@ export const UNDO_GRACE_MS = 6000;
 interface UndoSnapshot {
   state: GameState;
   sessionCounters: Record<string, number>;
+  // The move log entry(ies) the undone action appended — undoLastAction
+  // trims them back off, same as it reverts state/sessionCounters, so an
+  // undone meld/lay-off never ends up in what's submitted for verification.
+  moveLogLength: number;
 }
 
 // Re-exported so any existing `import { SortMode } from "./GameContext"`
@@ -269,6 +275,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   const buyQueueRef = useRef<string[]>([]);
   const recordedRoundsRef = useRef<Set<number>>(new Set());
+
+  // The one integer a solo/pass-and-play game's whole deal is reproducible
+  // from — see deck.ts's roundSeed for why this is a plain seed rather than
+  // a live rng stream (a save/resume can't persist a generator's internal
+  // state). Null for a tutorial (never verified) or a pre-existing saved
+  // game from before this field existed (see localSave.ts's SavedGame —
+  // recordGameResult falls back to the old direct-write path for a game
+  // with no seed). Daily Deal keeps deriving its own from the calendar date
+  // (dateSeed/localDateKey) rather than a random draw, but still gets
+  // stored here so it can ride along in the same verification payload.
+  const gameSeedRef = useRef<number | null>(null);
+  // Every draw/meld/lay-off/discard this game has made, human or AI alike
+  // — the other half (with gameSeedRef) of what a server-side replay needs
+  // to independently reproduce this exact game and verify its outcome. See
+  // moveLog.ts for why a round boundary needs no entry of its own.
+  const moveLogRef = useRef<MoveLogEntry[]>([]);
 
   // Refs mirror the persistence-relevant state synchronously, so commit()
   // can always write a consistent snapshot without waiting on React's
@@ -342,6 +364,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         roundHistory: roundHistoryRef.current,
         sessionCounters: sessionCountersRef.current,
         trackStats: trackStatsRef.current,
+        seed: gameSeedRef.current,
+        moveLog: moveLogRef.current,
       });
       return;
     }
@@ -356,6 +380,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundStartScores: roundStartScoresRef.current,
       roundHistory: roundHistoryRef.current,
       sessionCounters: sessionCountersRef.current,
+      seed: gameSeedRef.current,
+      moveLog: moveLogRef.current,
       trackStats: trackStatsRef.current,
     });
     setHasSavedGame(true);
@@ -412,6 +438,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!snapshot) return;
     stateRef.current = snapshot.state;
     sessionCountersRef.current = { ...snapshot.sessionCounters };
+    moveLogRef.current = moveLogRef.current.slice(0, snapshot.moveLogLength);
     clearUndoState();
     playUndo();
     commit();
@@ -450,7 +477,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const meldSizeBefore = new Map(live.melds.map((m) => [m.id, m.cards.length]));
       const discardBefore = live.discardPile.length;
 
-      playAITurn(live);
+      const aiEntries = playAITurn(live);
+      if (aiEntries.length > 0) moveLogRef.current = [...moveLogRef.current, ...aiEntries];
 
       const nextIsHuman = !live.roundOver && !live.gameOver && !live.players[live.currentPlayerIndex].isAI;
 
@@ -529,7 +557,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setTutorialSoundOverride(false);
       clearUndoState();
       setTrackStatsBoth(trackStats);
-      const state = createGame(configs, contracts);
+      // Doesn't need to be secret, only reproducible — a server-side replay
+      // rebuilds the identical deal from this same integer (see deck.ts's
+      // roundSeed and GameOverScreen's verification payload).
+      const seed = Math.floor(Math.random() * 2 ** 31);
+      gameSeedRef.current = seed;
+      moveLogRef.current = [];
+      const state = createGame(configs, contracts, seededRng(roundSeed(seed, 1)));
       stateRef.current = state;
       setSnapshot({ ...state });
       setHasDrawnBoth(false);
@@ -584,6 +618,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // default so nothing looks inconsistent if this were ever inspected
     // mid-tutorial.
     setTrackStatsBoth(true);
+    gameSeedRef.current = null;
+    moveLogRef.current = [];
     const state = createTutorialGame();
     stateRef.current = state;
     setSnapshot({ ...state });
@@ -614,6 +650,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // — but reset to the default so nothing looks inconsistent if this were
     // ever inspected mid-game.
     setTrackStatsBoth(true);
+    // Same date-derived seed createDailyDealGame already deals from
+    // internally — recomputed here (not returned by that function) since
+    // it's a pure function of today's date, cheap to redo, and this is the
+    // only other place that needs it.
+    gameSeedRef.current = dateSeed(localDateKey());
+    moveLogRef.current = [];
     const state = createDailyDealGame();
     stateRef.current = state;
     setSnapshot({ ...state });
@@ -648,6 +690,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setTutorialSoundOverride(false);
     clearUndoState();
     setTrackStatsBoth(saved.trackStats ?? true);
+    // A resumed Daily Deal is still today's deal (its save is same-day
+    // only — see loadDailyDealSave/DAILY_DEAL_SAVE_KEY), so re-derive the
+    // same date seed rather than trust a persisted one.
+    gameSeedRef.current = dateSeed(localDateKey());
+    moveLogRef.current = saved.moveLog ?? [];
     stateRef.current = saved.state;
     setSnapshot({ ...saved.state });
     setHasDrawnBoth(saved.hasDrawn);
@@ -683,6 +730,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setTutorialSoundOverride(false);
     clearUndoState();
     setTrackStatsBoth(saved.trackStats ?? true);
+    // Absent on a pre-existing save from before this field shipped — that
+    // one game just stays unverifiable (see Phase 8/recordGameResult's
+    // fallback), same as gameSeedRef defaulting to null everywhere else.
+    gameSeedRef.current = saved.seed ?? null;
+    moveLogRef.current = saved.moveLog ?? [];
     stateRef.current = saved.state;
     setSnapshot({ ...saved.state });
     setHasDrawnBoth(saved.hasDrawn);
@@ -741,6 +793,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       } else {
         card = drawFromPile(s);
       }
+
+      // Logged even when the draw comes back null below — a replay needs
+      // to know a draw was attempted here at all, since that's the only
+      // thing that tells it to call the same drawFromPile/drawFromDiscard
+      // that (when the piles are truly exhausted) ends the round itself as
+      // a side effect, with no further entry to signal it.
+      moveLogRef.current = [
+        ...moveLogRef.current,
+        { seat: s.currentPlayerIndex, type: "draw", fromDiscard: actuallyFromDiscard },
+      ];
 
       // Null means the draw/discard piles were truly both exhausted —
       // drawFromPile already ended the round itself (see gameEngine.ts).
@@ -813,8 +875,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // this meld doesn't also end the round (see UndoSnapshot's comment).
       const preActionState = structuredClone(s);
       const preActionCounters = { ...sessionCountersRef.current };
+      const preActionMoveLogLength = moveLogRef.current.length;
       const melds = meldChosenGroups(s, groups, preferredRunStarts);
       if (!melds) return false;
+      moveLogRef.current = [
+        ...moveLogRef.current,
+        { seat: s.currentPlayerIndex, type: "meldGroups", groups, preferredRunStarts },
+      ];
 
       if (isYou) {
         bump(`completed_round_${contract.round}`);
@@ -847,7 +914,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       playMeld();
       hapticMedium();
       emitFlight({ kind: "meld", cards: melds.flatMap((m) => m.cards), byId: player.id, isAI: false });
-      if (!wentOut) armUndo({ state: preActionState, sessionCounters: preActionCounters });
+      if (!wentOut) {
+        armUndo({ state: preActionState, sessionCounters: preActionCounters, moveLogLength: preActionMoveLogLength });
+      }
       commit();
       return true;
     },
@@ -866,9 +935,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // See the identical snapshot in confirmMeld — same reasoning applies.
       const preActionState = structuredClone(s);
       const preActionCounters = { ...sessionCountersRef.current };
+      const preActionMoveLogLength = moveLogRef.current.length;
 
       const ok = layOffCard(s, cardId, meldId, position);
       if (ok) {
+        moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "layOff", cardId, meldId, position }];
         if (isYou && card && meld) {
           bump("cards_laid_off");
           if (card.isWild) bump("wilds_laid_off");
@@ -887,7 +958,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         playCardTap();
         hapticLight();
         if (card) emitFlight({ kind: "layoff", card, meldId, byId: player.id, isAI: false });
-        if (!wentOut) armUndo({ state: preActionState, sessionCounters: preActionCounters });
+        if (!wentOut) {
+          armUndo({ state: preActionState, sessionCounters: preActionCounters, moveLogLength: preActionMoveLogLength });
+        }
         commit();
       }
       return ok;
@@ -952,11 +1025,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // call bails here instead of re-running discardAndAdvance / the AI loop.
       if (!s || !hasDrawnRef.current) return;
       clearUndoState();
-      const player = s.players[s.currentPlayerIndex];
+      const seat = s.currentPlayerIndex;
+      const player = s.players[seat];
       const isYou = player.id === YOU_PLAYER_ID;
       const discarded = player.hand.find((c) => c.id === cardId);
+      // discardAndAdvance advances currentPlayerIndex to the next player
+      // before returning (when the round doesn't end) — captured above so
+      // the logged seat is always whoever actually discarded, not whoever's
+      // turn it becomes next. wasAutoOut mirrors discardAndAdvance's own
+      // "already empty-handed after melding" guard: that path ends the
+      // round with no card found (`discarded` stays undefined) but still
+      // did something real, unlike a genuinely invalid cardId.
+      const wasAutoOut = player.hasMeldedContract && player.hand.length === 0;
 
       const roundEnded = discardAndAdvance(s, cardId);
+      if (discarded || wasAutoOut) {
+        moveLogRef.current = [...moveLogRef.current, { seat, type: "discard", cardId: discarded ? cardId : null }];
+      }
       if (discarded) emitFlight({ kind: "discard", card: discarded, byId: player.id, isAI: false });
       if (isYou) {
         bump("cards_discarded");
@@ -995,7 +1080,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const s = stateRef.current;
     if (!s || !s.roundOver) return;
     clearUndoState();
-    const next = startNextRound(s);
+    const seed = gameSeedRef.current;
+    const rng = seed != null ? seededRng(roundSeed(seed, s.round + 1)) : undefined;
+    const next = startNextRound(s, rng);
     stateRef.current = next;
     setSnapshot({ ...next });
     setHasDrawnBoth(false);

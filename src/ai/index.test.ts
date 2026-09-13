@@ -101,3 +101,72 @@ describe("playAITurn — round 7 (3 Runs, whole-hand meld)", () => {
     expect(state.roundOver).toBe(true);
   });
 });
+
+describe("playAITurn — move log", () => {
+  it("returns a draw, meld, lay-off(s), and discard entry in order for a normal melding turn", () => {
+    // A book of 2s in hand plus a spare 5 that lays off nowhere — melds the
+    // contract (2 Books needs a second book too, so give it one), then has
+    // nothing to lay off, then discards the spare.
+    const hand = [
+      ...makeHand(["A", "A", "A"]),
+      ...makeHand(["K", "K", "K"]),
+      makeCard("5", "clubs", { id: "spare" }),
+    ];
+    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand });
+    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
+    const state = makeGameState({
+      round: 1,
+      selectedContracts: CONTRACTS,
+      currentPlayerIndex: 0,
+      players: [ai, human],
+      drawPile: [makeCard("3", "diamonds", { id: "drawn" })],
+      discardPile: [],
+    });
+
+    const entries = playAITurn(state);
+
+    expect(entries[0]).toMatchObject({ seat: 0, type: "draw" });
+    expect(entries.some((e) => e.type === "meldContract")).toBe(true);
+    expect(entries.at(-1)).toMatchObject({ seat: 0, type: "discard" });
+    // Every entry actually happened — replaying them is exactly what made
+    // hasMeldedContract/hand end up this way, nothing extra or skipped.
+    expect(ai.hasMeldedContract).toBe(true);
+  });
+
+  it("still logs a draw entry when the draw pile is truly exhausted (round ends with no further moves)", () => {
+    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand: makeHand(["9", "9", "9"]) });
+    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
+    const state = makeGameState({
+      round: 1,
+      selectedContracts: CONTRACTS,
+      currentPlayerIndex: 0,
+      players: [ai, human],
+      drawPile: [],
+      discardPile: [makeCard("K", "clubs")], // <=1 card: nothing left to reshuffle in either
+    });
+
+    const entries = playAITurn(state);
+
+    expect(entries).toEqual([{ seat: 0, type: "draw", fromDiscard: false }]);
+    expect(state.roundOver).toBe(true);
+  });
+
+  it("doesn't log a meldContract entry on a later turn where the player already melded", () => {
+    const hand = [...makeHand(["A", "A", "A"]), makeCard("5", "clubs", { id: "spare" })];
+    const ai = makePlayer({ id: "ai1", isAI: true, difficulty: "medium", hand, hasMeldedContract: true });
+    const human = makePlayer({ id: "p2", hand: makeHand(["9", "9", "9"]) });
+    const state = makeGameState({
+      round: 1,
+      selectedContracts: CONTRACTS,
+      currentPlayerIndex: 0,
+      melds: [{ id: "ai1-meld-0-book", type: "book", ownerId: "ai1", cards: makeHand(["A", "A", "A"]) }],
+      players: [ai, human],
+      drawPile: [makeCard("3", "diamonds", { id: "drawn" })],
+      discardPile: [],
+    });
+
+    const entries = playAITurn(state);
+
+    expect(entries.some((e) => e.type === "meldContract")).toBe(false);
+  });
+});

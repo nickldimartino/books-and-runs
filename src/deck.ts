@@ -73,6 +73,19 @@ export function seededRng(seed: number): () => number {
   };
 }
 
+/**
+ * Derives a round's own seed from one game seed, rather than threading a
+ * single live rng stream through the whole game — a save/resume can persist
+ * the plain `gameSeed` integer, but not a generator's internal state, so
+ * each round's deal needs to be reproducible from (gameSeed, round) alone.
+ * This is also exactly what a server-side replay needs: it rebuilds each
+ * round's rng from scratch too, rather than replaying every earlier round's
+ * draws just to advance the stream to the right point.
+ */
+export function roundSeed(gameSeed: number, round: number): number {
+  return (gameSeed + round * 0x9e3779b1) >>> 0;
+}
+
 export function deal(deck: Card[], playerCount: number, handSize = 13) {
   const hands: Card[][] = Array.from({ length: playerCount }, () => []);
   let cursor = 0;
