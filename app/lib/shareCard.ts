@@ -6,6 +6,24 @@
  * (very old browsers) so the caller can fall back to the text share.
  */
 
+import type { AchievementCategory, AchievementTier } from "@/achievements";
+import { findPremiumEmojiOption, LEVEL_MEDAL_COLOR } from "./avatarPresets";
+import { findBannerOption } from "./bannerPresets";
+import {
+  ACHIEVEMENT_ICON_ELEMENTS,
+  CREATOR_STAR_PATH,
+  IconElement,
+  MEDAL_DISC,
+  MEDAL_RIBBON_ELEMENTS,
+} from "./achievementIconPaths";
+
+/** Always baked into the image itself, not just copied to the clipboard —
+ * see renderProfileShareCard's own doc for why a picture-only share (the
+ * one thing every share target reliably supports, see shareProfileCard's
+ * comment in player/page.tsx) needs this to guarantee the link actually
+ * reaches whoever receives it. */
+const SITE_URL = "books-and-runs.vercel.app";
+
 export interface ShareRow {
   rank: number;
   /** "Lv15" — the account level for you, the theoretical level for an AI. */
@@ -109,8 +127,15 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob | nul
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }
 
+export interface ShareTrophy {
+  category: AchievementCategory;
+  tier: AchievementTier;
+  familyTitle: string;
+}
+
 export interface ProfileShareCardInput {
   displayName: string;
+  isCreator: boolean;
   titleLabel: string | null;
   level: number;
   avatarKind: "emoji" | "photo";
@@ -125,9 +150,148 @@ export interface ProfileShareCardInput {
   /** An earned overlay emoji shown in the avatar's corner, separate from
    * the avatar itself — see migration 0031's `badge` column. Null for none. */
   badge: string | null;
+  /** The raw `leaderboard_entries.banner` id (bannerPresets.ts) — resolved
+   * here, not by the caller, since it needs the same lookup ProfileBanner
+   * and player/page.tsx's onBanner text-color branch both use. */
+  banner: string | null;
   stats: { label: string; value: string }[];
-  /** Tier ring colors for up to 6 pinned trophies, in Trophy Case order. */
-  trophyColors: string[];
+  /** Up to 6 pinned trophies, in Trophy Case order — same shape as the real
+   * page's ShowcaseItem, just without the `key`/`familyId` this renderer
+   * doesn't need. */
+  trophies: ShareTrophy[];
+}
+
+const TIER_RING_COLOR: Record<AchievementTier, string> = {
+  beginner: "#CD7F32",
+  easy: "#B0B8C1",
+  medium: "#F5C518",
+  hard: "#4FD1C5",
+  expert: "#38BDF8",
+};
+
+/** Replays achievementIconPaths.ts's element data as Path2D draws — canvas
+ * has no SVG renderer, so this is the canvas-side twin of
+ * AchievementIcons.tsx's JSX renderer. `size` is the on-canvas pixel size
+ * for the icon's 24x24 viewBox. */
+function drawIconElements(
+  ctx: CanvasRenderingContext2D,
+  elements: IconElement[],
+  cx: number,
+  cy: number,
+  size: number,
+  color: string
+): void {
+  const scale = size / 24;
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(scale, scale);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const el of elements) {
+    if (el.kind === "path") {
+      ctx.stroke(new Path2D(el.d));
+    } else if (el.kind === "circle") {
+      ctx.beginPath();
+      ctx.arc(el.cx, el.cy, el.r, 0, Math.PI * 2);
+      if (el.filled) ctx.fill();
+      else ctx.stroke();
+    } else {
+      ctx.stroke(roundedRectPath2D(el.x, el.y, el.w, el.h, el.rx));
+    }
+  }
+  ctx.restore();
+}
+
+/** Same shape as drawIconElements, for the level-milestone medal (see
+ * PremiumBadgeIcon.tsx's MedalIcon) — its disc is filled with the
+ * milestone's own color rather than `currentColor`, the one visual
+ * difference the ribbon icons don't have. */
+function drawMedalIcon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  strokeColor: string,
+  discColor: string
+): void {
+  const scale = size / 24;
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(scale, scale);
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const el of MEDAL_RIBBON_ELEMENTS) {
+    if (el.kind === "path") ctx.stroke(new Path2D(el.d));
+  }
+  ctx.beginPath();
+  ctx.arc(MEDAL_DISC.cx, MEDAL_DISC.cy, MEDAL_DISC.discR, 0, Math.PI * 2);
+  ctx.fillStyle = discColor;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(MEDAL_DISC.cx, MEDAL_DISC.cy, MEDAL_DISC.ringR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function roundedRectPath2D(x: number, y: number, w: number, h: number, r: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(x + r, y);
+  p.arcTo(x + w, y, x + w, y + h, r);
+  p.arcTo(x + w, y + h, x, y + h, r);
+  p.arcTo(x, y + h, x, y, r);
+  p.arcTo(x, y, x + w, y, r);
+  p.closePath();
+  return p;
+}
+
+/** Parses `linear-gradient(135deg, c1, c2)` (every non-grandmaster banner —
+ * see bannerPresets.ts) into its two color stops. */
+function parseLinearGradientStops(css: string): [string, string] | null {
+  const m = css.match(/linear-gradient\([^,]+,\s*([^,]+),\s*([^)]+)\)/);
+  return m ? [m[1].trim(), m[2].trim()] : null;
+}
+
+/** Parses `conic-gradient(from 0deg, c1, c2, ..., cN)` (grandmaster only)
+ * into its ordered color stops. */
+function parseConicGradientStops(css: string): string[] | null {
+  const m = css.match(/conic-gradient\([^,]+,\s*(.+)\)/);
+  return m ? m[1].split(",").map((s) => s.trim()) : null;
+}
+
+/** Fills [0,0,w,h] with the given banner preset's gradient, same visual
+ * language as ProfileBanner.tsx (a 135° linear gradient approximated here
+ * as corner-to-corner, close enough for a shared image) — or, for the one
+ * conic-gradient preset (grandmaster), a real conic gradient where the
+ * browser supports it, falling back to a diagonal approximation of the
+ * same stops otherwise. */
+function fillBannerGradient(ctx: CanvasRenderingContext2D, css: string, w: number, h: number): void {
+  const conicStops = parseConicGradientStops(css);
+  if (conicStops) {
+    const grad =
+      typeof ctx.createConicGradient === "function"
+        ? ctx.createConicGradient(0, w / 2, h / 2)
+        : ctx.createLinearGradient(0, 0, w, h);
+    conicStops.forEach((c, i) => grad.addColorStop(i / (conicStops.length - 1), c));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    return;
+  }
+  const stops = parseLinearGradientStops(css);
+  const grad = ctx.createLinearGradient(0, 0, w, h);
+  if (stops) {
+    grad.addColorStop(0, stops[0]);
+    grad.addColorStop(1, stops[1]);
+  } else {
+    grad.addColorStop(0, "#123c2c");
+    grad.addColorStop(1, "#123c2c");
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
 }
 
 function loadImageForCanvas(url: string): Promise<HTMLImageElement | null> {
@@ -141,20 +305,30 @@ function loadImageForCanvas(url: string): Promise<HTMLImageElement | null> {
 }
 
 /**
- * Renders a shareable "profile card" PNG — avatar (+ frame), name, title,
- * level/rank, a few headline stats, and Trophy Case dots. Same visual
- * language and canvas approach as renderShareCard above (a second,
+ * Renders a shareable "profile card" PNG — banner, avatar (+ frame +
+ * badge), name (+ Creator pill), title, level, a few headline stats, and a
+ * real Trophy Case (medal + icon + family name, not bare dots). Same
+ * visual language and canvas approach as renderShareCard above (a second,
  * differently-shaped card rather than a generalized one: a game result is
  * a list of rows, a profile is a single subject with an avatar — trying to
  * force both through one shape would've made each harder to read, not
- * easier to maintain).
+ * easier to maintain). The site URL is baked into the image itself (see
+ * SITE_URL above) — sharing this picture is the one thing every share
+ * target reliably supports (see shareProfileCard's own comment in
+ * player/page.tsx for why the link isn't also passed to navigator.share),
+ * so the link has to travel with the pixels to reliably reach whoever
+ * receives it.
  */
 export async function renderProfileShareCard(input: ProfileShareCardInput): Promise<Blob | null> {
   const scale = 2;
   const W = 540;
+  const bannerOption = findBannerOption(input.banner);
+  const onBanner = !!bannerOption;
   const hasStats = input.stats.length > 0;
-  const hasTrophies = input.trophyColors.length > 0;
-  const H = 216 + (hasStats ? 78 : 0) + (hasTrophies ? 54 : 0);
+  const hasTrophies = input.trophies.length > 0;
+  const headerH = 216;
+  const footerH = 30;
+  const H = headerH + (hasStats ? 78 : 0) + (hasTrophies ? 118 : 0) + footerH;
 
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -164,24 +338,38 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
   ctx.scale(scale, scale);
 
   const bg = themeColor("--bg", "#0a2b20");
+  const panel = themeColor("--panel", "#123c2c");
   const heading = themeColor("--heading", "#fef3c7");
   const text = themeColor("--text", "#f5f0e6");
   const faint = themeColor("--faint", "rgba(209,250,229,0.45)");
   const accent = themeColor("--accent", "#fbbf24");
 
+  // The whole card starts on the theme's own background (stats/trophies
+  // below the header always sit on this, same as the real page — the
+  // banner is scoped to the identity header only, see ProfileBanner.tsx).
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, -40, 0, W / 2, -40, W * 0.9);
-  glow.addColorStop(0, hexWithAlpha(accent, 0.14));
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
+
+  if (bannerOption) {
+    // Same 135°-gradient-plus-dark-scrim language as ProfileBanner.tsx —
+    // the scrim guarantees the white header text stays legible regardless
+    // of which preset's stops happen to land where.
+    fillBannerGradient(ctx, bannerOption.css, W, headerH);
+    ctx.fillStyle = "rgba(0,0,0,0.32)";
+    ctx.fillRect(0, 0, W, headerH);
+  } else {
+    const glow = ctx.createRadialGradient(W / 2, -40, 0, W / 2, -40, W * 0.9);
+    glow.addColorStop(0, hexWithAlpha(accent, 0.14));
+    glow.addColorStop(1, "transparent");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, headerH);
+  }
 
   const sans =
     '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
   ctx.textBaseline = "middle";
 
-  ctx.fillStyle = faint;
+  ctx.fillStyle = onBanner ? "rgba(255,255,255,0.85)" : faint;
   ctx.font = `600 14px ${sans}`;
   ctx.textAlign = "left";
   ctx.fillText("🃏  BOOKS & RUNS", 32, 34);
@@ -224,36 +412,79 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     }
   }
 
+  // The earned avatar-corner badge — same custom icon treatment as
+  // EmojiOrBadge/PremiumBadgeIcon.tsx on the real page (a category-mastery
+  // badge renders that category's own line-art icon; a level-milestone
+  // badge renders the ribbon medal in its own color), not the raw emoji
+  // character, which is what the previous version of this card drew.
   if (input.badge) {
     const badgeRadius = avatarSize * 0.18;
     const badgeCx = avatarX + avatarSize - badgeRadius * 0.6;
     const badgeCy = avatarY + avatarSize - badgeRadius * 0.6;
+    // Ring matching the real chip's border-2 border-[var(--bg)], then a
+    // bg-[var(--panel)] disc underneath the icon.
     ctx.beginPath();
-    ctx.arc(badgeCx, badgeCy, badgeRadius, 0, Math.PI * 2);
+    ctx.arc(badgeCx, badgeCy, badgeRadius + 2, 0, Math.PI * 2);
     ctx.fillStyle = bg;
     ctx.fill();
-    ctx.textAlign = "center";
-    ctx.font = `${Math.round(badgeRadius * 1.3)}px ${sans}`;
-    ctx.fillText(input.badge, badgeCx, badgeCy + 1);
+    ctx.beginPath();
+    ctx.arc(badgeCx, badgeCy, badgeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = panel;
+    ctx.fill();
+    const premium = findPremiumEmojiOption(input.badge);
+    const iconSize = badgeRadius * 1.3;
+    if (premium?.unlock.kind === "categoryMastered") {
+      drawIconElements(ctx, ACHIEVEMENT_ICON_ELEMENTS[premium.unlock.category], badgeCx, badgeCy, iconSize, heading);
+    } else if (premium) {
+      drawMedalIcon(ctx, badgeCx, badgeCy, iconSize, heading, LEVEL_MEDAL_COLOR[premium.emoji] ?? heading);
+    } else {
+      // Unrecognized value (shouldn't happen for a real account) — fall
+      // back to the raw character rather than drawing nothing.
+      ctx.textAlign = "center";
+      ctx.fillStyle = heading;
+      ctx.font = `${Math.round(badgeRadius * 1.3)}px ${sans}`;
+      ctx.fillText(input.badge, badgeCx, badgeCy + 1);
+    }
   }
 
   const textX = avatarX + avatarSize + 24;
+  const maxTextW = W - textX - 24;
   ctx.textAlign = "left";
-  ctx.fillStyle = heading;
+  ctx.fillStyle = onBanner ? "#ffffff" : heading;
   ctx.font = `800 26px ${sans}`;
-  ctx.fillText(input.displayName, textX, avatarY + 20);
+  const nameW = Math.min(ctx.measureText(input.displayName).width, maxTextW);
+  ctx.fillText(input.displayName, textX, avatarY + 20, maxTextW);
 
-  if (input.titleLabel) {
-    ctx.fillStyle = accent;
-    ctx.font = `600 14px ${sans}`;
-    ctx.fillText(input.titleLabel, textX, avatarY + 46);
+  if (input.isCreator) {
+    // Same star-badge language as player/page.tsx's Creator pill.
+    const pillX = textX + nameW + 10;
+    const pillY = avatarY + 20;
+    const pillW = 74;
+    ctx.fillStyle = onBanner ? "rgba(255,255,255,0.2)" : hexWithAlpha(accent, 0.15);
+    roundRect(ctx, pillX, pillY - 9, pillW, 18, 9);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(pillX + 12, pillY - 4.5);
+    ctx.scale(0.42, 0.42);
+    ctx.fillStyle = onBanner ? "#fef08a" : accent;
+    ctx.fill(new Path2D(CREATOR_STAR_PATH));
+    ctx.restore();
+    ctx.fillStyle = onBanner ? "#fef08a" : accent;
+    ctx.font = `700 10px ${sans}`;
+    ctx.fillText("CREATOR", pillX + 20, pillY + 1);
   }
 
-  ctx.fillStyle = faint;
+  if (input.titleLabel) {
+    ctx.fillStyle = onBanner ? "#fde047" : accent;
+    ctx.font = `600 14px ${sans}`;
+    ctx.fillText(input.titleLabel, textX, avatarY + 46, maxTextW);
+  }
+
+  ctx.fillStyle = onBanner ? "rgba(255,255,255,0.85)" : faint;
   ctx.font = `600 13px ${sans}`;
   ctx.fillText(`Level ${input.level}`, textX, avatarY + (input.titleLabel ? 68 : 46));
 
-  let y = avatarY + avatarSize + 26;
+  let y = headerH - 20;
   ctx.strokeStyle = hexWithAlpha(text, 0.14);
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -282,15 +513,38 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     ctx.fillStyle = faint;
     ctx.font = `600 11px ${sans}`;
     ctx.fillText("TROPHY CASE", 32, y + 6);
-    const dotY = y + 28;
-    input.trophyColors.forEach((color, i) => {
-      const x = 32 + i * 34 + 12;
+    // Same medal shape as the real Trophy Case's TrophyBadge: a tier-
+    // colored ring, a panel-colored disc, the category's own icon at half
+    // size, and the family name underneath — not a bare color dot.
+    const medalR = 22;
+    const medalY = y + 24 + medalR;
+    const colW = (W - 64) / input.trophies.length;
+    input.trophies.forEach((trophy, i) => {
+      const cx2 = 32 + colW * i + colW / 2;
       ctx.beginPath();
-      ctx.arc(x, dotY, 12, 0, Math.PI * 2);
-      ctx.fillStyle = color;
+      ctx.arc(cx2, medalY, medalR, 0, Math.PI * 2);
+      ctx.fillStyle = TIER_RING_COLOR[trophy.tier];
       ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx2, medalY, medalR - 3, 0, Math.PI * 2);
+      ctx.fillStyle = panel;
+      ctx.fill();
+      drawIconElements(ctx, ACHIEVEMENT_ICON_ELEMENTS[trophy.category], cx2, medalY, medalR, heading);
+      ctx.textAlign = "center";
+      ctx.fillStyle = faint;
+      ctx.font = `500 10px ${sans}`;
+      const label =
+        trophy.familyTitle.length > 12 ? `${trophy.familyTitle.slice(0, 11)}…` : trophy.familyTitle;
+      ctx.fillText(label, cx2, medalY + medalR + 14, colW - 4);
     });
+    y += 118;
   }
+
+  // The link, baked into the image itself — see this function's own doc.
+  ctx.textAlign = "center";
+  ctx.fillStyle = faint;
+  ctx.font = `500 11px ${sans}`;
+  ctx.fillText(SITE_URL, W / 2, H - footerH / 2);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }

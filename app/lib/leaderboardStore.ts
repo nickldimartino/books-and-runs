@@ -77,6 +77,9 @@ export interface LeaderboardEntry {
   // don't come from player_stats/achievement_counters.
   daily_deal_streak: number;
   daily_deal_best_streak: number;
+  // Broadcast by syncWeeklyChallengeStreak, same reasoning as the pair
+  // above — server-verified via migration 0039's trigger, not client-set.
+  weekly_challenge_best_streak: number;
   mp_games_played: number;
   mp_games_won: number;
   mp_best_win_streak: number;

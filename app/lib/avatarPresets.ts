@@ -13,8 +13,7 @@
 // whichever picture (photo or one of the free emoji above) an account
 // actually has, not a competing picture of their own.
 
-import { AchievementProgressState } from "@/achievements";
-import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked } from "./cosmeticUnlocks";
+import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked, UnlockContext } from "./cosmeticUnlocks";
 
 export const EMOJI_OPTIONS: readonly string[] = [
   "😀", "😎", "🤠", "🥸", "🤓", "🧐", "😺", "🐯", "🦁", "🐵", "🐼", "🐨",
@@ -58,18 +57,37 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "📜", unlock: { kind: "categoryMastered", category: "contracts", categoryLabel: "Contracts" } },
   { emoji: "🎪", unlock: { kind: "categoryMastered", category: "tableComposition", categoryLabel: "Table Composition" } },
   { emoji: "👑", unlock: { kind: "categoryMastered", category: "multiplayer", categoryLabel: "Multiplayer" } },
+  // Epic/Mythic/Prismatic — see cosmeticUnlocks.ts's own doc for the new
+  // rule kinds these use. Each pairs with a matching avatar frame, title,
+  // and banner of the same name (profileCosmetics.ts/bannerPresets.ts) —
+  // one named reward per milestone, not four separately-tuned ones.
+  { emoji: "🧭", unlock: { kind: "categoriesMasteredCount", count: 3 } },
+  { emoji: "🏵️", unlock: { kind: "categoriesMasteredCount", count: 6 } },
+  { emoji: "🌌", unlock: { kind: "level", level: 250 } },
+  { emoji: "⚔️", unlock: { kind: "gamesPlayed", count: 500 } },
+  { emoji: "🏮", unlock: { kind: "dailyDealStreak", days: 30 } },
+  { emoji: "🏆", unlock: { kind: "weeklyChallengeStreak", weeks: 12 } },
+  { emoji: "💫", unlock: { kind: "complete" } },
 ] as const;
 
-/** Ring color behind each level-milestone medal (see
- * PremiumBadgeIcon.tsx's MedalIcon) — bronze/silver/gold/diamond, in
- * ascending order the same way achievement tiers use bronze→diamond rings
- * (player/page.tsx's TIER_RING_COLOR). Category-mastery badges don't need
- * an entry here — they're colored by their own achievement tier instead. */
+/** Ring/disc color behind each non-category-mastery medal (see
+ * PremiumBadgeIcon.tsx's MedalIcon) — bronze/silver/gold/diamond for the
+ * original 4 level milestones, then each new Epic/Mythic/Prismatic
+ * reward's own signature color (matching its avatar frame). Category-
+ * mastery badges don't need an entry here — they're colored by their own
+ * achievement tier instead (see AchievementIcon). */
 export const LEVEL_MEDAL_COLOR: Record<string, string> = {
   "🥉": "#CD7F32",
   "🥈": "#B0B8C1",
   "🥇": "#F5C518",
   "💎": "#38BDF8",
+  "🧭": "#a855f7",
+  "🏵️": "#e5e7eb",
+  "🌌": "#f0c14b",
+  "⚔️": "#9ca3af",
+  "🏮": "#f97316",
+  "🏆": "#facc15",
+  "💫": "#ec4899",
 };
 
 /** The premium option for a given emoji, or null for a free (or unknown)
@@ -142,12 +160,8 @@ export function isValidColor(hex: string): boolean {
  * as mastered." Mirrors, but isn't the source of truth for, migration
  * 0026's server-side trigger — that's what actually decides on save.
  */
-export function isPremiumEmojiUnlocked(
-  option: PremiumEmojiOption,
-  level: number,
-  progress: AchievementProgressState
-): boolean {
-  return isCosmeticUnlocked(option.unlock, level, progress);
+export function isPremiumEmojiUnlocked(option: PremiumEmojiOption, ctx: UnlockContext): boolean {
+  return isCosmeticUnlocked(option.unlock, ctx);
 }
 
 /** A short "how to unlock this" line for the picker's lock tooltip. */

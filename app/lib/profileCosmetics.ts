@@ -43,6 +43,24 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
   { id: "slate", label: "Slate" },
   { id: "onyx", label: "Onyx" },
   { id: "grandmaster", label: "Grandmaster", unlock: { kind: "allCategoriesMastered" } },
+  // Epic/Mythic/Prismatic — see cosmeticUnlocks.ts's own doc for the new
+  // rule kinds. Each id matches a same-named title/banner/badge — one
+  // named reward per milestone, not four separately-tuned cosmetics.
+  { id: "specialist", label: "Specialist", unlock: { kind: "categoriesMasteredCount", count: 3 } },
+  { id: "virtuoso", label: "Virtuoso", unlock: { kind: "categoriesMasteredCount", count: 6 } },
+  { id: "ascendant", label: "Ascendant", unlock: { kind: "level", level: 250 } },
+  { id: "ironwill", label: "Iron Will", unlock: { kind: "gamesPlayed", count: 500 } },
+  { id: "unbroken", label: "Unbroken", unlock: { kind: "dailyDealStreak", days: 30 } },
+  { id: "undefeated", label: "Undefeated", unlock: { kind: "weeklyChallengeStreak", weeks: 12 } },
+  // "prismatic" gets an animated conic ring (see AvatarFrame.tsx), the
+  // same treatment as grandmaster but reserved for the single hardest
+  // reward in the game.
+  { id: "prismatic", label: "Complete", unlock: { kind: "complete" } },
+  // Frame + banner only (see bannerPresets.ts) — no title or badge; the
+  // existing "Creator" pill next to the name already covers that ground,
+  // so a redundant earned-badge/title pair would just say the same thing
+  // twice.
+  { id: "dealerstable", label: "Dealer's Table", unlock: { kind: "creatorOnly" } },
 ];
 
 /** Solid ring colors for each frame — "grandmaster" instead gets a
@@ -65,6 +83,19 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   rose: "#F43F5E",
   slate: "#64748B",
   onyx: "#1E293B",
+  // Epic/Mythic/Prismatic solid colors — "prismatic" gets its own animated
+  // conic ring in AvatarFrame.tsx (same mechanism as grandmaster); this
+  // entry is only the flat fallback the share card's canvas uses (a static
+  // PNG can't show rotation anyway — see shareCard.ts, same simplification
+  // already applied to grandmaster there).
+  specialist: "#7C3AED",
+  virtuoso: "#D9D9DC",
+  ascendant: "#F0C14B",
+  ironwill: "#9CA3AF",
+  unbroken: "#F97316",
+  undefeated: "#22C55E",
+  prismatic: "#EC4899",
+  dealerstable: "#D4AF37",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {
@@ -132,6 +163,14 @@ export const TITLE_OPTIONS: readonly TitleOption[] = [
     unlock: { kind: "categoryMastered", category: "multiplayer", categoryLabel: "Multiplayer" },
   },
   { id: "grandmaster", label: "Grandmaster", unlock: { kind: "allCategoriesMastered" } },
+  // Epic/Mythic/Prismatic — matching id to the same-named frame/banner/badge.
+  { id: "specialist", label: "Specialist", unlock: { kind: "categoriesMasteredCount", count: 3 } },
+  { id: "virtuoso", label: "Virtuoso", unlock: { kind: "categoriesMasteredCount", count: 6 } },
+  { id: "ascendant", label: "Ascendant", unlock: { kind: "level", level: 250 } },
+  { id: "ironwill", label: "Iron Will", unlock: { kind: "gamesPlayed", count: 500 } },
+  { id: "unbroken", label: "Unbroken", unlock: { kind: "dailyDealStreak", days: 30 } },
+  { id: "undefeated", label: "Undefeated", unlock: { kind: "weeklyChallengeStreak", weeks: 12 } },
+  { id: "prismatic", label: "Complete", unlock: { kind: "complete" } },
 ];
 
 export function findTitleOption(id: string | null): TitleOption | null {

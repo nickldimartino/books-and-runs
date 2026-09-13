@@ -59,7 +59,7 @@ import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
 import { loadLocalCardBack } from "../lib/cardBackStore";
 import { loadLocalCardFace } from "../lib/cardFaceStore";
-import { cosmeticRequirementLabel, isCosmeticUnlocked } from "../lib/cosmeticUnlocks";
+import { cosmeticRequirementLabel, isCosmeticUnlocked, makeUnlockContext } from "../lib/cosmeticUnlocks";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
 import {
@@ -326,6 +326,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
     worst_score: null,
     daily_deal_streak: 0,
     daily_deal_best_streak: 0,
+    weekly_challenge_best_streak: 0,
     mp_games_played: 0,
     mp_games_won: 0,
     mp_best_win_streak: 0,
@@ -718,7 +719,13 @@ export default function PlayerProfilePage() {
   }
 
   // ── Share profile card ──────────────────────────────────────────────────
-  const [shareState, setShareState] = useState<"idle" | "working" | "error">("idle");
+  // "copied" is the normal success state, not just an error fallback — see
+  // the clipboard-write below for why the link is never part of the actual
+  // share payload, which means nothing else on screen previously told the
+  // person it had been copied at all. Without that, "share the picture"
+  // silently dropped the link on the floor unless they already knew to
+  // paste it themselves afterward.
+  const [shareState, setShareState] = useState<"idle" | "working" | "copied" | "error">("idle");
 
   async function shareProfileCard() {
     if (!entry) return;
@@ -739,6 +746,7 @@ export default function PlayerProfilePage() {
       const titleOption = findTitleOption(entry.title);
       const blob = await renderProfileShareCard({
         displayName: displayNameFor(entry),
+        isCreator: entry.is_creator,
         titleLabel: titleOption?.label ?? null,
         level: displayLevel,
         avatarKind: entry.avatar_kind,
@@ -752,15 +760,16 @@ export default function PlayerProfilePage() {
           ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id])
           : null,
         badge: entry.badge,
+        banner: entry.banner,
         stats: [
           { label: "Games", value: String(entry.games_played) },
           { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
           { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
         ],
-        trophyColors: entry.showcase
+        trophies: entry.showcase
           .map(resolveShowcaseItem)
           .filter((i): i is ShowcaseItem => !!i)
-          .map((i) => TIER_RING_COLOR[i.tier]),
+          .map((i) => ({ category: i.category, tier: i.tier, familyTitle: i.familyTitle })),
       });
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
@@ -779,8 +788,14 @@ export default function PlayerProfilePage() {
         window.open(url, "_blank");
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
       }
-      setShareState("idle");
+      setShareState("copied");
+      setTimeout(() => setShareState((s) => (s === "copied" ? "idle" : s)), 4000);
     } catch (err) {
+      // A user backing out of the native share sheet also lands here (some
+      // platforms reject navigator.share's promise on cancel) — that's not
+      // really a failure worth alarming over, but there's no reliable way
+      // to tell it apart from a real error, so it still surfaces the same
+      // message; worst case someone taps Share again.
       console.error("Failed to share profile card:", err);
       setShareState("error");
     }
@@ -855,6 +870,25 @@ export default function PlayerProfilePage() {
     getMyMpHistory(client, 20).then(setMpHistory).catch(() => setMpHistory([]));
   }, [user, isSelf]);
 
+  // Every unlock check on this page (the self-heal below, and each
+  // picker's own locked/unlocked state) reads from this one context —
+  // built from the live level (self-view only has that; see displayLevel's
+  // own doc) plus whatever this account's entry/progress already say.
+  // Only ever meaningful in a self-view, but harmless to compute either
+  // way since nothing outside isSelf-gated code reads it.
+  const unlockCtx = useMemo(
+    () =>
+      makeUnlockContext({
+        level: level?.level ?? entry?.level ?? 0,
+        progress,
+        gamesPlayed: entry?.games_played ?? 0,
+        dailyDealBestStreak: entry?.daily_deal_best_streak ?? 0,
+        weeklyChallengeBestStreak: entry?.weekly_challenge_best_streak ?? 0,
+        isCreator: entry?.is_creator ?? false,
+      }),
+    [level, entry, progress]
+  );
+
   // Self-heal: an equipped cosmetic can end up over-privileged relative to
   // today's live level/progress — stale data from before a gate was
   // tightened, or account stats that changed after the fact (e.g. a reset
@@ -870,33 +904,33 @@ export default function PlayerProfilePage() {
     const client = supabase;
 
     const frameOption = findAvatarFrameOption(entry.avatar_frame);
-    if (frameOption?.unlock && !isCosmeticUnlocked(frameOption.unlock, level.level, progress)) {
+    if (frameOption?.unlock && !isCosmeticUnlocked(frameOption.unlock, unlockCtx)) {
       updateLeaderboardAvatarFrame(client, user.id, null)
         .then(() => setEntry((prev) => (prev ? { ...prev, avatar_frame: null } : prev)))
         .catch((err) => console.error("Failed to clear an over-privileged avatar frame:", err));
     }
 
     const titleOption = findTitleOption(entry.title);
-    if (titleOption && !isCosmeticUnlocked(titleOption.unlock, level.level, progress)) {
+    if (titleOption && !isCosmeticUnlocked(titleOption.unlock, unlockCtx)) {
       updateLeaderboardTitle(client, user.id, null)
         .then(() => setEntry((prev) => (prev ? { ...prev, title: null } : prev)))
         .catch((err) => console.error("Failed to clear an over-privileged title:", err));
     }
 
     const bannerOption = findBannerOption(entry.banner);
-    if (bannerOption?.unlock && !isCosmeticUnlocked(bannerOption.unlock, level.level, progress)) {
+    if (bannerOption?.unlock && !isCosmeticUnlocked(bannerOption.unlock, unlockCtx)) {
       updateLeaderboardBanner(client, user.id, null)
         .then(() => setEntry((prev) => (prev ? { ...prev, banner: null } : prev)))
         .catch((err) => console.error("Failed to clear an over-privileged banner:", err));
     }
 
     const badgeOption = entry.badge ? findPremiumEmojiOption(entry.badge) : null;
-    if (badgeOption && !isPremiumEmojiUnlocked(badgeOption, level.level, progress)) {
+    if (badgeOption && !isPremiumEmojiUnlocked(badgeOption, unlockCtx)) {
       updateLeaderboardBadge(client, user.id, null)
         .then(() => setEntry((prev) => (prev ? { ...prev, badge: null } : prev)))
         .catch((err) => console.error("Failed to clear an over-privileged badge:", err));
     }
-  }, [user, isSelf, entry, level, progress, privateLoading]);
+  }, [user, isSelf, entry, level, unlockCtx, privateLoading]);
 
   const achievements = useMemo(() => allAchievements(progress), [progress]);
   const unlocked = useMemo(() => achievements.filter((a) => a.unlocked), [achievements]);
@@ -1161,6 +1195,11 @@ export default function PlayerProfilePage() {
                   </button>
                 )}
               </div>
+              {shareState === "copied" && (
+                <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>
+                  Link copied — paste it along with the picture.
+                </p>
+              )}
               {shareState === "error" && (
                 <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
               )}
@@ -1346,7 +1385,7 @@ export default function PlayerProfilePage() {
                     None
                   </button>
                   {PREMIUM_EMOJI_OPTIONS.map((option) => {
-                    const unlocked = isPremiumEmojiUnlocked(option, level?.level ?? 0, progress);
+                    const unlocked = isPremiumEmojiUnlocked(option, unlockCtx);
                     return (
                       <button
                         key={option.emoji}
@@ -1467,7 +1506,7 @@ export default function PlayerProfilePage() {
                     <span className="text-[10px] text-[var(--faint)]">None</span>
                   </button>
                   {AVATAR_FRAME_OPTIONS.map((option) => {
-                    const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, unlockCtx);
                     return (
                       <button
                         key={option.id}
@@ -1513,7 +1552,7 @@ export default function PlayerProfilePage() {
                     None
                   </button>
                   {TITLE_OPTIONS.map((option) => {
-                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    const unlocked = isCosmeticUnlocked(option.unlock, unlockCtx);
                     return (
                       <button
                         key={option.id}
@@ -1558,7 +1597,7 @@ export default function PlayerProfilePage() {
                     <span className="text-[10px] text-[var(--faint)]">None</span>
                   </button>
                   {BANNER_OPTIONS.map((option) => {
-                    const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, unlockCtx);
                     return (
                       <button
                         key={option.id}

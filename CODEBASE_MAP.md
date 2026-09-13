@@ -310,6 +310,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0039 | The Weekly Challenge, built server-verified from day one: `weekly_challenge_completions` (service-role-only writes, same shape as 0036) + a trigger computing `leaderboard_entries`' new `weekly_challenge_streak`/`weekly_challenge_best_streak`/`weekly_challenge_last_played` columns from it. |
 | 0040 | Clubs — `clubs` + `club_members` (owner-curated, only onto an existing friend), RPCs for create/rename/delete/add/remove member, and `club_standings()` (a filtered, re-ranked view of real multiplayer stats — no new stats pipeline). |
 | 0041 | Tournaments — a round-robin series, not a bracket (see `tournamentsStore.ts`'s own doc). `tournaments` + `tournament_games` link a fixed roster's ordinary multiplayer games together; no `mp` Edge Function changes. RPCs create/link/cancel a series and compute live standings from `mp_participants`. |
+| 0042 | The Rarity Vault — Epic (3/6-of-9 categories mastered), Mythic (Level 250, 500 games, 30-day Daily Deal streak, 12-week Weekly Challenge streak), and Prismatic (all of the above at once) cosmetic tiers, plus a Creator-only frame + banner. New `cosmetic_unlocked()` requirement kinds; see `cosmeticUnlocks.ts`. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped

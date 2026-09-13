@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_PROGRESS_STATE } from "@/achievements";
+import { makeUnlockContext } from "./cosmeticUnlocks";
 import { isPremiumEmojiUnlocked, isValidBadge, isValidEmoji, PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
 
 function findPremium(emoji: string) {
   const found = PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === emoji);
   if (!found) throw new Error(`no premium option for ${emoji}`);
   return found;
+}
+
+function ctx(overrides: Partial<Parameters<typeof makeUnlockContext>[0]> = {}) {
+  return makeUnlockContext({ level: 0, progress: EMPTY_PROGRESS_STATE, ...overrides });
 }
 
 describe("isValidEmoji", () => {
@@ -35,14 +40,14 @@ describe("isValidBadge", () => {
 describe("isPremiumEmojiUnlocked", () => {
   it("gates a level-milestone emoji on the account's level", () => {
     const bronze = findPremium("🥉");
-    expect(isPremiumEmojiUnlocked(bronze, 9, EMPTY_PROGRESS_STATE)).toBe(false);
-    expect(isPremiumEmojiUnlocked(bronze, 10, EMPTY_PROGRESS_STATE)).toBe(true);
+    expect(isPremiumEmojiUnlocked(bronze, ctx({ level: 9 }))).toBe(false);
+    expect(isPremiumEmojiUnlocked(bronze, ctx({ level: 10 }))).toBe(true);
   });
 
   it("gates a category-mastery emoji on every family in that category reaching Expert", () => {
     const multiplayerCrown = findPremium("👑");
     // Nothing unlocked yet.
-    expect(isPremiumEmojiUnlocked(multiplayerCrown, 0, EMPTY_PROGRESS_STATE)).toBe(false);
+    expect(isPremiumEmojiUnlocked(multiplayerCrown, ctx())).toBe(false);
 
     // The multiplayer category's families read mpGamesPlayed/mpGamesWon/
     // mpBestWinStreak/mpWinRate (see achievements.ts) — maxing all four to
@@ -53,7 +58,7 @@ describe("isPremiumEmojiUnlocked", () => {
       mpGamesWon: 1000,
       mpBestWinStreak: 1000,
     };
-    expect(isPremiumEmojiUnlocked(multiplayerCrown, 0, mastered)).toBe(true);
+    expect(isPremiumEmojiUnlocked(multiplayerCrown, ctx({ progress: mastered }))).toBe(true);
   });
 
   it("doesn't unlock a category emoji from mastering a different category", () => {
@@ -69,6 +74,13 @@ describe("isPremiumEmojiUnlocked", () => {
         melds_with_zero_wilds: 1000,
       },
     };
-    expect(isPremiumEmojiUnlocked(multiplayerCrown, 0, masteredMeldingOnly)).toBe(false);
+    expect(isPremiumEmojiUnlocked(multiplayerCrown, ctx({ progress: masteredMeldingOnly }))).toBe(false);
+  });
+
+  it("gates the new Epic/Mythic/Prismatic badges on their own dimensions", () => {
+    expect(isPremiumEmojiUnlocked(findPremium("⚔️"), ctx({ gamesPlayed: 500 }))).toBe(true);
+    expect(isPremiumEmojiUnlocked(findPremium("⚔️"), ctx({ gamesPlayed: 499 }))).toBe(false);
+    expect(isPremiumEmojiUnlocked(findPremium("🏮"), ctx({ dailyDealBestStreak: 30 }))).toBe(true);
+    expect(isPremiumEmojiUnlocked(findPremium("🏆"), ctx({ weeklyChallengeBestStreak: 12 }))).toBe(true);
   });
 });

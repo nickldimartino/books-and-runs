@@ -1977,6 +1977,32 @@ html[data-intro]::before {
   }
 }
 
+/* Same technique as .trophy-foil above, sized for a bigger element (the
+   Prismatic avatar frame ring and profile banner — see AvatarFrame.tsx/
+   ProfileBanner.tsx) — a slower, wider sweep so it reads as "shimmering"
+   rather than "flickering" on something this much larger than a trophy
+   medal. Reserved for the one apex reward that sits a tier above
+   Grandmaster's own (static) conic-gradient cosmetics. */
+.prismatic-foil {
+  position: relative;
+  overflow: hidden;
+}
+.prismatic-foil::after {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
+  transform: translateX(-130%) rotate(20deg);
+  animation: foil-sweep 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prismatic-foil::after {
+    animation: none;
+    display: none;
+  }
+}
+
 /* UnlockToast (components/UnlockToast.tsx) — drops in from above, same
    "no JS state, just a fresh mount" trick as .confirm-pop. */
 @keyframes unlock-toast-pop {

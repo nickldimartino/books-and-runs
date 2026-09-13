@@ -46,6 +46,32 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
     css: "conic-gradient(from 0deg, #f43f5e, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #a855f7, #f43f5e)",
     unlock: { kind: "allCategoriesMastered" },
   },
+  // Epic/Mythic — see cosmeticUnlocks.ts's own doc for the new rule kinds.
+  // Each id matches a same-named avatar frame/title/badge — one named
+  // reward per milestone. Kept to exactly two stops like every banner
+  // above, not just for visual consistency but because shareCard.ts's
+  // canvas renderer only parses a 2-stop linear-gradient.
+  { id: "specialist", label: "Eclipse", css: "linear-gradient(135deg, #1a0b2e, #0a0a0f)", unlock: { kind: "categoriesMasteredCount", count: 3 } },
+  { id: "virtuoso", label: "Nova", css: "linear-gradient(135deg, #7c3aed, #f0abfc)", unlock: { kind: "categoriesMasteredCount", count: 6 } },
+  { id: "ascendant", label: "Aurora Crown", css: "linear-gradient(135deg, #1e1b4b, #f0abfc)", unlock: { kind: "level", level: 250 } },
+  { id: "ironwill", label: "Forge", css: "linear-gradient(135deg, #1c1917, #dc2626)", unlock: { kind: "gamesPlayed", count: 500 } },
+  { id: "unbroken", label: "Daily Fire", css: "linear-gradient(135deg, #450a0a, #fde047)", unlock: { kind: "dailyDealStreak", days: 30 } },
+  { id: "undefeated", label: "Victory Lap", css: "linear-gradient(135deg, #052e16, #facc15)", unlock: { kind: "weeklyChallengeStreak", weeks: 12 } },
+  // Prismatic — the single apex reward. Same conic-gradient mechanism as
+  // Grandmaster (and the same static-PNG simplification in shareCard.ts),
+  // but with its own animated rotation in ProfileBanner.tsx (see
+  // globals.css's .prismatic-spin) so the two "foil" banners still read as
+  // visibly different tiers on the live page, not just different colors.
+  {
+    id: "prismatic",
+    label: "The Complete Table",
+    css: "conic-gradient(from 0deg, #ec4899, #a855f7, #6366f1, #06b6d4, #22c55e, #eab308, #f59e0b, #ec4899)",
+    unlock: { kind: "complete" },
+  },
+  // Frame + banner only (see profileCosmetics.ts) — a deliberately deeper,
+  // more saturated felt green than the free "forest" banner, so the two
+  // don't just look like the same pick.
+  { id: "dealerstable", label: "Dealer's Table", css: "linear-gradient(135deg, #062015, #0a3324)", unlock: { kind: "creatorOnly" } },
 ];
 
 export function findBannerOption(id: string | null): BannerOption | null {
