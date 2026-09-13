@@ -95,7 +95,11 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   unbroken: "#F97316",
   undefeated: "#22C55E",
   prismatic: "#EC4899",
-  dealerstable: "#D4AF37",
+  // "dealerstable" ("Rose Cut" — see AvatarFrame.tsx) gets a faceted icy
+  // conic gradient live; this is only the flat fallback the share card's
+  // canvas uses, same simplification already applied to grandmaster/
+  // prismatic there.
+  dealerstable: "#DCEEF5",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {

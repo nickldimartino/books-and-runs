@@ -68,10 +68,13 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
     css: "conic-gradient(from 0deg, #ec4899, #a855f7, #6366f1, #06b6d4, #22c55e, #eab308, #f59e0b, #ec4899)",
     unlock: { kind: "complete" },
   },
-  // Frame + banner only (see profileCosmetics.ts) — a deliberately deeper,
-  // more saturated felt green than the free "forest" banner, so the two
-  // don't just look like the same pick.
-  { id: "dealerstable", label: "Dealer's Table", css: "linear-gradient(135deg, #062015, #0a3324)", unlock: { kind: "creatorOnly" } },
+  // Frame + banner only (see profileCosmetics.ts). The live banner gets a
+  // full jeweled-border/wood/felt treatment (ProfileBanner.tsx's
+  // isDealersTable branch, styled in globals.css) that this `css` field
+  // can't express — it only feeds the free-swatch picker preview and the
+  // share-card PNG fallback (shareCard.ts only parses a plain 2-stop
+  // gradient), so it stays a simple approximation of the felt tone alone.
+  { id: "dealerstable", label: "Dealer's Table", css: "linear-gradient(135deg, #124a35, #051911)", unlock: { kind: "creatorOnly" } },
 ];
 
 export function findBannerOption(id: string | null): BannerOption | null {

@@ -2003,6 +2003,162 @@ html[data-intro]::before {
   }
 }
 
+/* "Rose Cut" Dealer's Table avatar frame (AvatarFrame.tsx) — same foil
+   technique as .prismatic-foil, tuned icy-white and a touch faster so a
+   faceted stone reads as glinting rather than shimmering. */
+.diamond-foil {
+  position: relative;
+  overflow: hidden;
+}
+.diamond-foil::after {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.9) 49%, transparent 56%);
+  transform: translateX(-130%) rotate(20deg);
+  animation: foil-sweep 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .diamond-foil::after {
+    animation: none;
+    display: none;
+  }
+}
+
+/* Creator-exclusive "Dealer's Table" banner (ProfileBanner.tsx) — a
+   walnut band studded with gem cabochons wrapping a dark felt table,
+   real layered DOM rather than the single `background` string every
+   other banner uses (bannerPresets.ts's `css` for this id only feeds the
+   free-swatch picker and the share-card fallback). */
+.dealers-table-banner {
+  position: relative;
+  border-radius: 20px;
+  padding: 22px;
+  background: repeating-linear-gradient(115deg, #b5793f 0px, #6b4423 3px, #b5793f 7px, #3d2412 11px);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.dealers-table-felt {
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 140% 100% at 20% 0%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%),
+    radial-gradient(ellipse 120% 90% at 50% 120%, #124a35, #0a2d20 60%, #051911 100%);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.55);
+}
+.dealers-table-felt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.07) 0 1.5px, transparent 1.5px 26px),
+    repeating-linear-gradient(-45deg, rgba(212, 175, 55, 0.07) 0 1.5px, transparent 1.5px 26px);
+  pointer-events: none;
+}
+.dealers-table-gems {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.dealers-table-edge {
+  position: absolute;
+  display: flex;
+  gap: 4px;
+}
+.dealers-table-edge.top,
+.dealers-table-edge.bottom {
+  left: 0;
+  right: 0;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+.dealers-table-edge.top {
+  top: 6px;
+}
+.dealers-table-edge.bottom {
+  bottom: 6px;
+}
+.dealers-table-edge.left,
+.dealers-table-edge.right {
+  top: 0;
+  bottom: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 30px 0;
+}
+.dealers-table-edge.left {
+  left: 6px;
+}
+.dealers-table-edge.right {
+  right: 6px;
+}
+.gem-stone {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.4),
+    inset 0 2px 3px rgba(255, 255, 255, 0.45);
+}
+.gem-stone::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 4px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}
+.gem-stone.corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+.gem-stone.corner::after {
+  top: 3px;
+  left: 4.5px;
+  width: 5px;
+  height: 4px;
+}
+.gem-stone.tl {
+  top: 4px;
+  left: 4px;
+}
+.gem-stone.tr {
+  top: 4px;
+  right: 4px;
+}
+.gem-stone.bl {
+  bottom: 4px;
+  left: 4px;
+}
+.gem-stone.br {
+  bottom: 4px;
+  right: 4px;
+}
+.gem-sapphire {
+  background: radial-gradient(circle at 35% 30%, #7fb3ff, #2f6fd6 45%, #163f85 100%);
+}
+.gem-ruby {
+  background: radial-gradient(circle at 35% 30%, #f2839a, #c0263f 45%, #6e0f22 100%);
+}
+.gem-emerald {
+  background: radial-gradient(circle at 35% 30%, #6fe0ac, #1f8a5f 45%, #0e4a30 100%);
+}
+.gem-amethyst {
+  background: radial-gradient(circle at 35% 30%, #d1a3ee, #7a3fae 45%, #421f61 100%);
+}
+.gem-diamond {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #aebfc9 55%, #7fa3b3 100%);
+}
+
 /* UnlockToast (components/UnlockToast.tsx) — drops in from above, same
    "no JS state, just a fresh mount" trick as .confirm-pop. */
 @keyframes unlock-toast-pop {

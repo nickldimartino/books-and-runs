@@ -1459,7 +1459,7 @@ export default function PlayerProfilePage() {
                     </AvatarFrame>
                     <span className="text-[10px] text-[var(--faint)]">None</span>
                   </button>
-                  {AVATAR_FRAME_OPTIONS.map((option) => {
+                  {AVATAR_FRAME_OPTIONS.filter((option) => option.unlock?.kind !== "creatorOnly" || unlockCtx.isCreator).map((option) => {
                     const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, unlockCtx);
                     return (
                       <button
@@ -1550,7 +1550,7 @@ export default function PlayerProfilePage() {
                     <div className="h-10 w-16 rounded-md border border-[var(--border)] bg-[var(--panel)]" />
                     <span className="text-[10px] text-[var(--faint)]">None</span>
                   </button>
-                  {BANNER_OPTIONS.map((option) => {
+                  {BANNER_OPTIONS.filter((option) => option.unlock?.kind !== "creatorOnly" || unlockCtx.isCreator).map((option) => {
                     const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, unlockCtx);
                     return (
                       <button
