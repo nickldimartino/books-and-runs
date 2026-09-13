@@ -53,6 +53,7 @@ tells you a project's real state.
 | 0031 | `leaderboard_entries.badge` — moves the 13 milestone/category-mastery emoji off `avatar_emoji` (which now only takes the 46 free ones) onto their own overlay column, so a photo or free emoji and an earned badge can show together instead of one replacing the other. |
 | 0032 | Avatar frames become free, purely stylistic picks (bronze/silver/gold/diamond renamed to amber/mist/citrine/sky, their level-gate rows removed from `cosmetic_unlocks`) — only "Grandmaster" stays earned. Also fixes `mp_my_stats()` computing stats for `auth.uid()` instead of the account actually being asked about — harmless from a real client, but broke any admin/migration bulk-update touching a row with a gated title/badge/banner already set. Adds `mp_stats_for(p_user_id)`; `compute_total_xp`/`category_mastered` now use it directly. |
 | 0033 | Fixes a mistake in 0032 that broke saving any frame/title/banner/badge: `mp_stats_for()` was locked to internal-only, but its callers (`compute_total_xp`/`category_mastered`) weren't `security definer`, so a real user's nested call to it was denied. Makes both `security definer` so the whole chain runs under one consistent identity. |
+| 0034 | Widens `leaderboard_avatar_color_ok`/`leaderboard_banner_ok` for a much larger set of avatar background colors and profile banners (avatar frames need no DB change — no CHECK constraint on that column). |
 
 ## New migrations
 

@@ -101,6 +101,17 @@ export const COLOR_OPTIONS: readonly ColorOption[] = [
   { hex: "#EC4899", label: "Pink" },
   { hex: "#F43F5E", label: "Rose" },
   { hex: "#64748B", label: "Slate" },
+  // Appended rather than interleaved so DEFAULT_COLOR's index below (and
+  // anyone else who ever indexes into this array by position) stays
+  // pointed at the same color it always has.
+  { hex: "#0EA5E9", label: "Sky" },
+  { hex: "#D946EF", label: "Fuchsia" },
+  { hex: "#B91C1C", label: "Crimson" },
+  { hex: "#166534", label: "Forest" },
+  { hex: "#1E3A8A", label: "Navy" },
+  { hex: "#334155", label: "Charcoal" },
+  { hex: "#A16207", label: "Gold" },
+  { hex: "#6EE7B7", label: "Mint" },
 ] as const;
 
 export const DEFAULT_EMOJI = EMOJI_OPTIONS[0];

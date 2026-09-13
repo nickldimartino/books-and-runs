@@ -30,6 +30,18 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
   { id: "mist", label: "Mist" },
   { id: "citrine", label: "Citrine" },
   { id: "sky", label: "Sky" },
+  { id: "crimson", label: "Crimson" },
+  { id: "coral", label: "Coral" },
+  { id: "emerald", label: "Emerald" },
+  { id: "forest", label: "Forest" },
+  { id: "teal", label: "Teal" },
+  { id: "cobalt", label: "Cobalt" },
+  { id: "indigo", label: "Indigo" },
+  { id: "violet", label: "Violet" },
+  { id: "magenta", label: "Magenta" },
+  { id: "rose", label: "Rose" },
+  { id: "slate", label: "Slate" },
+  { id: "onyx", label: "Onyx" },
   { id: "grandmaster", label: "Grandmaster", unlock: { kind: "allCategoriesMastered" } },
 ];
 
@@ -41,6 +53,18 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   mist: "#B0B8C1",
   citrine: "#F5C518",
   sky: "#38BDF8",
+  crimson: "#DC2626",
+  coral: "#FB7185",
+  emerald: "#10B981",
+  forest: "#15803D",
+  teal: "#14B8A6",
+  cobalt: "#2563EB",
+  indigo: "#6366F1",
+  violet: "#8B5CF6",
+  magenta: "#D946EF",
+  rose: "#F43F5E",
+  slate: "#64748B",
+  onyx: "#1E293B",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {
