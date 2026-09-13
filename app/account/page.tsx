@@ -8,6 +8,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
 import { playerProfileHref, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
@@ -263,6 +264,12 @@ export default function AccountPage() {
         ← Home
       </Link>
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Account</h1>
+
+      <PageTip id="account" title="Your public picture, name, and bio live elsewhere">
+        This page is sign-in and security — email, password, two-factor, your data. Your display
+        name, bio, profile picture, frame, title, and banner are all edited from your profile page
+        (the &quot;Edit your profile →&quot; link below).
+      </PageTip>
 
       {authLoading || loading ? (
         <LoadingSpinner />
@@ -520,6 +527,7 @@ export default function AccountPage() {
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home
       </Link>
+      <p className="text-center text-[10px] text-[var(--faint)]">Made by Nicky D</p>
     </main>
   );
 }

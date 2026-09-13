@@ -12,6 +12,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import {
   addFriendByCode,
@@ -321,13 +322,15 @@ export default function FriendsPage() {
         </p>
       </div>
 
+      <PageTip id="friends" title="More than a list">
+        Tap a friend&apos;s name to open their profile — level, achievements, Trophy Case, and (once
+        you&apos;ve played some multiplayer games together) your head-to-head record against them.
+      </PageTip>
+
       {authLoading || loading ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">
-          Couldn&apos;t load your friends — check your connection, or that this Supabase project has
-          every migration in <code>supabase/migrations/</code> applied.
-        </p>
+        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load your friends — check your connection and try again.</p>
       ) : (
         <>
           {/* Shared friend link (?add=CODE) */}

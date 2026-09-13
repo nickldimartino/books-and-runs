@@ -18,6 +18,7 @@ import { useAuth } from "../AuthContext";
 import { AvatarFrame } from "../components/AvatarFrame";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
@@ -309,13 +310,15 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
+      <PageTip id="leaderboard" title="Finding your friends">
+        Tap the &quot;Friends&quot; toggle below to rank against just the people you&apos;ve added,
+        instead of every signed-in account. Tap any name to open their profile.
+      </PageTip>
+
       {authLoading || loading ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">
-          Couldn&apos;t load the leaderboard — check your connection, or that this Supabase project has
-          every migration in <code>supabase/migrations/</code> applied.
-        </p>
+        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load the leaderboard — check your connection and try again.</p>
       ) : entries.length === 0 ? (
         <EmptyState
           icon="🏆"

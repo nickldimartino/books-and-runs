@@ -75,6 +75,7 @@ import {
   PremiumEmojiLockedError,
   displayNameFor,
   isDisplayNameAvailable,
+  playerProfileHref,
   reportProfilePhoto,
   revertToEmojiAvatar,
   showcaseKeyFor,
@@ -94,7 +95,7 @@ import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats }
 import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
 import { computeRank } from "../lib/rank";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
-import { renderProfileShareCard } from "../lib/shareCard";
+import { renderProfileAvatarCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
@@ -660,13 +661,8 @@ export default function PlayerProfilePage() {
     setShareState("working");
     try {
       const frameOption = findAvatarFrameOption(entry.avatar_frame);
-      const titleOption = findTitleOption(entry.title);
-      const rank = computeRank(entry.games_played, entry.games_won);
-      const blob = await renderProfileShareCard({
-        displayName: displayNameFor(entry),
-        titleLabel: titleOption?.label ?? null,
-        level: entry.level,
-        rankLabel: rank.tier?.label ?? null,
+      const bannerOption = findBannerOption(entry.banner);
+      const blob = await renderProfileAvatarCard({
         avatarKind: entry.avatar_kind,
         avatarEmoji: entry.avatar_emoji,
         avatarColor: entry.avatar_color,
@@ -677,20 +673,13 @@ export default function PlayerProfilePage() {
         frameColor: frameOption
           ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id])
           : null,
-        stats: [
-          { label: "Games", value: String(entry.games_played) },
-          { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
-          { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
-        ],
-        trophyColors: entry.showcase
-          .map(resolveShowcaseItem)
-          .filter((i): i is ShowcaseItem => !!i)
-          .map((i) => TIER_RING_COLOR[i.tier]),
+        bannerCss: bannerOption?.css ?? null,
       });
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
+      const profileUrl = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "My Books & Runs profile" });
+        await navigator.share({ files: [file], url: profileUrl });
       } else {
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
@@ -926,9 +915,18 @@ export default function PlayerProfilePage() {
         <>
           <PageTip id="player-profile" title={isSelf ? "Your profile" : "Player profiles"}>
             {isSelf
-              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile to change your name, bio, picture, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories also unlocks exclusive avatar emoji. Everything below the edit section (stats breakdown, achievements, game history) is only ever visible to you."
+              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive frames, titles, and avatar emoji. Everything below the edit section (stats breakdown, achievements, game history) is only ever visible to you."
               : "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here."}
           </PageTip>
+
+          {isSelf && (
+            <PageTip id="player-cosmetics" title="What am I looking at?">
+              Bronze / Silver / Gold / Diamond name a level milestone (10 / 25 / 50 / 100) shared by
+              frames, titles, and avatar emoji — not a free pick, and greyed out with a lock until you
+              reach that level. &quot;Card back&quot; and &quot;Card face&quot; show the physical-card
+              look you picked in Settings, so a friend viewing your profile can see it too.
+            </PageTip>
+          )}
 
           {/* ── Public — same for everyone, including your own view ── */}
           <ProfileBanner banner={entry.banner}>
@@ -1543,10 +1541,7 @@ export default function PlayerProfilePage() {
               {privateLoading ? (
                 <LoadingSpinner />
               ) : privateStatsError ? (
-                <p className="text-sm text-[var(--danger)]">
-                  Couldn&apos;t load your stats — check your connection, or that this Supabase project has
-                  every migration in <code>supabase/migrations/</code> applied.
-                </p>
+                <p className="text-sm text-[var(--danger)]">Couldn&apos;t load your stats — check your connection and try again.</p>
               ) : privateStats ? (
                 <>
                   {/* Level */}

@@ -281,6 +281,115 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }
 
+export interface ProfileAvatarCardInput {
+  avatarKind: "emoji" | "photo";
+  avatarEmoji: string | null;
+  avatarColor: string | null;
+  avatarPhotoUrl: string | null;
+  /** A solid ring color, or null for no frame — same simplification as
+   * renderProfileShareCard's own frameColor (see its doc). */
+  frameColor: string | null;
+  /** A banner preset's raw CSS `background` value (bannerPresets.ts), or
+   * null for none — approximated on canvas by bannerCanvasFill below,
+   * since canvas can't consume a CSS gradient string directly. */
+  bannerCss: string | null;
+}
+
+/**
+ * Renders just the avatar — picture, frame ring, and banner backdrop, no
+ * name/stats/trophy text — for sharing as a picture-plus-link instead of a
+ * standalone infographic: the profile's own URL (see player/page.tsx's
+ * shareProfileCard) carries the name/stats/trophies instead, and stays
+ * current after the picture's been shared, unlike text baked into a PNG.
+ */
+export async function renderProfileAvatarCard(input: ProfileAvatarCardInput): Promise<Blob | null> {
+  const scale = 2;
+  const W = 480;
+  const H = 480;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.scale(scale, scale);
+
+  const bg = themeColor("--bg", "#0a2b20");
+  const cx = W / 2;
+  const cy = H / 2;
+
+  ctx.fillStyle = (input.bannerCss && bannerCanvasFill(ctx, input.bannerCss, W, H, cx, cy)) || bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const avatarSize = 220;
+  if (input.frameColor) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, avatarSize / 2 + 10, 0, Math.PI * 2);
+    ctx.fillStyle = input.frameColor;
+    ctx.fill();
+  }
+
+  let drewPhoto = false;
+  if (input.avatarKind === "photo" && input.avatarPhotoUrl) {
+    const img = await loadImageForCanvas(input.avatarPhotoUrl);
+    if (img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, avatarSize / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, cx - avatarSize / 2, cy - avatarSize / 2, avatarSize, avatarSize);
+      ctx.restore();
+      drewPhoto = true;
+    }
+  }
+  if (!drewPhoto) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, avatarSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = input.avatarColor ?? "#3B82F6";
+    ctx.fill();
+    if (input.avatarEmoji) {
+      const sans =
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${Math.round(avatarSize * 0.5)}px ${sans}`;
+      ctx.fillText(input.avatarEmoji, cx, cy + 2);
+    }
+  }
+
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
+}
+
+/** Approximates a bannerPresets.ts CSS `background` gradient string as a
+ * canvas gradient — canvas has no way to consume a raw CSS background
+ * value, so this pulls out the hex stops instead: a linear-gradient(135deg,
+ * ...) becomes a top-left-to-bottom-right CanvasGradient with the same
+ * first/last colors, and the one conic-gradient (Grandmaster) becomes a
+ * real CanvasGradient conic sweep through every stop, when the browser
+ * supports createConicGradient — falling back to the same linear treatment
+ * otherwise. Returns null (caller falls back to a flat color) if the CSS
+ * doesn't contain at least two hex colors to work with. */
+function bannerCanvasFill(
+  ctx: CanvasRenderingContext2D,
+  css: string,
+  w: number,
+  h: number,
+  cx: number,
+  cy: number
+): CanvasGradient | null {
+  const colors = css.match(/#[0-9a-fA-F]{6}/g);
+  if (!colors || colors.length < 2) return null;
+  if (css.startsWith("conic-gradient") && typeof ctx.createConicGradient === "function") {
+    const gradient = ctx.createConicGradient(0, cx, cy);
+    colors.forEach((color, i) => gradient.addColorStop(i / (colors.length - 1), color));
+    return gradient;
+  }
+  const gradient = ctx.createLinearGradient(0, 0, w, h);
+  gradient.addColorStop(0, colors[0]);
+  gradient.addColorStop(1, colors[colors.length - 1]);
+  return gradient;
+}
+
 function wrapText(
   ctx: CanvasRenderingContext2D,
   str: string,
