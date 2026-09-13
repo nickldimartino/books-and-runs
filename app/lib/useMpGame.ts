@@ -14,10 +14,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { validateManualGroup } from "@/meld";
 import type { Card, ContractRequirement } from "@/types";
 import type { RedactedView } from "@/mp/types";
-import { allAchievements } from "@/achievements";
-import { ACHIEVEMENT_TIER_XP } from "@/leveling";
+import { allAchievements, AchievementProgressState } from "@/achievements";
+import { ACHIEVEMENT_TIER_XP, levelProgress } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import type { AchievementUnlockItem } from "../components/AchievementUnlock";
+import { AnyCosmeticOption, diffNewlyUnlockedCosmetics } from "./allCosmetics";
 import { hapticLight, hapticMedium, hapticSuccess } from "../lib/haptics";
 import { playCardTap, playGameWin, playMeld, playRoundWin } from "../lib/sound";
 import {
@@ -78,6 +79,11 @@ export interface UseMpGame {
   groupError: string | null;
   /** Achievements this game unlocked — populated once, at game over. */
   unlockedAchievements: AchievementUnlockItem[];
+  /** Any avatar emoji/frame/title/banner newly earned this game — see
+   * allCosmetics.ts's diffNewlyUnlockedCosmetics. Populated once, at game
+   * over, alongside unlockedAchievements above. */
+  newlyUnlockedCosmetics: AnyCosmeticOption[];
+  clearNewlyUnlockedCosmetics: () => void;
 
   refresh: () => void;
   draw: (from: "stock" | "discard") => Promise<void>;
@@ -120,6 +126,8 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
+  const [newlyUnlockedCosmetics, setNewlyUnlockedCosmetics] = useState<AnyCosmeticOption[]>([]);
+  const clearNewlyUnlockedCosmetics = useCallback(() => setNewlyUnlockedCosmetics([]), []);
   const [nudgeState, setNudgeState] = useState<"idle" | "sent" | "error">("idle");
   const loadedFor = useRef<string | null>(null);
 
@@ -208,7 +216,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
       try {
         const raw = localStorage.getItem(snapKey);
         if (!raw) return;
-        const before = JSON.parse(raw);
+        const before = JSON.parse(raw) as AchievementProgressState;
         const beforeSet = new Set(
           allAchievements(before)
             .filter((a) => a.unlocked)
@@ -219,6 +227,9 @@ export function useMpGame(gameId: string | null): UseMpGame {
           allAchievements(after)
             .filter((a) => a.unlocked && !beforeSet.has(`${a.familyId}:${a.tier}`))
             .map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] }))
+        );
+        setNewlyUnlockedCosmetics(
+          diffNewlyUnlockedCosmetics(levelProgress(before).level, before, levelProgress(after).level, after)
         );
         localStorage.removeItem(snapKey);
       } catch (err) {
@@ -524,6 +535,8 @@ export function useMpGame(gameId: string | null): UseMpGame {
     draft,
     groupError,
     unlockedAchievements,
+    newlyUnlockedCosmetics,
+    clearNewlyUnlockedCosmetics,
     refresh,
     draw,
     toggleCard,

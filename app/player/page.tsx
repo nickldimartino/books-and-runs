@@ -45,7 +45,9 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
+import { ProfileBanner } from "../components/ProfileBanner";
 import { RankBadge } from "../components/RankBadge";
+import { fetchAchievementRarity, formatRarity, RarityMap } from "../lib/achievementRarity";
 import {
   COLOR_OPTIONS,
   EMOJI_OPTIONS,
@@ -54,6 +56,7 @@ import {
   premiumEmojiRequirementLabel,
 } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
+import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
 import { cardBackLabel, loadLocalCardBack } from "../lib/cardBackStore";
 import { cardFaceLabel, loadLocalCardFace } from "../lib/cardFaceStore";
 import { cosmeticRequirementLabel, isCosmeticUnlocked } from "../lib/cosmeticUnlocks";
@@ -79,6 +82,7 @@ import {
   updateLeaderboardAvatarEmoji,
   updateLeaderboardAvatarFrame,
   updateLeaderboardAvatarPhoto,
+  updateLeaderboardBanner,
   updateLeaderboardBio,
   updateLeaderboardDisplayName,
   updateLeaderboardShowcase,
@@ -226,12 +230,16 @@ function Highlight({ label, children }: { label: string; children: React.ReactNo
 
 /** One pinned achievement, rendered as a medal: the achievement system's
  * existing category icon, framed in a ring colored for the tier it was
- * earned at (bronze beginner → diamond expert). */
-function TrophyBadge({ item, size = 56 }: { item: ShowcaseItem; size?: number }) {
+ * earned at (bronze beginner → diamond expert). Expert-tier medals get an
+ * animated foil sweep — the rarest tier is the one worth a little shine. */
+function TrophyBadge({ item, size = 56, rarityLabel }: { item: ShowcaseItem; size?: number; rarityLabel?: string | null }) {
   return (
-    <div className="flex flex-col items-center gap-1" title={`${item.familyTitle} · ${TIER_LABEL[item.tier]}`}>
+    <div
+      className="flex flex-col items-center gap-1"
+      title={`${item.familyTitle} · ${TIER_LABEL[item.tier]}${rarityLabel ? ` · ${rarityLabel}` : ""}`}
+    >
       <div
-        className="grid place-items-center rounded-full p-[3px]"
+        className={`grid place-items-center rounded-full p-[3px] ${item.tier === "expert" ? "trophy-foil" : ""}`}
         style={{ width: size, height: size, backgroundColor: TIER_RING_COLOR[item.tier] }}
       >
         <div className="grid h-full w-full place-items-center rounded-full bg-[var(--panel)]">
@@ -239,6 +247,7 @@ function TrophyBadge({ item, size = 56 }: { item: ShowcaseItem; size?: number })
         </div>
       </div>
       <p className="max-w-[4.5rem] truncate text-[10px] text-[var(--faint)]">{item.familyTitle}</p>
+      {rarityLabel && <p className="max-w-[4.5rem] truncate text-[9px] text-[var(--accent)]">{rarityLabel}</p>}
     </div>
   );
 }
@@ -275,6 +284,8 @@ function emptyEntry(userId: string): LeaderboardEntry {
     title: null,
     showcase_card_back: null,
     showcase_card_face: null,
+    banner: null,
+    joined_at: null,
     level: 0,
     total_xp: 0,
     achievements_unlocked: 0,
@@ -316,7 +327,7 @@ export default function PlayerProfilePage() {
       // A self-view self-heals its own row first — same reasoning as
       // Account/Leaderboard's own sync-on-visit (a past failed sync, or an
       // account that predates a stats column entirely).
-      if (profileId === user.id) await syncLeaderboardStats(client, profileId).catch(() => {});
+      if (profileId === user.id) await syncLeaderboardStats(client, profileId, user.created_at).catch(() => {});
       const { data, error } = await client.from("leaderboard_entries").select("*").eq("user_id", profileId).maybeSingle();
       if (cancelled) return;
       if (error) {
@@ -427,6 +438,18 @@ export default function PlayerProfilePage() {
 
   // ── Edit profile (self only) — collapsed until asked for ───────────────
   const [editingProfile, setEditingProfile] = useState(false);
+  const [editTab, setEditTab] = useState<"picture" | "trophies" | "frame" | "title" | "banner" | "name">("picture");
+
+  // ── Achievement rarity ("Only N% of players have this") ────────────────
+  // Global, so it can't be computed client-side (see achievementRarity.ts) —
+  // fetched once from the daily-refreshed summary table.
+  const [rarity, setRarity] = useState<RarityMap | null>(null);
+  useEffect(() => {
+    if (!supabase) return;
+    fetchAchievementRarity(supabase)
+      .then(setRarity)
+      .catch((err) => console.error("Failed to load achievement rarity:", err));
+  }, []);
 
   // ── Self-editing: display name ────────────────────────────────────────
   const [nameInput, setNameInput] = useState("");
@@ -607,6 +630,25 @@ export default function PlayerProfilePage() {
       if (err instanceof CosmeticLockedError) setTitleSaveError(err.message);
       else console.error("Failed to save title:", err);
       setTitleSaveState("error");
+    }
+  }
+
+  // ── Self-editing: profile banner ────────────────────────────────────────
+  const [bannerSaveState, setBannerSaveState] = useState<SaveState>("idle");
+  const [bannerSaveError, setBannerSaveError] = useState<string | null>(null);
+
+  async function chooseBanner(bannerId: string | null) {
+    if (!supabase || !user) return;
+    setBannerSaveState("saving");
+    setBannerSaveError(null);
+    try {
+      await updateLeaderboardBanner(supabase, user.id, bannerId);
+      setEntry((prev) => (prev ? { ...prev, banner: bannerId } : prev));
+      setBannerSaveState("saved");
+    } catch (err) {
+      if (err instanceof CosmeticLockedError) setBannerSaveError(err.message);
+      else console.error("Failed to save banner:", err);
+      setBannerSaveState("error");
     }
   }
 
@@ -862,6 +904,13 @@ export default function PlayerProfilePage() {
   // migration 0028 added (see the load effect's own bootstrap-push doc).
   const displayCardBack = isSelf ? loadLocalCardBack() : (entry?.showcase_card_back ?? null);
   const displayCardFace = isSelf ? loadLocalCardFace() : (entry?.showcase_card_face ?? null);
+  // A banner's gradient is always dark enough to need light text — see
+  // ProfileBanner's own scrim, which guarantees this regardless of which
+  // preset is picked.
+  const onBanner = !!findBannerOption(entry?.banner ?? null);
+  const joinedLabel = entry?.joined_at
+    ? `Joined ${new Date(entry.joined_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
+    : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
@@ -882,49 +931,57 @@ export default function PlayerProfilePage() {
           </PageTip>
 
           {/* ── Public — same for everyone, including your own view ── */}
-          <section className="flex flex-col items-center gap-2 text-center">
-            <AvatarFrame frame={entry.avatar_frame} size={88}>
-              <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
-            </AvatarFrame>
-            <h1 className="text-xl font-bold text-[var(--heading)]">{displayNameFor(entry)}</h1>
-            {titleOption && (
-              <p className="-mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
-                {titleOption.label}
-              </p>
-            )}
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)]">
-                Level {entry.level}
-              </span>
-              <RankBadge rank={rank} />
-            </div>
-            {entry.bio && <p className="max-w-xs text-sm text-[var(--muted)]">{entry.bio}</p>}
+          <ProfileBanner banner={entry.banner}>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <AvatarFrame frame={entry.avatar_frame} size={88}>
+                <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
+              </AvatarFrame>
 
-            {(displayCardBack || displayCardFace) && (
-              <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-[var(--faint)]">
-                <span className="rounded-full border border-[var(--border)] px-2 py-0.5">
-                  Card back: {cardBackLabel(displayCardBack)}
+              {/* Identity: name, title, level/rank — kept tight and on-brand
+                  regardless of banner, unlike bio/cosmetics/actions below,
+                  which read fine in the page's normal muted tones. */}
+              <h1 className={`text-xl font-bold ${onBanner ? "text-white" : "text-[var(--heading)]"}`}>
+                {displayNameFor(entry)}
+              </h1>
+              {titleOption && (
+                <p className={`-mt-1 text-xs font-semibold uppercase tracking-wide ${onBanner ? "text-yellow-300" : "text-[var(--accent)]"}`}>
+                  {titleOption.label}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${onBanner ? "bg-white/20 text-white" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`}
+                >
+                  Level {entry.level}
                 </span>
-                <span className="rounded-full border border-[var(--border)] px-2 py-0.5">
-                  Card face: {cardFaceLabel(displayCardFace)}
-                </span>
+                <RankBadge rank={rank} />
+                {joinedLabel && (
+                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${onBanner ? "bg-white/10 text-white/80" : "bg-[var(--panel-soft)] text-[var(--faint)]"}`}>
+                    {joinedLabel}
+                  </span>
+                )}
               </div>
-            )}
 
-            {!isSelf && headToHead && (
-              <p className="text-xs text-[var(--muted)]">
-                Head-to-head:{" "}
-                <span className="font-semibold text-[var(--heading)]">
-                  {headToHead.wins}-{headToHead.losses}
-                  {headToHead.ties > 0 ? `-${headToHead.ties}` : ""}
-                </span>{" "}
-                across {headToHead.gamesTogether} multiplayer game{headToHead.gamesTogether === 1 ? "" : "s"} together
-              </p>
-            )}
+              {entry.bio && (
+                <p className={`max-w-xs text-sm ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>{entry.bio}</p>
+              )}
 
-            {!isSelf && (
+              {(displayCardBack || displayCardFace) && (
+                <div className={`flex flex-wrap items-center justify-center gap-2 text-[10px] ${onBanner ? "text-white/70" : "text-[var(--faint)]"}`}>
+                  <span className={`rounded-full border px-2 py-0.5 ${onBanner ? "border-white/30" : "border-[var(--border)]"}`}>
+                    Card back: {cardBackLabel(displayCardBack)}
+                  </span>
+                  <span className={`rounded-full border px-2 py-0.5 ${onBanner ? "border-white/30" : "border-[var(--border)]"}`}>
+                    Card face: {cardFaceLabel(displayCardFace)}
+                  </span>
+                </div>
+              )}
+
+              {/* Actions — deliberately smaller/quieter than the stat tiles
+                  below: these are things you do occasionally, not the
+                  content itself. */}
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                {related !== "related" && (
+                {!isSelf && related !== "related" && (
                   <button
                     onClick={addFriend}
                     disabled={related === "requested"}
@@ -934,71 +991,85 @@ export default function PlayerProfilePage() {
                     {related === "requested" ? "Request sent" : "Add friend"}
                   </button>
                 )}
-                {entry.avatar_kind === "photo" && entry.avatar_photo_path && reportState === "idle" && (
+                {isSelf && (
+                  <button
+                    onClick={() => setEditingProfile((v) => !v)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${onBanner ? "border-white/40 text-white hover:bg-white/10" : "border-[var(--accent)]/60 text-[var(--heading)] hover:bg-[var(--panel-soft)]"}`}
+                  >
+                    {editingProfile ? "Done editing" : "Edit profile"}
+                  </button>
+                )}
+                <button
+                  onClick={shareProfileCard}
+                  disabled={shareState === "working"}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-60 ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+                >
+                  {shareState === "working" ? "Preparing…" : "Share profile card"}
+                </button>
+                {!isSelf && entry.avatar_kind === "photo" && entry.avatar_photo_path && reportState === "idle" && (
                   <button
                     onClick={() => setReportState("open")}
-                    className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
                   >
                     Report photo
                   </button>
                 )}
               </div>
-            )}
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-              {isSelf && (
-                <button
-                  onClick={() => setEditingProfile((v) => !v)}
-                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-1.5 text-xs font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
-                >
-                  {editingProfile ? "Done editing" : "Edit profile"}
-                </button>
+              {shareState === "error" && (
+                <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
               )}
-              <button
-                onClick={shareProfileCard}
-                disabled={shareState === "working"}
-                className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-60"
-              >
-                {shareState === "working" ? "Preparing…" : "Share profile card"}
-              </button>
-            </div>
-            {shareState === "error" && (
-              <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
-            )}
 
-            {(reportState === "open" || reportState === "sending") && (
-              <form onSubmit={submitReport} className="mt-2 flex w-full flex-col gap-2 rounded-lg border border-[var(--border)] p-3 text-left">
-                <label className="text-xs font-medium text-[var(--muted)]">
-                  What&apos;s wrong with this photo? (optional)
-                </label>
-                <textarea
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  maxLength={MAX_REPORT_REASON_LENGTH}
-                  rows={2}
-                  className="resize-none rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setReportState("idle")}
-                    disabled={reportState === "sending"}
-                    className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={reportState === "sending"}
-                    className="flex-1 rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
-                  >
-                    {reportState === "sending" ? "Reporting…" : "Report"}
-                  </button>
-                </div>
-              </form>
-            )}
-            {reportState === "sent" && <p className="text-xs text-[var(--muted)]">Thanks — we&apos;ll take a look.</p>}
-            {reportState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t send that report — try again.</p>}
-          </section>
+              {(reportState === "open" || reportState === "sending") && (
+                <form onSubmit={submitReport} className="mt-2 flex w-full flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-3 text-left">
+                  <label className="text-xs font-medium text-[var(--muted)]">
+                    What&apos;s wrong with this photo? (optional)
+                  </label>
+                  <textarea
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    maxLength={MAX_REPORT_REASON_LENGTH}
+                    rows={2}
+                    className="resize-none rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReportState("idle")}
+                      disabled={reportState === "sending"}
+                      className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={reportState === "sending"}
+                      className="flex-1 rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                    >
+                      {reportState === "sending" ? "Reporting…" : "Report"}
+                    </button>
+                  </div>
+                </form>
+              )}
+              {reportState === "sent" && <p className="text-xs text-[var(--muted)]">Thanks — we&apos;ll take a look.</p>}
+              {reportState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t send that report — try again.</p>}
+            </div>
+          </ProfileBanner>
+
+          {!isSelf && headToHead && (
+            <section>
+              <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                Head-to-head
+              </h2>
+              <div className="grid grid-cols-3 gap-2">
+                <StatTile label="Wins" value={headToHead.wins} />
+                <StatTile label="Losses" value={headToHead.losses} />
+                <StatTile label="Ties" value={headToHead.ties} />
+              </div>
+              <p className="mt-1.5 text-center text-[10px] text-[var(--faint)]">
+                Across {headToHead.gamesTogether} multiplayer game{headToHead.gamesTogether === 1 ? "" : "s"} together
+              </p>
+            </section>
+          )}
 
           <section className="grid grid-cols-3 gap-2">
             <StatTile label="Achievements" value={`${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`} />
@@ -1022,7 +1093,11 @@ export default function PlayerProfilePage() {
               </h2>
               <div className="flex flex-wrap justify-center gap-3">
                 {entry.showcase.map(resolveShowcaseItem).map((item, i) =>
-                  item ? <TrophyBadge key={item.key} item={item} /> : <EmptyTrophySlot key={`stale-${i}`} />
+                  item ? (
+                    <TrophyBadge key={item.key} item={item} rarityLabel={formatRarity(rarity?.[item.key])} />
+                  ) : (
+                    <EmptyTrophySlot key={`stale-${i}`} />
+                  )
                 )}
                 {isSelf &&
                   Array.from({ length: Math.max(0, MAX_SHOWCASE_ITEMS - entry.showcase.length) }).map((_, i) => (
@@ -1032,10 +1107,39 @@ export default function PlayerProfilePage() {
             </section>
           )}
 
-          {/* ── Edit profile (self only, collapsed by default) ── */}
+          {/* ── Edit profile (self only, collapsed by default) — tabbed so
+              only one editor is open at a time; Trophies sits second, not
+              last, since curating your showcase is at least as common a
+              reason to open this as changing your picture. ── */}
           {isSelf && editingProfile && (
-            <>
-              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
+            <section className="flex flex-col gap-4 rounded-xl border border-[var(--border)] p-4">
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ["picture", "Picture"],
+                    ["trophies", "Trophies"],
+                    ["frame", "Frame"],
+                    ["title", "Title"],
+                    ["banner", "Banner"],
+                    ["name", "Name & Bio"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    onClick={() => setEditTab(id)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      editTab === id
+                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                        : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--panel)]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {editTab === "picture" && (
+              <div className="flex flex-col gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Profile picture</h2>
                 <div className="flex gap-2">
                   <button
@@ -1167,153 +1271,11 @@ export default function PlayerProfilePage() {
                     <p className="text-xs text-[var(--faint)]">JPEG, PNG, or WebP. It&apos;s cropped to a square automatically.</p>
                   </div>
                 )}
-              </section>
+              </div>
+              )}
 
-              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Avatar frame</h2>
-                <p className="text-xs text-[var(--faint)]">
-                  A ring around your whole avatar, separate from the picture inside it — earned by leveling up or
-                  mastering an achievement category.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => chooseFrame(null)}
-                    className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                      !entry.avatar_frame ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]" : "hover:bg-[var(--panel-soft)]"
-                    }`}
-                  >
-                    <AvatarFrame frame={null} size={44}>
-                      <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
-                    </AvatarFrame>
-                    <span className="text-[10px] text-[var(--faint)]">None</span>
-                  </button>
-                  {AVATAR_FRAME_OPTIONS.map((option) => {
-                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() => (unlocked ? chooseFrame(option.id) : undefined)}
-                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
-                        className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                          !unlocked
-                            ? "cursor-default opacity-40"
-                            : entry.avatar_frame === option.id
-                              ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
-                              : "hover:bg-[var(--panel-soft)]"
-                        }`}
-                      >
-                        <AvatarFrame frame={unlocked ? option.id : null} size={44}>
-                          <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
-                        </AvatarFrame>
-                        <span className="text-[10px] text-[var(--faint)]">
-                          {unlocked ? option.label : "🔒"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {frameSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                {frameSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {frameSaveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">{frameSaveError ?? "Couldn't save — try again."}</p>
-                )}
-              </section>
-
-              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Title</h2>
-                <p className="text-xs text-[var(--faint)]">Shown under your name — the same earn-it-first rewards as your avatar frame.</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => chooseTitle(null)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                      !entry.title ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                    }`}
-                  >
-                    None
-                  </button>
-                  {TITLE_OPTIONS.map((option) => {
-                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() => (unlocked ? chooseTitle(option.id) : undefined)}
-                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                          !unlocked
-                            ? "cursor-default border-[var(--border)] text-[var(--faint)] opacity-50"
-                            : entry.title === option.id
-                              ? "border-[var(--accent)] text-[var(--accent)]"
-                              : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                        }`}
-                      >
-                        {unlocked ? option.label : `🔒 ${option.label}`}
-                      </button>
-                    );
-                  })}
-                </div>
-                {titleSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                {titleSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {titleSaveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">{titleSaveError ?? "Couldn't save — try again."}</p>
-                )}
-              </section>
-
-              <section className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Display name</h2>
-                <p className="text-xs text-[var(--faint)]">
-                  Shown here and on the Leaderboard — unique across every player, so it may already be taken.
-                </p>
-                <form onSubmit={handleSaveName} className="flex flex-col gap-1.5">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={nameInput}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      placeholder="Your name"
-                      maxLength={MAX_DISPLAY_NAME_LENGTH}
-                      className="flex-1 rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                    <button
-                      type="submit"
-                      disabled={nameSaveState === "saving"}
-                      className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                  </div>
-                  {nameAvailability === "checking" && <p className="text-xs text-[var(--faint)]">Checking…</p>}
-                  {nameAvailability === "available" && <p className="text-xs text-[var(--accent)]">Available.</p>}
-                  {nameAvailability === "taken" && <p className="text-xs text-[var(--danger)]">Already taken.</p>}
-                </form>
-                {nameError && <p className="text-xs text-[var(--danger)]">{nameError}</p>}
-                {nameSaveState === "saved" && !nameError && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {nameSaveState === "error" && !nameError && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
-              </section>
-
-              <section className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Bio</h2>
-                <p className="text-xs text-[var(--faint)]">A short line other players see on your profile. Optional.</p>
-                <form onSubmit={handleSaveBio} className="flex flex-col gap-2">
-                  <textarea
-                    value={bioInput}
-                    onChange={(e) => setBioInput(e.target.value)}
-                    placeholder="Say something about yourself…"
-                    maxLength={MAX_BIO_LENGTH}
-                    rows={2}
-                    className="resize-none rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                  />
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-[var(--faint)]">{bioInput.length} / {MAX_BIO_LENGTH}</span>
-                    <button type="submit" disabled={bioSaveState === "saving"} className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50">
-                      Save
-                    </button>
-                  </div>
-                </form>
-                {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
-              </section>
-
-              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
+              {editTab === "trophies" && (
+              <div className="flex flex-col gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
                   Trophy case
                   <span className="ml-2 font-normal normal-case text-[var(--faint)]">
@@ -1365,8 +1327,209 @@ export default function PlayerProfilePage() {
                 </button>
                 {showcaseSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {showcaseSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
-              </section>
-            </>
+              </div>
+              )}
+
+              {editTab === "frame" && (
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Avatar frame</h2>
+                <p className="text-xs text-[var(--faint)]">
+                  A ring around your whole avatar, separate from the picture inside it — earned by leveling up or
+                  mastering an achievement category.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => chooseFrame(null)}
+                    className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                      !entry.avatar_frame ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]" : "hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    <AvatarFrame frame={null} size={44}>
+                      <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
+                    </AvatarFrame>
+                    <span className="text-[10px] text-[var(--faint)]">None</span>
+                  </button>
+                  {AVATAR_FRAME_OPTIONS.map((option) => {
+                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => (unlocked ? chooseFrame(option.id) : undefined)}
+                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                          !unlocked
+                            ? "cursor-default opacity-40"
+                            : entry.avatar_frame === option.id
+                              ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                              : "hover:bg-[var(--panel-soft)]"
+                        }`}
+                      >
+                        <AvatarFrame frame={unlocked ? option.id : null} size={44}>
+                          <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
+                        </AvatarFrame>
+                        <span className="text-[10px] text-[var(--faint)]">
+                          {unlocked ? option.label : "🔒"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {frameSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
+                {frameSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {frameSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{frameSaveError ?? "Couldn't save — try again."}</p>
+                )}
+              </div>
+              )}
+
+              {editTab === "title" && (
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Title</h2>
+                <p className="text-xs text-[var(--faint)]">Shown under your name — the same earn-it-first rewards as your avatar frame.</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => chooseTitle(null)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      !entry.title ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    None
+                  </button>
+                  {TITLE_OPTIONS.map((option) => {
+                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => (unlocked ? chooseTitle(option.id) : undefined)}
+                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                          !unlocked
+                            ? "cursor-default border-[var(--border)] text-[var(--faint)] opacity-50"
+                            : entry.title === option.id
+                              ? "border-[var(--accent)] text-[var(--accent)]"
+                              : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                        }`}
+                      >
+                        {unlocked ? option.label : `🔒 ${option.label}`}
+                      </button>
+                    );
+                  })}
+                </div>
+                {titleSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
+                {titleSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {titleSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{titleSaveError ?? "Couldn't save — try again."}</p>
+                )}
+              </div>
+              )}
+
+              {editTab === "banner" && (
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Profile banner</h2>
+                <p className="text-xs text-[var(--faint)]">
+                  A wide strip of color behind your name and picture — most are free to pick; one is a prestige
+                  reward for mastering every achievement category.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => chooseBanner(null)}
+                    className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                      !entry.banner ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]" : "hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    <div className="h-10 w-16 rounded-md border border-[var(--border)] bg-[var(--panel)]" />
+                    <span className="text-[10px] text-[var(--faint)]">None</span>
+                  </button>
+                  {BANNER_OPTIONS.map((option) => {
+                    const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => (unlocked ? chooseBanner(option.id) : undefined)}
+                        title={unlocked ? undefined : option.unlock && cosmeticRequirementLabel(option.unlock)}
+                        className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                          !unlocked
+                            ? "cursor-default opacity-40"
+                            : entry.banner === option.id
+                              ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                              : "hover:bg-[var(--panel-soft)]"
+                        }`}
+                      >
+                        <div className="h-10 w-16 rounded-md" style={{ background: option.css }} />
+                        <span className="text-[10px] text-[var(--faint)]">
+                          {unlocked ? option.label : "🔒"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {bannerSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
+                {bannerSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {bannerSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{bannerSaveError ?? "Couldn't save — try again."}</p>
+                )}
+              </div>
+              )}
+
+              {editTab === "name" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Display name</h2>
+                <p className="text-xs text-[var(--faint)]">
+                  Shown here and on the Leaderboard — unique across every player, so it may already be taken.
+                </p>
+                <form onSubmit={handleSaveName} className="flex flex-col gap-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Your name"
+                      maxLength={MAX_DISPLAY_NAME_LENGTH}
+                      className="flex-1 rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={nameSaveState === "saving"}
+                      className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  {nameAvailability === "checking" && <p className="text-xs text-[var(--faint)]">Checking…</p>}
+                  {nameAvailability === "available" && <p className="text-xs text-[var(--accent)]">Available.</p>}
+                  {nameAvailability === "taken" && <p className="text-xs text-[var(--danger)]">Already taken.</p>}
+                </form>
+                {nameError && <p className="text-xs text-[var(--danger)]">{nameError}</p>}
+                {nameSaveState === "saved" && !nameError && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {nameSaveState === "error" && !nameError && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
+                </div>
+
+                <div className="flex flex-col gap-2 border-t border-[var(--border)] pt-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Bio</h2>
+                <p className="text-xs text-[var(--faint)]">A short line other players see on your profile. Optional.</p>
+                <form onSubmit={handleSaveBio} className="flex flex-col gap-2">
+                  <textarea
+                    value={bioInput}
+                    onChange={(e) => setBioInput(e.target.value)}
+                    placeholder="Say something about yourself…"
+                    maxLength={MAX_BIO_LENGTH}
+                    rows={2}
+                    className="resize-none rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-[var(--faint)]">{bioInput.length} / {MAX_BIO_LENGTH}</span>
+                    <button type="submit" disabled={bioSaveState === "saving"} className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50">
+                      Save
+                    </button>
+                  </div>
+                </form>
+                {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
+                </div>
+              </div>
+              )}
+            </section>
           )}
 
           {/* ── Private — only you can see this ── */}

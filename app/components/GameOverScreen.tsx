@@ -15,11 +15,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { allAchievements } from "@/achievements";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { Confetti } from "./Confetti";
+import { UnlockToast } from "./UnlockToast";
 import { Difficulty, GameState } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { AnyCosmeticOption, diffNewlyUnlockedCosmetics } from "../lib/allCosmetics";
 import { track } from "../lib/analytics";
 import { DailyDealState, mergeCloudDailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
 import {
@@ -110,6 +112,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [xpBreakdown, setXpBreakdown] = useState<XpLineItem[]>([]);
   const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
+  const [newlyUnlockedCosmetics, setNewlyUnlockedCosmetics] = useState<AnyCosmeticOption[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
   const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
 
@@ -221,13 +224,18 @@ export function GameOverScreen({ state }: { state: GameState }) {
       const knownTotal = breakdown.reduce((sum, item) => sum + item.amount, 0);
       const achievementBonus = Math.max(0, gained - knownTotal);
 
+      const didLevelUp = after.level > beforeLevel;
+
       // Named individually (icon, tier, tap-to-expand requirement — the
       // same AchievementUnlockCard RoundSummary renders after every earlier
       // round) whenever the lookup below succeeds; achievementBonus is only
       // ever shown as its own generic line if that lookup fails, so the XP
-      // is never just silently unaccounted for.
+      // is never just silently unaccounted for. Also whenever this fetch
+      // happens (an achievement changed, or a level-up alone could be
+      // enough — e.g. crossing Level 10), diff every gated cosmetic too,
+      // for the "you just earned a new frame/title/emoji" toast.
       let unlockedItems: AchievementUnlockItem[] = [];
-      if (achievementBonus > 0 && beforeAchievementsRef.current) {
+      if ((achievementBonus > 0 || didLevelUp) && beforeAchievementsRef.current) {
         try {
           const afterProgress = await loadAchievementProgressState(supabase, user.id);
           const beforeUnlocked = new Set(
@@ -238,6 +246,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
           unlockedItems = allAchievements(afterProgress)
             .filter((a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`))
             .map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] }));
+          setNewlyUnlockedCosmetics(
+            diffNewlyUnlockedCosmetics(beforeLevel, beforeAchievementsRef.current, after.level, afterProgress)
+          );
         } catch (err) {
           console.error("Failed to determine which achievements this game unlocked:", err);
         }
@@ -249,7 +260,6 @@ export function GameOverScreen({ state }: { state: GameState }) {
           ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
           : breakdown
       );
-      const didLevelUp = after.level > beforeLevel;
       if (didLevelUp) setLeveledUpTo(after.level);
       // Same "don't layer two chimes at once" priority the round/game-win
       // effect in game/page.tsx already uses for its own overlapping case —
@@ -456,6 +466,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
           actually builds to, so this doesn't gate on `winners`/`isTie` at
           all. Purely decorative and non-blocking (see Confetti's own doc). */}
       <Confetti />
+      <UnlockToast items={newlyUnlockedCosmetics} onDismiss={() => setNewlyUnlockedCosmetics([])} />
       <div className="text-center">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">
           {isTutorial ? "Tutorial complete" : isDailyDeal ? "Daily Deal" : "Game over"}

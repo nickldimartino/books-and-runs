@@ -48,6 +48,14 @@ export interface LeaderboardEntry {
    * policy on the private `settings` table). Null until they've set one. */
   showcase_card_back: string | null;
   showcase_card_face: string | null;
+  /** A wide color strip behind the profile header — see
+   * bannerPresets.ts's BANNER_OPTIONS. Null means the plain background. */
+  banner: string | null;
+  /** When this account first signed in — see syncLeaderboardStats's own
+   * doc for why this is set once from the client's own session rather
+   * than read from the (unreadable-to-clients) auth.users table. Null for
+   * any row synced before migration 0029 added this column. */
+  joined_at: string | null;
   level: number;
   total_xp: number;
   achievements_unlocked: number;
@@ -90,7 +98,16 @@ export function displayNameFor(entry: Pick<LeaderboardEntry, "user_id" | "displa
  * `display_name` (that's updateLeaderboardDisplayName's job below), so
  * calling this can never clobber a name someone already chose.
  */
-export async function syncLeaderboardStats(supabase: SupabaseClient, userId: string): Promise<void> {
+export async function syncLeaderboardStats(
+  supabase: SupabaseClient,
+  userId: string,
+  /** The signed-in session's own `user.created_at` — passed in rather than
+   * read here since a client can't query auth.users for anyone (itself
+   * included) beyond what its own session object already carries. Once
+   * set, later calls harmlessly re-write the same value (account creation
+   * time never changes); omit it and this column is left untouched. */
+  joinedAt?: string
+): Promise<void> {
   const [statsRes, countersRes, mpStats] = await Promise.all([
     supabase
       .from("player_stats")
@@ -131,6 +148,7 @@ export async function syncLeaderboardStats(supabase: SupabaseClient, userId: str
     games_won: stats?.games_won ?? 0,
     average_score: stats?.average_score ?? null,
     worst_score: stats?.worst_score ?? null,
+    ...(joinedAt ? { joined_at: joinedAt } : {}),
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
@@ -325,7 +343,7 @@ const DEFAULT_AVATAR: AvatarInfo = { kind: "emoji", emoji: null, color: null, ph
  * the same underlying stats) disagreed, most likely stale client-side
  * progress data. */
 export class CosmeticLockedError extends Error {
-  constructor(public readonly cosmeticType: "avatar_emoji" | "avatar_frame" | "title") {
+  constructor(public readonly cosmeticType: "avatar_emoji" | "avatar_frame" | "title" | "banner") {
     super("You haven't unlocked that yet.");
     this.name = "CosmeticLockedError";
   }
@@ -434,6 +452,26 @@ export async function updateLeaderboardTitle(
   });
   if (error) {
     if (error.message?.includes("title_locked")) throw new CosmeticLockedError("title");
+    throw error;
+  }
+}
+
+/** Sets (or clears, with null) the signed-in user's profile banner — see
+ * bannerPresets.ts's BANNER_OPTIONS. Throws CosmeticLockedError for the
+ * one gated banner ("grandmaster") when migration 0029's trigger rejects
+ * it as not yet earned. */
+export async function updateLeaderboardBanner(
+  supabase: SupabaseClient,
+  userId: string,
+  banner: string | null
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    banner,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) {
+    if (error.message?.includes("banner_locked")) throw new CosmeticLockedError("banner");
     throw error;
   }
 }

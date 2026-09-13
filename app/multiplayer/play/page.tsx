@@ -29,6 +29,7 @@ import { PageTip } from "../../components/PageTip";
 import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
+import { UnlockToast } from "../../components/UnlockToast";
 import { useMpGame } from "../../lib/useMpGame";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
 import { applyHandOrder, compareByMode, SortMode } from "../../lib/handSort";
@@ -338,6 +339,7 @@ export default function MultiplayerPlayPage() {
     const iWon = view.winnerSeat != null && view.players[view.winnerSeat]?.userId === user?.id;
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
+        <UnlockToast items={g.newlyUnlockedCosmetics} onDismiss={g.clearNewlyUnlockedCosmetics} />
         <BackLink />
         <h1 className="text-2xl font-bold text-[var(--heading)]">
           {iWon ? "You won!" : `${view.winnerSeat != null ? view.players[view.winnerSeat].name : "Nobody"} won`}
