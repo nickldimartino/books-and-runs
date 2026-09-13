@@ -694,7 +694,15 @@ export default function HomePage() {
           </div>
           <button
             onClick={handleWeeklyChallenge}
-            className="shrink-0 rounded-lg bg-[var(--highlight)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:opacity-90"
+            // --on-accent is only guaranteed to contrast against --accent
+            // (what it's actually named for) — pairing it with --highlight
+            // instead read fine in the dark Midnight theme but fell to
+            // 3.94:1 against daylight's --highlight (#0284c7), under
+            // WCAG AA's 4.5:1 floor for normal text (caught by the a11y
+            // e2e suite). The card's border/wash above stays on
+            // --highlight for the blue-vs-amber distinction from Daily
+            // Deal; only the solid-fill button needed the safer pairing.
+            className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
           >
             {weeklyChallengePlayedThisWeek
               ? "Play again"
