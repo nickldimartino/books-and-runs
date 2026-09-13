@@ -19,7 +19,12 @@ export interface AnyCosmeticOption {
 
 export const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
   ...PREMIUM_EMOJI_OPTIONS.map((o) => ({ kind: "badge" as const, id: o.emoji, label: `${o.emoji} badge`, unlock: o.unlock })),
-  ...AVATAR_FRAME_OPTIONS.map((o) => ({ kind: "avatar_frame" as const, id: o.id, label: `${o.label} frame`, unlock: o.unlock })),
+  ...AVATAR_FRAME_OPTIONS.filter((o) => o.unlock).map((o) => ({
+    kind: "avatar_frame" as const,
+    id: o.id,
+    label: `${o.label} frame`,
+    unlock: o.unlock as CosmeticUnlockRule,
+  })),
   ...TITLE_OPTIONS.map((o) => ({ kind: "title" as const, id: o.id, label: `"${o.label}" title`, unlock: o.unlock })),
   ...BANNER_OPTIONS.filter((o) => o.unlock).map((o) => ({
     kind: "banner" as const,

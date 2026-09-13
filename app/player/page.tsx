@@ -870,7 +870,7 @@ export default function PlayerProfilePage() {
     const client = supabase;
 
     const frameOption = findAvatarFrameOption(entry.avatar_frame);
-    if (frameOption && !isCosmeticUnlocked(frameOption.unlock, level.level, progress)) {
+    if (frameOption?.unlock && !isCosmeticUnlocked(frameOption.unlock, level.level, progress)) {
       updateLeaderboardAvatarFrame(client, user.id, null)
         .then(() => setEntry((prev) => (prev ? { ...prev, avatar_frame: null } : prev)))
         .catch((err) => console.error("Failed to clear an over-privileged avatar frame:", err));
@@ -1437,8 +1437,8 @@ export default function PlayerProfilePage() {
               <div className="flex flex-col gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Avatar frame</h2>
                 <p className="text-xs text-[var(--faint)]">
-                  A ring around your whole avatar, separate from the picture inside it — earned by leveling up or
-                  mastering an achievement category.
+                  A ring around your whole avatar, separate from the picture inside it — pick any color free.
+                  &quot;Grandmaster&quot; is the one exception, earned by mastering every achievement category.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -1453,12 +1453,12 @@ export default function PlayerProfilePage() {
                     <span className="text-[10px] text-[var(--faint)]">None</span>
                   </button>
                   {AVATAR_FRAME_OPTIONS.map((option) => {
-                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
                     return (
                       <button
                         key={option.id}
                         onClick={() => (unlocked ? chooseFrame(option.id) : undefined)}
-                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        title={unlocked ? undefined : option.unlock && cosmeticRequirementLabel(option.unlock)}
                         className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                           !unlocked
                             ? "cursor-default opacity-40"
@@ -1488,7 +1488,7 @@ export default function PlayerProfilePage() {
               {editTab === "title" && (
               <div className="flex flex-col gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Title</h2>
-                <p className="text-xs text-[var(--faint)]">Shown under your name — the same earn-it-first rewards as your avatar frame.</p>
+                <p className="text-xs text-[var(--faint)]">Shown under your name — earned the same way your badge is.</p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => chooseTitle(null)}

@@ -1,26 +1,35 @@
-// Avatar frames and nameplate titles — two more gated cosmetics alongside
-// the premium avatar emoji (avatarPresets.ts), sharing the same unlock
-// system (cosmeticUnlocks.ts) and the same server-side enforcement
-// (migration 0028's cosmetic_unlocks table + trigger). Keep both catalogs
-// here in sync with that migration if either ever changes.
+// Avatar frames and nameplate titles, alongside the premium avatar emoji
+// badge (avatarPresets.ts), sharing the same unlock system
+// (cosmeticUnlocks.ts) and the same server-side enforcement (migration
+// 0028's cosmetic_unlocks table + trigger). Keep both catalogs here in
+// sync with that migration if either ever changes.
+//
+// Frames are deliberately NOT level-gated (migration 0032) — they used to
+// require the exact same level milestones as the badge's own 🥉🥈🥇💎,
+// two systems saying the same thing about a person's level on the same
+// card. The badge is the one place level shows up now; frames are just a
+// color to pick, free from the start — "grandmaster" is the one
+// exception, earned by mastering every achievement category instead,
+// a different kind of flex than a level number.
 
 import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 
 export interface AvatarFrameOption {
   id: string;
   label: string;
-  unlock: CosmeticUnlockRule;
+  /** Absent for a free pick — only "grandmaster" has one. */
+  unlock?: CosmeticUnlockRule;
 }
 
 /** A ring drawn around the whole avatar (photo or emoji), independent of
  * which emoji/color/photo is inside it — see AvatarFrame.tsx. "none" isn't
  * listed here since it's just the absence of a frame (avatar_frame: null),
- * not a pickable option with its own unlock rule. */
+ * not a pickable option of its own. */
 export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
-  { id: "bronze", label: "Bronze", unlock: { kind: "level", level: 10 } },
-  { id: "silver", label: "Silver", unlock: { kind: "level", level: 25 } },
-  { id: "gold", label: "Gold", unlock: { kind: "level", level: 50 } },
-  { id: "diamond", label: "Diamond", unlock: { kind: "level", level: 100 } },
+  { id: "amber", label: "Amber" },
+  { id: "mist", label: "Mist" },
+  { id: "citrine", label: "Citrine" },
+  { id: "sky", label: "Sky" },
   { id: "grandmaster", label: "Grandmaster", unlock: { kind: "allCategoriesMastered" } },
 ];
 
@@ -28,10 +37,10 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
  * rotating conic gradient (see AvatarFrame.tsx) rather than one flat
  * color, since it's the single rarest cosmetic in the whole system. */
 export const AVATAR_FRAME_COLOR: Record<string, string> = {
-  bronze: "#CD7F32",
-  silver: "#B0B8C1",
-  gold: "#F5C518",
-  diamond: "#38BDF8",
+  amber: "#CD7F32",
+  mist: "#B0B8C1",
+  citrine: "#F5C518",
+  sky: "#38BDF8",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {
