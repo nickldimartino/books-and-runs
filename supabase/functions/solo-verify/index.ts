@@ -130,6 +130,57 @@ function cleanRoundHistory(raw: unknown): RoundHistoryEntry[] {
   );
 }
 
+// ── Daily Deal streak integrity ─────────────────────────────────────────
+// A verified completion just inserts one (user_id, date) row — the
+// leaderboard_entries streak columns are recomputed from these by a
+// trigger (migration 0036), the same "server silently overwrites whatever
+// the client pushes" pattern migration 0035 already uses for level/XP.
+// Before this, the only record of "did this account actually play today's
+// deal" was three plain client-writable columns on leaderboard_entries
+// (daily_deal_streak/daily_deal_best_streak/daily_deal_last_played) — a
+// signed-in account could push any streak it wanted directly.
+
+// Same tiny djb2 hash as dailyDealStore.ts's own dateSeed — duplicated
+// rather than shared since it's the one piece of that file this function
+// needs and dailyDealStore.ts isn't part of the src/ bundle.
+function dateSeed(dateKey: string): number {
+  let hash = 5381;
+  for (let i = 0; i < dateKey.length; i++) {
+    hash = (hash * 33) ^ dateKey.charCodeAt(i);
+  }
+  return hash >>> 0;
+}
+
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Not a precise check — "local calendar day" is inherently a client-side
+ * concept, and dateSeed can't be reversed to recover the date it came from
+ * — just generous enough tolerance (timezone skew plus the local-vs-UTC
+ * day boundary) to reject a wildly different claimed date (last month,
+ * next year) while never falsely rejecting a real player's actual today. */
+function isBelievableDailyDealDate(dateKey: string): boolean {
+  if (!DATE_KEY_RE.test(dateKey)) return false;
+  const claimed = new Date(`${dateKey}T00:00:00Z`).getTime();
+  if (Number.isNaN(claimed)) return false;
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  return Math.abs(Date.now() - claimed) <= 2 * ONE_DAY_MS;
+}
+
+async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: unknown): Promise<Response> {
+  const dailyDealDateKey = typeof rawDateKey === "string" ? rawDateKey : "";
+  if (!isBelievableDailyDealDate(dailyDealDateKey)) {
+    return json({ ok: false, error: "invalid Daily Deal date" }, 400);
+  }
+  if (dateSeed(dailyDealDateKey) !== seed) {
+    return json({ ok: false, error: "seed doesn't match the claimed Daily Deal date" }, 400);
+  }
+  const { error } = await admin
+    .from("daily_deal_completions")
+    .upsert({ user_id: uid, date: dailyDealDateKey }, { onConflict: "user_id,date", ignoreDuplicates: true });
+  if (error) return json({ ok: false, error: "couldn't record the completion" }, 500);
+  return json({ ok: true, dailyDeal: true });
+}
+
 // ── stats derivation + writes ───────────────────────────────────────────
 
 interface PlayerStatsRow {
@@ -185,6 +236,11 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
   // achievement_counters/game_history — every write already lands under
   // whichever account's JWT this request carries, so there's nothing a
   // caller could redirect by lying about seats.
+
+  // Daily Deal never counted toward player_stats/achievement_counters (see
+  // dailyDealStore.ts's own doc) — a verified completion here only ever
+  // records attendance toward the streak, nothing else.
+  if (body.isDailyDeal === true) return await handleDailyDealCompletion(uid, seed, body.dailyDealDateKey);
 
   if (!trackStats) return json({ ok: true, tracked: false });
 

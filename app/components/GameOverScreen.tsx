@@ -27,7 +27,12 @@ import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AnyCosmeticOption, diffNewlyUnlockedCosmetics } from "../lib/allCosmetics";
 import { track } from "../lib/analytics";
-import { DailyDealState, mergeCloudDailyDealState, recordDailyDealResult } from "../lib/dailyDealStore";
+import {
+  DailyDealState,
+  localDateKey,
+  mergeCloudDailyDealState,
+  recordDailyDealResult,
+} from "../lib/dailyDealStore";
 import {
   DailyDealFriendScore,
   fetchDailyDealFriendScores,
@@ -44,7 +49,7 @@ import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { renderShareCard } from "../lib/shareCard";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
-import { buildSoloVerifyPayload, verifySoloGame } from "../lib/verifySoloGame";
+import { buildDailyDealVerifyPayload, buildSoloVerifyPayload, verifySoloGame } from "../lib/verifySoloGame";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
@@ -325,6 +330,20 @@ export function GameOverScreen({ state }: { state: GameState }) {
         syncDailyDealStreak(client, uid, result.streak, result.bestStreak, result.lastPlayedDate).catch((err) => {
           console.error("Failed to sync Daily Deal streak:", err);
         });
+        // Records a verified completion toward the account's real streak
+        // (see solo-verify/index.ts and migration 0036) — the sync above
+        // pushes this device's own locally-computed numbers, but a
+        // leaderboard_entries trigger silently overwrites them with
+        // whatever daily_deal_completions actually has on file, so this is
+        // what the streak shown everywhere actually rests on. Best-effort
+        // and idempotent (a replay of an already-recorded day just no-ops
+        // server-side) — never blocks the local streak shown above.
+        const payload = buildDailyDealVerifyPayload(state, getSeed(), getMoveLog(), localDateKey());
+        if (payload) {
+          verifySoloGame(client, payload).catch((err) => {
+            console.error("Failed to record a verified Daily Deal completion:", err);
+          });
+        }
         // Record this account's score for today's deal, then pull the
         // friend leaderboard for it. Best-effort: a project without
         // migration 0018 just won't show the panel. `history[0]` is the
@@ -343,7 +362,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
         }
       }
     })();
-  }, [isDailyDeal, state, user]);
+  }, [isDailyDeal, state, user, getSeed, getMoveLog]);
 
   // Without live multiplayer, a shared result is this game's only social
   // loop — the sole way one player's game becomes someone else's reason to

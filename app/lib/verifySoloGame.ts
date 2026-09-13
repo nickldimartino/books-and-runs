@@ -36,6 +36,13 @@ export interface SoloVerifyPayload {
   moveLog: MoveLogEntry[];
   trackStats: boolean;
   roundHistory: RoundHistoryEntry[];
+  /** Set only for a Daily Deal game — see buildDailyDealVerifyPayload. When
+   * true, the server skips player_stats/achievement_counters/game_history
+   * entirely (Daily Deal has never counted toward those — see
+   * dailyDealStore.ts's own doc) and instead records a verified completion
+   * for `dailyDealDateKey` toward the account's streak. */
+  isDailyDeal?: boolean;
+  dailyDealDateKey?: string;
 }
 
 export interface SoloVerifyResult {
@@ -43,6 +50,7 @@ export interface SoloVerifyResult {
   tracked?: boolean;
   won?: boolean;
   tied?: boolean;
+  dailyDeal?: boolean;
 }
 
 export async function verifySoloGame(supabase: SupabaseClient, payload: SoloVerifyPayload): Promise<SoloVerifyResult> {
@@ -93,4 +101,21 @@ export function buildSoloVerifyPayload(
     trackStats,
     roundHistory,
   };
+}
+
+/** Same shape, for a Daily Deal completion specifically — `dailyDealDateKey`
+ * is the local date (dailyDealStore.ts's localDateKey) the deal was seeded
+ * from, so the server can check it hashes to the same seed and is close
+ * enough to its own clock to be believable (see solo-verify/index.ts).
+ * `null` under the same conditions as buildSoloVerifyPayload — callers
+ * should just skip the call, same as any other unverifiable game. */
+export function buildDailyDealVerifyPayload(
+  state: GameState,
+  seed: number | null,
+  moveLog: MoveLogEntry[],
+  dailyDealDateKey: string
+): SoloVerifyPayload | null {
+  const base = buildSoloVerifyPayload(state, seed, moveLog, true, []);
+  if (!base) return null;
+  return { ...base, isDailyDeal: true, dailyDealDateKey };
 }

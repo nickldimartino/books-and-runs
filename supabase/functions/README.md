@@ -80,6 +80,15 @@ client-side JS, so nothing stops a script from generating a valid-looking
 move log offline far faster than a human could actually play one through
 the UI — this is the backstop for that.
 
+**Daily Deal completions** flow through the same function (`isDailyDeal:
+true`, `dailyDealDateKey` — see `verifySoloGame.ts`'s
+`buildDailyDealVerifyPayload`) but take a different branch entirely: no
+player_stats/achievement_counters/game_history write (Daily Deal has never
+counted toward those), just a verified `daily_deal_completions` row after
+checking the claimed date both hashes to the submitted seed and is close
+enough to the function's own clock to be believable. See migration 0036 —
+the trigger that actually makes this matter.
+
 ### Deploy
 
 ```bash

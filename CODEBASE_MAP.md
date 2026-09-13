@@ -298,6 +298,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0022 | Extends `settings` (0001) with `theme`/`card_back`/`card_face`/`colorblind_mode`/`meld_hints`/`highlight_layoffs`/`show_whose_turn`/`sound_volume`/`ambient_music_enabled`/`ambient_volume` — every Settings/Theme/Card back/Card face preference now syncs to the account, not just AI difficulty. See `accountSettingsSync.ts`. |
 | 0023–0034 | Cosmetics/profile evolution (avatar frames, titles, banners, badges, showcase, Creator badge, a much larger cosmetic catalog) — see `supabase/migrations/README.md` for the full list; not restated here. |
 | 0035 | Closes the solo-stats hole: drops the owner insert/update policies on `player_stats`/`achievement_counters` (only `solo-verify`'s and `mp`'s service-role writes reach them now — same zero-client-RLS idea as `mp_game_state`), and a trigger overwriting `leaderboard_entries`' `level`/`total_xp`/`games_played`/`games_won`/`average_score`/`worst_score` with server-recomputed values on every write. |
+| 0036 | Same fix for the Daily Deal streak: `daily_deal_completions` (service-role-only writes) + a trigger recomputing `leaderboard_entries`' `daily_deal_streak`/`daily_deal_best_streak`/`daily_deal_last_played` from it, closing the same "plain client-writable column" gap those three had. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -333,8 +334,9 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
   regress) — a smaller slice of `src/` than `mp`'s own copy (no `ai/` or
   `mp/`: solo-verify replays already-concrete logged moves, never re-runs
   AI strategy code).
-- Requires migration 0035 to have run for the hole to actually be closed —
-  see `supabase/functions/README.md`.
+- Requires migration 0035 (and, for Daily Deal completions specifically,
+  0036) to have run for the holes to actually be closed — see
+  `supabase/functions/README.md`.
 
 ### Edge Function (`supabase/functions/contact/`)
 
