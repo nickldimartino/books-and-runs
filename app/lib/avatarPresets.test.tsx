@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_PROGRESS_STATE } from "@/achievements";
-import { isPremiumEmojiUnlocked, isValidEmoji, PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
+import { isPremiumEmojiUnlocked, isValidBadge, isValidEmoji, PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
 
 function findPremium(emoji: string) {
   const found = PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === emoji);
@@ -9,13 +9,26 @@ function findPremium(emoji: string) {
 }
 
 describe("isValidEmoji", () => {
-  it("accepts both free and premium emoji", () => {
+  it("accepts a free emoji", () => {
     expect(isValidEmoji("😀")).toBe(true);
-    expect(isValidEmoji("👑")).toBe(true);
   });
 
-  it("rejects anything not in either list", () => {
+  it("rejects a premium (badge-only) emoji — that's isValidBadge's job now", () => {
+    expect(isValidEmoji("👑")).toBe(false);
+  });
+
+  it("rejects anything not in the free list", () => {
     expect(isValidEmoji("🥕")).toBe(false);
+  });
+});
+
+describe("isValidBadge", () => {
+  it("accepts a premium emoji", () => {
+    expect(isValidBadge("👑")).toBe(true);
+  });
+
+  it("rejects a free emoji", () => {
+    expect(isValidBadge("😀")).toBe(false);
   });
 });
 

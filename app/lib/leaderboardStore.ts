@@ -10,7 +10,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { levelProgress } from "@/leveling";
-import { isValidColor, isValidEmoji } from "./avatarPresets";
+import { isValidBadge, isValidColor, isValidEmoji } from "./avatarPresets";
 import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";
 
 interface PlayerStatsRow {
@@ -40,6 +40,11 @@ export interface LeaderboardEntry {
   /** A ring around the whole avatar — see profileCosmetics.ts's
    * AVATAR_FRAME_OPTIONS and AvatarFrame.tsx. Null means no frame. */
   avatar_frame: string | null;
+  /** A small earned overlay on the avatar's corner — see avatarPresets.ts's
+   * PREMIUM_EMOJI_OPTIONS (migration 0031 moved these off avatar_emoji, so
+   * a photo or free emoji picture and an earned badge show together
+   * instead of one replacing the other). Null means no badge chosen. */
+  badge: string | null;
   /** A short earned flair shown under the display name — see
    * profileCosmetics.ts's TITLE_OPTIONS. Null means no title chosen. */
   title: string | null;
@@ -332,34 +337,17 @@ export interface AvatarInfo {
 
 const DEFAULT_AVATAR: AvatarInfo = { kind: "emoji", emoji: null, color: null, photoPath: null };
 
-/** Thrown by updateLeaderboardAvatarEmoji when migration 0026's trigger
- * rejects a premium emoji the account hasn't earned yet — the client-side
- * lock check (avatarPresets.ts's isPremiumEmojiUnlocked) should normally
- * catch this before the request ever goes out, so seeing this in practice
- * means that check and the server's own (re-derived from the same
- * underlying stats) disagreed, most likely stale client-side progress
- * data. */
-/** Thrown by updateLeaderboardAvatarEmoji/AvatarFrame/Title when migration
- * 0028's trigger rejects a gated cosmetic the account hasn't earned yet —
- * the client-side lock check (cosmeticUnlocks.ts's isCosmeticUnlocked)
- * should normally catch this before the request ever goes out, so seeing
- * this in practice means that check and the server's own (re-derived from
- * the same underlying stats) disagreed, most likely stale client-side
- * progress data. */
+/** Thrown by updateLeaderboardAvatarFrame/Title/Banner/Badge when a
+ * migration's trigger rejects a gated cosmetic the account hasn't earned
+ * yet — the client-side lock check (cosmeticUnlocks.ts's
+ * isCosmeticUnlocked) should normally catch this before the request ever
+ * goes out, so seeing this in practice means that check and the server's
+ * own (re-derived from the same underlying stats) disagreed, most likely
+ * stale client-side progress data. */
 export class CosmeticLockedError extends Error {
-  constructor(public readonly cosmeticType: "avatar_emoji" | "avatar_frame" | "title" | "banner") {
+  constructor(public readonly cosmeticType: "avatar_frame" | "title" | "banner" | "badge") {
     super("You haven't unlocked that yet.");
     this.name = "CosmeticLockedError";
-  }
-}
-
-/** Kept as its own name for existing callers — same thing as
- * `new CosmeticLockedError("avatar_emoji")`. */
-export class PremiumEmojiLockedError extends CosmeticLockedError {
-  constructor() {
-    super("avatar_emoji");
-    this.message = "You haven't unlocked that avatar option yet.";
-    this.name = "PremiumEmojiLockedError";
   }
 }
 
@@ -368,9 +356,8 @@ export class PremiumEmojiLockedError extends CosmeticLockedError {
  * previously-uploaded photo is still there if they switch back to it later
  * (see revertToPhotoAvatar). Both values are validated against the same
  * fixed lists the DB constrains them to (see migration 0024's own doc for
- * why the two must stay in sync). Throws PremiumEmojiLockedError
- * specifically when migration 0026's trigger rejects a locked premium
- * emoji — every other failure rethrows as-is. */
+ * why the two must stay in sync). Free picks only — see
+ * updateLeaderboardBadge for the earned, milestone-gated overlay. */
 export async function updateLeaderboardAvatarEmoji(
   supabase: SupabaseClient,
   userId: string,
@@ -387,10 +374,7 @@ export async function updateLeaderboardAvatarEmoji(
     avatar_color: color,
     updated_at: new Date().toISOString(),
   });
-  if (error) {
-    if (error.message?.includes("avatar_emoji_locked")) throw new PremiumEmojiLockedError();
-    throw error;
-  }
+  if (error) throw error;
 }
 
 /** Records a freshly-uploaded photo as the signed-in user's avatar and
@@ -476,6 +460,29 @@ export async function updateLeaderboardBanner(
   });
   if (error) {
     if (error.message?.includes("banner_locked")) throw new CosmeticLockedError("banner");
+    throw error;
+  }
+}
+
+/** Sets (or clears, with null) the signed-in user's badge — an earned
+ * overlay on the avatar's corner, separate from the avatar picture itself;
+ * see avatarPresets.ts's PREMIUM_EMOJI_OPTIONS. Throws CosmeticLockedError
+ * for a badge migration 0031's trigger rejects as not yet earned. */
+export async function updateLeaderboardBadge(
+  supabase: SupabaseClient,
+  userId: string,
+  badge: string | null
+): Promise<void> {
+  if (badge !== null && !isValidBadge(badge)) {
+    throw new Error("That badge isn't one of the presets.");
+  }
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    badge,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) {
+    if (error.message?.includes("badge_locked")) throw new CosmeticLockedError("badge");
     throw error;
   }
 }

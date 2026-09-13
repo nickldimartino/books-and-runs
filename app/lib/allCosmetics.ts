@@ -1,8 +1,8 @@
-// Every gated cosmetic across all four systems (premium avatar emoji,
-// avatar frame, title, banner), flattened into one list purely for "did
-// anything just newly unlock" diffing (see GameOverScreen.tsx and
-// useMpGame.ts) — not for any picker UI, which each still reads from its
-// own catalog (avatarPresets.ts, profileCosmetics.ts, bannerPresets.ts).
+// Every gated cosmetic across all four systems (badge, avatar frame,
+// title, banner), flattened into one list purely for "did anything just
+// newly unlock" diffing (see GameOverScreen.tsx and useMpGame.ts) — not
+// for any picker UI, which each still reads from its own catalog
+// (avatarPresets.ts, profileCosmetics.ts, bannerPresets.ts).
 
 import { AchievementProgressState } from "@/achievements";
 import { PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
@@ -11,14 +11,14 @@ import { CosmeticUnlockRule, isCosmeticUnlocked } from "./cosmeticUnlocks";
 import { AVATAR_FRAME_OPTIONS, TITLE_OPTIONS } from "./profileCosmetics";
 
 export interface AnyCosmeticOption {
-  kind: "avatar_emoji" | "avatar_frame" | "title" | "banner";
+  kind: "badge" | "avatar_frame" | "title" | "banner";
   id: string;
   label: string;
   unlock: CosmeticUnlockRule;
 }
 
 export const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
-  ...PREMIUM_EMOJI_OPTIONS.map((o) => ({ kind: "avatar_emoji" as const, id: o.emoji, label: `${o.emoji} avatar`, unlock: o.unlock })),
+  ...PREMIUM_EMOJI_OPTIONS.map((o) => ({ kind: "badge" as const, id: o.emoji, label: `${o.emoji} badge`, unlock: o.unlock })),
   ...AVATAR_FRAME_OPTIONS.map((o) => ({ kind: "avatar_frame" as const, id: o.id, label: `${o.label} frame`, unlock: o.unlock })),
   ...TITLE_OPTIONS.map((o) => ({ kind: "title" as const, id: o.id, label: `"${o.label}" title`, unlock: o.unlock })),
   ...BANNER_OPTIONS.filter((o) => o.unlock).map((o) => ({

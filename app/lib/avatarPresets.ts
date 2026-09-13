@@ -2,10 +2,16 @@
 // don't want to) upload a photo — an emoji plus a background color, same
 // visual language as the AI opponents' single-emoji avatars (aiPersonas.ts),
 // just with a color behind it since a human player only ever picks one, not
-// a whole roster. All three lists (free emoji, premium emoji, colors) are
-// constrained at the database too (migration 0024's leaderboard_avatar_
-// emoji_ok / leaderboard_avatar_color_ok CHECKs, migration 0026's premium
-// additions) — keep those in sync with these if any list ever changes.
+// a whole roster. Both lists (free emoji, colors) are constrained at the
+// database too (migration 0024's leaderboard_avatar_emoji_ok /
+// leaderboard_avatar_color_ok CHECKs) — keep those in sync with these if
+// either list ever changes.
+//
+// PREMIUM_EMOJI_OPTIONS below is a separate thing despite living in this
+// same file (it predates the badge/picture split) — those 13 are earned
+// badges (migration 0031's `badge` column), an overlay shown alongside
+// whichever picture (photo or one of the free emoji above) an account
+// actually has, not a competing picture of their own.
 
 import { AchievementProgressState } from "@/achievements";
 import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked } from "./cosmeticUnlocks";
@@ -33,9 +39,10 @@ export interface PremiumEmojiOption {
  * achievements.ts's 9 categories. Shown greyed-out with a lock and the
  * requirement in the picker until earned (see isPremiumEmojiUnlocked
  * below), never hidden — the point is to be a visible goal, not a secret.
- * Enforced for real at the database (migration 0026's trigger) — this
- * client-side check is just what drives the picker's UI, not the source of
- * truth; see leaderboardStore.ts's PremiumEmojiLockedError.
+ * Enforced for real at the database (migration 0031's trigger, as the
+ * `badge` column) — this client-side check is just what drives the
+ * picker's UI, not the source of truth; see leaderboardStore.ts's
+ * CosmeticLockedError.
  */
 export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "🥉", unlock: { kind: "level", level: 10 } },
@@ -99,11 +106,17 @@ export const COLOR_OPTIONS: readonly ColorOption[] = [
 export const DEFAULT_EMOJI = EMOJI_OPTIONS[0];
 export const DEFAULT_COLOR = COLOR_OPTIONS[9].hex; // Blue — a neutral, on-theme default
 
-/** Every emoji the database will structurally accept — free or premium,
- * locked or not. Doesn't mean the signed-in account is *allowed* to set it
- * right now (see isPremiumEmojiUnlocked) — just that it's a real option. */
+/** Every emoji the database will accept as a whole avatar picture — the
+ * free set only (migration 0031 moved the 13 premium ones to their own
+ * `badge` column, an overlay rather than a competing picture). */
 export function isValidEmoji(emoji: string): boolean {
-  return EMOJI_OPTIONS.includes(emoji) || PREMIUM_EMOJI_OPTIONS.some((p) => p.emoji === emoji);
+  return EMOJI_OPTIONS.includes(emoji);
+}
+
+/** Every emoji the database will accept as a badge — the earned set only;
+ * see findPremiumEmojiOption for looking one up with its unlock rule. */
+export function isValidBadge(emoji: string): boolean {
+  return PREMIUM_EMOJI_OPTIONS.some((p) => p.emoji === emoji);
 }
 
 export function isValidColor(hex: string): boolean {

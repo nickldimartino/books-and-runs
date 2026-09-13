@@ -44,13 +44,14 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
-import { PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
+import { EmojiOrBadge, PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
 import { ProfileBanner } from "../components/ProfileBanner";
 import { RankBadge } from "../components/RankBadge";
 import { fetchAchievementRarity, formatRarity, RarityMap } from "../lib/achievementRarity";
 import {
   COLOR_OPTIONS,
   EMOJI_OPTIONS,
+  findPremiumEmojiOption,
   isPremiumEmojiUnlocked,
   PREMIUM_EMOJI_OPTIONS,
   premiumEmojiRequirementLabel,
@@ -72,7 +73,6 @@ import {
   MAX_DISPLAY_NAME_LENGTH,
   MAX_REPORT_REASON_LENGTH,
   MAX_SHOWCASE_ITEMS,
-  PremiumEmojiLockedError,
   displayNameFor,
   isDisplayNameAvailable,
   playerProfileHref,
@@ -83,6 +83,7 @@ import {
   updateLeaderboardAvatarEmoji,
   updateLeaderboardAvatarFrame,
   updateLeaderboardAvatarPhoto,
+  updateLeaderboardBadge,
   updateLeaderboardBanner,
   updateLeaderboardBio,
   updateLeaderboardDisplayName,
@@ -311,6 +312,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
     avatar_photo_path: null,
     showcase: [],
     avatar_frame: null,
+    badge: null,
     title: null,
     showcase_card_back: null,
     showcase_card_face: null,
@@ -473,7 +475,9 @@ export default function PlayerProfilePage() {
 
   // ── Edit profile (self only) — collapsed until asked for ───────────────
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editTab, setEditTab] = useState<"picture" | "trophies" | "frame" | "title" | "banner" | "name">("picture");
+  const [editTab, setEditTab] = useState<"picture" | "badge" | "trophies" | "frame" | "title" | "banner" | "name">(
+    "picture"
+  );
 
   // ── Achievement rarity ("Only N% of players have this") ────────────────
   // Global, so it can't be computed client-side (see achievementRarity.ts) —
@@ -569,7 +573,6 @@ export default function PlayerProfilePage() {
   const [pendingEmoji, setPendingEmoji] = useState<string | null>(null);
   const [pendingColor, setPendingColor] = useState<string | null>(null);
   const [avatarSaveState, setAvatarSaveState] = useState<SaveState>("idle");
-  const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
   const [photoState, setPhotoState] = useState<"idle" | "uploading" | "error">("idle");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -590,17 +593,12 @@ export default function PlayerProfilePage() {
   async function saveEmojiAvatar(emoji: string | null, color: string | null) {
     if (!supabase || !user || !emoji || !color) return;
     setAvatarSaveState("saving");
-    setAvatarSaveError(null);
     try {
       await updateLeaderboardAvatarEmoji(supabase, user.id, emoji, color);
       setEntry((prev) => (prev ? { ...prev, avatar_kind: "emoji", avatar_emoji: emoji, avatar_color: color } : prev));
       setAvatarSaveState("saved");
     } catch (err) {
-      if (err instanceof PremiumEmojiLockedError) {
-        setAvatarSaveError(err.message);
-      } else {
-        console.error("Failed to save avatar:", err);
-      }
+      console.error("Failed to save avatar:", err);
       setAvatarSaveState("error");
     }
   }
@@ -701,12 +699,43 @@ export default function PlayerProfilePage() {
     }
   }
 
+  // ── Self-editing: badge — an earned overlay on the avatar's corner,
+  // separate from the picture itself (see migration 0031's own doc). ──────
+  const [badgeSaveState, setBadgeSaveState] = useState<SaveState>("idle");
+  const [badgeSaveError, setBadgeSaveError] = useState<string | null>(null);
+
+  async function chooseBadge(badge: string | null) {
+    if (!supabase || !user) return;
+    setBadgeSaveState("saving");
+    setBadgeSaveError(null);
+    try {
+      await updateLeaderboardBadge(supabase, user.id, badge);
+      setEntry((prev) => (prev ? { ...prev, badge } : prev));
+      setBadgeSaveState("saved");
+    } catch (err) {
+      if (err instanceof CosmeticLockedError) setBadgeSaveError(err.message);
+      else console.error("Failed to save badge:", err);
+      setBadgeSaveState("error");
+    }
+  }
+
   // ── Share profile card ──────────────────────────────────────────────────
-  const [shareState, setShareState] = useState<"idle" | "working" | "linkCopied" | "error">("idle");
+  const [shareState, setShareState] = useState<"idle" | "working" | "error">("idle");
 
   async function shareProfileCard() {
     if (!entry) return;
     setShareState("working");
+    // Written first, before any await — Safari in particular only honors
+    // navigator.clipboard.writeText while the click's user-activation is
+    // still fresh, and it silently no-ops (the promise still resolves)
+    // rather than throwing once that window has passed. Doing this before
+    // the async canvas render below, not after, is what actually gets the
+    // link onto the clipboard instead of just appearing to.
+    try {
+      await navigator.clipboard?.writeText(`${window.location.origin}${playerProfileHref(entry.user_id)}`);
+    } catch {
+      // Best-effort — the picture share below still goes ahead either way.
+    }
     try {
       const frameOption = findAvatarFrameOption(entry.avatar_frame);
       const titleOption = findTitleOption(entry.title);
@@ -726,6 +755,7 @@ export default function PlayerProfilePage() {
         frameColor: frameOption
           ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id])
           : null,
+        badge: entry.badge,
         stats: [
           { label: "Games", value: String(entry.games_played) },
           { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
@@ -738,24 +768,14 @@ export default function PlayerProfilePage() {
       });
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
-      const profileUrl = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
-      // Deliberately two separate, independently-reliable steps rather than
-      // one navigator.share({files, url}) call — tried that twice already;
-      // on at least one real device, canShare({files, url}) reported true
-      // but the actual share sheet still silently dropped the picture and
-      // sent only the link. Sharing the file alone is the one thing
-      // reliably supported wherever canShare says files work at all, and a
-      // clipboard copy alongside it gets the link into the same chat with
-      // one paste, without depending on any share target's handling of a
-      // multi-part payload.
-      let copiedUrl = false;
-      try {
-        await navigator.clipboard?.writeText(profileUrl);
-        copiedUrl = true;
-      } catch {
-        // Clipboard access can be denied/unavailable — the picture share
-        // below still goes ahead either way.
-      }
+      // Deliberately not navigator.share({files, url}) in one call — tried
+      // that twice already; on at least one real device, canShare({files,
+      // url}) reported true but the actual share sheet still silently
+      // dropped the picture and sent only the link. Sharing the file alone
+      // is the one thing reliably supported wherever canShare says files
+      // work at all; the clipboard copy above gets the link into the same
+      // chat with one paste, without depending on any share target's
+      // handling of a multi-part payload.
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
       } else {
@@ -763,7 +783,7 @@ export default function PlayerProfilePage() {
         window.open(url, "_blank");
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
       }
-      setShareState(copiedUrl ? "linkCopied" : "idle");
+      setShareState("idle");
     } catch (err) {
       console.error("Failed to share profile card:", err);
       setShareState("error");
@@ -838,6 +858,49 @@ export default function PlayerProfilePage() {
 
     getMyMpHistory(client, 20).then(setMpHistory).catch(() => setMpHistory([]));
   }, [user, isSelf]);
+
+  // Self-heal: an equipped cosmetic can end up over-privileged relative to
+  // today's live level/progress — stale data from before a gate was
+  // tightened, or account stats that changed after the fact (e.g. a reset
+  // for testing). Runs once per profile load, after both the live level
+  // and this account's own achievement progress have loaded, and clears
+  // anything that no longer passes its own unlock check rather than
+  // leaving it looking permanently (and incorrectly) earned.
+  const revalidatedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!supabase || !user || !isSelf || !entry || !level || privateLoading) return;
+    if (revalidatedForRef.current === entry.user_id) return;
+    revalidatedForRef.current = entry.user_id;
+    const client = supabase;
+
+    const frameOption = findAvatarFrameOption(entry.avatar_frame);
+    if (frameOption && !isCosmeticUnlocked(frameOption.unlock, level.level, progress)) {
+      updateLeaderboardAvatarFrame(client, user.id, null)
+        .then(() => setEntry((prev) => (prev ? { ...prev, avatar_frame: null } : prev)))
+        .catch((err) => console.error("Failed to clear an over-privileged avatar frame:", err));
+    }
+
+    const titleOption = findTitleOption(entry.title);
+    if (titleOption && !isCosmeticUnlocked(titleOption.unlock, level.level, progress)) {
+      updateLeaderboardTitle(client, user.id, null)
+        .then(() => setEntry((prev) => (prev ? { ...prev, title: null } : prev)))
+        .catch((err) => console.error("Failed to clear an over-privileged title:", err));
+    }
+
+    const bannerOption = findBannerOption(entry.banner);
+    if (bannerOption?.unlock && !isCosmeticUnlocked(bannerOption.unlock, level.level, progress)) {
+      updateLeaderboardBanner(client, user.id, null)
+        .then(() => setEntry((prev) => (prev ? { ...prev, banner: null } : prev)))
+        .catch((err) => console.error("Failed to clear an over-privileged banner:", err));
+    }
+
+    const badgeOption = entry.badge ? findPremiumEmojiOption(entry.badge) : null;
+    if (badgeOption && !isPremiumEmojiUnlocked(badgeOption, level.level, progress)) {
+      updateLeaderboardBadge(client, user.id, null)
+        .then(() => setEntry((prev) => (prev ? { ...prev, badge: null } : prev)))
+        .catch((err) => console.error("Failed to clear an over-privileged badge:", err));
+    }
+  }, [user, isSelf, entry, level, progress, privateLoading]);
 
   const achievements = useMemo(() => allAchievements(progress), [progress]);
   const unlocked = useMemo(() => achievements.filter((a) => a.unlocked), [achievements]);
@@ -1038,9 +1101,19 @@ export default function PlayerProfilePage() {
               <ShareIcon />
             </button>
             <div className="flex flex-col items-center gap-2 text-center">
-              <AvatarFrame frame={entry.avatar_frame} size={88}>
-                <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
-              </AvatarFrame>
+              <div className="relative">
+                <AvatarFrame frame={entry.avatar_frame} size={88}>
+                  <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
+                </AvatarFrame>
+                {entry.badge && (
+                  <span
+                    title="Earned badge"
+                    className="absolute bottom-0 right-0 grid h-7 w-7 place-items-center rounded-full border-2 border-[var(--bg)] bg-[var(--panel)] p-1 shadow"
+                  >
+                    <EmojiOrBadge emoji={entry.badge} className="h-full w-full text-[var(--heading)]" />
+                  </span>
+                )}
+              </div>
 
               {/* Identity: name, title, level/rank — kept tight and on-brand
                   regardless of banner, unlike bio/cosmetics/actions below,
@@ -1094,9 +1167,6 @@ export default function PlayerProfilePage() {
                   </button>
                 )}
               </div>
-              {shareState === "linkCopied" && (
-                <p className="text-xs text-[var(--muted)]">Profile link copied — paste it in along with the picture.</p>
-              )}
               {shareState === "error" && (
                 <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
               )}
@@ -1147,6 +1217,7 @@ export default function PlayerProfilePage() {
                 {(
                   [
                     ["picture", "Picture"],
+                    ["badge", "Badge"],
                     ["trophies", "Trophies"],
                     ["frame", "Frame"],
                     ["title", "Title"],
@@ -1203,55 +1274,6 @@ export default function PlayerProfilePage() {
                       ))}
                     </div>
 
-                    <div>
-                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)]">
-                        Premium — earned, not picked
-                      </p>
-                      <div className="grid grid-cols-8 gap-1.5">
-                        {PREMIUM_EMOJI_OPTIONS.map((option) => {
-                          const unlocked = isPremiumEmojiUnlocked(option, level?.level ?? 0, progress);
-                          return (
-                            <button
-                              key={option.emoji}
-                              onClick={() => (unlocked ? chooseEmoji(option.emoji) : undefined)}
-                              aria-label={
-                                unlocked
-                                  ? `Use ${option.emoji} as your avatar`
-                                  : `${option.emoji} locked — ${premiumEmojiRequirementLabel(option.unlock)}`
-                              }
-                              title={unlocked ? undefined : premiumEmojiRequirementLabel(option.unlock)}
-                              className={`relative grid aspect-square place-items-center rounded-lg text-[var(--heading)] transition ${
-                                !unlocked
-                                  ? "cursor-default bg-[var(--panel-soft)] opacity-40"
-                                  : pendingEmoji === option.emoji
-                                    ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
-                                    : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
-                              }`}
-                            >
-                              <PremiumBadgeIcon option={option} className="block h-2/3 w-2/3" />
-                              {!unlocked && (
-                                <span
-                                  aria-hidden="true"
-                                  className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-[var(--bg)] text-[8px] leading-none"
-                                >
-                                  🔒
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {pendingEmoji && PREMIUM_EMOJI_OPTIONS.some((o) => o.emoji === pendingEmoji) && (
-                        <p className="mt-1.5 text-[10px] text-[var(--faint)]">
-                          {
-                            premiumEmojiRequirementLabel(
-                              PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === pendingEmoji)!.unlock
-                            )
-                          }
-                        </p>
-                      )}
-                    </div>
-
                     <div className="flex flex-wrap gap-2">
                       {COLOR_OPTIONS.map((color) => (
                         <button
@@ -1267,7 +1289,7 @@ export default function PlayerProfilePage() {
                     {avatarSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                     {avatarSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                     {avatarSaveState === "error" && (
-                      <p className="text-xs text-[var(--danger)]">{avatarSaveError ?? "Couldn't save — try again."}</p>
+                      <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — try again.</p>
                     )}
                   </div>
                 ) : (
@@ -1294,6 +1316,69 @@ export default function PlayerProfilePage() {
                     {photoError && <p className="text-xs text-[var(--danger)]">{photoError}</p>}
                     <p className="text-xs text-[var(--faint)]">JPEG, PNG, or WebP. It&apos;s cropped to a square automatically.</p>
                   </div>
+                )}
+              </div>
+              )}
+
+              {editTab === "badge" && (
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Badge</h2>
+                <p className="text-xs text-[var(--faint)]">
+                  A small earned overlay on the corner of your avatar — shown alongside your picture,
+                  not instead of it. Leveling up and mastering achievement categories unlock more.
+                </p>
+                <div className="grid grid-cols-8 gap-1.5">
+                  <button
+                    onClick={() => chooseBadge(null)}
+                    aria-label="No badge"
+                    className={`grid aspect-square place-items-center rounded-lg text-[10px] text-[var(--faint)] transition ${
+                      !entry.badge ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                    }`}
+                  >
+                    None
+                  </button>
+                  {PREMIUM_EMOJI_OPTIONS.map((option) => {
+                    const unlocked = isPremiumEmojiUnlocked(option, level?.level ?? 0, progress);
+                    return (
+                      <button
+                        key={option.emoji}
+                        onClick={() => (unlocked ? chooseBadge(option.emoji) : undefined)}
+                        aria-label={
+                          unlocked
+                            ? `Use ${option.emoji} as your badge`
+                            : `${option.emoji} locked — ${premiumEmojiRequirementLabel(option.unlock)}`
+                        }
+                        title={unlocked ? undefined : premiumEmojiRequirementLabel(option.unlock)}
+                        className={`relative grid aspect-square place-items-center rounded-lg text-[var(--heading)] transition ${
+                          !unlocked
+                            ? "cursor-default bg-[var(--panel-soft)] opacity-40"
+                            : entry.badge === option.emoji
+                              ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
+                              : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                        }`}
+                      >
+                        <PremiumBadgeIcon option={option} className="block h-2/3 w-2/3" />
+                        {!unlocked && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-[var(--bg)] text-[8px] leading-none"
+                          >
+                            🔒
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {entry.badge && (
+                  <p className="text-[10px] text-[var(--faint)]">
+                    {premiumEmojiRequirementLabel(PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === entry.badge)!.unlock)}
+                  </p>
+                )}
+                {badgeSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
+                {badgeSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {badgeSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{badgeSaveError ?? "Couldn't save — try again."}</p>
                 )}
               </div>
               )}

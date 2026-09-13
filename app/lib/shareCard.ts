@@ -123,6 +123,9 @@ export interface ProfileShareCardInput {
    * export has no motion to show off anyway; it just renders framed with
    * one of its own gradient stops instead of failing to render at all. */
   frameColor: string | null;
+  /** An earned overlay emoji shown in the avatar's corner, separate from
+   * the avatar itself — see migration 0031's `badge` column. Null for none. */
+  badge: string | null;
   stats: { label: string; value: string }[];
   /** Tier ring colors for up to 6 pinned trophies, in Trophy Case order. */
   trophyColors: string[];
@@ -220,6 +223,19 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
       ctx.font = `${Math.round(avatarSize * 0.5)}px ${sans}`;
       ctx.fillText(input.avatarEmoji, cx, cy + 2);
     }
+  }
+
+  if (input.badge) {
+    const badgeRadius = avatarSize * 0.18;
+    const badgeCx = avatarX + avatarSize - badgeRadius * 0.6;
+    const badgeCy = avatarY + avatarSize - badgeRadius * 0.6;
+    ctx.beginPath();
+    ctx.arc(badgeCx, badgeCy, badgeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.textAlign = "center";
+    ctx.font = `${Math.round(badgeRadius * 1.3)}px ${sans}`;
+    ctx.fillText(input.badge, badgeCx, badgeCy + 1);
   }
 
   const textX = avatarX + avatarSize + 24;

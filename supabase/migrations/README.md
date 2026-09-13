@@ -50,6 +50,7 @@ tells you a project's real state.
 | 0028 | Avatar frames + nameplate titles (`leaderboard_entries.avatar_frame`/`.title`), a public mirror of your equipped card back/face (`.showcase_card_back`/`.showcase_card_face`), and a data-driven `cosmetic_unlocks` catalog + generic trigger replacing 0026/0027's single-purpose emoji trigger. |
 | 0029 | Profile banner (`leaderboard_entries.banner`, one more gated cosmetic), `joined_at` ("member since"), and `achievement_unlock_counts` — a daily `pg_cron`-refreshed summary table powering each trophy's rarity %. |
 | 0030 | `leaderboard_entries.is_creator` — a "Creator" badge shown on one account's profile, set once by matching `auth.users.email` (never through a client update function). |
+| 0031 | `leaderboard_entries.badge` — moves the 13 milestone/category-mastery emoji off `avatar_emoji` (which now only takes the 46 free ones) onto their own overlay column, so a photo or free emoji and an earned badge can show together instead of one replacing the other. |
 
 ## New migrations
 
