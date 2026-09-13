@@ -36,7 +36,7 @@ export async function loadAchievementProgressState(
   const [statsRes, countersRes, mpStats] = await Promise.all([
     supabase
       .from("player_stats")
-      .select("games_played, games_won, wins_by_difficulty")
+      .select("games_played, games_won, best_score, wins_by_difficulty")
       .eq("user_id", userId)
       .maybeSingle<PlayerStatsRow>(),
     supabase
@@ -51,6 +51,7 @@ export async function loadAchievementProgressState(
     counters: countersRes.data?.counters ?? {},
     gamesPlayed: statsRes.data?.games_played ?? 0,
     gamesWon: statsRes.data?.games_won ?? 0,
+    bestScore: statsRes.data?.best_score ?? null,
     winsByDifficulty: statsRes.data?.wins_by_difficulty ?? {},
     mpGamesPlayed: mpStats.played,
     mpGamesWon: mpStats.won,
