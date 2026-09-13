@@ -5,11 +5,17 @@
 The authority for multiplayer games: it runs the real `src/` game engine,
 keeps the full state + shuffled deck server-side (in the `mp_game_state`
 table, which has **no RLS policies** so no client can read it), validates
-every move, and returns each player only their own redacted view.
+every move, and returns each player only their own redacted view. It's also
+the only writer of `player_stats`/`achievement_counters`/`game_history` for
+a multiplayer game (`creditAchievementCounters` after each verified move,
+`recordMpGameOutcome` at game-over) — this used to be a separate client-side
+write (`recordMpGameResult`, using the player's own RLS-scoped session)
+that nothing re-verified against the real server state, closed alongside
+the solo-stats hole below.
 
 All the game logic is in [`../../src/mp/adapter.ts`](../../src/mp/adapter.ts)
-(pure, unit-tested — `src/mp/adapter.test.ts`). `mp/index.ts` is just auth +
-database + routing.
+(pure, unit-tested — `src/mp/adapter.test.ts`). `mp/index.ts` is auth +
+database + routing + the stats-crediting logic above.
 
 ### Deploy
 

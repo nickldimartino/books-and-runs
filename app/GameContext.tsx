@@ -297,10 +297,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // a live rng stream (a save/resume can't persist a generator's internal
   // state). Null for a tutorial (never verified) or a pre-existing saved
   // game from before this field existed (see localSave.ts's SavedGame —
-  // recordGameResult falls back to the old direct-write path for a game
-  // with no seed). Daily Deal keeps deriving its own from the calendar date
-  // (dateSeed/localDateKey) rather than a random draw, but still gets
-  // stored here so it can ride along in the same verification payload.
+  // GameOverScreen's attemptSave just skips verifying/recording that one
+  // game when this is null, same treatment as trackStats off). Daily Deal
+  // keeps deriving its own from the calendar date (dateSeed/localDateKey)
+  // rather than a random draw, but still gets stored here so it can ride
+  // along in the same verification payload.
   const gameSeedRef = useRef<number | null>(null);
   // Every draw/meld/lay-off/discard this game has made, human or AI alike
   // — the other half (with gameSeedRef) of what a server-side replay needs
@@ -755,8 +756,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     clearUndoState();
     setTrackStatsBoth(saved.trackStats ?? true);
     // Absent on a pre-existing save from before this field shipped — that
-    // one game just stays unverifiable (see Phase 8/recordGameResult's
-    // fallback), same as gameSeedRef defaulting to null everywhere else.
+    // one game just stays unverifiable and skips recording entirely at
+    // game-over (see GameOverScreen's attemptSave), same as gameSeedRef
+    // defaulting to null everywhere else.
     gameSeedRef.current = saved.seed ?? null;
     moveLogRef.current = saved.moveLog ?? [];
     stateRef.current = saved.state;

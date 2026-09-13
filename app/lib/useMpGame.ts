@@ -3,12 +3,12 @@
 // The multiplayer play-screen hook — everything /multiplayer/play needs to
 // render and drive one game. Fetches the redacted view, exposes a local
 // turn draft (select cards, group them, stage lay-offs and a discard),
-// and submits a turn as two calls: `draw` then `commitTurn`. At game-over
-// it mirrors GameOverScreen's recording path for MP: flush the per-turn
-// achievement counters it derived from each committed move, call
-// recordMpGameResult (so the game counts toward normal stats/XP), and
-// diff a progress snapshot (taken on first load, keyed by game id in
-// localStorage) to surface any achievements this game unlocked.
+// and submits a turn as two calls: `draw` then `commitTurn`. Stats and
+// achievement-counter crediting both happen server-side now (mp/index.ts,
+// derived from whatever it just verified — see its own doc for why this
+// moved off the client) — this hook just diffs a progress snapshot (taken
+// on first load, keyed by game id in localStorage) at game-over, to
+// surface which achievements that already-applied server write unlocked.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { validateManualGroup } from "@/meld";
@@ -34,8 +34,6 @@ import {
 } from "./mpStore";
 import { loadAchievementProgressState } from "./loadAchievementProgress";
 import { parseRedactedView } from "./mpSchema";
-import { recordAchievementProgress } from "./recordAchievementProgress";
-import { recordMpGameResult } from "./recordMpGameResult";
 import { supabase } from "./supabaseClient";
 
 export interface StagedGroup {
@@ -201,18 +199,17 @@ export function useMpGame(gameId: string | null): UseMpGame {
     }
   }, [view?.roundOver, view?.gameOver]);
 
-  // Game over: flush the last counters, record the result against normal
-  // stats + XP + achievements, then diff to list what unlocked.
+  // Game over: the server already recorded stats/achievement counters for
+  // every real move as it happened (see mp/index.ts's creditAchievementCounters
+  // / recordMpGameOutcome, called from inside handleMove/handleResign — the
+  // same response that flips `view.gameOver` true already reflects those
+  // writes) — this just diffs the achievement snapshot to list what unlocked.
   const finalizedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!supabase || !user || !gameId || !snapKey || !view?.gameOver) return;
     if (view.yourSeat == null || finalizedRef.current === gameId) return;
     finalizedRef.current = gameId;
     (async () => {
-      await flushTurnCounters();
-      await recordMpGameResult(supabase!, user.id, view, view.yourSeat!).catch((err) =>
-        console.error("Failed to record MP game result:", err)
-      );
       try {
         const raw = localStorage.getItem(snapKey);
         if (!raw) return;
@@ -236,7 +233,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
         console.error("Failed to diff MP achievements:", err);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, snapKey, user, view?.gameOver, view?.yourSeat]);
 
   useEffect(() => {
@@ -283,25 +279,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
     [view?.yourHand, stagedCardIds]
   );
 
-  // Per-turn achievement counter deltas (the same keys GameContext.bump uses
-  // in local play). Accumulated across a turn's draw + commit, then flushed
-  // to achievement_counters once per commit — per-turn rather than at
-  // game-over so closing the tab mid-game doesn't lose progress.
-  const turnCountersRef = useRef<Record<string, number>>({});
-  const bumpC = (key: string, n = 1) => {
-    turnCountersRef.current[key] = (turnCountersRef.current[key] ?? 0) + n;
-  };
-  async function flushTurnCounters() {
-    const deltas = turnCountersRef.current;
-    turnCountersRef.current = {};
-    if (!supabase || !user || Object.keys(deltas).length === 0) return;
-    try {
-      await recordAchievementProgress(supabase, user.id, deltas);
-    } catch (err) {
-      console.error("Failed to record MP achievement progress:", err);
-    }
-  }
-
   async function run<T extends MpStateResponse | MpMoveResponse | { view: RedactedView; status: string }>(
     fn: () => Promise<T>
   ): Promise<T | null> {
@@ -329,15 +306,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
     async (from: "stock" | "discard") => {
       if (!supabase || !gameId) return;
       const res = await run(() => submitMpMove(supabase!, gameId, { type: "draw", from }));
-      const drawnId = res && "drawnCard" in res ? res.drawnCard?.id : undefined;
-      const drawn = drawnId ? res?.view.yourHand.find((c) => c.id === drawnId) : undefined;
       if (res) {
         playCardTap();
         hapticLight();
       }
-      bumpC("turns_taken");
-      if (drawn?.isWild) bumpC("wilds_drawn");
-      if (drawn?.rank === "JOKER") bumpC("jokers_drawn");
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [gameId, user]
@@ -404,10 +376,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
 
   const commitTurn = useCallback(async () => {
     if (!supabase || !gameId || !view || !contract) return;
-    const preView = view;
     const preDraft = draft;
-    const mySeat = preView.yourSeat;
-    const goingOut = (preView.yourHand ?? []).every((c) => stagedCardIds.has(c.id));
 
     const res = await run(() =>
       submitMpMove(supabase!, gameId, {
@@ -424,6 +393,9 @@ export function useMpGame(gameId: string | null): UseMpGame {
     // above (it needs to fire from a realtime refresh too, not just your
     // own commit) — this is just the per-turn "you melded / played a card"
     // feedback, same split local play's confirmMeld/layOff/discard use.
+    // Achievement-counter crediting for this move now happens server-side
+    // (mp/index.ts's handleMove, derived from what it just verified) —
+    // see this file's own top-of-file doc.
     if (preDraft.groups.length > 0) {
       playMeld();
       hapticMedium();
@@ -431,35 +403,8 @@ export function useMpGame(gameId: string | null): UseMpGame {
       playCardTap();
       hapticLight();
     }
-
-    const cardById = (id: string) => preView.yourHand.find((c) => c.id === id);
-    for (const grp of preDraft.groups) {
-      const cards = grp.cardIds.map(cardById).filter((c): c is Card => !!c);
-      const wilds = cards.filter((c) => c.isWild).length;
-      if (grp.type === "book") {
-        bumpC("books_melded");
-        if (cards.length > contract.bookSize) bumpC("oversized_books_melded");
-      } else {
-        bumpC("runs_melded");
-        if (cards.length > contract.runSize) bumpC("oversized_runs_melded");
-      }
-      if (wilds > 0) bumpC("wilds_used_in_melds", wilds);
-      else bumpC("melds_with_zero_wilds");
-    }
-    for (const lo of preDraft.layoffs) {
-      bumpC("cards_laid_off");
-      if (cardById(lo.cardId)?.isWild) bumpC("wilds_laid_off");
-      const meld = preView.melds.find((m) => m.id === lo.meldId);
-      if (meld && mySeat != null && meld.ownerId !== `seat-${mySeat}`) bumpC("laid_off_onto_opponent");
-    }
-    if (preDraft.discardCardId) bumpC("cards_discarded");
-    if (goingOut) {
-      bumpC("rounds_won");
-      if (preDraft.discardCardId) bumpC("rounds_won_via_discard");
-    }
-    await flushTurnCounters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, draft, view, contract, stagedCardIds, user]);
+  }, [gameId, draft, view, contract, user]);
 
   const resign = useCallback(async () => {
     if (!supabase || !gameId) return;

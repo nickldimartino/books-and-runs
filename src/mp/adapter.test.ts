@@ -220,6 +220,65 @@ describe("applyCommit", () => {
     expect(r.engine).toBe(eng);
     expect(eng.state.melds).toHaveLength(0);
   });
+
+  // mp/index.ts's achievement-counter crediting reads these two fields
+  // instead of diffing the returned engine's own state — advanceThroughAi
+  // (bundled into the same return) can redeal a whole new round on top of
+  // exactly what these need to see, the instant this commit ends the
+  // current one. See applyCommit's own doc for why.
+  it("reports the melds actually laid via meldedThisCommit, distinct from state.melds after a round transition", () => {
+    const { eng, hand } = meldableEngine();
+    const r = applyCommit(eng, humanConfig(2), 0, {
+      type: "commit",
+      groups: [
+        [hand[0].id, hand[1].id, hand[2].id],
+        [hand[3].id, hand[4].id, hand[5].id],
+      ],
+      discardCardId: hand[6].id,
+    });
+    expect(r.error).toBeUndefined();
+    expect(r.meldedThisCommit).toHaveLength(2);
+    expect(r.meldedThisCommit?.every((m) => m.type === "book")).toBe(true);
+    expect(r.wentOutThisCommit).toBe(false); // one leftover card, round continues
+  });
+
+  it("reports wentOutThisCommit true when melding down to an empty hand ends the round", () => {
+    // Exactly 2 books, no leftover — melding the whole hand ends the round
+    // immediately (gameEngine.ts's own "hasMeldedContract && hand empty"
+    // rule), same as GameContext.tsx's finishIfWentOut for solo play.
+    const hand = makeHand([
+      ["7", "hearts"], ["7", "diamonds"], ["7", "clubs"],
+      ["9", "hearts"], ["9", "diamonds"], ["9", "clubs"],
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 1,
+        players: [
+          makePlayer({ id: "seat-0", hand }),
+          makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) }),
+        ],
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    const r = applyCommit(eng, humanConfig(2), 0, {
+      type: "commit",
+      groups: [
+        [hand[0].id, hand[1].id, hand[2].id],
+        [hand[3].id, hand[4].id, hand[5].id],
+      ],
+    });
+    expect(r.error).toBeUndefined();
+    expect(r.wentOutThisCommit).toBe(true);
+    expect(r.meldedThisCommit).toHaveLength(2);
+    // The round-ending redeal already happened inside advanceThroughAi —
+    // exactly the state a naive post-hoc diff would misread as "no melds,
+    // no round win," which is what meldedThisCommit/wentOutThisCommit exist
+    // to avoid depending on.
+    expect(r.engine.state.round).toBe(2);
+  });
 });
 
 describe("two-human turn hand-off", () => {

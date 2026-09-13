@@ -2,13 +2,17 @@
 
 // The end-of-game screen for a solo/pass-and-play game, and the place where
 // a finished game is actually *recorded*. On mount (once, guarded) it:
-// snapshots pre-game achievement progress, then writes the result through
-// recordGameResult + recordAchievementProgress + syncLeaderboardStats,
-// refreshes the level, merges/streaks the Daily Deal if this was one, and
-// diffs the snapshot to show which achievements unlocked. Any Supabase
-// write that fails is queued to pendingSaveQueue for PendingSaveSync to
-// retry. Also renders standings, the Confetti burst, and the share image.
-// (Multiplayer's equivalent recording path is in useMpGame.)
+// snapshots pre-game achievement progress, then verifies + records the
+// result via the solo-verify Edge Function (verifySoloGame — the client's
+// seed + move log replayed server-side; see that function's own doc for
+// why nothing here writes player_stats/achievement_counters directly any
+// more), syncs the leaderboard row, refreshes the level, merges/streaks
+// the Daily Deal if this was one, and diffs the snapshot to show which
+// achievements unlocked. A verification call that can't reach Supabase is
+// queued to pendingSaveQueue for PendingSaveSync to retry — a rejected
+// (illegal replay) one is not, and just shows as an error. Also renders
+// standings, the Confetti burst, and the share image. (Multiplayer's
+// equivalent recording path is server-side in mp/index.ts.)
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,8 +20,7 @@ import { allAchievements } from "@/achievements";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { Confetti } from "./Confetti";
 import { UnlockToast } from "./UnlockToast";
-import { finalGameDeltas, mergeDeltas } from "@/replayStats";
-import { Difficulty, GameState } from "@/types";
+import { Difficulty, GameState, YOU_PLAYER_ID } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
@@ -41,8 +44,7 @@ import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { renderShareCard } from "../lib/shareCard";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
-import { recordAchievementProgress } from "../lib/recordAchievementProgress";
-import { recordGameResult, YOU_PLAYER_ID } from "../lib/recordGameResult";
+import { buildSoloVerifyPayload, verifySoloGame } from "../lib/verifySoloGame";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
@@ -58,7 +60,7 @@ const SITE_URL = "https://books-and-runs.vercel.app";
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory, getSessionCounters, clearSessionCounters, isTutorial, isDailyDeal, trackStats } =
+  const { quitToHome, roundHistory, getSeed, getMoveLog, clearSessionCounters, isTutorial, isDailyDeal, trackStats } =
     useGame();
   const { user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
@@ -94,13 +96,6 @@ export function GameOverScreen({ state }: { state: GameState }) {
       won: state.winnerId === YOU_PLAYER_ID,
     });
   }, [state, isTutorial, isDailyDeal]);
-  // Tracked separately from `saved` so a retry after a partial failure (one
-  // write went through, the other didn't) only re-sends the write that
-  // actually failed — neither recordGameResult nor recordAchievementProgress
-  // is safe to run twice, since each one adds its own deltas on top of
-  // whatever's already stored rather than overwriting.
-  const gameResultDoneRef = useRef(false);
-  const achievementDoneRef = useRef(false);
   // Snapshot of achievement progress from immediately before this game's
   // writes land — captured once (a retry after a partial failure must reuse
   // it, not re-snapshot, or a partially-applied write would look like the
@@ -144,13 +139,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
     }
 
     const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
-    const counters = { ...getSessionCounters() };
-    if (you) mergeDeltas(counters, finalGameDeltas(you.cumulativeScore));
-
     // The per-game XP sources (finishing, winning, difficulty bonus) are
-    // fully known from this game alone — matches the exact rule
-    // recordGameResult uses for which AI difficulties count toward a win.
-    // A tie for the lowest score is a tie, not a win — no "Won" XP bonus.
+    // fully known from this game alone — matches the exact rule the server
+    // uses for which AI difficulties count toward a win. A tie for the
+    // lowest score is a tie, not a win — no "Won" XP bonus. Purely a
+    // display projection (which XP lines to show) — the actual write below
+    // never trusts anything computed here.
     const won = !!you && !isTie && you.cumulativeScore === lowestScore;
     const breakdown: XpLineItem[] = [{ label: "Finished the game", amount: FINISH_GAME_XP }];
     if (won) {
@@ -165,38 +159,33 @@ export function GameOverScreen({ state }: { state: GameState }) {
       }
     }
 
-    const [gameResult, achievementResult] = await Promise.allSettled([
-      gameResultDoneRef.current ? Promise.resolve() : recordGameResult(supabase, user.id, state, roundHistory),
-      achievementDoneRef.current ? Promise.resolve() : recordAchievementProgress(supabase, user.id, counters),
-    ]);
+    // No seed/move log (a save from before this shipped — see
+    // GameContext.tsx's gameSeedRef doc) means this one game just can't be
+    // verified. The caller effect below already gates on getSeed() being
+    // present before ever calling attemptSave, so this is only a defensive
+    // fallback, not the normal path — treat it the same as trackStats being
+    // off: nothing recorded, nothing queued, no error shown.
+    const payload = buildSoloVerifyPayload(state, getSeed(), getMoveLog(), trackStats, roundHistory);
+    if (!payload) {
+      setSaved("saved");
+      return;
+    }
 
-    // Promise.all's single opaque error made this genuinely undiagnosable
-    // from the outside — logging which write failed and why is the only
-    // way anyone (developer or a report from a player) can tell a real
-    // Supabase/schema problem apart from an actual network blip.
-    if (gameResult.status === "fulfilled") {
-      gameResultDoneRef.current = true;
-    } else {
-      console.error("Failed to save game result:", gameResult.reason);
-    }
-    if (achievementResult.status === "fulfilled") {
-      achievementDoneRef.current = true;
-    } else {
-      console.error("Failed to save achievement progress:", achievementResult.reason);
-    }
-    if (gameResult.status === "rejected" || achievementResult.status === "rejected") {
-      // Not fully saved — queue it so this game's result survives leaving
-      // this screen or closing the app. PendingSaveSync retries it once the
-      // connection's back, even if this screen never gets revisited.
-      upsertPendingSave({
-        id: gameId,
-        userId: user.id,
-        state,
-        roundHistory,
-        counters,
-        gameResultDone: gameResultDoneRef.current,
-        achievementDone: achievementDoneRef.current,
-      });
+    try {
+      await verifySoloGame(supabase, payload);
+    } catch (err) {
+      console.error("Failed to verify and save this game:", err);
+      // A verification rejection (malformed payload, or a replay that
+      // didn't hold up) is deterministic — the exact same payload will
+      // fail again identically, so queuing it for PendingSaveSync to keep
+      // retrying forever would just spam the same rejection. Only queue
+      // for genuinely transient failures (offline, a 5xx, a dropped
+      // connection) where a later retry could plausibly succeed.
+      const status = (err as { status?: number } | null)?.status;
+      const permanentRejection = typeof status === "number" && status >= 400 && status < 500;
+      if (!permanentRejection) {
+        upsertPendingSave({ id: gameId, userId: user.id, payload });
+      }
       setSaved("error");
       return;
     }
@@ -274,7 +263,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // `level` is only read for the before/after diff — it must not retrigger
     // a fresh save as PlayerLevelProvider's own state updates after refresh().
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, roundHistory, user, getSessionCounters, clearSessionCounters, refreshLevel, gameId]);
+  }, [state, roundHistory, user, getSeed, getMoveLog, trackStats, clearSessionCounters, refreshLevel, gameId]);
 
   useEffect(() => {
     // Tutorial games are scripted practice, and Daily Deal is its own
@@ -282,10 +271,15 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // Supabase, so neither can inflate stats/achievements or count toward
     // "games played." trackStats is New Game's own opt-out (offered for 2+
     // pass-and-play human players) — same rule, skip the write outright.
+    // getSeed() == null means this one game predates seeding (see
+    // GameContext.tsx's gameSeedRef doc) and simply can't be verified —
+    // same treatment as trackStats off, not an error: nothing recorded for
+    // this one game, no retry queued, game-over screen still shows fine.
     if (recordedRef.current || !supabase || !user || isTutorial || isDailyDeal || !trackStats) return;
+    if (getSeed() == null) return;
     recordedRef.current = true;
     attemptSave();
-  }, [user, isTutorial, isDailyDeal, trackStats, attemptSave]);
+  }, [user, isTutorial, isDailyDeal, trackStats, getSeed, attemptSave]);
 
   // Deliberately separate from the Supabase save above — see
   // dailyDealStore.ts's own doc for why the streak computation itself needs

@@ -64,18 +64,28 @@ reads and mutates in place.
 | `achievements.ts` | 44 families × 5 tiers = 220 achievements. Pure: `allAchievements(progress)` → unlocked/locked. `AchievementProgressState` is the input shape. |
 | `mp/adapter.ts` | The pure core of multiplayer: `dealGame`, `applyDraw`, `applyCommit`, `applyResign`, `advanceThroughAi`, `redactFor`. Transactional via `structuredClone`. |
 | `mp/types.ts` | MP adapter types: `MpSeat`, `MpConfig`, `MpEngine`, `RedactedView`, `RoundResult`. |
+| `moveLog.ts` | `MoveLogEntry` — one atomic draw/meld/lay-off/discard, human or AI, appended to alongside `GameState` for solo/pass-and-play games (see `app/GameContext.tsx`'s `moveLogRef`). |
+| `replayStats.ts` | Pure achievement-counter-delta functions (`drawDeltas`, `meldDeltas`, `layOffDeltas`, `roundWonDeltas`, `discardDeltas`, `tableCompositionDeltas`, `finalGameDeltas`) — the one place "what counts" is defined, shared by live play and the server-side replay below. |
+| `solo/replay.ts` | `replaySoloGame(seed, seats, contracts, moveLog)` — independently replays a finished solo/pass-and-play game through the real engine and derives its counter deltas; the pure core the `solo-verify` Edge Function wraps. |
 | `demo.ts` | `npm run demo` — plays a full 5-AI game headless. Its job is the stuck-round guard. |
 | `testHelpers.ts` | Test-only builders (`makeCard`, `makeHand`, `makePlayer`). Not shipped. |
 | `*.test.ts` | Vitest suites, colocated. `npm test`. |
 
 **Key conventions**
-- `YOU_PLAYER_ID = "human-0"` (defined in `app/lib/recordGameResult.ts`) is the
-  seat that counts as "the signed-in account" in pass-and-play. Achievement
-  counters and stats only ever move for that seat.
+- `YOU_PLAYER_ID = "human-0"` (defined in `src/types.ts`, re-exported from
+  `app/lib/recordGameResult.ts` for existing importers) is the seat that
+  counts as "the signed-in account" in pass-and-play. Achievement counters
+  and stats only ever move for that seat.
 - A turn = draw → (optionally) meld the whole contract at once → lay off →
   discard. You cannot lay off until you've melded your own contract.
 - Round `N` is a position into `state.selectedContracts`, not a fixed 1–7 —
   short and custom games reorder/drop rounds.
+- Every solo/pass-and-play game is seeded (`GameContext.tsx`'s
+  `gameSeedRef`, `deck.ts`'s `roundSeed`) and its move log recorded
+  (`moveLogRef`) — together, everything the `solo-verify` Edge Function
+  needs to independently replay and verify a finished game before
+  `player_stats`/`achievement_counters`/`game_history` change at all. See
+  §4's "Finishing a solo game" data flow and `supabase/functions/README.md`.
 
 ---
 
@@ -170,12 +180,17 @@ AuthProvider
 
 **Recording a finished game (the write path)**
 
+`player_stats`/`achievement_counters`/`game_history` no longer accept direct
+client writes at all (migration 0035) — every write to them is
+server-verified, derived from a replay/the real engine, never taken on a
+client's word. See §8 for the full design.
+
 | File | Role |
 |---|---|
-| `recordGameResult.ts` | Defines `YOU_PLAYER_ID`. Writes `player_stats` + `game_history` for a finished game. |
-| `recordAchievementProgress.ts` | Merges a game's counter deltas into `achievement_counters`. |
-| `recordMpGameResult.ts` | Wraps an MP game's result into a minimal `GameState` and runs it through `recordGameResult` — so an MP game "counts like any game" for stats/XP/achievements, on top of its separate MP W/L record. |
-| `leaderboardStore.ts` | `syncLeaderboardStats` — self-reported upsert into `leaderboard_entries` (core stats + a best-effort separate MP-columns upsert). |
+| `recordGameResult.ts` | Just `YOU_PLAYER_ID` (re-exported from `src/types.ts`) and the shared `RoundHistoryEntry` shape now — the write itself moved server-side (see `verifySoloGame.ts` below and `mp/index.ts`'s `recordMpGameOutcome`). |
+| `verifySoloGame.ts` | Client side of the solo-verify flow: `buildSoloVerifyPayload` (seed + move log + seats + contracts from `GameState`/`GameContext`) and `verifySoloGame` (calls the Edge Function, throws `SoloVerifyError` on rejection). |
+| `pendingSaveQueue.ts` | Queues a `verifySoloGame` payload that couldn't reach Supabase (offline/network failure only — a genuine rejection is never queued, since replaying the same payload later would just fail identically) for `PendingSaveSync` to retry. |
+| `leaderboardStore.ts` | `syncLeaderboardStats` — self-reported upsert into `leaderboard_entries` (core stats + a best-effort separate MP-columns upsert); `level`/`total_xp`/`games_played`/`games_won`/`average_score`/`worst_score` specifically get silently overwritten server-side by a trigger (migration 0035) regardless of what's pushed here. |
 | `loadAchievementProgress.ts` | `loadAchievementProgressState` — assembles the `AchievementProgressState` the Achievements/Profile pages need (player_stats + counters + MP stats). |
 
 **Multiplayer**
@@ -183,7 +198,7 @@ AuthProvider
 | File | Role |
 |---|---|
 | `mpStore.ts` | Client → Edge Function (`create`/`respond`/`state`/`move`/`resign`) + read-only RPC lists (`getMyMpGames`, `getMyMpHistory`, `getMyMpStats`). `MpError`. |
-| `useMpGame.ts` | The MP play-screen hook. Turn drafting (`draw` then `commit`), achievement snapshot/diff at game-over, `recordMpGameResult`. |
+| `useMpGame.ts` | The MP play-screen hook. Turn drafting (`draw` then `commit`); stats/achievement-counter crediting happen server-side now (see `mp/index.ts`) — this just diffs a progress snapshot at game-over to show what unlocked. |
 | `useNotifications.ts` | One combined Realtime hook: friend requests + game requests + your-turn count → a single badge. Replaced `useFriendActivity` + `useMpActivity`. |
 | `friendsStore.ts` | Friend RPC wrappers (`getFriends`, `sendFriendRequest`, `addFriendByCode`, …). |
 
@@ -201,16 +216,25 @@ AuthProvider
 
 ### Finishing a solo game
 ```
-game/page.tsx  →  GameContext (state hits gameOver)
+game/page.tsx  →  GameContext (state hits gameOver; owns the game's seed +
+                   move log the whole way through — see gameSeedRef/moveLogRef)
                →  GameOverScreen mounts
                     ├ snapshot achievement progress (localStorage)
-                    ├ recordGameResult()          → player_stats, game_history
-                    ├ recordAchievementProgress() → achievement_counters
+                    ├ buildSoloVerifyPayload(state, seed, moveLog, ...)
+                    ├ verifySoloGame() → Edge Function `solo-verify`:
+                    │     replays the game from seed+moveLog through the
+                    │     real engine (src/solo/replay.ts) — a replay that
+                    │     doesn't hold up rejects the whole submission —
+                    │     then writes player_stats/achievement_counters/
+                    │     game_history from the verified result
                     ├ syncLeaderboardStats()      → leaderboard_entries
                     ├ PlayerLevelContext.refresh()
                     └ diff snapshot → show AchievementUnlock card
-   (any Supabase write fails → pendingSaveQueue → PendingSaveSync retries later)
+   (a network failure → pendingSaveQueue → PendingSaveSync retries later;
+   a genuine rejection is not retried — see verifySoloGame.ts)
 ```
+No seed (a save from before this shipped) → that one game is skipped
+entirely, same treatment as the "track stats" opt-out.
 
 ### An async multiplayer turn
 ```
@@ -218,13 +242,26 @@ multiplayer/play  →  useMpGame
    getMpState        → mpStore → Edge Function → redacted view
    [player drafts turn locally: groups, layoffs, discard]
    draw              → Edge Function: applyDraw   → returns the drawn card
+                                                   → credits achievement counters
+                                                     for the caller's own seat
    commitTurn        → Edge Function: applyCommit → validates + advanceThroughAi
-                                                  → writes mp_game_state
-                                                  → returns new redacted view
-   on gameOver: recordMpGameResult() + achievement diff (same as solo)
+                                                   → writes mp_game_state
+                                                   → credits achievement counters
+                                                     (derived from what was
+                                                     just verified, not the
+                                                     client's own claim)
+                                                   → returns new redacted view
+   on gameOver: Edge Function's finalizeParticipants also runs
+                recordMpGameOutcome() → player_stats + game_history for every
+                human participant, before the response is even sent — the
+                client just diffs a progress snapshot to show what unlocked
 ```
 The Edge Function is the **only** reader/writer of `mp_game_state` (the sealed
-full state + deck). Clients never see another hand or the draw pile.
+full state + deck) — and, as of this change, the only writer of
+`player_stats`/`achievement_counters`/`game_history` for a multiplayer game
+too (closing a gap where a client could otherwise call `recordMpGameResult`
+directly with a fabricated result). Clients never see another hand or the
+draw pile.
 
 ### Achievements / XP
 All pure (`src/achievements.ts`, `src/leveling.ts`). The app just assembles an
@@ -259,6 +296,8 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0020 | `push_subscriptions` (owner-only) — Web Push endpoints; sent from the `mp` function's `addEvent()` via VAPID (`your_turn`/`game_request`/`nudge` only). |
 | 0021 | `bio` column on `leaderboard_entries` (140 chars, same shape as `display_name`) — set on Account, shown in OpponentStrip's popover for a multiplayer opponent (fetched client-side via `mp_participants` + `leaderboardStore.fetchBiosFor`, no Edge Function change needed). |
 | 0022 | Extends `settings` (0001) with `theme`/`card_back`/`card_face`/`colorblind_mode`/`meld_hints`/`highlight_layoffs`/`show_whose_turn`/`sound_volume`/`ambient_music_enabled`/`ambient_volume` — every Settings/Theme/Card back/Card face preference now syncs to the account, not just AI difficulty. See `accountSettingsSync.ts`. |
+| 0023–0034 | Cosmetics/profile evolution (avatar frames, titles, banners, badges, showcase, Creator badge, a much larger cosmetic catalog) — see `supabase/migrations/README.md` for the full list; not restated here. |
+| 0035 | Closes the solo-stats hole: drops the owner insert/update policies on `player_stats`/`achievement_counters` (only `solo-verify`'s and `mp`'s service-role writes reach them now — same zero-client-RLS idea as `mp_game_state`), and a trigger overwriting `leaderboard_entries`' `level`/`total_xp`/`games_played`/`games_won`/`average_score`/`worst_score` with server-recomputed values on every write. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -268,12 +307,34 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 
 - `index.ts` — Deno. Path-routed: `/mp/{create,respond,cancel,state,move,resign}`.
   Auth + DB + wiring only. Uses the service-role client to reach the sealed
-  `mp_game_state`.
+  `mp_game_state` — and, as of migration 0035, is also the only writer of
+  `player_stats`/`achievement_counters`/`game_history` for a multiplayer
+  game (`creditAchievementCounters` per verified move,
+  `recordMpGameOutcome` at game-over) — this used to be a client-side write
+  (`recordMpGameResult`) with nothing re-verifying it against the real
+  server state.
 - `_shared/cors.ts` — `corsHeaders`, `json()`.
 - `_engine/` — **gitignored build artifact.** A copy of `src/` with explicit
   `.ts` import extensions, produced by `scripts/bundle-mp-engine.mjs` (the
   Supabase deploy bundler ignores `deno.json` / extension-less imports).
 - Project ref: `wnhzcjfhnvvhsjrhapes`.
+
+### Edge Function (`supabase/functions/solo-verify/`)
+
+- `index.ts` — Deno. Single route. Auth + request sanitizing + DB wiring
+  around `src/solo/replay.ts`'s pure `replaySoloGame` — replays a finished
+  solo/pass-and-play game from the client's seed + move log through the
+  real engine, rejects the whole submission if any move doesn't hold up,
+  and only then writes `player_stats`/`achievement_counters`/`game_history`
+  with the service-role client. See §4's "Finishing a solo game" flow.
+- `_engine/` — **gitignored build artifact**, produced by
+  `scripts/bundle-solo-verify-engine.mjs` (a deliberate near-duplicate of
+  `bundle-mp-engine.mjs`, not shared, so nothing about `mp`'s own bundle can
+  regress) — a smaller slice of `src/` than `mp`'s own copy (no `ai/` or
+  `mp/`: solo-verify replays already-concrete logged moves, never re-runs
+  AI strategy code).
+- Requires migration 0035 to have run for the hole to actually be closed —
+  see `supabase/functions/README.md`.
 
 ### Edge Function (`supabase/functions/contact/`)
 

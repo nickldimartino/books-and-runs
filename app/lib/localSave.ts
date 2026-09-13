@@ -47,8 +47,9 @@ export interface SavedGame {
   // The integer this game's whole deal (every round) is reproducible from
   // — see deck.ts's roundSeed and GameContext.tsx's gameSeedRef. Optional/
   // absent for a save made before this field existed; a game with no seed
-  // just can't be server-verified at game-over and falls back to the old
-  // direct-write stats path for that one game (see recordGameResult.ts).
+  // just can't be server-verified at game-over, so it's skipped entirely —
+  // treated as untracked for that one game, same as trackStats off (see
+  // GameOverScreen.tsx's attemptSave).
   seed?: number | null;
   // Every draw/meld/lay-off/discard so far this game, alongside `seed` —
   // together, everything a server-side replay needs. Same optionality

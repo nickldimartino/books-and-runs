@@ -28,6 +28,17 @@ import {
   redactFor,
 } from "./_engine/mp/adapter.ts";
 import { MpConfig, MpEngine } from "./_engine/mp/types.ts";
+import { layOffOptions } from "./_engine/meld.ts";
+import {
+  CounterDeltas,
+  discardDeltas,
+  drawDeltas,
+  meldDeltas,
+  layOffDeltas,
+  mergeDeltas,
+  roundWonDeltas,
+} from "./_engine/replayStats.ts";
+import { Difficulty } from "./_engine/types.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -223,6 +234,137 @@ async function syncPublicColumns(gameId: string, engine: MpEngine, config: MpCon
   await admin.from("mp_games").update(patch).eq("id", gameId);
 }
 
+// ── shared-with-solo-verify-style stats crediting ───────────────────────
+// Multiplayer used to have the client itself write these (recordMpGameResult.ts
+// calling recordGameResult/recordAchievementProgress with the player's own
+// RLS-scoped session, fed from a RedactedView + counter deltas the client
+// computed for its own turn) — nothing re-verified that against the actual
+// server state, so a fabricated call could credit stats for a game that
+// never really happened this way. Moved here instead: every write below is
+// derived from `engine`/`config` this function already has *because* the
+// move it followed was just verified by applyDraw/applyCommit above, using
+// the admin service-role client, same pattern solo-verify uses for solo
+// games. `achievement_counters`/`player_stats` no longer accept direct
+// client writes at all (see migration 0035) — this is now the only way
+// either table changes for a multiplayer game, matching how mp_game_state
+// itself has always worked.
+
+async function creditAchievementCounters(uid: string, deltas: CounterDeltas): Promise<void> {
+  const entries = Object.entries(deltas).filter(([, v]) => v !== 0);
+  if (entries.length === 0) return;
+  const { data: existing } = await admin
+    .from("achievement_counters")
+    .select("counters")
+    .eq("user_id", uid)
+    .maybeSingle<{ counters: Record<string, number> }>();
+  const merged: Record<string, number> = { ...(existing?.counters ?? {}) };
+  for (const [key, delta] of entries) merged[key] = (merged[key] ?? 0) + delta;
+  const { error } = await admin.from("achievement_counters").upsert({
+    user_id: uid,
+    counters: merged,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) console.error("Failed to credit MP achievement counters for", uid, error);
+}
+
+const EMPTY_WINS_BY_DIFFICULTY: Record<string, number> = {
+  beginner: 0,
+  easy: 0,
+  medium: 0,
+  hard: 0,
+  expert: 0,
+};
+
+/** The "counts like any solo game" half of finishing a multiplayer game —
+ * games_played/games_won/best-worst-average score/wins_by_difficulty and a
+ * game_history row, for every human participant, derived from the final
+ * verified engine state. Exactly recordGameResult.ts's own logic, just
+ * server-side and per-participant instead of a single client-side write
+ * keyed to "human-0" — every real account in the game gets credited for
+ * their own seat's own outcome. The separate MP-specific win/loss record
+ * (mp_participants.outcome, mp_games' own columns) is untouched by this. */
+async function recordMpGameOutcome(
+  engine: MpEngine,
+  config: MpConfig,
+  participants: { user_id: string; seat: number }[]
+): Promise<void> {
+  const s = engine.state;
+  const lowestScore = Math.min(...s.players.map((p) => p.cumulativeScore));
+  const winnerSeats = s.players
+    .map((p, seat) => ({ seat, score: p.cumulativeScore }))
+    .filter((p) => p.score === lowestScore)
+    .map((p) => p.seat);
+  const tiedForLowest = winnerSeats.length > 1;
+
+  for (const participant of participants) {
+    const you = s.players[participant.seat];
+    if (!you) continue;
+    const won = !tiedForLowest && you.cumulativeScore === lowestScore;
+    const tied = tiedForLowest && you.cumulativeScore === lowestScore;
+    const opponents = s.players
+      .filter((_, seat) => seat !== participant.seat)
+      .map((p) => ({ name: p.name, difficulty: p.isAI ? p.difficulty ?? null : null }));
+
+    const { data: existing } = await admin
+      .from("player_stats")
+      .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty")
+      .eq("user_id", participant.user_id)
+      .maybeSingle<{
+        games_played: number;
+        games_won: number;
+        games_tied: number;
+        best_score: number | null;
+        worst_score: number | null;
+        average_score: number | null;
+        wins_by_difficulty: Record<string, number>;
+      }>();
+
+    const priorGames = existing?.games_played ?? 0;
+    const gamesPlayed = priorGames + 1;
+    const gamesWon = (existing?.games_won ?? 0) + (won ? 1 : 0);
+    const gamesTied = (existing?.games_tied ?? 0) + (tied ? 1 : 0);
+    const bestScore =
+      existing?.best_score != null ? Math.min(existing.best_score, you.cumulativeScore) : you.cumulativeScore;
+    const worstScore =
+      existing?.worst_score != null ? Math.max(existing.worst_score, you.cumulativeScore) : you.cumulativeScore;
+    const priorAverage = existing?.average_score ?? you.cumulativeScore;
+    const averageScore = (priorAverage * priorGames + you.cumulativeScore) / gamesPlayed;
+
+    const winsByDifficulty = { ...EMPTY_WINS_BY_DIFFICULTY, ...(existing?.wins_by_difficulty ?? {}) };
+    if (won) {
+      const difficultiesFaced = new Set(opponents.map((o) => o.difficulty).filter((d): d is Difficulty => !!d));
+      for (const d of difficultiesFaced) {
+        if (d in winsByDifficulty) winsByDifficulty[d] += 1;
+      }
+    }
+
+    const { error: statsError } = await admin.from("player_stats").upsert({
+      user_id: participant.user_id,
+      games_played: gamesPlayed,
+      games_won: gamesWon,
+      games_tied: gamesTied,
+      best_score: bestScore,
+      worst_score: worstScore,
+      average_score: averageScore,
+      wins_by_difficulty: winsByDifficulty,
+      updated_at: new Date().toISOString(),
+    });
+    if (statsError) console.error("Failed to record MP player_stats for", participant.user_id, statsError);
+
+    const { error: historyError } = await admin.from("game_history").insert({
+      user_id: participant.user_id,
+      opponents,
+      rounds: [], // per-round totals aren't tracked server-side for MP today
+      winner:
+        winnerSeats.length > 1
+          ? `${winnerSeats.map((seat) => s.players[seat].name).join(", ")} (tied)`
+          : (s.players[winnerSeats[0]]?.name ?? "unknown"),
+      winner_score: lowestScore,
+    });
+    if (historyError) console.error("Failed to record MP game_history for", participant.user_id, historyError);
+  }
+}
+
 // Stamp outcomes + emit game_over when a game finishes.
 async function finalizeParticipants(gameId: string, engine: MpEngine, config: MpConfig) {
   const s = engine.state;
@@ -240,6 +382,11 @@ async function finalizeParticipants(gameId: string, engine: MpEngine, config: Mp
       .eq("game_id", gameId)
       .eq("user_id", r.user_id);
     await addEvent(r.user_id, "game_over", gameId, null);
+  }
+  if (rows && rows.length > 0) {
+    await recordMpGameOutcome(engine, config, rows).catch((err) =>
+      console.error("Failed to record MP game outcome:", err)
+    );
   }
 }
 
@@ -563,8 +710,14 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
 
   const config = configOf(game);
   const prevTurnUserId = game.turn_user_id;
+  const preState = (stateRow.engine as MpEngine).state;
   let engine = stateRow.engine as MpEngine;
   let drawnCard = null;
+  // Achievement-counter deltas for `uid`'s own seat, derived from exactly
+  // what applyDraw/applyCommit just verified below — see
+  // creditAchievementCounters's own doc for why this replaced the client's
+  // former direct writes.
+  const counterDeltas: CounterDeltas = {};
 
   if (action?.type === "draw") {
     const from = action.from === "discard" ? "discard" : "stock";
@@ -572,20 +725,48 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
     if (res.error) return json({ error: res.error }, 409);
     engine = res.engine;
     drawnCard = res.card;
+    if (drawnCard) mergeDeltas(counterDeltas, drawDeltas(drawnCard, from === "discard"));
   } else if (action?.type === "commit") {
+    const layoffs = Array.isArray(action.layoffs)
+      ? (action.layoffs as { cardId: string; meldId: string; position?: "low" | "high" }[])
+      : [];
+    const discardCardId = typeof action.discardCardId === "string" ? action.discardCardId : undefined;
+
     const res = applyCommit(engine, config, mine.seat, {
       type: "commit",
       groups: Array.isArray(action.groups) ? (action.groups as string[][]) : undefined,
       preferredRunStarts: Array.isArray(action.preferredRunStarts)
         ? (action.preferredRunStarts as (number | undefined)[])
         : undefined,
-      layoffs: Array.isArray(action.layoffs)
-        ? (action.layoffs as { cardId: string; meldId: string; position?: "low" | "high" }[])
-        : undefined,
-      discardCardId: typeof action.discardCardId === "string" ? action.discardCardId : undefined,
+      layoffs: layoffs.length > 0 ? layoffs : undefined,
+      discardCardId,
     });
     if (res.error) return json({ error: res.error }, 409);
     engine = res.engine;
+
+    // Derived from pre-commit state (a lay-off's card/meld lookup) and
+    // applyCommit's own meldedThisCommit/wentOutThisCommit — never diffed
+    // out of the post-call engine.state, which advanceThroughAi may
+    // already have moved past (redealing a new round, or running AI turns
+    // of their own) by the time this function returns. Never from the
+    // client's own claim about what it did.
+    const contract = preState.selectedContracts[preState.round - 1];
+    if (res.meldedThisCommit && res.meldedThisCommit.length > 0) {
+      mergeDeltas(counterDeltas, meldDeltas(res.meldedThisCommit, contract));
+    }
+    const actingPlayerId = preState.players[mine.seat]?.id;
+    for (const lo of layoffs) {
+      const card = preState.players[mine.seat]?.hand.find((c) => c.id === lo.cardId);
+      const meld = preState.melds.find((m) => m.id === lo.meldId);
+      if (card && meld && actingPlayerId) {
+        const wasAmbiguous = layOffOptions(card, meld).length === 2;
+        mergeDeltas(counterDeltas, layOffDeltas(card, meld, actingPlayerId, wasAmbiguous));
+      }
+    }
+    if (discardCardId) mergeDeltas(counterDeltas, discardDeltas());
+    if (res.wentOutThisCommit) {
+      mergeDeltas(counterDeltas, roundWonDeltas(contract, !!discardCardId));
+    }
   } else {
     return json({ error: "unknown action" }, 400);
   }
@@ -594,6 +775,7 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
     return json({ error: "the game moved on — refresh" }, 409);
   }
   await syncPublicColumns(gameId, engine, config);
+  await creditAchievementCounters(uid, counterDeltas);
 
   if (engine.state.gameOver) {
     await finalizeParticipants(gameId, engine, config);

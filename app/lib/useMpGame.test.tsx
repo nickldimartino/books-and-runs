@@ -4,8 +4,10 @@
 // turn draft, and the sound/haptic feedback added alongside multiplayer's
 // sound gap — against a mocked `fetch` and a stub Supabase client, rather
 // than a live Edge Function. Everything the hook reaches beyond fetch
-// (achievement progress snapshotting, result recording, sound/haptics) is
-// mocked out so failures here point at useMpGame itself, not those modules.
+// (achievement progress snapshotting, sound/haptics) is mocked out so
+// failures here point at useMpGame itself, not those modules. Stats/
+// achievement-counter crediting itself now happens server-side (see
+// mp/index.ts) — nothing left here to mock for that.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -26,8 +28,6 @@ vi.mock("./haptics", () => ({ hapticLight, hapticMedium, hapticSuccess }));
 vi.mock("./loadAchievementProgress", () => ({
   loadAchievementProgressState: vi.fn().mockResolvedValue(EMPTY_PROGRESS_STATE),
 }));
-vi.mock("./recordMpGameResult", () => ({ recordMpGameResult: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("./recordAchievementProgress", () => ({ recordAchievementProgress: vi.fn().mockResolvedValue(undefined) }));
 
 const ME = "u-me";
 vi.mock("../AuthContext", () => ({ useAuth: () => ({ user: { id: ME } }) }));

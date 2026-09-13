@@ -199,8 +199,8 @@ export default function LeaderboardPage() {
           // someone who's only ever played Daily Deal (never a full tracked
           // game) still has a real streak worth ranking, so the "real
           // activity" bar here is either kind of activity, not just games_played.
-          // MP games also bump games_played (recordMpGameResult → recordGameResult),
-          // so an MP-only player already passes the games_played filter.
+          // MP games also bump games_played (mp/index.ts's recordMpGameOutcome,
+          // server-side), so an MP-only player already passes this filter.
           .or("games_played.gt.0,daily_deal_best_streak.gt.0")
           .order("level", { ascending: false })
           .order("total_xp", { ascending: false })

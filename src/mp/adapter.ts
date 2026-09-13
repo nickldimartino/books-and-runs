@@ -29,7 +29,7 @@ import {
   startNextRound,
 } from "../gameEngine";
 import { handPenalty } from "../scorer";
-import { Card, CONTRACTS, ContractRequirement, GameState } from "../types";
+import { Card, CONTRACTS, ContractRequirement, GameState, Meld } from "../types";
 import { MpAction, MpConfig, MpEngine, RedactedView, RoundResult } from "./types";
 
 /** Flat penalty added to a resigner's score so they always finish last. */
@@ -203,7 +203,7 @@ export function applyCommit(
   config: MpConfig,
   seat: number,
   action: Extract<MpAction, { type: "commit" }>
-): { engine: MpEngine; error?: string } {
+): { engine: MpEngine; error?: string; wentOutThisCommit?: boolean; meldedThisCommit?: Meld[] } {
   const s0 = engIn.state;
   if (s0.roundOver || s0.gameOver) return { engine: engIn, error: "the round is over" };
   if (s0.currentPlayerIndex !== seat) return { engine: engIn, error: "it isn't your turn" };
@@ -219,10 +219,17 @@ export function applyCommit(
   const s = eng.state;
   const player = s.players[seat];
 
+  // Hoisted so it survives past this block — mp/index.ts's achievement-
+  // counter crediting needs the actual melds laid (type, cards, wild
+  // usage), and by the time this function returns, advanceThroughAi may
+  // already have redealt a new round on top of them (see
+  // wentOutThisCommit's own note just below).
+  let meldedThisCommit: Meld[] | undefined;
   if (action.groups && action.groups.length > 0) {
     if (player.hasMeldedContract) return { engine: engIn, error: "you've already melded this round" };
     const melds = meldChosenGroups(s, action.groups, action.preferredRunStarts);
     if (!melds) return { engine: engIn, error: "that meld doesn't complete this round's contract" };
+    meldedThisCommit = melds;
   }
 
   for (const lo of action.layoffs ?? []) {
@@ -242,8 +249,17 @@ export function applyCommit(
     }
   }
 
+  // Captured here, before advanceThroughAi below — which, the instant it
+  // sees a round over, immediately deals the next one (or plays AI turns
+  // into a further round-end of their own) — is the only place a caller
+  // can still tell "did *this* commit end the round" apart from "some
+  // later AI turn in the same call did." mp/index.ts's own achievement-
+  // counter crediting (rounds_won / rounds_won_no_discard/via_discard)
+  // needs exactly that distinction.
+  const wentOutThisCommit = s.roundOver;
+
   eng.turnDrawn = false;
-  return { engine: advanceThroughAi(eng) };
+  return { engine: advanceThroughAi(eng), wentOutThisCommit, meldedThisCommit };
 }
 
 /**

@@ -1,25 +1,21 @@
-import { GameState } from "@/types";
-import { RoundHistoryEntry } from "./recordGameResult";
+import { SoloVerifyPayload } from "./verifySoloGame";
 
 const QUEUE_KEY = "booksAndRuns:pendingSaves";
 
 /**
- * A finished game whose stats/achievement writes couldn't reach Supabase
- * (offline, mid-sync failure) — kept here so it survives leaving the
- * game-over screen or closing the app entirely, and gets retried once the
- * connection comes back (see PendingSaveSync.tsx). `gameResultDone`/
- * `achievementDone` track each write independently, same reason as
- * GameOverScreen's own in-session retry: neither write is safe to repeat
- * once it's actually succeeded.
+ * A finished game whose solo-verify call couldn't reach Supabase (offline,
+ * mid-sync failure) — kept here so it survives leaving the game-over screen
+ * or closing the app entirely, and gets retried once the connection comes
+ * back (see PendingSaveSync.tsx). `payload` is exactly what verifySoloGame
+ * needs to replay it — the whole point of the seed+move-log design is that
+ * this replay is order-independent of *when* it's verified, only what
+ * actually happened, so queuing the full payload and retrying it later is
+ * exactly as sound as verifying it immediately would have been.
  */
 export interface PendingSave {
   id: string;
   userId: string;
-  state: GameState;
-  roundHistory: RoundHistoryEntry[];
-  counters: Record<string, number>;
-  gameResultDone: boolean;
-  achievementDone: boolean;
+  payload: SoloVerifyPayload;
 }
 
 export function loadPendingSaves(): PendingSave[] {
