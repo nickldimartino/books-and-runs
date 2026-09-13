@@ -189,27 +189,33 @@ describe("ambience", () => {
     }
   });
 
-  it("wraps from the third song back to the first after three rotations", async () => {
+  it("ping-pongs forward through all ten songs then back, instead of wrapping straight to the first", async () => {
     vi.useFakeTimers();
     try {
-      const { startAmbience } = await import("./ambience");
+      const { startAmbience, AMBIENT_SONGS } = await import("./ambience");
       startAmbience();
 
-      await vi.advanceTimersByTimeAsync(3 * (3 * 60 * 1000 + 5000));
+      // 11 rotation firings: song index 0,1,2,...,9 (forward through all
+      // ten), then turns around into 8, 7 — never straight back to 0.
+      await vi.advanceTimersByTimeAsync(11 * (3 * 60 * 1000 + 5000));
 
       // Every song's bass root sits at or below 220Hz (A3); every arpeggio
       // note and sparkle sits at C4 (261.63Hz) or higher — so filtering by
-      // that boundary reliably picks out just the one-per-voice bass roots.
+      // that boundary reliably picks out just the one-per-voice bass roots,
+      // in the order each voice (song) was started.
       const bassRoots = lastContext!.createOscillator.mock.results
         .map((r) => (r.value as FakeOscillator).frequency.value)
         .filter((f) => f > 0 && f <= 220);
 
-      // Song 1 ("Arpeggio")'s own first chord root (C3, 130.81Hz) is unique
-      // to it — neither "Bounce" nor "Skip" starts on C — so it reappearing
-      // is proof the rotation wrapped song 0 -> 1 -> 2 -> back to 0, not
-      // just proof of the very first voice at start.
-      const song1RootCount = bassRoots.filter((f) => f === 130.81).length;
-      expect(song1RootCount).toBeGreaterThanOrEqual(2);
+      // The initial voice plus 11 rotations.
+      expect(bassRoots.length).toBe(12);
+      // Forward leg: every song's own first chord root, index 0 through 9.
+      expect(bassRoots.slice(0, 10)).toEqual(AMBIENT_SONGS.map((s) => s.chords[0].root));
+      // Turnaround: back into song 8 then song 7 — not a wrap to song 0,
+      // even though song 0 and song 7 happen to share the same root (both
+      // start on C), this is really index 8's distinct root that proves it.
+      expect(bassRoots[10]).toBe(AMBIENT_SONGS[8].chords[0].root);
+      expect(bassRoots[11]).toBe(AMBIENT_SONGS[7].chords[0].root);
     } finally {
       vi.useRealTimers();
     }

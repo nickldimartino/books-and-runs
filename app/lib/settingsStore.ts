@@ -12,7 +12,18 @@ const KEY = "booksAndRuns:settings";
 // (still looping it) — see ambience.ts's own AMBIENT_SONGS for the list.
 // Defined here (not in ambience.ts) so this file, which ambience.ts already
 // imports from, stays dependency-free.
-export type AmbientTrackChoice = "rotate" | "arpeggio" | "bounce" | "skip";
+export type AmbientTrackChoice =
+  | "rotate"
+  | "arpeggio"
+  | "bounce"
+  | "skip"
+  | "glide"
+  | "descend"
+  | "drift"
+  | "rise"
+  | "climb"
+  | "settle"
+  | "home";
 
 export interface HouseSettings {
   preferredAiDifficulty: Difficulty;

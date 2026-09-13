@@ -514,8 +514,8 @@ export default function SettingsPage() {
           />
           <section className="flex flex-col gap-2">
             <InfoDetails label="Ambient song">
-              Rotate through all three every 3 minutes (blending into each other), or pin it to just
-              one.
+              Play through all {AMBIENT_SONGS.length} forward, then back again, 3 minutes each
+              (blending into each other) — or pin it to just one.
             </InfoDetails>
             <div className="flex flex-col gap-1.5">
               <button
@@ -527,7 +527,7 @@ export default function SettingsPage() {
                     : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                 }`}
               >
-                Rotate all 3
+                Play all {AMBIENT_SONGS.length}
               </button>
               {AMBIENT_SONGS.map((song) => (
                 <div key={song.id} className="flex items-center gap-2">

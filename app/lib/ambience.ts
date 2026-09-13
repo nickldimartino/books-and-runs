@@ -14,17 +14,20 @@ import { AmbientTrackChoice, loadLocalSettings } from "./settingsStore";
  * enough space to not sound dry, not enough to read as a cathedral. Calm,
  * not dance-tempo, but constantly moving rather than held.
  *
- * Three songs (SONGS/AMBIENT_SONGS below) — by default they rotate, 3
- * minutes each, so a long session doesn't loop the same ~35s progression
- * for the whole game; Settings can also pin playback to just one of them
- * (settingsStore.ts's ambientTrack). All three stay in C major (or its
- * closely related ii/vi chords) specifically so any two can overlap during
- * a crossfade without clashing — the same reason each song's own chord
- * cycle is built to resolve smoothly right before wrapping back to its own
- * first chord. Rotation crossfades the outgoing song out and the incoming
- * one in together (see startVoice/stopVoice) rather than a hard cut, on
- * every transition including the wrap from the last song back to the
- * first. Entirely separate from sound.ts's own AudioContext/volume — see
+ * Ten songs (AMBIENT_SONGS below) — by default they rotate, 3 minutes
+ * each, so a long session doesn't loop the same ~35s progression for the
+ * whole game; Settings can also pin playback to just one of them
+ * (settingsStore.ts's ambientTrack). All ten stay in C major (or its
+ * closely related ii/iii/vi chords) specifically so any two can overlap
+ * during a crossfade without clashing — the same reason each song's own
+ * chord cycle is built to resolve smoothly right before wrapping back to
+ * its own first chord. Rotation crossfades the outgoing song out and the
+ * incoming one in together (see startVoice/stopVoice) rather than a hard
+ * cut, on every transition — including the ping-pong turnaround at either
+ * end of the list (song 10 back into song 9, or song 1 back into song 2;
+ * see nextRotationIndex), so the whole set reads as one continuous piece
+ * played forward and then backward rather than a loop with a seam.
+ * Entirely separate from sound.ts's own AudioContext/volume — see
  * settingsStore.ts's own doc for why this is its own toggle, off by
  * default.
  */
@@ -121,9 +124,176 @@ const SONG_SKIP: Song = {
   ],
 };
 
-/** In rotation order — the order "rotate" cycles through, wrapping from the
- * last back to the first. Also what Settings' song picker lists. */
-export const AMBIENT_SONGS: Song[] = [SONG_ARPEGGIO, SONG_BOUNCE, SONG_SKIP];
+// Song 4 "Glide" — I–IV–I–V (C–F–C–G), played twice. A smooth ascending
+// root-third-fifth-octave run each bar, the most straightforwardly "rising"
+// contour of the set.
+const SONG_GLIDE: Song = {
+  id: "glide",
+  label: "Glide",
+  noteMs: 360,
+  waveform: "triangle",
+  filterHz: 3600,
+  chords: [
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 523.25], repeats: 3 }, // C  — C4 E4 G4 C5
+    { root: 174.61, arp: [349.23, 440.0, 523.25, 698.46], repeats: 3 }, // F  — F4 A4 C5 F5
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 523.25], repeats: 3 }, // C
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 783.99], repeats: 3 }, // G  — G4 B4 D5 G5 — dominant, resolves the wrap
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 523.25], repeats: 3 }, // C
+    { root: 174.61, arp: [349.23, 440.0, 523.25, 698.46], repeats: 3 }, // F
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 523.25], repeats: 3 }, // C
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 783.99], repeats: 3 }, // G
+  ],
+};
+
+// Song 5 "Descend" — vi–IV–I–V (Am–F–C–G), played twice. The mirror image
+// of Glide's contour: each bar steps down from the octave to the root
+// instead of climbing to it, the one song in the set that reads as
+// coming down rather than going up while staying just as bright.
+const SONG_DESCEND: Song = {
+  id: "descend",
+  label: "Descend",
+  noteMs: 340,
+  waveform: "triangle",
+  filterHz: 3700,
+  chords: [
+    { root: 220.0, arp: [880.0, 659.25, 523.25, 440.0], repeats: 3 }, // Am — A5 E5 C5 A4
+    { root: 174.61, arp: [698.46, 523.25, 440.0, 349.23], repeats: 3 }, // F  — F5 C5 A4 F4
+    { root: 130.81, arp: [523.25, 392.0, 329.63, 261.63], repeats: 3 }, // C  — C5 G4 E4 C4
+    { root: 196.0, arp: [783.99, 587.33, 493.88, 392.0], repeats: 3 }, // G  — G5 D5 B4 G4 — dominant, resolves the wrap
+    { root: 220.0, arp: [880.0, 659.25, 523.25, 440.0], repeats: 3 }, // Am
+    { root: 174.61, arp: [698.46, 523.25, 440.0, 349.23], repeats: 3 }, // F
+    { root: 130.81, arp: [523.25, 392.0, 329.63, 261.63], repeats: 3 }, // C
+    { root: 196.0, arp: [783.99, 587.33, 493.88, 392.0], repeats: 3 }, // G
+  ],
+};
+
+// Song 6 "Drift" — I–vi–ii–V (C–Am–Dm–G), played twice. The gentlest tempo
+// of the set, a gently rocking root-third-fifth-third contour rather than
+// any of the others' bigger leaps — still upbeat, just the gentlest hand
+// of the ten.
+const SONG_DRIFT: Song = {
+  id: "drift",
+  label: "Drift",
+  noteMs: 390,
+  waveform: "triangle",
+  filterHz: 3500,
+  chords: [
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 329.63], repeats: 3 }, // C  — C4 E4 G4 E4
+    { root: 220.0, arp: [440.0, 523.25, 659.25, 523.25], repeats: 3 }, // Am — A4 C5 E5 C5
+    { root: 146.83, arp: [293.66, 349.23, 440.0, 349.23], repeats: 3 }, // Dm — D4 F4 A4 F4
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 493.88], repeats: 3 }, // G  — G4 B4 D5 B4 — dominant, resolves the wrap
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 329.63], repeats: 3 }, // C
+    { root: 220.0, arp: [440.0, 523.25, 659.25, 523.25], repeats: 3 }, // Am
+    { root: 146.83, arp: [293.66, 349.23, 440.0, 349.23], repeats: 3 }, // Dm
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 493.88], repeats: 3 }, // G
+  ],
+};
+
+// Song 7 "Rise" — IV–V–iii–vi (F–G–Em–Am), played twice. The quickest
+// tempo of the set and the only one built from a rising-tension
+// progression rather than one that resolves straight back to the tonic —
+// reads as the most energetic of the ten.
+const SONG_RISE: Song = {
+  id: "rise",
+  label: "Rise",
+  noteMs: 310,
+  waveform: "triangle",
+  filterHz: 4000,
+  chords: [
+    { root: 174.61, arp: [349.23, 440.0, 523.25, 698.46], repeats: 3 }, // F  — F4 A4 C5 F5
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 783.99], repeats: 3 }, // G  — G4 B4 D5 G5
+    { root: 164.81, arp: [329.63, 392.0, 493.88, 659.25], repeats: 3 }, // Em — E4 G4 B4 E5
+    { root: 220.0, arp: [440.0, 523.25, 659.25, 880.0], repeats: 3 }, // Am — A4 C5 E5 A5 — peak of the set
+    { root: 174.61, arp: [349.23, 440.0, 523.25, 698.46], repeats: 3 }, // F
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 783.99], repeats: 3 }, // G
+    { root: 164.81, arp: [329.63, 392.0, 493.88, 659.25], repeats: 3 }, // Em
+    { root: 220.0, arp: [440.0, 523.25, 659.25, 880.0], repeats: 3 }, // Am
+  ],
+};
+
+// Song 8 "Climb" — I–iii–IV–V (C–Em–F–G), played twice. A jump-and-return
+// root-fifth-octave-fifth contour on every bar — the biggest single-bar
+// leap of the set, landing an octave up before stepping back down.
+const SONG_CLIMB: Song = {
+  id: "climb",
+  label: "Climb",
+  noteMs: 345,
+  waveform: "triangle",
+  filterHz: 3800,
+  chords: [
+    { root: 130.81, arp: [261.63, 392.0, 523.25, 392.0], repeats: 3 }, // C  — C4 G4 C5 G4
+    { root: 164.81, arp: [329.63, 493.88, 659.25, 493.88], repeats: 3 }, // Em — E4 B4 E5 B4
+    { root: 174.61, arp: [349.23, 523.25, 698.46, 523.25], repeats: 3 }, // F  — F4 C5 F5 C5
+    { root: 196.0, arp: [392.0, 587.33, 783.99, 587.33], repeats: 3 }, // G  — G4 D5 G5 D5 — dominant, resolves the wrap
+    { root: 130.81, arp: [261.63, 392.0, 523.25, 392.0], repeats: 3 }, // C
+    { root: 164.81, arp: [329.63, 493.88, 659.25, 493.88], repeats: 3 }, // Em
+    { root: 174.61, arp: [349.23, 523.25, 698.46, 523.25], repeats: 3 }, // F
+    { root: 196.0, arp: [392.0, 587.33, 783.99, 587.33], repeats: 3 }, // G
+  ],
+};
+
+// Song 9 "Settle" — vi–V–IV–iii (Am–G–F–Em), played twice. Climb's
+// progression in reverse, with a matching third-root-fifth-root contour
+// that steps down each bar instead of leaping — the set's other
+// "coming down" song alongside Descend, built from different chords.
+const SONG_SETTLE: Song = {
+  id: "settle",
+  label: "Settle",
+  noteMs: 370,
+  waveform: "triangle",
+  filterHz: 3600,
+  chords: [
+    { root: 220.0, arp: [523.25, 440.0, 659.25, 440.0], repeats: 3 }, // Am — C5 A4 E5 A4
+    { root: 196.0, arp: [493.88, 392.0, 587.33, 392.0], repeats: 3 }, // G  — B4 G4 D5 G4
+    { root: 174.61, arp: [440.0, 349.23, 523.25, 349.23], repeats: 3 }, // F  — A4 F4 C5 F4
+    { root: 164.81, arp: [392.0, 329.63, 493.88, 329.63], repeats: 3 }, // Em — G4 E4 B4 E4
+    { root: 220.0, arp: [523.25, 440.0, 659.25, 440.0], repeats: 3 }, // Am
+    { root: 196.0, arp: [493.88, 392.0, 587.33, 392.0], repeats: 3 }, // G
+    { root: 174.61, arp: [440.0, 349.23, 523.25, 349.23], repeats: 3 }, // F
+    { root: 164.81, arp: [392.0, 329.63, 493.88, 329.63], repeats: 3 }, // Em
+  ],
+};
+
+// Song 10 "Home" — I–V–vi–IV (C–G–Am–F), played twice — pop's own most
+// familiar progression, ending on the subdominant for a plagal ("amen")
+// resolution back to the tonic instead of the dominant every other song
+// in the set uses, the strongest close of the ten for the far end of the
+// rotation before it plays back toward Arpeggio.
+const SONG_HOME: Song = {
+  id: "home",
+  label: "Home",
+  noteMs: 365,
+  waveform: "triangle",
+  filterHz: 3750,
+  chords: [
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 329.63], repeats: 3 }, // C  — C4 E4 G4 E4
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 493.88], repeats: 3 }, // G  — G4 B4 D5 B4
+    { root: 220.0, arp: [440.0, 523.25, 659.25, 523.25], repeats: 3 }, // Am — A4 C5 E5 C5
+    { root: 174.61, arp: [349.23, 440.0, 523.25, 440.0], repeats: 3 }, // F  — F4 A4 C5 A4 — subdominant, plagal resolution
+    { root: 130.81, arp: [261.63, 329.63, 392.0, 329.63], repeats: 3 }, // C
+    { root: 196.0, arp: [392.0, 493.88, 587.33, 493.88], repeats: 3 }, // G
+    { root: 220.0, arp: [440.0, 523.25, 659.25, 523.25], repeats: 3 }, // Am
+    { root: 174.61, arp: [349.23, 440.0, 523.25, 440.0], repeats: 3 }, // F
+  ],
+};
+
+/** Playback order — "rotate" ping-pongs through this list (1→2→…→10→9→…→1,
+ * see nextRotationIndex below) rather than wrapping straight from the last
+ * song back to the first, so a long session reads as one continuous piece
+ * played forward and then backward rather than a loop with a seam. Also
+ * what Settings' song picker lists, in this same order. */
+export const AMBIENT_SONGS: Song[] = [
+  SONG_ARPEGGIO,
+  SONG_BOUNCE,
+  SONG_SKIP,
+  SONG_GLIDE,
+  SONG_DESCEND,
+  SONG_DRIFT,
+  SONG_RISE,
+  SONG_CLIMB,
+  SONG_SETTLE,
+  SONG_HOME,
+];
 
 function songIndexFor(id: Exclude<AmbientTrackChoice, "rotate">): number {
   return AMBIENT_SONGS.findIndex((s) => s.id === id);
@@ -168,6 +338,27 @@ let voices: Voice[] = [];
 let rotationTimer: number | null = null;
 let sparkleTimers: number[] = [];
 let sparkleSessionId = 0;
+// Ping-pong, not a circular wrap: 0→1→…→9→8→…→0→1→… — reset to forward on
+// every fresh start so a session's rotation always begins the same way.
+let rotationDirection: 1 | -1 = 1;
+
+/** The next index in the ping-pong sequence — reverses direction at either
+ * end instead of wrapping, so song 10 is followed by song 9 again (not a
+ * jump back to song 1) and the whole set reads as one continuous piece
+ * played forward then backward rather than a loop with a seam. */
+function nextRotationIndex(currentIndex: number): number {
+  if (AMBIENT_SONGS.length <= 1) return currentIndex;
+  const next = currentIndex + rotationDirection;
+  if (next >= AMBIENT_SONGS.length) {
+    rotationDirection = -1;
+    return AMBIENT_SONGS.length - 2;
+  }
+  if (next < 0) {
+    rotationDirection = 1;
+    return 1;
+  }
+  return next;
+}
 
 let previewMasterGain: GainNode | null = null;
 let previewVoice: Voice | null = null;
@@ -370,7 +561,7 @@ function scheduleRotation(c: AudioContext): void {
   rotationTimer = window.setTimeout(() => {
     if (!running) return;
     const current = voices[voices.length - 1];
-    const nextIndex = (current.songIndex + 1) % AMBIENT_SONGS.length;
+    const nextIndex = nextRotationIndex(current.songIndex);
     const incoming = startVoice(c, nextIndex, CROSSFADE_MS, masterGain!);
     voices.push(incoming);
     stopVoice(c, current, CROSSFADE_MS);
@@ -393,6 +584,7 @@ export function startAmbience(): void {
   if (!c) return;
   running = true;
   voices = [];
+  rotationDirection = 1;
 
   masterGain = c.createGain();
   masterGain.gain.value = 0;
