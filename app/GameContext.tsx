@@ -153,6 +153,13 @@ interface GameContextValue {
   getSessionCounters: () => Record<string, number>;
   /** Call right after a successful recordAchievementProgress flush. */
   clearSessionCounters: () => void;
+  /** This game's seed and move log so far — together, everything a
+   * server-side replay needs (see src/solo/replay.ts). Null seed means this
+   * game can't be verified (a tutorial, or a save from before this field
+   * existed) — callers building a verification payload should treat that as
+   * "fall back to the old direct-write path," not an error. */
+  getSeed: () => number | null;
+  getMoveLog: () => MoveLogEntry[];
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -330,6 +337,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [bump]
   );
   const getSessionCounters = useCallback(() => sessionCountersRef.current, []);
+  const getSeed = useCallback(() => gameSeedRef.current, []);
+  const getMoveLog = useCallback(() => moveLogRef.current, []);
 
   // See UndoSnapshot's own comment for exactly what this does and doesn't
   // cover. canUndo is the only piece of this that needs to be reactive (for
@@ -903,6 +912,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // own comment) — checking it here meant these counters could only
       // ever bump on whichever round happened to be the game's last one.
       const wentOut = finishIfWentOut(s);
+      // finishIfWentOut's own discardAndAdvance(s, "") call is a real state
+      // change a replay must also make at exactly this point — same
+      // "cardId: null" shape as playAITurn's round-7 auto-out entry.
+      if (wentOut) {
+        moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "discard", cardId: null }];
+      }
       if (isYou && wentOut) applyDeltas(roundWonDeltas(contract, false));
       playMeld();
       hapticMedium();
@@ -938,6 +953,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // means you won this round; state.winnerId is the game's overall
         // winner, a different and unrelated thing.
         const wentOut = finishIfWentOut(s);
+        // See the identical note in confirmMeld — finishIfWentOut's own
+        // discardAndAdvance(s, "") call is a real state change a replay
+        // must also make at exactly this point.
+        if (wentOut) {
+          moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "discard", cardId: null }];
+        }
         if (isYou && wentOut) {
           const contract = s.selectedContracts[s.round - 1];
           applyDeltas(roundWonDeltas(contract, false));
@@ -1143,6 +1164,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       quitToHome,
       getSessionCounters,
       clearSessionCounters,
+      getSeed,
+      getMoveLog,
       canUndo,
       undoExpiresAt,
       undoLastAction,
@@ -1178,6 +1201,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       quitToHome,
       getSessionCounters,
       clearSessionCounters,
+      getSeed,
+      getMoveLog,
       canUndo,
       undoExpiresAt,
       undoLastAction,

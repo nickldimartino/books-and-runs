@@ -10,6 +10,7 @@ import { act, render } from "@testing-library/react";
 import { GameProvider, UNDO_GRACE_MS, useGame } from "./GameContext";
 import { seededRng } from "@/deck";
 import { solveContract } from "@/meld";
+import { makeGameState, makeHand, makePlayer } from "@/testHelpers";
 import { CONTRACTS, SHORT_GAME_CONTRACTS } from "@/types";
 import { YOU_PLAYER_ID } from "./lib/recordGameResult";
 
@@ -301,5 +302,108 @@ describe("GameContext — undo grace window", () => {
 
     expect(api.canUndo).toBe(false);
     expect(api.undoExpiresAt).toBeNull();
+  });
+});
+
+describe("GameContext — seed and move log (server-verified stats)", () => {
+  it("a fresh game gets a seed and starts with an empty move log; draw()/discard() append entries", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
+    expect(api.getSeed()).not.toBeNull();
+    expect(api.getMoveLog()).toEqual([]);
+
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    expect(api.getMoveLog()).toEqual([{ seat: 0, type: "draw", fromDiscard: false }]);
+
+    const toDiscard = api.state!.players[0].hand[0].id;
+    act(() => api.discard(toDiscard));
+    expect(api.getMoveLog()).toEqual([
+      { seat: 0, type: "draw", fromDiscard: false },
+      { seat: 0, type: "discard", cardId: toDiscard },
+    ]);
+  });
+
+  it("undoLastAction trims the move log back to before the undone meld, matching the reverted state", () => {
+    mount();
+    meldFirstSolvableHand();
+    const loggedAfterMeld = api.getMoveLog();
+    expect(loggedAfterMeld.at(-1)?.type).toBe("meldGroups");
+
+    act(() => api.undoLastAction());
+
+    expect(api.getMoveLog()).toHaveLength(loggedAfterMeld.length - 1);
+  });
+
+  it("a tutorial game has no seed and is never in scope for verification", () => {
+    mount();
+    act(() => api.startTutorialGame());
+    expect(api.getSeed()).toBeNull();
+  });
+
+  it("continueGame() restores the seed and move log from the saved game", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, SHORT_GAME_CONTRACTS));
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+    const seedBefore = api.getSeed();
+    const moveLogBefore = api.getMoveLog();
+
+    mount();
+    act(() => api.continueGame());
+
+    expect(api.getSeed()).toBe(seedBefore);
+    expect(api.getMoveLog()).toEqual(moveLogBefore);
+  });
+
+  /**
+   * Melding (or laying off) down to a completely empty hand ends the round
+   * immediately with no discard to follow — gameEngine.ts's own functions
+   * don't do this themselves (see GameContext.tsx's finishIfWentOut), so
+   * confirmMeld/layOff have to log that round-ending state change with the
+   * same shape playAITurn's round-7 auto-out already uses, or a
+   * server-side replay would have no way to know it happened (this was a
+   * real gap: fixed alongside adding this test).
+   */
+  it("melding the whole hand outside round 7 logs a null-cardId discard entry (finishIfWentOut)", () => {
+    mount();
+    const you = makePlayer({
+      id: YOU_PLAYER_ID,
+      hand: [...makeHand(["A", "A", "A"]), ...makeHand(["K", "K", "K"])],
+    });
+    const ai = makePlayer({ id: "ai-1", isAI: true, difficulty: "medium", hand: makeHand(["9", "9", "9"]) });
+    const state = makeGameState({
+      round: 1,
+      selectedContracts: CONTRACTS,
+      currentPlayerIndex: 0,
+      players: [you, ai],
+    });
+    localStorage.setItem(
+      "booksAndRuns:savedGame",
+      JSON.stringify({
+        state,
+        hasDrawn: true,
+        roundStartScores: { [YOU_PLAYER_ID]: 0, "ai-1": 0 },
+        roundHistory: [],
+        sessionCounters: {},
+        seed: 123,
+        moveLog: [],
+        trackStats: true,
+        savedAt: Date.now(),
+      })
+    );
+    act(() => api.continueGame());
+
+    const aceIds = you.hand.filter((c) => c.rank === "A").map((c) => c.id);
+    const kingIds = you.hand.filter((c) => c.rank === "K").map((c) => c.id);
+    act(() => api.confirmMeld([aceIds, kingIds]));
+
+    expect(api.state!.players[0].hand).toHaveLength(0);
+    expect(api.state!.roundOver).toBe(true);
+    expect(api.getMoveLog()).toEqual([
+      { seat: 0, type: "meldGroups", groups: [aceIds, kingIds], preferredRunStarts: undefined },
+      { seat: 0, type: "discard", cardId: null },
+    ]);
   });
 });
