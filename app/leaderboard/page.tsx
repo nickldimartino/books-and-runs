@@ -299,20 +299,16 @@ export default function LeaderboardPage() {
         ← Home
       </Link>
 
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Leaderboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Every signed-in account, ranked by whichever stat you sort by below. Set your own name on the{" "}
-          <Link href="/account" className="underline hover:text-[var(--heading)]">
-            Account
-          </Link>{" "}
-          page.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">Leaderboard</h1>
 
       <PageTip id="leaderboard" title="Finding your friends">
-        Tap the &quot;Friends&quot; toggle below to rank against just the people you&apos;ve added,
-        instead of every signed-in account. Tap any name to open their profile.
+        Every signed-in account, ranked by whichever stat you sort by below — or tap the
+        &quot;Friends&quot; toggle to rank against just the people you&apos;ve added. Tap any name to
+        open their profile. Set your own name on the{" "}
+        <Link href="/account" className="underline hover:text-[var(--heading)]">
+          Account
+        </Link>{" "}
+        page.
       </PageTip>
 
       {authLoading || loading ? (

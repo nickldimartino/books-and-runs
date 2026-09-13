@@ -315,15 +315,11 @@ export default function FriendsPage() {
         ← Home
       </Link>
 
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Friends</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Add friends to start multiplayer games with them. Share your code, or paste theirs.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">Friends</h1>
 
       <PageTip id="friends" title="More than a list">
-        Tap a friend&apos;s name to open their profile — level, achievements, Trophy Case, and (once
+        Add friends to start multiplayer games with them — share your code, or paste theirs. Tap a
+        friend&apos;s name to open their profile: level, achievements, Trophy Case, and (once
         you&apos;ve played some multiplayer games together) your head-to-head record against them.
       </PageTip>
 
