@@ -40,6 +40,7 @@ import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
 import { getMpParticipantUserIds } from "../../lib/mpStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
 import { supabase } from "../../lib/supabaseClient";
+import { getTournamentForGame } from "../../lib/tournamentsStore";
 import { useFocusTrap } from "../../lib/useFocusTrap";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { layOffOptions } from "@/meld";
@@ -117,6 +118,12 @@ export default function MultiplayerPlayPage() {
   // pending games too (unlike bios above), since that's exactly the screen
   // this was reported stale on.
   const [namesByUserId, setNamesByUserId] = useState<Record<string, string>>({});
+  // Whether this finished game is part of a tracked tournament series (see
+  // tournamentsStore.ts) — looked up once the game's actually over, purely
+  // to show a link to the series' standings/next-round page. The play
+  // screen itself knows nothing else about tournaments; all of that lives
+  // on /tournaments.
+  const [tournamentLink, setTournamentLink] = useState<{ tournamentId: string; roundNumber: number } | null>(null);
 
   useEffect(() => {
     const client = supabase;
@@ -148,6 +155,14 @@ export default function MultiplayerPlayPage() {
       ),
     };
   }, [rawView, namesByUserId]);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !gameId || !view?.gameOver) return;
+    getTournamentForGame(client, gameId)
+      .then(setTournamentLink)
+      .catch((err) => console.error("Failed to check tournament linkage:", err));
+  }, [gameId, view?.gameOver]);
 
   useEffect(() => {
     const client = supabase;
@@ -370,6 +385,21 @@ export default function MultiplayerPlayPage() {
             items={g.unlockedAchievements}
             heading={g.unlockedAchievements.length === 1 ? "Achievement unlocked" : "Achievements unlocked"}
           />
+        )}
+
+        {/* This "Rematch" button is a plain one-off — the tracked way to
+            continue a tournament series is the tournament page's own
+            "Start next round" (see tournamentsStore.ts's own doc), which
+            also records the new game as the series' next round. Someone
+            could still tap this instead, but it wouldn't be linked to the
+            series. */}
+        {tournamentLink && (
+          <Link
+            href={`/tournaments?id=${tournamentLink.tournamentId}`}
+            className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-center text-sm font-medium text-[var(--heading)] hover:bg-[var(--accent)]/15"
+          >
+            Round {tournamentLink.roundNumber} of a tournament — view standings →
+          </Link>
         )}
 
         <button

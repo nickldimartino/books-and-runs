@@ -125,6 +125,8 @@ AuthProvider
 | `/achievements` | All 220 achievements by family, unlocked state, progress. |
 | `/leaderboard` | One row per account (self-reported snapshot). Sortable. Add-friend button per row; names link to `/player`. |
 | `/friends` | Friend list, incoming/outgoing requests, friend code + share link (`?add=BR-XXXXX`); names link to `/player`. |
+| `/clubs`, `/clubs?id=<uuid>` | A standing named group of friends with its own scoreboard (real MP stats, filtered + re-ranked to the roster) — list + detail, same query-param routing as `/player`. Owner-curated membership, only onto an existing friend. |
+| `/tournaments`, `/tournaments?id=<uuid>`, `/tournaments/new` | A round-robin series — the same roster plays a fixed number of ordinary MP games back-to-back, standings summed live. List + detail (query-param routed) + the creation form (`?club=<uuid>` pre-checks that club's roster). |
 | `/history` | Local (device) game history. |
 | `/scorecard` | Standalone pen-and-paper scorekeeper (no engine — just a score grid). |
 | `/settings`, `/settings/theme`, `/settings/card-back`, `/settings/card-face` | House rules, theme picker (38 themes), card-back picker, card-face picker (6 styles). Every preference here syncs to the account when signed in — see `accountSettingsSync.ts`. |
@@ -203,6 +205,8 @@ client's word. See §8 for the full design.
 | `useMpGame.ts` | The MP play-screen hook. Turn drafting (`draw` then `commit`); stats/achievement-counter crediting happen server-side now (see `mp/index.ts`) — this just diffs a progress snapshot at game-over to show what unlocked. |
 | `useNotifications.ts` | One combined Realtime hook: friend requests + game requests + your-turn count → a single badge. Replaced `useFriendActivity` + `useMpActivity`. |
 | `friendsStore.ts` | Friend RPC wrappers (`getFriends`, `sendFriendRequest`, `addFriendByCode`, …). |
+| `clubsStore.ts` | Club RPC wrappers (migration 0040) — create/rename/delete, add/remove member (owner-only, only onto an existing friend), `getClubStandings` (real MP stats, filtered + re-ranked to the roster). |
+| `tournamentsStore.ts` | Tournament RPC wrappers (migration 0041) — a round-robin series among a fixed roster, not a bracket. `createTournament` links an already-created mp_games row as round 1; `addTournamentRound` links a rematch as the next one; `getTournamentStandings` sums each player's `mp_participants.final_score`/`outcome` live across every linked game. Never touches the `mp` Edge Function itself. |
 
 **Small pure formatters** — `formatNames.ts` (`joinNames`), `formatScore.ts`
 (shared int/decimal/`—` rendering), `achievementFormat.ts`, `aiPersonas.ts`
@@ -304,6 +308,8 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0037 | `settings.haptics_on` — splits Haptics into its own synced toggle, previously bundled into `sound_on`. |
 | 0038 | Schedules the `daily-deal-reminder` Edge Function via `pg_cron`/`pg_net` — a once-daily push for any account whose Daily Deal streak is about to lapse. Needs manual one-time setup (a Vault secret) outside this file. |
 | 0039 | The Weekly Challenge, built server-verified from day one: `weekly_challenge_completions` (service-role-only writes, same shape as 0036) + a trigger computing `leaderboard_entries`' new `weekly_challenge_streak`/`weekly_challenge_best_streak`/`weekly_challenge_last_played` columns from it. |
+| 0040 | Clubs — `clubs` + `club_members` (owner-curated, only onto an existing friend), RPCs for create/rename/delete/add/remove member, and `club_standings()` (a filtered, re-ranked view of real multiplayer stats — no new stats pipeline). |
+| 0041 | Tournaments — a round-robin series, not a bracket (see `tournamentsStore.ts`'s own doc). `tournaments` + `tournament_games` link a fixed roster's ordinary multiplayer games together; no `mp` Edge Function changes. RPCs create/link/cancel a series and compute live standings from `mp_participants`. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped

@@ -17,7 +17,10 @@ export type TipId =
   | "player-profile"
   | "leaderboard"
   | "friends"
-  | "scorecard";
+  | "scorecard"
+  | "clubs"
+  | "tournaments"
+  | "tournaments-new";
 
 const KEY = "booksAndRuns:seenTips";
 

@@ -59,6 +59,8 @@ tells you a project's real state.
 | 0037 | `settings.haptics_on` — splits Haptics into its own synced toggle, previously bundled into `sound_on`. |
 | 0038 | Schedules the `daily-deal-reminder` Edge Function via `pg_cron`/`pg_net`, once a day, for every account whose Daily Deal streak is at risk of lapsing today. Needs manual one-time setup outside this file (a Vault secret, never committed) — see the file's own header and `supabase/functions/README.md`. |
 | 0039 | The Weekly Challenge (Daily Deal's bigger, harder sibling — the full 7-round game vs. 3 Hard AIs, seeded by the week): `weekly_challenge_completions` (user_id, week — service-role-only writes, same shape as 0036's `daily_deal_completions`) and a trigger recomputing `leaderboard_entries`' new `weekly_challenge_streak`/`weekly_challenge_best_streak`/`weekly_challenge_last_played` columns from it. Run only after `solo-verify` is redeployed with Weekly Challenge support. |
+| 0040 | Clubs ("a regular table") — `clubs` + `club_members` (owner-curated, only onto an existing friend), RPCs for create/rename/delete/add/remove member, and `club_standings()` — a filtered, re-ranked view of each member's real multiplayer stats (no new stats pipeline). |
+| 0041 | Tournaments — a fixed roster playing a fixed number of ordinary multiplayer games back-to-back (round-robin series, deliberately not an elimination bracket — see the file's own doc for why). `tournaments` + `tournament_games` (a thin linking layer; no changes to the `mp` Edge Function or its engine at all), RPCs to create a series from an already-created game, link each later round (a rematch), cancel, and compute live standings from `mp_participants`' own outcome/final_score. |
 
 ## New migrations
 

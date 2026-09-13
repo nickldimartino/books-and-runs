@@ -227,6 +227,8 @@ function MoreSection({
             </span>
           </MoreLink>
         )}
+        {configured && user && <MoreLink href="/clubs">Clubs</MoreLink>}
+        {configured && user && <MoreLink href="/tournaments">Tournaments</MoreLink>}
         <MoreLink href="/settings">Settings</MoreLink>
         {configured && user && <MoreLink href="/account">Account</MoreLink>}
         <MoreLink href="/scorecard">Scorekeeper</MoreLink>
