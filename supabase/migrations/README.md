@@ -49,6 +49,7 @@ tells you a project's real state.
 | 0027 | Fixes 0026's level gate to compute your level live (`compute_level()`, `compute_total_xp()`) instead of trusting the periodically-synced `leaderboard_entries.level` snapshot, which could lag behind a real level-up. Replaces `achievement_expert_thresholds` with the fuller `achievement_thresholds` (all 5 tiers, not just Expert). |
 | 0028 | Avatar frames + nameplate titles (`leaderboard_entries.avatar_frame`/`.title`), a public mirror of your equipped card back/face (`.showcase_card_back`/`.showcase_card_face`), and a data-driven `cosmetic_unlocks` catalog + generic trigger replacing 0026/0027's single-purpose emoji trigger. |
 | 0029 | Profile banner (`leaderboard_entries.banner`, one more gated cosmetic), `joined_at` ("member since"), and `achievement_unlock_counts` — a daily `pg_cron`-refreshed summary table powering each trophy's rarity %. |
+| 0030 | `leaderboard_entries.is_creator` — a "Creator" badge shown on one account's profile, set once by matching `auth.users.email` (never through a client update function). |
 
 ## New migrations
 

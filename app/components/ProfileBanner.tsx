@@ -10,7 +10,7 @@ export function ProfileBanner({ banner, children }: { banner: string | null; chi
   const option = findBannerOption(banner);
   return (
     <div
-      className="rounded-2xl px-6 py-6"
+      className="relative rounded-2xl px-6 py-6"
       style={{
         // A dark scrim under every banner guarantees the header's own
         // white-on-banner text (see player/page.tsx's onBanner branch)

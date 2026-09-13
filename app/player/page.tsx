@@ -57,8 +57,8 @@ import {
 } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
-import { cardBackLabel, loadLocalCardBack } from "../lib/cardBackStore";
-import { cardFaceLabel, loadLocalCardFace } from "../lib/cardFaceStore";
+import { loadLocalCardBack } from "../lib/cardBackStore";
+import { loadLocalCardFace } from "../lib/cardFaceStore";
 import { cosmeticRequirementLabel, isCosmeticUnlocked } from "../lib/cosmeticUnlocks";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
@@ -75,7 +75,6 @@ import {
   PremiumEmojiLockedError,
   displayNameFor,
   isDisplayNameAvailable,
-  playerProfileHref,
   reportProfilePhoto,
   revertToEmojiAvatar,
   showcaseKeyFor,
@@ -200,6 +199,35 @@ function PersonCheckIcon() {
   );
 }
 
+/** The universal pencil-on-a-line "edit" glyph. */
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+/** The universal "box with an arrow escaping upward" share glyph. */
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+      <path d="M12 15V4M8 8l4-4 4 4" />
+      <path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13" />
+    </svg>
+  );
+}
+
+/** A small star glyph for the Creator badge — same "earned recognition"
+ * visual language as a verified/staff badge on other platforms. */
+function CreatorBadgeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-2.5 w-2.5" aria-hidden="true">
+      <path d="M12 2.5l2.7 6.28 6.8.57-5.18 4.5 1.57 6.65L12 16.9l-5.89 3.6 1.57-6.65-5.18-4.5 6.8-.57Z" />
+    </svg>
+  );
+}
+
 function formatWinRate(gamesPlayed: number, gamesWon: number): string {
   if (gamesPlayed < WIN_RATE_MIN_GAMES) return "—";
   return `${Math.round((100 * gamesWon) / gamesPlayed)}%`;
@@ -287,6 +315,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
     showcase_card_face: null,
     banner: null,
     joined_at: null,
+    is_creator: false,
     level: 0,
     total_xp: 0,
     achievements_unlocked: 0,
@@ -704,17 +733,12 @@ export default function PlayerProfilePage() {
       });
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
-      const profileUrl = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
-      // canShare must be checked against the exact same shape passed to
-      // share() — checking {files} alone and then also sending `url` used
-      // to pass this check on a platform that couldn't actually honor both
-      // together, and silently shared only the url with no picture at all.
-      // Falling back to a files-only share keeps the picture (the whole
-      // point of this button) rather than losing it to an unsupported
-      // combination.
-      if (navigator.share && navigator.canShare?.({ files: [file], url: profileUrl })) {
-        await navigator.share({ files: [file], url: profileUrl });
-      } else if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      // Files-only, deliberately no url/text alongside it — combining a
+      // file with a url is unreliable across share targets in practice
+      // (some silently drop the file and share only the link), so this
+      // sticks to the one thing guaranteed to work everywhere canShare
+      // says files are supported at all: the picture itself.
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
@@ -924,11 +948,6 @@ export default function PlayerProfilePage() {
     : undefined;
   const titleOption = entry ? findTitleOption(entry.title) : null;
   const rank = entry ? computeRank(entry.games_played, entry.games_won) : { tier: null, winRate: null };
-  // Self-view reads local storage directly (always the freshest copy of
-  // your own choice); viewing someone else reads the public mirror
-  // migration 0028 added (see the load effect's own bootstrap-push doc).
-  const displayCardBack = isSelf ? loadLocalCardBack() : (entry?.showcase_card_back ?? null);
-  const displayCardFace = isSelf ? loadLocalCardFace() : (entry?.showcase_card_face ?? null);
   // A banner's gradient is always dark enough to need light text — see
   // ProfileBanner's own scrim, which guarantees this regardless of which
   // preset is picked.
@@ -957,6 +976,25 @@ export default function PlayerProfilePage() {
 
           {/* ── Public — same for everyone, including your own view ── */}
           <ProfileBanner banner={entry.banner}>
+            {isSelf && (
+              <button
+                onClick={() => setEditingProfile((v) => !v)}
+                aria-label={editingProfile ? "Done editing profile" : "Edit profile"}
+                title={editingProfile ? "Done editing profile" : "Edit profile"}
+                className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/30"
+              >
+                <EditIcon />
+              </button>
+            )}
+            <button
+              onClick={shareProfileCard}
+              disabled={shareState === "working"}
+              aria-label="Share profile card"
+              title="Share profile card"
+              className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/30 disabled:opacity-60"
+            >
+              <ShareIcon />
+            </button>
             <div className="flex flex-col items-center gap-2 text-center">
               <AvatarFrame frame={entry.avatar_frame} size={88}>
                 <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
@@ -965,8 +1003,18 @@ export default function PlayerProfilePage() {
               {/* Identity: name, title, level/rank — kept tight and on-brand
                   regardless of banner, unlike bio/cosmetics/actions below,
                   which read fine in the page's normal muted tones. */}
-              <h1 className={`text-xl font-bold ${onBanner ? "text-white" : "text-[var(--heading)]"}`}>
+              <h1 className={`flex items-center gap-1.5 text-xl font-bold ${onBanner ? "text-white" : "text-[var(--heading)]"}`}>
                 {displayNameFor(entry)}
+                {entry.is_creator && (
+                  <span
+                    title="Creator of Books & Runs"
+                    aria-label="Creator of Books & Runs"
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${onBanner ? "bg-white/20 text-yellow-200" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`}
+                  >
+                    <CreatorBadgeIcon />
+                    Creator
+                  </span>
+                )}
               </h1>
               {titleOption && (
                 <p className={`-mt-1 text-xs font-semibold uppercase tracking-wide ${onBanner ? "text-yellow-300" : "text-[var(--accent)]"}`}>
@@ -991,17 +1039,6 @@ export default function PlayerProfilePage() {
                 <p className={`max-w-xs text-sm ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>{entry.bio}</p>
               )}
 
-              {(displayCardBack || displayCardFace) && (
-                <div className={`flex flex-wrap items-center justify-center gap-2 text-[10px] ${onBanner ? "text-white/70" : "text-[var(--faint)]"}`}>
-                  <span className={`rounded-full border px-2 py-0.5 ${onBanner ? "border-white/30" : "border-[var(--border)]"}`}>
-                    Card back: {cardBackLabel(displayCardBack)}
-                  </span>
-                  <span className={`rounded-full border px-2 py-0.5 ${onBanner ? "border-white/30" : "border-[var(--border)]"}`}>
-                    Card face: {cardFaceLabel(displayCardFace)}
-                  </span>
-                </div>
-              )}
-
               {/* Actions — deliberately smaller/quieter than the stat tiles
                   below: these are things you do occasionally, not the
                   content itself. */}
@@ -1016,21 +1053,6 @@ export default function PlayerProfilePage() {
                     {related === "requested" ? "Request sent" : "Add friend"}
                   </button>
                 )}
-                {isSelf && (
-                  <button
-                    onClick={() => setEditingProfile((v) => !v)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${onBanner ? "border-white/40 text-white hover:bg-white/10" : "border-[var(--accent)]/60 text-[var(--heading)] hover:bg-[var(--panel-soft)]"}`}
-                  >
-                    {editingProfile ? "Done editing" : "Edit profile"}
-                  </button>
-                )}
-                <button
-                  onClick={shareProfileCard}
-                  disabled={shareState === "working"}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-60 ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
-                >
-                  {shareState === "working" ? "Preparing…" : "Share profile card"}
-                </button>
                 {!isSelf && entry.avatar_kind === "photo" && entry.avatar_photo_path && reportState === "idle" && (
                   <button
                     onClick={() => setReportState("open")}

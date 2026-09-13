@@ -520,7 +520,6 @@ export default function AccountPage() {
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
         Back to Home
       </Link>
-      <p className="text-center text-[10px] text-[var(--faint)]">Made by Nicky D</p>
     </main>
   );
 }

@@ -56,6 +56,10 @@ export interface LeaderboardEntry {
    * than read from the (unreadable-to-clients) auth.users table. Null for
    * any row synced before migration 0029 added this column. */
   joined_at: string | null;
+  /** True for exactly one account — the app's developer — set once by
+   * migration 0030, never through any client update function. A profile
+   * badge, not a permission: nothing else in the app reads this. */
+  is_creator: boolean;
   level: number;
   total_xp: number;
   achievements_unlocked: number;
