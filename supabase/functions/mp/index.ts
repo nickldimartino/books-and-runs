@@ -346,6 +346,52 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
   return json({ game_id: game.id });
 }
 
+/**
+ * Flips a fully-accepted pending game to active and deals it — the last
+ * accepter used to do this inline in handleRespond, with no way to recover
+ * if that one attempt failed partway (a transient error between the
+ * invite_status update and this step left the game stuck "pending" forever:
+ * every participant already shows "accepted", so nobody can ever call
+ * handleRespond's accept branch again to retry it — that branch rejects
+ * anyone whose invite_status isn't still "invited"). Now shared with
+ * handleState, which calls this as a self-heal check on every "pending"
+ * game load — the same recovery idea as handleState's own "active but
+ * never dealt" repair just below, one stage earlier in the same handoff.
+ * Returns "waiting" if someone still hasn't accepted, "started" if this
+ * call is the one that dealt the game, or "already-active" if everyone had
+ * accepted but a concurrent call (or a previous, already-successful call)
+ * got there first — still a success from this caller's point of view, just
+ * not the one that did the dealing.
+ */
+async function tryStartIfEveryoneAccepted(
+  gameId: string,
+  game: GameRow
+): Promise<"waiting" | "started" | "already-active"> {
+  if (game.status !== "pending") return "already-active";
+
+  const { count } = await admin
+    .from("mp_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("game_id", gameId)
+    .neq("invite_status", "accepted");
+  if ((count ?? 0) > 0) return "waiting";
+
+  const { data: claimed } = await admin
+    .from("mp_games")
+    .update({ status: "active", updated_at: new Date().toISOString() })
+    .eq("id", gameId)
+    .eq("status", "pending")
+    .select("id");
+  if ((claimed?.length ?? 0) === 0) return "already-active";
+
+  const config = configOf(game);
+  const engine = dealGame(config);
+  await admin.from("mp_game_state").insert({ game_id: gameId, engine, version: 0 });
+  await syncPublicColumns(gameId, engine, config);
+  await notifyTurn(gameId, null, engine, config);
+  return "started";
+}
+
 async function handleRespond(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
   const accept = body.accept === true;
@@ -386,28 +432,9 @@ async function handleRespond(uid: string, body: Record<string, unknown>): Promis
     .select("user_id");
   if ((accepted?.length ?? 0) === 0) return json({ status: game.status });
 
-  const { count } = await admin
-    .from("mp_participants")
-    .select("*", { count: "exact", head: true })
-    .eq("game_id", gameId)
-    .neq("invite_status", "accepted");
-  if ((count ?? 0) > 0) return json({ status: "pending", accepted: true });
-
-  // Everyone's in. Flip pending → active atomically; the winner of that race deals.
-  const { data: claimed } = await admin
-    .from("mp_games")
-    .update({ status: "active", updated_at: new Date().toISOString() })
-    .eq("id", gameId)
-    .eq("status", "pending")
-    .select("id");
-  if ((claimed?.length ?? 0) === 0) return json({ status: "active" });
-
-  const config = configOf(game);
-  const engine = dealGame(config);
-  await admin.from("mp_game_state").insert({ game_id: gameId, engine, version: 0 });
-  await syncPublicColumns(gameId, engine, config);
-  await notifyTurn(gameId, null, engine, config);
-  return json({ status: "active" });
+  // Only actually flips to active (and deals) once everyone's accepted.
+  const result = await tryStartIfEveryoneAccepted(gameId, game);
+  return json(result === "waiting" ? { status: "pending", accepted: true } : { status: "active" });
 }
 
 // The host withdraws a game invite before everyone's accepted — the other
@@ -442,12 +469,23 @@ async function handleCancel(uid: string, body: Record<string, unknown>): Promise
 
 async function handleState(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
-  const game = await loadGame(gameId);
+  let game = await loadGame(gameId);
   if (!game) return json({ error: "no such game" }, 404);
   const mine = await myParticipant(gameId, uid);
   if (!mine) return json({ error: "you're not in this game" }, 403);
 
   if (game.status === "cancelled") return json({ status: "cancelled" });
+
+  if (game.status === "pending") {
+    // Self-heal: everyone may already have accepted with the actual flip
+    // to active never having gone through (see tryStartIfEveryoneAccepted's
+    // own doc) — anyone loading a "pending" game re-checks this instead of
+    // trusting the stored status, so the game isn't stuck here forever just
+    // because the one moment that should have started it hit a transient
+    // error.
+    const result = await tryStartIfEveryoneAccepted(gameId, game);
+    if (result !== "waiting") game = (await loadGame(gameId)) ?? game;
+  }
 
   if (game.status === "pending") {
     const { data: parts } = await admin
