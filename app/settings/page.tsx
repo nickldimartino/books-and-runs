@@ -24,7 +24,7 @@ import {
   loadLocalCardBack,
   saveLocalCardBack,
 } from "../lib/cardBackStore";
-import { AMBIENT_SONGS, isPreviewing, previewSong, setAmbienceVolume, stopPreview } from "../lib/ambience";
+import { AMBIENT_SONGS, setAmbienceVolume } from "../lib/ambience";
 import {
   CARD_FACES,
   CardFaceId,
@@ -278,6 +278,38 @@ function CardFaceLinkRow({ name, cardFace }: { name: string; cardFace: CardFaceI
   );
 }
 
+// The same "current selection, tap to change" row as SwatchLinkRow/
+// CardFaceLinkRow, but with a plain music-note glyph instead of a swatch
+// or a card preview — there's no color or drawing to show off here.
+function AmbientSongLinkRow({ name, disabled }: { name: string; disabled: boolean }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[var(--muted)]">Ambient song</label>
+      <Link
+        href={disabled ? "#" : "/settings/ambient-song"}
+        aria-disabled={disabled}
+        className={`flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition ${
+          disabled ? "pointer-events-none opacity-50" : "hover:bg-[var(--panel-soft)]"
+        }`}
+      >
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--panel-soft)] text-[var(--accent)]"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+            <path d="M8 3v9.28a3 3 0 1 0 1.5 2.6V6.5l6-1.2v6.98a3 3 0 1 0 1.5 2.6V2L8 3.6V3Z" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
+          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
+        </span>
+        <ChevronRightIcon />
+      </Link>
+    </section>
+  );
+}
+
 export default function SettingsPage() {
   const { configured, user } = useAuth();
   const [settings, setSettings] = useState<HouseSettings>(DEFAULT_SETTINGS);
@@ -290,24 +322,6 @@ export default function SettingsPage() {
   const [tipsReset, setTipsReset] = useState(false);
   const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
   const [pushError, setPushError] = useState<string | null>(null);
-  const [previewingId, setPreviewingId] = useState<(typeof AMBIENT_SONGS)[number]["id"] | null>(null);
-
-  // Never leave a preview playing behind after navigating away — nothing
-  // else would stop it, since it's entirely independent of the real
-  // game-screen startAmbience/stopAmbience lifecycle.
-  useEffect(() => {
-    return () => stopPreview();
-  }, []);
-
-  function togglePreview(id: (typeof AMBIENT_SONGS)[number]["id"]) {
-    if (isPreviewing(id)) {
-      stopPreview();
-      setPreviewingId(null);
-    } else {
-      previewSong(id);
-      setPreviewingId(id);
-    }
-  }
 
   // Re-reads every local store — called on mount, and again whenever
   // AccountSettingsSync pulls the account's copy down while this page is
@@ -397,6 +411,7 @@ export default function SettingsPage() {
 
   const activeThemeOption = THEMES.find((t) => t.id === theme);
   const activeCardBackOption = cardBack === "match" ? undefined : THEMES.find((t) => t.id === cardBack);
+  const currentSongLabel = AMBIENT_SONGS.find((s) => s.id === settings.ambientTrack)?.label ?? "Arpeggio";
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
@@ -512,48 +527,10 @@ export default function SettingsPage() {
             description="How loud the background pad is. Kept subtle even at 100% — it's meant to sit behind everything else."
             ariaLabel="Ambient music volume"
           />
-          <section className="flex flex-col gap-2">
-            <InfoDetails label="Ambient song">
-              Play through all {AMBIENT_SONGS.length} forward, then back again, 3 minutes each
-              (blending into each other) — or pin it to just one.
-            </InfoDetails>
-            <div className="flex flex-col gap-1.5">
-              <button
-                onClick={() => updateSettings({ ambientTrack: "rotate" })}
-                disabled={!settings.ambientMusicEnabled}
-                className={`rounded-md px-3 py-2 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-                  settings.ambientTrack === "rotate"
-                    ? "bg-[var(--accent)] text-[var(--on-accent)]"
-                    : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                }`}
-              >
-                Play all {AMBIENT_SONGS.length}
-              </button>
-              {AMBIENT_SONGS.map((song) => (
-                <div key={song.id} className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateSettings({ ambientTrack: song.id })}
-                    disabled={!settings.ambientMusicEnabled}
-                    className={`flex-1 rounded-md px-3 py-2 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-                      settings.ambientTrack === song.id
-                        ? "bg-[var(--accent)] text-[var(--on-accent)]"
-                        : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                    }`}
-                  >
-                    {song.label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => togglePreview(song.id)}
-                    aria-label={previewingId === song.id ? `Stop listening to ${song.label}` : `Listen to ${song.label}`}
-                    className="shrink-0 rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--heading)] hover:bg-[var(--panel-soft)]"
-                  >
-                    {previewingId === song.id ? "⏸" : "▶"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
+          <AmbientSongLinkRow
+            name={settings.ambientTrack === "rotate" ? `All ${AMBIENT_SONGS.length} songs` : currentSongLabel}
+            disabled={!settings.ambientMusicEnabled}
+          />
           </SettingsSection>
 
           <SettingsSection title="Gameplay">
