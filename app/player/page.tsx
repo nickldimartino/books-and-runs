@@ -95,7 +95,7 @@ import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats }
 import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
 import { computeRank } from "../lib/rank";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
-import { renderProfileAvatarCard } from "../lib/shareCard";
+import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
@@ -547,15 +547,19 @@ export default function PlayerProfilePage() {
     setPendingColor(entry.avatar_color);
   }, [entry, isSelf]);
 
-  async function saveEmojiAvatar() {
-    if (!supabase || !user || !pendingEmoji || !pendingColor) return;
+  // Takes the emoji/color explicitly rather than reading pendingEmoji/
+  // pendingColor state — called right from each button's onClick (see
+  // chooseEmoji/chooseColor below) with the value that was just clicked, so
+  // this saves immediately like every other cosmetic picker instead of
+  // needing a separate "Save" button (which read as redundant next to
+  // frame/title/banner, all of which already save on click).
+  async function saveEmojiAvatar(emoji: string | null, color: string | null) {
+    if (!supabase || !user || !emoji || !color) return;
     setAvatarSaveState("saving");
     setAvatarSaveError(null);
     try {
-      await updateLeaderboardAvatarEmoji(supabase, user.id, pendingEmoji, pendingColor);
-      setEntry((prev) =>
-        prev ? { ...prev, avatar_kind: "emoji", avatar_emoji: pendingEmoji, avatar_color: pendingColor } : prev
-      );
+      await updateLeaderboardAvatarEmoji(supabase, user.id, emoji, color);
+      setEntry((prev) => (prev ? { ...prev, avatar_kind: "emoji", avatar_emoji: emoji, avatar_color: color } : prev));
       setAvatarSaveState("saved");
     } catch (err) {
       if (err instanceof PremiumEmojiLockedError) {
@@ -565,6 +569,16 @@ export default function PlayerProfilePage() {
       }
       setAvatarSaveState("error");
     }
+  }
+
+  function chooseEmoji(emoji: string) {
+    setPendingEmoji(emoji);
+    saveEmojiAvatar(emoji, pendingColor);
+  }
+
+  function chooseColor(color: string) {
+    setPendingColor(color);
+    saveEmojiAvatar(pendingEmoji, color);
   }
 
   async function handlePhotoChosen(e: ChangeEvent<HTMLInputElement>) {
@@ -661,8 +675,13 @@ export default function PlayerProfilePage() {
     setShareState("working");
     try {
       const frameOption = findAvatarFrameOption(entry.avatar_frame);
-      const bannerOption = findBannerOption(entry.banner);
-      const blob = await renderProfileAvatarCard({
+      const titleOption = findTitleOption(entry.title);
+      const rank = computeRank(entry.games_played, entry.games_won);
+      const blob = await renderProfileShareCard({
+        displayName: displayNameFor(entry),
+        titleLabel: titleOption?.label ?? null,
+        level: entry.level,
+        rankLabel: rank.tier?.label ?? null,
         avatarKind: entry.avatar_kind,
         avatarEmoji: entry.avatar_emoji,
         avatarColor: entry.avatar_color,
@@ -673,13 +692,30 @@ export default function PlayerProfilePage() {
         frameColor: frameOption
           ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id])
           : null,
-        bannerCss: bannerOption?.css ?? null,
+        stats: [
+          { label: "Games", value: String(entry.games_played) },
+          { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
+          { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
+        ],
+        trophyColors: entry.showcase
+          .map(resolveShowcaseItem)
+          .filter((i): i is ShowcaseItem => !!i)
+          .map((i) => TIER_RING_COLOR[i.tier]),
       });
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
       const profileUrl = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      // canShare must be checked against the exact same shape passed to
+      // share() — checking {files} alone and then also sending `url` used
+      // to pass this check on a platform that couldn't actually honor both
+      // together, and silently shared only the url with no picture at all.
+      // Falling back to a files-only share keeps the picture (the whole
+      // point of this button) rather than losing it to an unsupported
+      // combination.
+      if (navigator.share && navigator.canShare?.({ files: [file], url: profileUrl })) {
         await navigator.share({ files: [file], url: profileUrl });
+      } else if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
@@ -915,18 +951,9 @@ export default function PlayerProfilePage() {
         <>
           <PageTip id="player-profile" title={isSelf ? "Your profile" : "Player profiles"}>
             {isSelf
-              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive frames, titles, and avatar emoji. Everything below the edit section (stats breakdown, achievements, game history) is only ever visible to you."
+              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive frames, titles, and avatar emoji. Everything under \"Your activity\" further down is only ever visible to you."
               : "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here."}
           </PageTip>
-
-          {isSelf && (
-            <PageTip id="player-cosmetics" title="What am I looking at?">
-              Bronze / Silver / Gold / Diamond name a level milestone (10 / 25 / 50 / 100) shared by
-              frames, titles, and avatar emoji — not a free pick, and greyed out with a lock until you
-              reach that level. &quot;Card back&quot; and &quot;Card face&quot; show the physical-card
-              look you picked in Settings, so a friend viewing your profile can see it too.
-            </PageTip>
-          )}
 
           {/* ── Public — same for everyone, including your own view ── */}
           <ProfileBanner banner={entry.banner}>
@@ -1053,58 +1080,6 @@ export default function PlayerProfilePage() {
             </div>
           </ProfileBanner>
 
-          {!isSelf && headToHead && (
-            <section>
-              <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Head-to-head
-              </h2>
-              <div className="grid grid-cols-3 gap-2">
-                <StatTile label="Wins" value={headToHead.wins} />
-                <StatTile label="Losses" value={headToHead.losses} />
-                <StatTile label="Ties" value={headToHead.ties} />
-              </div>
-              <p className="mt-1.5 text-center text-[10px] text-[var(--faint)]">
-                Across {headToHead.gamesTogether} multiplayer game{headToHead.gamesTogether === 1 ? "" : "s"} together
-              </p>
-            </section>
-          )}
-
-          <section className="grid grid-cols-3 gap-2">
-            <StatTile label="Achievements" value={`${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`} />
-            <StatTile label="Total XP" value={entry.total_xp} />
-            <StatTile label="Games" value={entry.games_played} />
-            <StatTile label="Win rate" value={formatWinRate(entry.games_played, entry.games_won)} />
-            <StatTile label="Avg. score" value={formatScore(entry.average_score)} />
-            <StatTile label="Worst score" value={formatScore(entry.worst_score)} />
-            <StatTile label="Daily streak" value={entry.daily_deal_streak} />
-            <StatTile label="Best streak" value={entry.daily_deal_best_streak} />
-            <StatTile label="MP wins" value={entry.mp_games_won ?? 0} />
-            <StatTile label="MP win rate" value={formatMpWinRate(entry.mp_games_played ?? 0, entry.mp_games_won ?? 0)} />
-            <StatTile label="MP streak" value={entry.mp_best_win_streak ?? 0} />
-          </section>
-
-          {/* ── Trophy case — public; empty slots only shown to yourself ── */}
-          {(entry.showcase.length > 0 || isSelf) && (
-            <section>
-              <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Trophy Case
-              </h2>
-              <div className="flex flex-wrap justify-center gap-3">
-                {entry.showcase.map(resolveShowcaseItem).map((item, i) =>
-                  item ? (
-                    <TrophyBadge key={item.key} item={item} rarityLabel={formatRarity(rarity?.[item.key])} />
-                  ) : (
-                    <EmptyTrophySlot key={`stale-${i}`} />
-                  )
-                )}
-                {isSelf &&
-                  Array.from({ length: Math.max(0, MAX_SHOWCASE_ITEMS - entry.showcase.length) }).map((_, i) => (
-                    <EmptyTrophySlot key={`empty-${i}`} />
-                  ))}
-              </div>
-            </section>
-          )}
-
           {/* ── Edit profile (self only, collapsed by default) — tabbed so
               only one editor is open at a time; Trophies sits second, not
               last, since curating your showcase is at least as common a
@@ -1160,7 +1135,7 @@ export default function PlayerProfilePage() {
                       {EMOJI_OPTIONS.map((emoji) => (
                         <button
                           key={emoji}
-                          onClick={() => setPendingEmoji(emoji)}
+                          onClick={() => chooseEmoji(emoji)}
                           aria-label={`Use ${emoji} as your avatar`}
                           className={`grid aspect-square place-items-center rounded-lg text-lg transition ${
                             pendingEmoji === emoji ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
@@ -1181,7 +1156,7 @@ export default function PlayerProfilePage() {
                           return (
                             <button
                               key={option.emoji}
-                              onClick={() => (unlocked ? setPendingEmoji(option.emoji) : undefined)}
+                              onClick={() => (unlocked ? chooseEmoji(option.emoji) : undefined)}
                               aria-label={
                                 unlocked
                                   ? `Use ${option.emoji} as your avatar`
@@ -1224,7 +1199,7 @@ export default function PlayerProfilePage() {
                       {COLOR_OPTIONS.map((color) => (
                         <button
                           key={color.hex}
-                          onClick={() => setPendingColor(color.hex)}
+                          onClick={() => chooseColor(color.hex)}
                           aria-label={`Background color ${color.label}`}
                           title={color.label}
                           className={`h-7 w-7 rounded-full transition ${pendingColor === color.hex ? "ring-2 ring-offset-2 ring-offset-[var(--bg)] ring-[var(--accent)]" : ""}`}
@@ -1232,13 +1207,7 @@ export default function PlayerProfilePage() {
                         />
                       ))}
                     </div>
-                    <button
-                      onClick={saveEmojiAvatar}
-                      disabled={avatarSaveState === "saving" || !pendingEmoji || !pendingColor}
-                      className="self-start rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
-                    >
-                      {avatarSaveState === "saving" ? "Saving…" : "Save avatar"}
-                    </button>
+                    {avatarSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                     {avatarSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                     {avatarSaveState === "error" && (
                       <p className="text-xs text-[var(--danger)]">{avatarSaveError ?? "Couldn't save — try again."}</p>
@@ -1529,6 +1498,59 @@ export default function PlayerProfilePage() {
               )}
             </section>
           )}
+
+          {!isSelf && headToHead && (
+            <section>
+              <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                Head-to-head
+              </h2>
+              <div className="grid grid-cols-3 gap-2">
+                <StatTile label="Wins" value={headToHead.wins} />
+                <StatTile label="Losses" value={headToHead.losses} />
+                <StatTile label="Ties" value={headToHead.ties} />
+              </div>
+              <p className="mt-1.5 text-center text-[10px] text-[var(--faint)]">
+                Across {headToHead.gamesTogether} multiplayer game{headToHead.gamesTogether === 1 ? "" : "s"} together
+              </p>
+            </section>
+          )}
+
+          <section className="grid grid-cols-3 gap-2">
+            <StatTile label="Achievements" value={`${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`} />
+            <StatTile label="Total XP" value={entry.total_xp} />
+            <StatTile label="Games" value={entry.games_played} />
+            <StatTile label="Win rate" value={formatWinRate(entry.games_played, entry.games_won)} />
+            <StatTile label="Avg. score" value={formatScore(entry.average_score)} />
+            <StatTile label="Worst score" value={formatScore(entry.worst_score)} />
+            <StatTile label="Daily streak" value={entry.daily_deal_streak} />
+            <StatTile label="Best streak" value={entry.daily_deal_best_streak} />
+            <StatTile label="MP wins" value={entry.mp_games_won ?? 0} />
+            <StatTile label="MP win rate" value={formatMpWinRate(entry.mp_games_played ?? 0, entry.mp_games_won ?? 0)} />
+            <StatTile label="MP streak" value={entry.mp_best_win_streak ?? 0} />
+          </section>
+
+          {/* ── Trophy case — public; empty slots only shown to yourself ── */}
+          {(entry.showcase.length > 0 || isSelf) && (
+            <section>
+              <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                Trophy Case
+              </h2>
+              <div className="flex flex-wrap justify-center gap-3">
+                {entry.showcase.map(resolveShowcaseItem).map((item, i) =>
+                  item ? (
+                    <TrophyBadge key={item.key} item={item} rarityLabel={formatRarity(rarity?.[item.key])} />
+                  ) : (
+                    <EmptyTrophySlot key={`stale-${i}`} />
+                  )
+                )}
+                {isSelf &&
+                  Array.from({ length: Math.max(0, MAX_SHOWCASE_ITEMS - entry.showcase.length) }).map((_, i) => (
+                    <EmptyTrophySlot key={`empty-${i}`} />
+                  ))}
+              </div>
+            </section>
+          )}
+
 
           {/* ── Private — only you can see this ── */}
           {isSelf && (

@@ -15,10 +15,8 @@ export type TipId =
   | "settings"
   | "achievements"
   | "player-profile"
-  | "player-cosmetics"
   | "leaderboard"
-  | "friends"
-  | "account";
+  | "friends";
 
 const KEY = "booksAndRuns:seenTips";
 
