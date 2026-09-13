@@ -75,6 +75,7 @@ import {
   PremiumEmojiLockedError,
   displayNameFor,
   isDisplayNameAvailable,
+  playerProfileHref,
   reportProfilePhoto,
   revertToEmojiAvatar,
   showcaseKeyFor,
@@ -357,7 +358,11 @@ export default function PlayerProfilePage() {
       // A self-view self-heals its own row first — same reasoning as
       // Account/Leaderboard's own sync-on-visit (a past failed sync, or an
       // account that predates a stats column entirely).
-      if (profileId === user.id) await syncLeaderboardStats(client, profileId, user.created_at).catch(() => {});
+      if (profileId === user.id) {
+        await syncLeaderboardStats(client, profileId, user.created_at).catch((err) =>
+          console.error("Failed to sync leaderboard stats (a missing migration would fail silently otherwise):", err)
+        );
+      }
       const { data, error } = await client.from("leaderboard_entries").select("*").eq("user_id", profileId).maybeSingle();
       if (cancelled) return;
       if (error) {
@@ -697,7 +702,7 @@ export default function PlayerProfilePage() {
   }
 
   // ── Share profile card ──────────────────────────────────────────────────
-  const [shareState, setShareState] = useState<"idle" | "working" | "error">("idle");
+  const [shareState, setShareState] = useState<"idle" | "working" | "linkCopied" | "error">("idle");
 
   async function shareProfileCard() {
     if (!entry) return;
@@ -709,7 +714,7 @@ export default function PlayerProfilePage() {
       const blob = await renderProfileShareCard({
         displayName: displayNameFor(entry),
         titleLabel: titleOption?.label ?? null,
-        level: entry.level,
+        level: displayLevel,
         rankLabel: rank.tier?.label ?? null,
         avatarKind: entry.avatar_kind,
         avatarEmoji: entry.avatar_emoji,
@@ -733,11 +738,24 @@ export default function PlayerProfilePage() {
       });
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
-      // Files-only, deliberately no url/text alongside it — combining a
-      // file with a url is unreliable across share targets in practice
-      // (some silently drop the file and share only the link), so this
-      // sticks to the one thing guaranteed to work everywhere canShare
-      // says files are supported at all: the picture itself.
+      const profileUrl = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
+      // Deliberately two separate, independently-reliable steps rather than
+      // one navigator.share({files, url}) call — tried that twice already;
+      // on at least one real device, canShare({files, url}) reported true
+      // but the actual share sheet still silently dropped the picture and
+      // sent only the link. Sharing the file alone is the one thing
+      // reliably supported wherever canShare says files work at all, and a
+      // clipboard copy alongside it gets the link into the same chat with
+      // one paste, without depending on any share target's handling of a
+      // multi-part payload.
+      let copiedUrl = false;
+      try {
+        await navigator.clipboard?.writeText(profileUrl);
+        copiedUrl = true;
+      } catch {
+        // Clipboard access can be denied/unavailable — the picture share
+        // below still goes ahead either way.
+      }
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
       } else {
@@ -745,7 +763,7 @@ export default function PlayerProfilePage() {
         window.open(url, "_blank");
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
       }
-      setShareState("idle");
+      setShareState(copiedUrl ? "linkCopied" : "idle");
     } catch (err) {
       console.error("Failed to share profile card:", err);
       setShareState("error");
@@ -948,6 +966,18 @@ export default function PlayerProfilePage() {
     : undefined;
   const titleOption = entry ? findTitleOption(entry.title) : null;
   const rank = entry ? computeRank(entry.games_played, entry.games_won) : { tier: null, winRate: null };
+  // entry.level is a synced snapshot (leaderboard_entries.level) — only as
+  // fresh as the last successful syncLeaderboardStats call, which silently
+  // no-ops on any error (a missing migration, a network blip). The exact
+  // same gated cosmetics on this page (frame/title/emoji tabs, just below)
+  // check the live PlayerLevelContext value instead, which has no such
+  // lag — showing entry.level here instead could read "Level 25" right
+  // next to an already-equipped Diamond frame that actually needed level
+  // 100, with no way to tell the two numbers ever disagreed. Self-view
+  // shows the same live number the unlock checks use; a visitor has no
+  // access to your private progress, so their view still shows the
+  // synced snapshot — the best a public profile can do.
+  const displayLevel = isSelf && level ? level.level : (entry?.level ?? 0);
   // A banner's gradient is always dark enough to need light text — see
   // ProfileBanner's own scrim, which guarantees this regardless of which
   // preset is picked.
@@ -976,7 +1006,7 @@ export default function PlayerProfilePage() {
 
           {/* ── Public — same for everyone, including your own view ── */}
           <ProfileBanner banner={entry.banner}>
-            {isSelf && (
+            {isSelf ? (
               <button
                 onClick={() => setEditingProfile((v) => !v)}
                 aria-label={editingProfile ? "Done editing profile" : "Edit profile"}
@@ -985,6 +1015,18 @@ export default function PlayerProfilePage() {
               >
                 <EditIcon />
               </button>
+            ) : (
+              related !== "related" && (
+                <button
+                  onClick={addFriend}
+                  disabled={related === "requested"}
+                  aria-label={related === "requested" ? "Friend request sent" : "Add friend"}
+                  title={related === "requested" ? "Friend request sent" : "Add friend"}
+                  className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/30 disabled:opacity-60"
+                >
+                  {related === "requested" ? <PersonCheckIcon /> : <PersonAddIcon />}
+                </button>
+              )
             )}
             <button
               onClick={shareProfileCard}
@@ -1025,7 +1067,7 @@ export default function PlayerProfilePage() {
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${onBanner ? "bg-white/20 text-white" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`}
                 >
-                  Level {entry.level}
+                  Level {displayLevel}
                 </span>
                 <RankBadge rank={rank} />
                 {joinedLabel && (
@@ -1043,16 +1085,6 @@ export default function PlayerProfilePage() {
                   below: these are things you do occasionally, not the
                   content itself. */}
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                {!isSelf && related !== "related" && (
-                  <button
-                    onClick={addFriend}
-                    disabled={related === "requested"}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)] disabled:opacity-60"
-                  >
-                    {related === "requested" ? <PersonCheckIcon /> : <PersonAddIcon />}
-                    {related === "requested" ? "Request sent" : "Add friend"}
-                  </button>
-                )}
                 {!isSelf && entry.avatar_kind === "photo" && entry.avatar_photo_path && reportState === "idle" && (
                   <button
                     onClick={() => setReportState("open")}
@@ -1062,6 +1094,9 @@ export default function PlayerProfilePage() {
                   </button>
                 )}
               </div>
+              {shareState === "linkCopied" && (
+                <p className="text-xs text-[var(--muted)]">Profile link copied — paste it in along with the picture.</p>
+              )}
               {shareState === "error" && (
                 <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
               )}

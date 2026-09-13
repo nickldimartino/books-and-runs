@@ -9,7 +9,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
-import { playerProfileHref, syncLeaderboardStats } from "../lib/leaderboardStore";
+import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -268,22 +268,6 @@ export default function AccountPage() {
         <LoadingSpinner />
       ) : (
         <>
-          <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Public profile</h2>
-            <p className="text-xs text-[var(--faint)]">
-              Your display name, bio, and profile picture — visible to other players on the
-              Leaderboard and Friends list. Display names are unique across every player.
-            </p>
-            {user && (
-              <Link
-                href={playerProfileHref(user.id)}
-                className="self-start rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
-              >
-                Edit your profile →
-              </Link>
-            )}
-          </section>
-
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Email</h2>
             <p className="text-xs text-[var(--muted)]">Signed in as {user?.email}.</p>
