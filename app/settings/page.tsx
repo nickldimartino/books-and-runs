@@ -528,7 +528,7 @@ export default function SettingsPage() {
             ariaLabel="Ambient music volume"
           />
           <AmbientSongLinkRow
-            name={settings.ambientTrack === "rotate" ? `All ${AMBIENT_SONGS.length} songs` : currentSongLabel}
+            name={settings.ambientTrack === "rotate" ? "All songs" : currentSongLabel}
             disabled={!settings.ambientMusicEnabled}
           />
           </SettingsSection>

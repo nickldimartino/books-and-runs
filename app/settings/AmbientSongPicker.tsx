@@ -52,7 +52,7 @@ export function AmbientSongPicker({
             : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         }`}
       >
-        Play all {AMBIENT_SONGS.length}
+        Play all songs
       </button>
       {AMBIENT_SONGS.map((song) => (
         <div key={song.id} className="flex items-center gap-2">
