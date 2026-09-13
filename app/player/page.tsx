@@ -43,6 +43,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
+import { PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
 import {
   COLOR_OPTIONS,
   EMOJI_OPTIONS,
@@ -866,7 +867,7 @@ export default function PlayerProfilePage() {
                                   : `${option.emoji} locked — ${premiumEmojiRequirementLabel(option.unlock)}`
                               }
                               title={unlocked ? undefined : premiumEmojiRequirementLabel(option.unlock)}
-                              className={`relative grid aspect-square place-items-center rounded-lg text-lg transition ${
+                              className={`relative grid aspect-square place-items-center rounded-lg text-[var(--heading)] transition ${
                                 !unlocked
                                   ? "cursor-default bg-[var(--panel-soft)] opacity-40"
                                   : pendingEmoji === option.emoji
@@ -874,7 +875,7 @@ export default function PlayerProfilePage() {
                                     : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
                               }`}
                             >
-                              {option.emoji}
+                              <PremiumBadgeIcon option={option} className="block h-2/3 w-2/3" />
                               {!unlocked && (
                                 <span
                                   aria-hidden="true"

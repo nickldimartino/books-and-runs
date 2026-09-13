@@ -46,6 +46,7 @@ tells you a project's real state.
 | 0024 | Public player profiles — unique (case-insensitive) `display_name`, avatar columns, the `avatars` Storage bucket |
 | 0025 | `profile_photo_reports` — flag an inappropriate profile photo for manual review |
 | 0026 | Profile showcase — pinned trophy case (`leaderboard_entries.showcase`), and milestone-gated premium avatar emoji enforced by a trigger (`achievement_expert_thresholds`, `category_mastered()`) |
+| 0027 | Fixes 0026's level gate to compute your level live (`compute_level()`, `compute_total_xp()`) instead of trusting the periodically-synced `leaderboard_entries.level` snapshot, which could lag behind a real level-up. Replaces `achievement_expert_thresholds` with the fuller `achievement_thresholds` (all 5 tiers, not just Expert). |
 
 ## New migrations
 

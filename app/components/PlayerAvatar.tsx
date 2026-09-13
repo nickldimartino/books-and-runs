@@ -7,8 +7,9 @@
 // anywhere it links there (Leaderboard, Friends).
 
 import { AvatarInfo, avatarPhotoUrlFor } from "../lib/leaderboardStore";
-import { DEFAULT_COLOR, DEFAULT_EMOJI } from "../lib/avatarPresets";
+import { DEFAULT_COLOR, DEFAULT_EMOJI, findPremiumEmojiOption } from "../lib/avatarPresets";
 import { supabase } from "../lib/supabaseClient";
+import { PremiumBadgeIcon } from "./PremiumBadgeIcon";
 
 interface PlayerAvatarProps {
   avatar?: AvatarInfo | null;
@@ -36,13 +37,20 @@ export function PlayerAvatar({ avatar, updatedAt, size = 40, className = "" }: P
   }
   const emoji = avatar?.emoji ?? DEFAULT_EMOJI;
   const color = avatar?.color ?? DEFAULT_COLOR;
+  const premium = findPremiumEmojiOption(emoji);
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center rounded-full ${className}`}
+      className={`grid shrink-0 place-items-center rounded-full text-white ${className}`}
       style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.55, lineHeight: 1 }}
     >
-      {emoji}
+      {premium ? (
+        <span style={{ width: size * 0.6, height: size * 0.6 }}>
+          <PremiumBadgeIcon option={premium} className="block h-full w-full" />
+        </span>
+      ) : (
+        emoji
+      )}
     </span>
   );
 }

@@ -51,6 +51,25 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "👑", unlock: { kind: "categoryMastered", category: "multiplayer", categoryLabel: "Multiplayer" } },
 ] as const;
 
+/** Ring color behind each level-milestone medal (see
+ * PremiumBadgeIcon.tsx's MedalIcon) — bronze/silver/gold/diamond, in
+ * ascending order the same way achievement tiers use bronze→diamond rings
+ * (player/page.tsx's TIER_RING_COLOR). Category-mastery badges don't need
+ * an entry here — they're colored by their own achievement tier instead. */
+export const LEVEL_MEDAL_COLOR: Record<string, string> = {
+  "🥉": "#CD7F32",
+  "🥈": "#B0B8C1",
+  "🥇": "#F5C518",
+  "💎": "#38BDF8",
+};
+
+/** The premium option for a given emoji, or null for a free (or unknown)
+ * one — the one lookup PlayerAvatar/the picker both need to decide
+ * "should this render as a custom badge icon instead of plain text." */
+export function findPremiumEmojiOption(emoji: string): PremiumEmojiOption | null {
+  return PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === emoji) ?? null;
+}
+
 export interface ColorOption {
   hex: string;
   label: string;

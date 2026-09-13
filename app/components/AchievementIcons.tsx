@@ -5,7 +5,9 @@ import { AchievementCategory } from "@/achievements";
 // in the same thin-stroke, currentColor style already established by the
 // Settings page's circled-"i" info icon, deliberately not emoji, matching
 // this app's existing icon language everywhere else.
-const SHARED_PROPS = {
+// Exported so PremiumBadgeIcon.tsx's own new icon (the level-milestone
+// medal) matches this exactly, rather than a close-but-drifting copy.
+export const ACHIEVEMENT_ICON_PROPS = {
   viewBox: "0 0 24 24",
   fill: "none" as const,
   stroke: "currentColor",
@@ -13,6 +15,7 @@ const SHARED_PROPS = {
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
 };
+const SHARED_PROPS = ACHIEVEMENT_ICON_PROPS;
 
 /** Account-level stats (Tablehand, Champion, Sharpshooter, Consistent) — a trophy. */
 function TrophyIcon() {
