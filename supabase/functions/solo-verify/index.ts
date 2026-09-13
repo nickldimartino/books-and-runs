@@ -34,6 +34,11 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: 
 
 const AI_DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
 const VALID_ROUNDS = [1, 2, 3, 4, 5, 6, 7];
+// Generous floor, not a real pacing model — a real human cannot finish
+// even the fastest legitimate game (a 2-player, 1-round Daily-Deal-style
+// game) in under this; see this constant's own use for what it actually
+// guards against.
+const MIN_MS_BETWEEN_GAMES = 10_000;
 
 /** "Ann" / "Ann & Bo" / "Ann, Bo & Cy" — for naming a tied-for-first group
  * in game_history.winner. Same tiny helper as app/lib/formatNames.ts;
@@ -193,10 +198,26 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
 
   const { data: existingStats, error: statsSelectError } = await admin
     .from("player_stats")
-    .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty")
+    .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty, updated_at")
     .eq("user_id", uid)
-    .maybeSingle<PlayerStatsRow>();
+    .maybeSingle<PlayerStatsRow & { updated_at: string | null }>();
   if (statsSelectError) return json({ ok: false, error: "couldn't read current stats" }, 500);
+
+  // A real game — even a fast, short, 2-player one — takes a real human
+  // meaningfully longer than this to actually play through the UI. Replay
+  // verification alone only proves a submission is a *legal* game; it
+  // can't tell a script that generated one offline (the engine is ordinary
+  // client-side JS, replicable outside the app) from one someone actually
+  // played, so this bounds how often *credited* games can land for one
+  // account at all, on top of that. Checked before any write — a
+  // rate-limited submission changes nothing, so there's nothing to queue
+  // or retry for it.
+  if (existingStats?.updated_at) {
+    const sinceLastGameMs = Date.now() - new Date(existingStats.updated_at).getTime();
+    if (sinceLastGameMs < MIN_MS_BETWEEN_GAMES) {
+      return json({ ok: false, error: "too many games recorded too quickly — try again shortly" }, 429);
+    }
+  }
 
   const priorGames = existingStats?.games_played ?? 0;
   const gamesPlayed = priorGames + 1;

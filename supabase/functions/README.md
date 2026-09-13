@@ -72,6 +72,14 @@ writes. Final `player_stats`/achievement-counter deltas/`game_history` are
 all *derived* from the verified replay, never taken from anything the
 client claims.
 
+Also rate-limited: a submission arriving less than `MIN_MS_BETWEEN_GAMES`
+(10s — a generous floor, not a real pacing model) after the account's last
+*credited* game is rejected outright, no write at all. Replay verification
+alone only proves a submission is a *legal* game — the engine is ordinary
+client-side JS, so nothing stops a script from generating a valid-looking
+move log offline far faster than a human could actually play one through
+the UI — this is the backstop for that.
+
 ### Deploy
 
 ```bash
