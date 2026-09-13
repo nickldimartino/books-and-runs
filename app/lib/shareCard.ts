@@ -113,7 +113,6 @@ export interface ProfileShareCardInput {
   displayName: string;
   titleLabel: string | null;
   level: number;
-  rankLabel: string | null;
   avatarKind: "emoji" | "photo";
   avatarEmoji: string | null;
   avatarColor: string | null;
@@ -252,8 +251,7 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
 
   ctx.fillStyle = faint;
   ctx.font = `600 13px ${sans}`;
-  const levelLine = input.rankLabel ? `Level ${input.level}  ·  ${input.rankLabel}` : `Level ${input.level}`;
-  ctx.fillText(levelLine, textX, avatarY + (input.titleLabel ? 68 : 46));
+  ctx.fillText(`Level ${input.level}`, textX, avatarY + (input.titleLabel ? 68 : 46));
 
   let y = avatarY + avatarSize + 26;
   ctx.strokeStyle = hexWithAlpha(text, 0.14);

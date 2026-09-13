@@ -46,7 +46,6 @@ import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { EmojiOrBadge, PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
 import { ProfileBanner } from "../components/ProfileBanner";
-import { RankBadge } from "../components/RankBadge";
 import { fetchAchievementRarity, formatRarity, RarityMap } from "../lib/achievementRarity";
 import {
   COLOR_OPTIONS,
@@ -94,7 +93,6 @@ import {
 } from "../lib/leaderboardStore";
 import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
 import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
-import { computeRank } from "../lib/rank";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
@@ -739,12 +737,10 @@ export default function PlayerProfilePage() {
     try {
       const frameOption = findAvatarFrameOption(entry.avatar_frame);
       const titleOption = findTitleOption(entry.title);
-      const rank = computeRank(entry.games_played, entry.games_won);
       const blob = await renderProfileShareCard({
         displayName: displayNameFor(entry),
         titleLabel: titleOption?.label ?? null,
         level: displayLevel,
-        rankLabel: rank.tier?.label ?? null,
         avatarKind: entry.avatar_kind,
         avatarEmoji: entry.avatar_emoji,
         avatarColor: entry.avatar_color,
@@ -1028,7 +1024,6 @@ export default function PlayerProfilePage() {
       }
     : undefined;
   const titleOption = entry ? findTitleOption(entry.title) : null;
-  const rank = entry ? computeRank(entry.games_played, entry.games_won) : { tier: null, winRate: null };
   // entry.level is a synced snapshot (leaderboard_entries.level) — only as
   // fresh as the last successful syncLeaderboardStats call, which silently
   // no-ops on any error (a missing migration, a network blip). The exact
@@ -1063,7 +1058,7 @@ export default function PlayerProfilePage() {
         <>
           <PageTip id="player-profile" title={isSelf ? "Your profile" : "Player profiles"}>
             {isSelf
-              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive frames, titles, and avatar emoji. Everything under \"Your activity\" further down is only ever visible to you."
+              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, badge, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive badges, frames, and titles. Everything under \"Your activity\" further down is only ever visible to you."
               : "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here."}
           </PageTip>
 
@@ -1115,7 +1110,7 @@ export default function PlayerProfilePage() {
                 )}
               </div>
 
-              {/* Identity: name, title, level/rank — kept tight and on-brand
+              {/* Identity: name, title, level — kept tight and on-brand
                   regardless of banner, unlike bio/cosmetics/actions below,
                   which read fine in the page's normal muted tones. */}
               <h1 className={`flex items-center gap-1.5 text-xl font-bold ${onBanner ? "text-white" : "text-[var(--heading)]"}`}>
@@ -1142,7 +1137,6 @@ export default function PlayerProfilePage() {
                 >
                   Level {displayLevel}
                 </span>
-                <RankBadge rank={rank} />
                 {joinedLabel && (
                   <span className={`rounded-full px-3 py-1 text-xs font-medium ${onBanner ? "bg-white/10 text-white/80" : "bg-[var(--panel-soft)] text-[var(--faint)]"}`}>
                     {joinedLabel}
