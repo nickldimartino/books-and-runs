@@ -14,6 +14,11 @@ const SAVE_KEY = "booksAndRuns:savedGame";
 // challenge isn't worth the extra sync surface; exiting early just means
 // resuming on the same device you left it on.
 const DAILY_DEAL_SAVE_KEY = "booksAndRuns:dailyDealSave";
+// Same reasoning as DAILY_DEAL_SAVE_KEY, its own slot for the Weekly
+// Challenge (see weeklyChallengeStore.ts) — all three (a real game, Daily
+// Deal, Weekly Challenge) can be in flight at once, none should clobber
+// another.
+const WEEKLY_CHALLENGE_SAVE_KEY = "booksAndRuns:weeklyChallengeSave";
 
 // Fired after the local saved game is written / cleared, so LocalSaveSync
 // can mirror it to the account (see LocalSaveSync.tsx). `br:solo-synced`
@@ -152,6 +157,41 @@ export function clearDailyDealSave(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(DAILY_DEAL_SAVE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Same shape/validity check, the Weekly Challenge's own slot. */
+export function loadWeeklyChallengeSave(): SavedGame | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(WEEKLY_CHALLENGE_SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!looksLikeSavedGame(parsed)) {
+      clearWeeklyChallengeSave();
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function saveWeeklyChallengeGame(data: Omit<SavedGame, "savedAt">): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(WEEKLY_CHALLENGE_SAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
+  } catch {
+    // storage unavailable/full — local persistence is a nicety, not required
+  }
+}
+
+export function clearWeeklyChallengeSave(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(WEEKLY_CHALLENGE_SAVE_KEY);
   } catch {
     // ignore
   }

@@ -22,6 +22,7 @@ import { DrawPile, DiscardPile } from "../components/Piles";
 import { OpponentStrip } from "../components/OpponentStrip";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
+import { SoundQuickToggle } from "../components/SoundQuickToggle";
 import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
 import { RoundSummary } from "../components/RoundSummary";
@@ -1106,6 +1107,7 @@ export default function GamePage() {
           >
             How to play
           </Link>
+          <SoundQuickToggle />
         </div>
       </div>
 

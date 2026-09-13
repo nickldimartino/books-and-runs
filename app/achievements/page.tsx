@@ -134,30 +134,6 @@ export default function AchievementsPage() {
     );
   }
 
-  if (!authLoading && configured && !user) {
-    return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in to see your achievements</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Achievements only track your own turns at the table — signing in is how the game knows
-          which seat is you.
-        </p>
-        <Link
-          href="/sign-in"
-          className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
-        >
-          Sign in
-        </Link>
-        <Link
-          href="/"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Back to Home
-        </Link>
-      </main>
-    );
-  }
-
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
       <Link
@@ -182,6 +158,24 @@ export default function AchievementsPage() {
         <LoadingSpinner />
       ) : (
         <>
+          {/* The catalog below (44 families × 5 tiers) isn't personal data —
+              showing it to a guest, all locked, previews what's worth
+              playing for instead of a dead-end "sign in to see this" wall.
+              Only the tracking is account-bound. */}
+          {configured && !user && (
+            <section className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
+              <p className="text-xs text-[var(--muted)]">
+                Sign in to start tracking your own progress toward these.
+              </p>
+              <Link
+                href="/sign-in"
+                className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+              >
+                Sign in
+              </Link>
+            </section>
+          )}
+
           <PageTip id="achievements" title="Tracked automatically">
             Progress updates as you play — solo, pass-and-play, and multiplayer games all count, no
             separate action needed. Check back after a few games to see what&apos;s close.

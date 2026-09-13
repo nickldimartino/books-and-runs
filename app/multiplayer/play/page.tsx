@@ -21,16 +21,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { usePlayerLevel } from "../../PlayerLevelContext";
 import { DraggableHand } from "../../components/DraggableHand";
 import { HandPreviewBar } from "../../components/HandPreviewBar";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
 import { PageTip } from "../../components/PageTip";
+import { SoundQuickToggle } from "../../components/SoundQuickToggle";
 import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { UnlockToast } from "../../components/UnlockToast";
 import { useMpGame } from "../../lib/useMpGame";
+import { AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
 import { applyHandOrder, compareByMode, SortMode } from "../../lib/handSort";
 import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
@@ -40,6 +43,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useFocusTrap } from "../../lib/useFocusTrap";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { layOffOptions } from "@/meld";
+import { handPenalty } from "@/scorer";
 import type { Card, Meld, Player } from "@/types";
 import type { RedactedView } from "@/mp/types";
 
@@ -77,6 +81,7 @@ export default function MultiplayerPlayPage() {
   const router = useRouter();
   const gameId = useGameId();
   const { loading: authLoading, user } = useAuth();
+  const { level } = usePlayerLevel();
   const g = useMpGame(user ? gameId : null);
   const { view: rawView } = g;
 
@@ -403,6 +408,21 @@ export default function MultiplayerPlayPage() {
     ? view.melds.filter((m) => layOffOptions(selectedCard, m).length > 0).map((m) => m.id)
     : [];
 
+  // Group table melds by owner — same as solo/pass-and-play (see
+  // game/page.tsx's meldsByOwner) — so a player with 2+ melds gets one name
+  // heading with all of their melds nested under it, instead of the name
+  // repeating on every individual meld.
+  const meldsByOwnerMap = new Map<string, Meld[]>();
+  for (const meld of view.melds) {
+    const list = meldsByOwnerMap.get(meld.ownerId) ?? [];
+    list.push(meld);
+    meldsByOwnerMap.set(meld.ownerId, list);
+  }
+  for (const list of meldsByOwnerMap.values()) {
+    list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
+  }
+  const meldsByOwner = [...meldsByOwnerMap.entries()];
+
   // Same purely-local sort/reorder as game/page.tsx's hand drawer — see
   // handOrder's own doc for why this never reaches the server.
   const orderedVisibleHand = applyHandOrder(g.visibleHand, handOrder);
@@ -440,14 +460,23 @@ export default function MultiplayerPlayPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 px-4 py-6">
       <div className="flex items-center justify-between">
         <BackLink />
-        <button
-          onClick={() => {
-            if (confirm("Leave this game? You forfeit it.")) g.resign();
-          }}
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Leave
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/how-to-play?from=mp&g=${gameId ?? ""}`}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            How to play
+          </Link>
+          <SoundQuickToggle />
+          <button
+            onClick={() => {
+              if (confirm("Leave this game? You forfeit it.")) g.resign();
+            }}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            Leave
+          </button>
+        </div>
       </div>
 
       <PageTip id="multiplayer-play" title="Playing async">
@@ -456,15 +485,35 @@ export default function MultiplayerPlayPage() {
         it&apos;s yours again.
       </PageTip>
 
-      <header className="rounded-xl bg-[var(--panel)] px-4 py-3">
-        <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-          Round {view.round} of {view.totalRounds}
-        </p>
-        <p className="text-lg font-bold leading-tight text-[var(--heading)]">{view.roundLabel}</p>
-        <ul className="mt-1 flex flex-wrap gap-x-3 text-xs text-[var(--muted)]">
+      <header className="panel-elevated flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3">
+        <div className="shrink-0 text-left">
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+            Round {view.round} of {view.totalRounds}
+          </p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">{view.roundLabel}</p>
+        </div>
+        <div className="min-w-0 px-1 text-center">
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Your hand</p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+            {handPenalty(view.yourHand)} pts
+          </p>
+        </div>
+        <ul className="shrink-0 space-y-1 text-right text-xs text-[var(--muted)]">
           {scores.map((p) => (
-            <li key={p.seat}>
-              {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
+            <li key={p.seat} className="flex items-center justify-end gap-1">
+              {p.userId === user?.id && level && (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
+                  Lv{level.level}
+                </span>
+              )}
+              {p.isAI && p.difficulty && (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--muted)]">
+                  Lv{AI_THEORETICAL_LEVEL[p.difficulty]}
+                </span>
+              )}
+              <span className="truncate">
+                {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
+              </span>
             </li>
           ))}
         </ul>
@@ -581,28 +630,34 @@ export default function MultiplayerPlayPage() {
         {view.melds.length === 0 ? (
           <p className="text-sm text-[var(--faint)]">Nothing melded yet this round.</p>
         ) : (
-          <div className="flex flex-wrap gap-3">
-            {view.melds.map((meld) => {
-              const armed = layoffArmed && layoffTargets.includes(meld.id);
-              return (
-                <button
-                  key={meld.id}
-                  data-meld-id={meld.id}
-                  onClick={() => onMeldClick(meld)}
-                  disabled={!armed}
-                  className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""}`}
-                >
-                  <span className="mb-1 block text-[10px] text-[var(--faint)]">
-                    {view.players[Number(meld.ownerId.replace("seat-", ""))]?.name ?? meld.ownerId}
-                  </span>
-                  <span className="flex items-end gap-1">
-                    {meld.cards.map((c) => (
-                      <PlayingCard key={c.id} card={c} small />
-                    ))}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-3">
+            {meldsByOwner.map(([ownerId, melds]) => (
+              <div key={ownerId}>
+                <p className="mb-1 text-[10px] text-[var(--faint)]">
+                  {view.players[Number(ownerId.replace("seat-", ""))]?.name ?? ownerId}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {melds.map((meld) => {
+                    const armed = layoffArmed && layoffTargets.includes(meld.id);
+                    return (
+                      <button
+                        key={meld.id}
+                        data-meld-id={meld.id}
+                        onClick={() => onMeldClick(meld)}
+                        disabled={!armed}
+                        className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""}`}
+                      >
+                        <span className="flex items-end gap-1">
+                          {meld.cards.map((c) => (
+                            <PlayingCard key={c.id} card={c} small />
+                          ))}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
@@ -640,8 +695,19 @@ export default function MultiplayerPlayPage() {
               </button>
             </div>
 
-            {acting && (
+            {/* Always rendered whenever it's your turn — matching solo's
+                buildMeldSection/discardSection (see game/page.tsx), which
+                stay mounted and only disable individual buttons rather than
+                disappearing outright. Previously this whole section was
+                gated on `acting` (isMyTurn && drawn), so opening "Manage
+                your hand" before drawing — entirely possible, since the
+                draw buttons live outside this drawer — showed no meld/
+                discard controls at all. */}
+            {isMyTurn && (
               <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+                {!drawn && (
+                  <p className="text-xs text-[var(--accent)]">Draw a card first to start your turn.</p>
+                )}
                 {/* staged summary */}
                 <div className="flex flex-wrap gap-2 text-xs">
                   {!alreadyMelded && (
@@ -703,7 +769,7 @@ export default function MultiplayerPlayPage() {
                   {!alreadyMelded && (
                     <button
                       onClick={() => g.stageGroup()}
-                      disabled={g.selectedIds.length === 0}
+                      disabled={!drawn || g.selectedIds.length === 0}
                       className="rounded-md bg-[var(--elevated)] px-3 py-1.5 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
                     >
                       Group selected
@@ -712,7 +778,7 @@ export default function MultiplayerPlayPage() {
                   {canLayOff && (
                     <button
                       onClick={armLayoffFromDrawer}
-                      disabled={!oneSelected || layoffTargets.length === 0}
+                      disabled={!drawn || !oneSelected || layoffTargets.length === 0}
                       className="rounded-md bg-[var(--elevated)] px-3 py-1.5 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
                     >
                       Lay off selected
@@ -721,7 +787,7 @@ export default function MultiplayerPlayPage() {
                   {!goingOut && (
                     <button
                       onClick={() => oneSelected && g.setDiscard(g.selectedIds[0])}
-                      disabled={!oneSelected}
+                      disabled={!drawn || !oneSelected}
                       className="rounded-md bg-[var(--elevated)] px-3 py-1.5 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
                     >
                       Set as discard
@@ -782,7 +848,7 @@ export default function MultiplayerPlayPage() {
                 />
               )}
               <p className="mt-1 text-center text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
-              {acting && (
+              {isMyTurn && drawn && (
                 <p className="mt-2 text-center text-xs text-[var(--faint)]">
                   Tap cards to select. {alreadyMelded ? "" : "“Group selected” lays a book or run toward the contract. "}
                   Pick one card and “Set as discard” to end your turn.

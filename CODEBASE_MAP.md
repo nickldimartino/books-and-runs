@@ -22,6 +22,7 @@ Books & Runs is a Contract Rummy card game with three ways to play:
 |---|---|---|
 | **Solo / pass-and-play** | 100% in the browser | No |
 | **Daily Deal** | In the browser, seeded shuffle by date | No (syncs streak if signed in) |
+| **Weekly Challenge** | In the browser, seeded shuffle by ISO week — full 7-round game vs. 3 Hard AIs | No (syncs streak if signed in) |
 | **Async multiplayer** | Authoritative state in Supabase, moves via an Edge Function | Yes |
 
 Three layers, from pure to plugged-in:
@@ -113,7 +114,7 @@ AuthProvider
 
 | Route | Purpose |
 |---|---|
-| `/` (`page.tsx`) | Home. New Game button + `<HomeGames>` "Your games" list (local save + active MP games + pending invites). Daily Deal entry. Level badge. |
+| `/` (`page.tsx`) | Home. New Game button + `<HomeGames>` "Your games" list (local save + active MP games + pending invites). Daily Deal + Weekly Challenge entries. Level badge. |
 | `/new-game` | Fork screen: Solo & pass-and-play / With friends / tutorial link. |
 | `/new-game/local` | The solo game setup form (players, difficulty, round mode). |
 | `/new-game/multiplayer` | MP game setup — pick friends + AI seats, choose rounds, send invites. |
@@ -173,6 +174,7 @@ AuthProvider
 | `tipsStore.ts` | `seenTips` — which first-visit page tips (`PageTip.tsx`) have been dismissed; "Show again" in Settings clears it. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
+| `weeklyChallengeStore.ts` | `weeklyChallenge` — Daily Deal's bigger, harder sibling: full 7-round game vs. 3 Hard AIs, seeded deal by ISO week (`isoWeekKey`). Own results + streak, own save slot (`localSave.ts`'s `WEEKLY_CHALLENGE_SAVE_KEY`). No per-challenge friend leaderboard yet. |
 | `favoriteGameConfig.ts` | "My usual" saved solo/pass-and-play setup (localStorage): load/save/describe + `contractsFor` / `playerConfigsFor` deal helpers. |
 | `scorecardStore.ts` | `scorecard` — the standalone scorekeeper's grid. |
 | `pushSubscriptions.ts` | Web Push opt-in (Settings page): register `public/sw.js`, subscribe/unsubscribe via `PushManager`, keep `push_subscriptions` (migration 0020) in step. The actual send is server-side — see `mp/index.ts`'s `sendPushForEvent`. |
@@ -299,6 +301,9 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0023–0034 | Cosmetics/profile evolution (avatar frames, titles, banners, badges, showcase, Creator badge, a much larger cosmetic catalog) — see `supabase/migrations/README.md` for the full list; not restated here. |
 | 0035 | Closes the solo-stats hole: drops the owner insert/update policies on `player_stats`/`achievement_counters` (only `solo-verify`'s and `mp`'s service-role writes reach them now — same zero-client-RLS idea as `mp_game_state`), and a trigger overwriting `leaderboard_entries`' `level`/`total_xp`/`games_played`/`games_won`/`average_score`/`worst_score` with server-recomputed values on every write. |
 | 0036 | Same fix for the Daily Deal streak: `daily_deal_completions` (service-role-only writes) + a trigger recomputing `leaderboard_entries`' `daily_deal_streak`/`daily_deal_best_streak`/`daily_deal_last_played` from it, closing the same "plain client-writable column" gap those three had. |
+| 0037 | `settings.haptics_on` — splits Haptics into its own synced toggle, previously bundled into `sound_on`. |
+| 0038 | Schedules the `daily-deal-reminder` Edge Function via `pg_cron`/`pg_net` — a once-daily push for any account whose Daily Deal streak is about to lapse. Needs manual one-time setup (a Vault secret) outside this file. |
+| 0039 | The Weekly Challenge, built server-verified from day one: `weekly_challenge_completions` (service-role-only writes, same shape as 0036) + a trigger computing `leaderboard_entries`' new `weekly_challenge_streak`/`weekly_challenge_best_streak`/`weekly_challenge_last_played` columns from it. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -335,8 +340,8 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
   `mp/`: solo-verify replays already-concrete logged moves, never re-runs
   AI strategy code).
 - Requires migration 0035 (and, for Daily Deal completions specifically,
-  0036) to have run for the holes to actually be closed — see
-  `supabase/functions/README.md`.
+  0036; Weekly Challenge, 0039) to have run for the holes to actually be
+  closed — see `supabase/functions/README.md`.
 
 ### Edge Function (`supabase/functions/contact/`)
 
@@ -479,8 +484,11 @@ was looking). No genuinely orphaned file exists anywhere in the repo.
 4. **`/multiplayer` + `/multiplayer/new` redirect stubs** are intentional
    legacy shims. Keep until old links have aged out.
 
-5. **`app/lib/dailyDealStore.ts`** exports `localDateKey` and `dateSeed`
-   used only internally — same "unnecessary export" category as #3.
+5. **`app/lib/dailyDealStore.ts`** exports `localDateKey` used only
+   internally — same "unnecessary export" category as #3. `dateSeed` is the
+   one exception: `weeklyChallengeStore.ts` reuses its djb2 hash directly
+   (it only ever hashes a string, so the "date" in its name is just where it
+   was first written, not a real constraint) rather than duplicating it.
 
 6. **The five `loadLocalX`/`saveLocalX`/`applyX` store triads**
    (`themeStore.ts`, `cardBackStore.ts`, `cardFaceStore.ts`,

@@ -6,36 +6,39 @@ import { accountSwitched } from "./lib/accountScope";
 import { resetLocalPreferencesToDefaults } from "./lib/accountSettingsSync";
 import { resetDailyDealLocal } from "./lib/dailyDealStore";
 import { clearFavoriteGameConfig } from "./lib/favoriteGameConfig";
-import { clearDailyDealSave, clearSavedGame } from "./lib/localSave";
+import { clearDailyDealSave, clearSavedGame, clearWeeklyChallengeSave } from "./lib/localSave";
 import { resetSeenTips } from "./lib/tipsStore";
+import { resetWeeklyChallengeLocal } from "./lib/weeklyChallengeStore";
 
 /**
  * Catches a genuinely different account signing in on a device that still
  * has another account's local data on it — a shared computer, or simply
  * the same person's own device after someone else (or a second account of
  * theirs) used it. Without this, every "local cache, synced lazily" store
- * in the app — solo save, Daily Deal streak (and its own separate
- * in-progress save, see localSave.ts's DAILY_DEAL_SAVE_KEY), favorite game
- * config, first-visit tips, and every Settings/Theme/Card back/Card face
+ * in the app — solo save, Daily Deal streak and Weekly Challenge streak
+ * (each with its own separate in-progress save, see localSave.ts's
+ * DAILY_DEAL_SAVE_KEY/WEEKLY_CHALLENGE_SAVE_KEY), favorite game config,
+ * first-visit tips, and every Settings/Theme/Card back/Card face
  * preference — would show the PREVIOUS account's leftover values to the
  * new one. Worse than just a display bug: several of those stores' own
  * sync functions treat "local has something, cloud doesn't yet" as "this
  * device is the source of truth, push it up" (see localSave.ts's
- * LocalSaveSync, dailyDealStore.ts, favoriteGameConfig.ts's own docs) — so
- * without a reset first, the new account's very first sync could actively
- * write the OLD account's leftover game/streak/config into the NEW
- * account's own cloud rows, not just display it locally.
+ * LocalSaveSync, dailyDealStore.ts, weeklyChallengeStore.ts,
+ * favoriteGameConfig.ts's own docs) — so without a reset first, the new
+ * account's very first sync could actively write the OLD account's
+ * leftover game/streak/config into the NEW account's own cloud rows, not
+ * just display it locally.
  *
- * Also clears favorite game config and the Daily Deal streak specifically
- * on sign-out (the opposite direction). Favorite game config: otherwise a
- * signed-in account's curated "usual" lineup stays sitting in local
- * storage, one tap away for whoever picks up the device next, signed in or
- * not. Daily Deal streak: unlike the solo save, which really is "whatever's
- * on this device" and stays put across a sign-out, the streak is meant to
- * belong to the account (see GameOverScreen.tsx's own Daily Deal effect,
- * which now only records a result at all when signed in) — showing the
- * previous account's streak to a signed-out guest is exactly the bug this
- * fixes.
+ * Also clears favorite game config and the Daily Deal/Weekly Challenge
+ * streaks specifically on sign-out (the opposite direction). Favorite game
+ * config: otherwise a signed-in account's curated "usual" lineup stays
+ * sitting in local storage, one tap away for whoever picks up the device
+ * next, signed in or not. The streaks: unlike the solo save, which really
+ * is "whatever's on this device" and stays put across a sign-out, a streak
+ * is meant to belong to the account (see GameOverScreen.tsx's own Daily
+ * Deal/Weekly Challenge effects, which now only record a result at all when
+ * signed in) — showing the previous account's streak to a signed-out guest
+ * is exactly the bug this fixes.
  *
  * Mounted once in the root layout, ahead of every other sync component
  * (AccountSettingsSync, LocalSaveSync, etc.) — React runs effects in tree
@@ -55,6 +58,8 @@ export function AccountSwitchGuard() {
       clearSavedGame();
       clearDailyDealSave();
       resetDailyDealLocal();
+      clearWeeklyChallengeSave();
+      resetWeeklyChallengeLocal();
       clearFavoriteGameConfig();
       resetSeenTips();
       resetLocalPreferencesToDefaults();
@@ -73,6 +78,7 @@ export function AccountSwitchGuard() {
       wasSignedIn.current = false;
       clearFavoriteGameConfig();
       resetDailyDealLocal();
+      resetWeeklyChallengeLocal();
     }
   }, [user]);
 

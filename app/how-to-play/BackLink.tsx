@@ -9,26 +9,33 @@ import { useGame } from "../GameContext";
 // instead of converting the whole page.
 //
 // Where Back goes is decided by where you *came from*, not just whether a
-// game happens to be loaded: the two entry points (the Home "More" list and
-// the in-game header link) each tag their href with `?from=`. Arriving from
-// Home returns to Home even mid-game; arriving from the game returns to the
-// game. GameContext's `state` is only a sanity guard — if you somehow reach
-// here with `?from=game` but no game is actually loaded, fall back to Home
-// rather than bouncing to a /game route that would just redirect anyway.
+// game happens to be loaded: the entry points (the Home "More" list, the
+// in-game header link, and the multiplayer header link) each tag their href
+// with `?from=`. Arriving from Home returns to Home even mid-game; arriving
+// from a solo game returns to that game; arriving from a multiplayer game
+// returns to that specific game (`?g=<id>`, carried along since MP has no
+// single "the game" the way solo does). GameContext's `state` is only a
+// sanity guard for the solo case — if you somehow reach here with
+// `?from=game` but no game is actually loaded, fall back to Home rather than
+// bouncing to a /game route that would just redirect anyway. There's no
+// equivalent cheap client-side check for a still-live MP game, so `?from=mp`
+// just trusts the `g` id it's handed.
 function useBackDestination(): { href: string; label: string } {
   const { state } = useGame();
   const [fromGame, setFromGame] = useState(false);
+  const [mpGameId, setMpGameId] = useState<string | null>(null);
 
   useEffect(() => {
     // Read at runtime rather than via useSearchParams(), which needs a
     // Suspense boundary under static export — this page has no other reason
     // to add one.
-    setFromGame(new URLSearchParams(window.location.search).get("from") === "game");
+    const params = new URLSearchParams(window.location.search);
+    setFromGame(params.get("from") === "game");
+    setMpGameId(params.get("from") === "mp" ? params.get("g") : null);
   }, []);
 
-  return fromGame && state
-    ? { href: "/game", label: "Game" }
-    : { href: "/", label: "Home" };
+  if (mpGameId) return { href: `/multiplayer/play?g=${mpGameId}`, label: "Game" };
+  return fromGame && state ? { href: "/game", label: "Game" } : { href: "/", label: "Home" };
 }
 
 export function HowToPlayTopBackLink() {

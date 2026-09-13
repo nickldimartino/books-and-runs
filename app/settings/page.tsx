@@ -503,12 +503,18 @@ export default function SettingsPage() {
             label="Sound effects"
             value={settings.soundEnabled}
             onChange={(v) => updateSettings({ soundEnabled: v })}
-            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins, plus the matching haptic taps on iOS."
+            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins."
           />
           <VolumeSlider
             value={settings.soundVolume}
             disabled={!settings.soundEnabled}
             onChange={(v) => updateSettings({ soundVolume: v })}
+          />
+          <BoolToggle
+            label="Haptics"
+            value={settings.hapticsEnabled}
+            onChange={(v) => updateSettings({ hapticsEnabled: v })}
+            description="Short vibration taps at the same moments — independent of sound, so you can have one without the other."
           />
           <BoolToggle
             label="Ambient music"
@@ -571,10 +577,10 @@ export default function SettingsPage() {
             <SettingsSection title="Notifications">
               <section className="flex flex-col gap-2">
                 <InfoDetails label="Turn notifications">
-                  A push notification when it&apos;s your move in a multiplayer game — the only way
-                  to know besides opening the app. Works once this page is added to your home
-                  screen or installed as an app; your browser controls the actual permission. Off
-                  by default.
+                  A push notification when it&apos;s your move in a multiplayer game, and — if your
+                  Daily Deal streak is about to lapse — a reminder to play before you lose it.
+                  Works once this page is added to your home screen or installed as an app; your
+                  browser controls the actual permission. Off by default.
                 </InfoDetails>
                 <details>
                   <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">

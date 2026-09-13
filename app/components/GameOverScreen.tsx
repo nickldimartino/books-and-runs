@@ -14,6 +14,7 @@
 // standings, the Confetti burst, and the share image. (Multiplayer's
 // equivalent recording path is server-side in mp/index.ts.)
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { allAchievements } from "@/achievements";
@@ -38,18 +39,31 @@ import {
   fetchDailyDealFriendScores,
   submitDailyDealScore,
 } from "../lib/dailyDealLeaderboard";
+import {
+  WeeklyChallengeState,
+  isoWeekKey,
+  mergeCloudWeeklyChallengeState,
+  recordWeeklyChallengeResult,
+} from "../lib/weeklyChallengeStore";
 import { joinNames } from "../lib/formatNames";
 import {
   displayNameFor,
   pullDailyDealStreak,
   syncDailyDealStreak,
+  pullWeeklyChallengeStreak,
+  syncWeeklyChallengeStreak,
   syncLeaderboardStats,
 } from "../lib/leaderboardStore";
 import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { renderShareCard } from "../lib/shareCard";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
-import { buildDailyDealVerifyPayload, buildSoloVerifyPayload, verifySoloGame } from "../lib/verifySoloGame";
+import {
+  buildDailyDealVerifyPayload,
+  buildSoloVerifyPayload,
+  buildWeeklyChallengeVerifyPayload,
+  verifySoloGame,
+} from "../lib/verifySoloGame";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
@@ -65,9 +79,18 @@ const SITE_URL = "https://books-and-runs.vercel.app";
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
-  const { quitToHome, roundHistory, getSeed, getMoveLog, clearSessionCounters, isTutorial, isDailyDeal, trackStats } =
-    useGame();
-  const { user } = useAuth();
+  const {
+    quitToHome,
+    roundHistory,
+    getSeed,
+    getMoveLog,
+    clearSessionCounters,
+    isTutorial,
+    isDailyDeal,
+    isWeeklyChallenge,
+    trackStats,
+  } = useGame();
+  const { configured, user } = useAuth();
   const { level, refresh: refreshLevel } = usePlayerLevel();
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   // Lowest score wins; everyone sharing that exact score is tied for it, so
@@ -96,11 +119,11 @@ export function GameOverScreen({ state }: { state: GameState }) {
     trackedRef.current = true;
     const humans = state.players.filter((p) => !p.isAI).length;
     track("game_completed", {
-      mode: isTutorial ? "tutorial" : isDailyDeal ? "daily" : humans > 1 ? "pass" : "solo",
+      mode: isTutorial ? "tutorial" : isDailyDeal ? "daily" : isWeeklyChallenge ? "weekly" : humans > 1 ? "pass" : "solo",
       rounds: state.selectedContracts.length,
       won: state.winnerId === YOU_PLAYER_ID,
     });
-  }, [state, isTutorial, isDailyDeal]);
+  }, [state, isTutorial, isDailyDeal, isWeeklyChallenge]);
   // Snapshot of achievement progress from immediately before this game's
   // writes land — captured once (a retry after a partial failure must reuse
   // it, not re-snapshot, or a partially-applied write would look like the
@@ -271,20 +294,23 @@ export function GameOverScreen({ state }: { state: GameState }) {
   }, [state, roundHistory, user, getSeed, getMoveLog, trackStats, clearSessionCounters, refreshLevel, gameId]);
 
   useEffect(() => {
-    // Tutorial games are scripted practice, and Daily Deal is its own
-    // separate local streak (see the effect below) — neither ever touches
-    // Supabase, so neither can inflate stats/achievements or count toward
-    // "games played." trackStats is New Game's own opt-out (offered for 2+
-    // pass-and-play human players) — same rule, skip the write outright.
-    // getSeed() == null means this one game predates seeding (see
-    // GameContext.tsx's gameSeedRef doc) and simply can't be verified —
-    // same treatment as trackStats off, not an error: nothing recorded for
-    // this one game, no retry queued, game-over screen still shows fine.
-    if (recordedRef.current || !supabase || !user || isTutorial || isDailyDeal || !trackStats) return;
+    // Tutorial games are scripted practice, and Daily Deal/Weekly Challenge
+    // are each their own separate local streak (see the effects below) —
+    // none of the three ever touches Supabase, so none can inflate stats/
+    // achievements or count toward "games played." trackStats is New
+    // Game's own opt-out (offered for 2+ pass-and-play human players) —
+    // same rule, skip the write outright. getSeed() == null means this one
+    // game predates seeding (see GameContext.tsx's gameSeedRef doc) and
+    // simply can't be verified — same treatment as trackStats off, not an
+    // error: nothing recorded for this one game, no retry queued, game-over
+    // screen still shows fine.
+    if (recordedRef.current || !supabase || !user || isTutorial || isDailyDeal || isWeeklyChallenge || !trackStats) {
+      return;
+    }
     if (getSeed() == null) return;
     recordedRef.current = true;
     attemptSave();
-  }, [user, isTutorial, isDailyDeal, trackStats, getSeed, attemptSave]);
+  }, [user, isTutorial, isDailyDeal, isWeeklyChallenge, trackStats, getSeed, attemptSave]);
 
   // Deliberately separate from the Supabase save above — see
   // dailyDealStore.ts's own doc for why the streak computation itself needs
@@ -363,6 +389,49 @@ export function GameOverScreen({ state }: { state: GameState }) {
       }
     })();
   }, [isDailyDeal, state, user, getSeed, getMoveLog]);
+
+  // Same shape as the Daily Deal effect above, weeks in place of days — see
+  // weeklyChallengeStore.ts's own doc. No per-challenge friend leaderboard
+  // (Daily Deal's dailyDealLeaderboard.ts/migration 0018 equivalent) yet —
+  // worth adding later, not required for the streak itself to work.
+  const weeklyChallengeRecordedRef = useRef(false);
+  const [weeklyChallengeState, setWeeklyChallengeState] = useState<WeeklyChallengeState | null>(null);
+  useEffect(() => {
+    if (!isWeeklyChallenge || weeklyChallengeRecordedRef.current) return;
+    weeklyChallengeRecordedRef.current = true;
+    if (!supabase || !user) return;
+    const client = supabase;
+    const uid = user.id;
+    (async () => {
+      try {
+        const cloud = await pullWeeklyChallengeStreak(client, uid);
+        if (cloud) mergeCloudWeeklyChallengeState(cloud);
+      } catch (err) {
+        console.error("Failed to pull Weekly Challenge streak from cloud:", err);
+      }
+      const result = recordWeeklyChallengeResult(state);
+      setWeeklyChallengeState(result);
+      if (result.lastPlayedWeek) {
+        syncWeeklyChallengeStreak(client, uid, result.streak, result.bestStreak, result.lastPlayedWeek).catch(
+          (err) => {
+            console.error("Failed to sync Weekly Challenge streak:", err);
+          }
+        );
+        // Records a verified completion toward the account's real streak
+        // (see solo-verify/index.ts and migration 0039) — same reasoning
+        // as the Daily Deal payload above: the sync call pushes this
+        // device's own locally-computed numbers, but a leaderboard_entries
+        // trigger silently overwrites them with whatever
+        // weekly_challenge_completions actually has on file.
+        const payload = buildWeeklyChallengeVerifyPayload(state, getSeed(), getMoveLog(), isoWeekKey());
+        if (payload) {
+          verifySoloGame(client, payload).catch((err) => {
+            console.error("Failed to record a verified Weekly Challenge completion:", err);
+          });
+        }
+      }
+    })();
+  }, [isWeeklyChallenge, state, user, getSeed, getMoveLog]);
 
   // Without live multiplayer, a shared result is this game's only social
   // loop — the sole way one player's game becomes someone else's reason to
@@ -481,7 +550,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
       <UnlockToast items={newlyUnlockedCosmetics} onDismiss={() => setNewlyUnlockedCosmetics([])} />
       <div className="text-center">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">
-          {isTutorial ? "Tutorial complete" : isDailyDeal ? "Daily Deal" : "Game over"}
+          {isTutorial
+            ? "Tutorial complete"
+            : isDailyDeal
+              ? "Daily Deal"
+              : isWeeklyChallenge
+                ? "Weekly Challenge"
+                : "Game over"}
         </p>
         {!isTutorial && wentOut && (
           <p className="mt-1 text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
@@ -578,6 +653,30 @@ export function GameOverScreen({ state }: { state: GameState }) {
         </div>
       )}
 
+      {/* Same treatment as Daily Deal's streak card above, weeks instead of
+          days. */}
+      {isWeeklyChallenge && weeklyChallengeState && (
+        <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-center">
+          <p className="text-3xl" aria-hidden="true">
+            🏆
+          </p>
+          <p className="mt-1 text-2xl font-bold text-[var(--heading)]">
+            {weeklyChallengeState.streak}-week streak
+          </p>
+          <p className="mt-1 text-xs text-[var(--faint)]">
+            Best streak: {weeklyChallengeState.bestStreak}. A new challenge lands next week.
+          </p>
+        </div>
+      )}
+
+      {isWeeklyChallenge && !user && (
+        <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-center">
+          <p className="text-sm text-[var(--muted)]">
+            Sign in to start a streak — it&apos;s tied to your account, so playing signed out won&apos;t count.
+          </p>
+        </div>
+      )}
+
       {/* Per-deal friend leaderboard (migration 0018). Only worth showing
           once it's actually a comparison — you plus at least one friend
           who's played today's same deal. */}
@@ -612,13 +711,35 @@ export function GameOverScreen({ state }: { state: GameState }) {
         </div>
       )}
 
-      {!isTutorial && !isDailyDeal && user && !trackStats && (
+      {/* Previously this game-over screen had zero conversion nudge for a
+          guest finishing a *regular* game — only Daily Deal (above) had
+          one. A completed game is the moment the value of an account is
+          most concrete (a level, achievement progress, a leaderboard spot,
+          this exact result compared against friends), so this is also
+          where the pitch is repeated, not just stated once on Home. */}
+      {!isTutorial && !isDailyDeal && !isWeeklyChallenge && configured && !user && (
+        <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4 text-center">
+          <p className="text-sm font-semibold text-[var(--heading)]">This game wasn&apos;t saved</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Sign in to keep your level and achievement progress, show up on the leaderboard, and
+            play multiplayer with friends.
+          </p>
+          <Link
+            href="/sign-in"
+            className="mt-3 inline-block rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+          >
+            Sign in
+          </Link>
+        </div>
+      )}
+
+      {!isTutorial && !isDailyDeal && !isWeeklyChallenge && user && !trackStats && (
         <p className="text-center text-xs text-[var(--faint)]">
           Stats weren&apos;t tracked for this game — you turned that off on the New Game screen.
         </p>
       )}
 
-      {!isTutorial && !isDailyDeal && user && trackStats && (
+      {!isTutorial && !isDailyDeal && !isWeeklyChallenge && user && trackStats && (
         <div className="text-center text-xs text-[var(--faint)]">
           <p>
             {saved === "saving" && "Saving to your stats…"}

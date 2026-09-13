@@ -46,6 +46,7 @@ function blankRow(): AccountSettingsRow {
     colorblind_mode: null,
     preferred_ai_difficulty_default: null,
     sound_on: true,
+    haptics_on: null,
     sound_volume: null,
     highlight_layoffs: null,
     show_whose_turn: null,
@@ -298,6 +299,7 @@ describe("pushAllDefaults", () => {
       card_face: "classic",
       colorblind_mode: "off",
       sound_on: true,
+      haptics_on: true,
     });
   });
 });

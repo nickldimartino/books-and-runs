@@ -89,6 +89,14 @@ checking the claimed date both hashes to the submitted seed and is close
 enough to the function's own clock to be believable. See migration 0036 —
 the trigger that actually makes this matter.
 
+**Weekly Challenge completions** — Daily Deal's bigger, harder sibling (the
+full 7-round game vs. 3 Hard AIs, seeded by the week instead of the day) —
+flow through the same function the same way (`isWeeklyChallenge: true`,
+`weeklyChallengeWeekKey` — see `verifySoloGame.ts`'s
+`buildWeeklyChallengeVerifyPayload`), verified into
+`weekly_challenge_completions` instead of `daily_deal_completions`. See
+migration 0039.
+
 ### Deploy
 
 ```bash
@@ -119,6 +127,46 @@ actually closed:
 // RLS-lockdown migration has run:
 await window.supabase.from("player_stats").update({ games_won: 999999 }).eq("user_id", (await window.supabase.auth.getUser()).data.user.id);
 ```
+
+## `daily-deal-reminder` — streak-at-risk push
+
+Push notifications previously only ever fired for multiplayer events
+(`your_turn`/`game_request`/`nudge`, see `mp`'s own `PUSH_COPY`) — this is
+the first one for anything else. A `pg_cron` job (see
+[`../migrations/0038_daily_deal_reminder_cron.sql`](../migrations/0038_daily_deal_reminder_cron.sql))
+calls this once a day; it finds every account whose Daily Deal streak is a
+real, server-verified one (migration 0036) but hasn't been extended to today
+yet, and sends each a push through the same `push_subscriptions` table and
+VAPID keys `mp` uses. Reuses the same **Turn notifications** on/off setting
+on the Settings page — there's no separate toggle for this.
+
+Not user-triggered, so it has no JWT to check — auth is a single shared
+secret (`CRON_SECRET`) instead of the per-user pattern every other function
+here uses.
+
+### Deploy
+
+```bash
+npx supabase secrets set CRON_SECRET=$(openssl rand -hex 32)
+npx supabase functions deploy daily-deal-reminder
+```
+
+No `_engine/` bundle step — this function never touches the game engine.
+Then run `supabase/migrations/0038_daily_deal_reminder_cron.sql`'s setup
+(Vault secret + `cron.schedule`) — see that file's own header; it needs the
+exact same `CRON_SECRET` value and can't be fully automated from here since
+it involves a secret that must never be committed to the repo.
+
+### Smoke test after deploy
+
+```bash
+export $(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | xargs)
+curl -X POST "$NEXT_PUBLIC_SUPABASE_URL/functions/v1/daily-deal-reminder" \
+  -H "Authorization: Bearer <your CRON_SECRET>"
+```
+
+Expect `{"sent":0}` (or a real count, if some account is genuinely at risk
+right now) rather than a 401.
 
 ## `contact` — bug reports & feature requests
 

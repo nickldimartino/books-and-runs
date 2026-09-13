@@ -1,16 +1,18 @@
 import { Capacitor } from "@capacitor/core";
 import type { ImpactStyle, NotificationType } from "@capacitor/haptics";
-import { soundEnabled } from "./sound";
+import { loadLocalSettings } from "./settingsStore";
+import { isTutorialAudioOverride } from "./sound";
 
 /**
  * Short haptic taps at the same moments sound.ts plays a sound effect —
  * see each call site for which one pairs with which. Native (Capacitor iOS)
  * uses the Haptics plugin; the plain web build falls back to
  * navigator.vibrate, which Android Chrome honours and iOS Safari silently
- * ignores. Gated on the same "Sound effects" setting sound.ts checks
- * (soundEnabled(), which already covers the tutorial override) rather than
- * a separate toggle — matches how iOS's own Settings groups Sound &
- * Haptics as one thing.
+ * ignores. Gated on its own "Haptics" setting, independent of "Sound
+ * effects" (see settingsStore.ts's hapticsEnabled) — unlike iOS's own
+ * Settings, which groups Sound & Haptics as one switch, this app lets
+ * either be off without the other. Still shares sound.ts's tutorial
+ * override, which shows off both regardless of either saved preference.
  *
  * `@capacitor/haptics`' actual plugin code is dynamically imported, only
  * inside the native branch — this file (and its call sites, game/page.tsx
@@ -23,7 +25,7 @@ import { soundEnabled } from "./sound";
  */
 
 function allowed(): boolean {
-  return soundEnabled();
+  return isTutorialAudioOverride() || loadLocalSettings().hapticsEnabled;
 }
 
 function webVibrate(pattern: number | number[]): void {

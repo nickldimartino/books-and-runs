@@ -30,6 +30,10 @@ export interface HouseSettings {
   // Local-only, like theme — not synced to the account (see settings/page.tsx's
   // handleSave, which never includes these in the Supabase upsert).
   soundEnabled: boolean;
+  // Independent of soundEnabled — some players want the tap/slide/chime
+  // sounds but not vibration (or vice versa), unlike iOS's own Settings,
+  // which groups Sound & Haptics as one switch. See haptics.ts's allowed().
+  hapticsEnabled: boolean;
   // Badge hand cards and the top discard-pile card that could currently be
   // laid off onto some meld on the table.
   highlightLayoffs: boolean;
@@ -61,6 +65,7 @@ export interface HouseSettings {
 export const DEFAULT_SETTINGS: HouseSettings = {
   preferredAiDifficulty: "medium",
   soundEnabled: true,
+  hapticsEnabled: true,
   highlightLayoffs: true,
   showWhoseTurn: true,
   soundVolume: 0.7,

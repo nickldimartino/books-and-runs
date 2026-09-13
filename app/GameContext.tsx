@@ -43,16 +43,20 @@ import {
 import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
 import { createDailyDealGame, dateSeed, localDateKey } from "./lib/dailyDealStore";
+import { createWeeklyChallengeGame, isoWeekKey, weekSeed } from "./lib/weeklyChallengeStore";
 import { track } from "./lib/analytics";
 import { applyHandOrder, compareByMode, SortMode } from "./lib/handSort";
 import { RoundHistoryEntry, YOU_PLAYER_ID } from "./lib/recordGameResult";
 import {
   clearDailyDealSave,
   clearSavedGame,
+  clearWeeklyChallengeSave,
   loadDailyDealSave,
   loadSavedGame,
+  loadWeeklyChallengeSave,
   saveDailyDealGame,
   saveGame,
+  saveWeeklyChallengeGame,
 } from "./lib/localSave";
 import { playCardSlide, playCardTap, playMeld, playUndo, setTutorialSoundOverride } from "./lib/sound";
 import { hapticLight, hapticMedium } from "./lib/haptics";
@@ -116,6 +120,12 @@ interface GameContextValue {
    * GameOverScreen. */
   startDailyDeal: () => void;
   isDailyDeal: boolean;
+  /** The full-game, week-seeded sibling of Daily Deal (see
+   * weeklyChallengeStore.ts) — same "own separate save slot, never the real
+   * saved-game slot" treatment, own local streak recorded separately from
+   * GameOverScreen. */
+  startWeeklyChallenge: () => void;
+  isWeeklyChallenge: boolean;
   /** Whether this game's results are being recorded to the signed-in
    * account — see startNewGame's own doc. Always true during a tutorial
    * (moot either way; isTutorial already gates every write on its own). */
@@ -125,6 +135,8 @@ interface GameContextValue {
    * persist() calls (see localSave.ts's DAILY_DEAL_SAVE_KEY) — a no-op if
    * there's nothing to resume. */
   continueDailyDeal: () => void;
+  /** Same, for an in-progress Weekly Challenge. */
+  continueWeeklyChallenge: () => void;
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
   confirmMeld: (groups: string[][], preferredRunStarts?: (number | undefined)[]) => boolean;
@@ -276,6 +288,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // deal can never clobber (or get resumed as) a real in-progress game.
   const [isDailyDeal, setIsDailyDeal] = useState(false);
   const isDailyDealRef = useRef(false);
+  // Same pattern again, for the Weekly Challenge (see startWeeklyChallenge
+  // below) — isDailyDeal and isWeeklyChallenge are never both true at once
+  // (each start*/continue* function clears the other), so persist() can
+  // check them in sequence unambiguously.
+  const [isWeeklyChallenge, setIsWeeklyChallenge] = useState(false);
+  const isWeeklyChallengeRef = useRef(false);
   // Whether this game's results should be recorded to the signed-in account
   // at all — set once at New Game (see its own "Track stats for this game"
   // toggle, offered for 3+ pass-and-play human players) and carried through
@@ -386,6 +404,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return;
       }
       saveDailyDealGame({
+        state: s,
+        hasDrawn: hasDrawnRef.current,
+        roundStartScores: roundStartScoresRef.current,
+        roundHistory: roundHistoryRef.current,
+        sessionCounters: sessionCountersRef.current,
+        trackStats: trackStatsRef.current,
+        seed: gameSeedRef.current,
+        moveLog: moveLogRef.current,
+      });
+      return;
+    }
+    // Same treatment, the Weekly Challenge's own slot.
+    if (isWeeklyChallengeRef.current) {
+      if (!s || s.gameOver) {
+        clearWeeklyChallengeSave();
+        return;
+      }
+      saveWeeklyChallengeGame({
         state: s,
         hasDrawn: hasDrawnRef.current,
         roundStartScores: roundStartScoresRef.current,
@@ -582,6 +618,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setIsTutorial(false);
       isDailyDealRef.current = false;
       setIsDailyDeal(false);
+      isWeeklyChallengeRef.current = false;
+      setIsWeeklyChallenge(false);
       setTutorialSoundOverride(false);
       clearUndoState();
       setTrackStatsBoth(trackStats);
@@ -636,6 +674,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsTutorial(true);
     isDailyDealRef.current = false;
     setIsDailyDeal(false);
+    isWeeklyChallengeRef.current = false;
+    setIsWeeklyChallenge(false);
     setTutorialSoundOverride(true);
     clearUndoState();
     // Irrelevant either way — isTutorialRef alone already fully gates every
@@ -668,6 +708,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsTutorial(false);
     isDailyDealRef.current = true;
     setIsDailyDeal(true);
+    isWeeklyChallengeRef.current = false;
+    setIsWeeklyChallenge(false);
     setTutorialSoundOverride(false);
     clearUndoState();
     // Irrelevant either way — isDailyDealRef alone already fully gates every
@@ -712,6 +754,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsTutorial(false);
     isDailyDealRef.current = true;
     setIsDailyDeal(true);
+    isWeeklyChallengeRef.current = false;
+    setIsWeeklyChallenge(false);
     setTutorialSoundOverride(false);
     clearUndoState();
     setTrackStatsBoth(saved.trackStats ?? true);
@@ -741,17 +785,102 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
+  const startWeeklyChallenge = useCallback(() => {
+    isTutorialRef.current = false;
+    setIsTutorial(false);
+    isDailyDealRef.current = false;
+    setIsDailyDeal(false);
+    isWeeklyChallengeRef.current = true;
+    setIsWeeklyChallenge(true);
+    setTutorialSoundOverride(false);
+    clearUndoState();
+    setTrackStatsBoth(true);
+    // Same week-derived seed createWeeklyChallengeGame deals from
+    // internally — recomputed here for the same reason startDailyDeal
+    // recomputes its own date seed (cheap, pure, the only other place that
+    // needs it).
+    gameSeedRef.current = weekSeed(isoWeekKey());
+    moveLogRef.current = [];
+    const state = createWeeklyChallengeGame();
+    stateRef.current = state;
+    setSnapshot({ ...state });
+    setHasDrawnBoth(false);
+    setAwaitingReveal(!state.players[state.currentPlayerIndex].isAI);
+    setAiThinking(false);
+    setRoundStartScoresBoth(Object.fromEntries(state.players.map((p) => [p.id, p.cumulativeScore])));
+    recordedRoundsRef.current = new Set();
+    roundHistoryRef.current = [];
+    setRoundHistory([]);
+    setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
+    sessionCountersRef.current = {};
+    track("game_started", {
+      mode: "weekly",
+      players: state.players.length,
+      ais: state.players.length - 1,
+      difficulty: "hard",
+      rounds: state.selectedContracts.length,
+    });
+    // Same reasoning as startDailyDeal — a fresh deal is a deliberate
+    // restart, so any stale save shouldn't linger under it.
+    persist();
+    if (state.players[state.currentPlayerIndex].isAI) {
+      runAiLoop();
+    }
+  }, [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
+
+  const continueWeeklyChallenge = useCallback(() => {
+    const saved = loadWeeklyChallengeSave();
+    if (!saved) return;
+    isTutorialRef.current = false;
+    setIsTutorial(false);
+    isDailyDealRef.current = false;
+    setIsDailyDeal(false);
+    isWeeklyChallengeRef.current = true;
+    setIsWeeklyChallenge(true);
+    setTutorialSoundOverride(false);
+    clearUndoState();
+    setTrackStatsBoth(saved.trackStats ?? true);
+    // A resumed Weekly Challenge is still this week's challenge (its save
+    // is same-week only — see loadWeeklyChallengeSave), so re-derive the
+    // same week seed rather than trust a persisted one.
+    gameSeedRef.current = weekSeed(isoWeekKey());
+    moveLogRef.current = saved.moveLog ?? [];
+    stateRef.current = saved.state;
+    setSnapshot({ ...saved.state });
+    setHasDrawnBoth(saved.hasDrawn);
+    setAiThinking(false);
+    setRoundStartScoresBoth(saved.roundStartScores);
+    roundHistoryRef.current = saved.roundHistory;
+    setRoundHistory(saved.roundHistory);
+    recordedRoundsRef.current = new Set(saved.roundHistory.map((r) => r.round));
+    setLastDrawnCardId(null);
+    setBuyOffer(null);
+    buyQueueRef.current = [];
+    sessionCountersRef.current = saved.sessionCounters ?? {};
+
+    const current = saved.state.players[saved.state.currentPlayerIndex];
+    if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
+      runAiLoop();
+    } else {
+      setAwaitingReveal(true);
+    }
+  }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
+
   const continueGame = useCallback(() => {
     const saved = loadSavedGame();
     if (!saved) return;
     // Defensive: a saved game is always real (persist() never runs during a
-    // tutorial or a Daily Deal), so make sure no stale flag survives from an
-    // earlier tutorial/Daily Deal that got abandoned without going through
+    // tutorial, Daily Deal, or Weekly Challenge), so make sure no stale flag
+    // survives from one of those getting abandoned without going through
     // quitToHome/startNewGame.
     isTutorialRef.current = false;
     setIsTutorial(false);
     isDailyDealRef.current = false;
     setIsDailyDeal(false);
+    isWeeklyChallengeRef.current = false;
+    setIsWeeklyChallenge(false);
     setTutorialSoundOverride(false);
     clearUndoState();
     setTrackStatsBoth(saved.trackStats ?? true);
@@ -1110,6 +1239,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     clearUndoState();
     const wasTutorial = isTutorialRef.current;
     const wasDailyDeal = isDailyDealRef.current;
+    const wasWeeklyChallenge = isWeeklyChallengeRef.current;
     stateRef.current = null;
     setSnapshot(null);
     setHasDrawnBoth(false);
@@ -1121,12 +1251,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsTutorial(false);
     isDailyDealRef.current = false;
     setIsDailyDeal(false);
+    isWeeklyChallengeRef.current = false;
+    setIsWeeklyChallenge(false);
     setTutorialSoundOverride(false);
     setTrackStatsBoth(true);
-    if (wasTutorial || wasDailyDeal) {
-      // Neither the tutorial nor a Daily Deal ever touched the real
-      // saved-game slot (persist() no-ops during both) — restore whatever
-      // was really there instead of wiping it.
+    if (wasTutorial || wasDailyDeal || wasWeeklyChallenge) {
+      // None of the tutorial, a Daily Deal, or a Weekly Challenge ever
+      // touched the real saved-game slot (persist() no-ops during all
+      // three) — restore whatever was really there instead of wiping it.
       setHasSavedGame(loadSavedGame() !== null);
     } else {
       clearSavedGame();
@@ -1151,9 +1283,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isTutorial,
       startDailyDeal,
       isDailyDeal,
+      startWeeklyChallenge,
+      isWeeklyChallenge,
       trackStats,
       continueGame,
       continueDailyDeal,
+      continueWeeklyChallenge,
       revealHand,
       draw,
       confirmMeld,
@@ -1188,9 +1323,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isTutorial,
       startDailyDeal,
       isDailyDeal,
+      startWeeklyChallenge,
+      isWeeklyChallenge,
       trackStats,
       continueGame,
       continueDailyDeal,
+      continueWeeklyChallenge,
       revealHand,
       draw,
       confirmMeld,

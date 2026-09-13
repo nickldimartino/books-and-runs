@@ -738,6 +738,51 @@ export async function pullDailyDealStreak(
   };
 }
 
+/** Same shape/reasoning as syncDailyDealStreak — the Weekly Challenge's own
+ * cloud record (migration 0039), weeks in place of days. */
+export async function syncWeeklyChallengeStreak(
+  supabase: SupabaseClient,
+  userId: string,
+  streak: number,
+  bestStreak: number,
+  lastPlayedWeek: string
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    weekly_challenge_streak: streak,
+    weekly_challenge_best_streak: bestStreak,
+    weekly_challenge_last_played: lastPlayedWeek,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+interface WeeklyChallengeCloudRow {
+  weekly_challenge_streak: number;
+  weekly_challenge_best_streak: number;
+  weekly_challenge_last_played: string | null;
+}
+
+/** Same shape/reasoning as pullDailyDealStreak — the Weekly Challenge's own
+ * cloud record. */
+export async function pullWeeklyChallengeStreak(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ streak: number; bestStreak: number; lastPlayedWeek: string | null } | null> {
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("weekly_challenge_streak, weekly_challenge_best_streak, weekly_challenge_last_played")
+    .eq("user_id", userId)
+    .maybeSingle<WeeklyChallengeCloudRow>();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    streak: data.weekly_challenge_streak,
+    bestStreak: data.weekly_challenge_best_streak,
+    lastPlayedWeek: data.weekly_challenge_last_played,
+  };
+}
+
 /** Max stored report reason length (migration 0025). */
 export const MAX_REPORT_REASON_LENGTH = 280;
 

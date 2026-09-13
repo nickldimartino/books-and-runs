@@ -181,6 +181,49 @@ async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: 
   return json({ ok: true, dailyDeal: true });
 }
 
+// ── Weekly Challenge streak integrity ───────────────────────────────────
+// Same pattern as Daily Deal's, one week key instead of one date key — see
+// migration 0039 for the (user_id, week) ground-truth table and trigger.
+
+const WEEK_KEY_RE = /^\d{4}-W\d{2}$/;
+
+/** Same generous-tolerance reasoning as isBelievableDailyDealDate, widened
+ * to a week either side — "local ISO week" is just as much a client-side
+ * concept as "local calendar day," and a week is a bigger window to have
+ * clock/timezone skew land near an edge of. */
+function isBelievableWeeklyChallengeWeek(weekKey: string): boolean {
+  if (!WEEK_KEY_RE.test(weekKey)) return false;
+  const [y, w] = weekKey.split("-W").map(Number);
+  if (w < 1 || w > 53) return false;
+  // Approximate the week's start (good enough for a tolerance check, not
+  // used for anything exact) from the ISO year/week number.
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  const jan4IsoDay = jan4.getUTCDay() === 0 ? 7 : jan4.getUTCDay();
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - (jan4IsoDay - 1));
+  const claimedWeekStart = new Date(week1Monday);
+  claimedWeekStart.setUTCDate(week1Monday.getUTCDate() + (w - 1) * 7);
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  return Math.abs(Date.now() - claimedWeekStart.getTime()) <= 2 * ONE_WEEK_MS;
+}
+
+async function handleWeeklyChallengeCompletion(uid: string, seed: number, rawWeekKey: unknown): Promise<Response> {
+  const weekKey = typeof rawWeekKey === "string" ? rawWeekKey : "";
+  if (!isBelievableWeeklyChallengeWeek(weekKey)) {
+    return json({ ok: false, error: "invalid Weekly Challenge week" }, 400);
+  }
+  // Same djb2 hash as dailyDealStore.ts's dateSeed / weeklyChallengeStore.ts's
+  // weekSeed — it only ever hashes a string, so the one copy above covers both.
+  if (dateSeed(weekKey) !== seed) {
+    return json({ ok: false, error: "seed doesn't match the claimed Weekly Challenge week" }, 400);
+  }
+  const { error } = await admin
+    .from("weekly_challenge_completions")
+    .upsert({ user_id: uid, week: weekKey }, { onConflict: "user_id,week", ignoreDuplicates: true });
+  if (error) return json({ ok: false, error: "couldn't record the completion" }, 500);
+  return json({ ok: true, weeklyChallenge: true });
+}
+
 // ── stats derivation + writes ───────────────────────────────────────────
 
 interface PlayerStatsRow {
@@ -241,6 +284,9 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
   // dailyDealStore.ts's own doc) — a verified completion here only ever
   // records attendance toward the streak, nothing else.
   if (body.isDailyDeal === true) return await handleDailyDealCompletion(uid, seed, body.dailyDealDateKey);
+  if (body.isWeeklyChallenge === true) {
+    return await handleWeeklyChallengeCompletion(uid, seed, body.weeklyChallengeWeekKey);
+  }
 
   if (!trackStats) return json({ ok: true, tracked: false });
 

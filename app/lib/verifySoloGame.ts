@@ -43,6 +43,11 @@ export interface SoloVerifyPayload {
    * for `dailyDealDateKey` toward the account's streak. */
   isDailyDeal?: boolean;
   dailyDealDateKey?: string;
+  /** Same idea as isDailyDeal/dailyDealDateKey, for a Weekly Challenge
+   * completion — see buildWeeklyChallengeVerifyPayload. Mutually exclusive
+   * with isDailyDeal (a game is never both). */
+  isWeeklyChallenge?: boolean;
+  weeklyChallengeWeekKey?: string;
 }
 
 export interface SoloVerifyResult {
@@ -51,6 +56,7 @@ export interface SoloVerifyResult {
   won?: boolean;
   tied?: boolean;
   dailyDeal?: boolean;
+  weeklyChallenge?: boolean;
 }
 
 export async function verifySoloGame(supabase: SupabaseClient, payload: SoloVerifyPayload): Promise<SoloVerifyResult> {
@@ -118,4 +124,20 @@ export function buildDailyDealVerifyPayload(
   const base = buildSoloVerifyPayload(state, seed, moveLog, true, []);
   if (!base) return null;
   return { ...base, isDailyDeal: true, dailyDealDateKey };
+}
+
+/** Same shape, for a Weekly Challenge completion — `weeklyChallengeWeekKey`
+ * is the local ISO week (weeklyChallengeStore.ts's isoWeekKey) the
+ * challenge was seeded from, so the server can check it hashes to the same
+ * seed and is close enough to its own clock to be believable (see
+ * solo-verify/index.ts). Same `null` conditions as buildSoloVerifyPayload. */
+export function buildWeeklyChallengeVerifyPayload(
+  state: GameState,
+  seed: number | null,
+  moveLog: MoveLogEntry[],
+  weeklyChallengeWeekKey: string
+): SoloVerifyPayload | null {
+  const base = buildSoloVerifyPayload(state, seed, moveLog, true, []);
+  if (!base) return null;
+  return { ...base, isWeeklyChallenge: true, weeklyChallengeWeekKey };
 }

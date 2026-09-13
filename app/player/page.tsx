@@ -1287,7 +1287,22 @@ export default function PlayerProfilePage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-4">
+                      {entry.avatar_photo_path && entry.avatar_kind === "photo" ? (
+                        <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={96} />
+                      ) : (
+                        <div
+                          className="grid shrink-0 place-items-center rounded-full border border-dashed border-[var(--border)] text-[10px] text-[var(--faint)]"
+                          style={{ width: 96, height: 96 }}
+                        >
+                          No photo yet
+                        </div>
+                      )}
+                      <p className="text-xs text-[var(--faint)]">
+                        JPEG, PNG, or WebP. It&apos;s cropped to a square automatically.
+                      </p>
+                    </div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -1308,7 +1323,6 @@ export default function PlayerProfilePage() {
                       </button>
                     )}
                     {photoError && <p className="text-xs text-[var(--danger)]">{photoError}</p>}
-                    <p className="text-xs text-[var(--faint)]">JPEG, PNG, or WebP. It&apos;s cropped to a square automatically.</p>
                   </div>
                 )}
               </div>

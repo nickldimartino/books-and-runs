@@ -40,6 +40,7 @@ export interface AccountSettingsRow {
   colorblind_mode: string | null;
   preferred_ai_difficulty_default: string | null;
   sound_on: boolean;
+  haptics_on: boolean | null;
   sound_volume: number | null;
   highlight_layoffs: boolean | null;
   show_whose_turn: boolean | null;
@@ -60,6 +61,7 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
   colorblind_mode: null,
   preferred_ai_difficulty_default: null,
   sound_on: true,
+  haptics_on: null,
   sound_volume: null,
   highlight_layoffs: null,
   show_whose_turn: null,
@@ -69,7 +71,7 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
 };
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, sound_volume, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
+  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -119,6 +121,7 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
   saveLocalSettings({
     preferredAiDifficulty: (row.preferred_ai_difficulty_default as Difficulty | null) ?? current.preferredAiDifficulty,
     soundEnabled: row.sound_on,
+    hapticsEnabled: row.haptics_on ?? current.hapticsEnabled,
     highlightLayoffs: row.highlight_layoffs ?? current.highlightLayoffs,
     showWhoseTurn: row.show_whose_turn ?? current.showWhoseTurn,
     soundVolume: row.sound_volume ?? current.soundVolume,
@@ -211,6 +214,7 @@ type SettingsPatch = Partial<{
   colorblind_mode: string;
   preferred_ai_difficulty_default: string;
   sound_on: boolean;
+  haptics_on: boolean;
   sound_volume: number;
   highlight_layoffs: boolean;
   show_whose_turn: boolean;
@@ -249,6 +253,7 @@ export function pushHouseSettingsPatch(supabase: SupabaseClient | null, userId: 
   const immediate: SettingsPatch = {};
   if (patch.preferredAiDifficulty !== undefined) immediate.preferred_ai_difficulty_default = patch.preferredAiDifficulty;
   if (patch.soundEnabled !== undefined) immediate.sound_on = patch.soundEnabled;
+  if (patch.hapticsEnabled !== undefined) immediate.haptics_on = patch.hapticsEnabled;
   if (patch.highlightLayoffs !== undefined) immediate.highlight_layoffs = patch.highlightLayoffs;
   if (patch.showWhoseTurn !== undefined) immediate.show_whose_turn = patch.showWhoseTurn;
   if (patch.ambientMusicEnabled !== undefined) immediate.ambient_music_enabled = patch.ambientMusicEnabled;
@@ -325,6 +330,7 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     colorblind_mode: DEFAULT_COLORBLIND_MODE,
     preferred_ai_difficulty_default: DEFAULT_SETTINGS.preferredAiDifficulty,
     sound_on: DEFAULT_SETTINGS.soundEnabled,
+    haptics_on: DEFAULT_SETTINGS.hapticsEnabled,
     sound_volume: DEFAULT_SETTINGS.soundVolume,
     highlight_layoffs: DEFAULT_SETTINGS.highlightLayoffs,
     show_whose_turn: DEFAULT_SETTINGS.showWhoseTurn,

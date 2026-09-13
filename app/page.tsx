@@ -18,8 +18,14 @@ import { IntroSplash } from "./components/IntroSplash";
 import { PageTip } from "./components/PageTip";
 import { useGame } from "./GameContext";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
-import { playerProfileHref, pullDailyDealStreak } from "./lib/leaderboardStore";
-import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame } from "./lib/localSave";
+import {
+  WeeklyChallengeState,
+  loadWeeklyChallengeState,
+  mergeCloudWeeklyChallengeState,
+  playedThisWeek,
+} from "./lib/weeklyChallengeStore";
+import { playerProfileHref, pullDailyDealStreak, pullWeeklyChallengeStreak } from "./lib/leaderboardStore";
+import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame, loadWeeklyChallengeSave } from "./lib/localSave";
 import { loadSupabase, supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
 import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
@@ -181,13 +187,11 @@ function MoreSection({
   configured,
   user,
   friendRequests,
-  totalNotifications,
   onSignOut,
 }: {
   configured: boolean;
   user: boolean;
   friendRequests: number;
-  totalNotifications: number;
   onSignOut: () => void;
 }) {
   return (
@@ -195,9 +199,15 @@ function MoreSection({
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2">
           More
-          {totalNotifications > 0 && (
+          {/* Only friendRequests, not useNotifications' full total — a
+              pending MP invite or your-turn game also feeds that total, but
+              neither has anywhere to go *inside* this dropdown (they're
+              already surfaced on Home itself, in <HomeGames> above this
+              section). Badging "More" with the full total showed a count
+              here that led nowhere once actually opened. */}
+          {friendRequests > 0 && (
             <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
-              {totalNotifications}
+              {friendRequests}
             </span>
           )}
         </span>
@@ -228,6 +238,32 @@ function MoreSection({
         )}
       </div>
     </details>
+  );
+}
+
+/**
+ * A guest-only prompt, surfaced right on Home instead of one tap deep inside
+ * "More" — signing in was previously only reachable via the collapsed More
+ * menu, which read as an afterthought buried among Settings/History/
+ * Scorekeeper rather than the one thing that unlocks stats, achievements,
+ * the leaderboard, and playing with friends at all.
+ */
+function SignInPrompt() {
+  return (
+    <Link
+      href="/sign-in"
+      className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left transition hover:bg-[var(--accent)]/15"
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-[var(--heading)]">Sign in to save your progress</span>
+        <span className="mt-0.5 block text-xs text-[var(--muted)]">
+          Track your level and achievements, climb the leaderboard, and play multiplayer with friends.
+        </span>
+      </span>
+      <span className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)]">
+        Sign in
+      </span>
+    </Link>
   );
 }
 
@@ -423,7 +459,15 @@ function HomeGames({
 export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
-  const { hasSavedGame, continueGame, startDailyDeal, continueDailyDeal, state } = useGame();
+  const {
+    hasSavedGame,
+    continueGame,
+    startDailyDeal,
+    continueDailyDeal,
+    startWeeklyChallenge,
+    continueWeeklyChallenge,
+    state,
+  } = useGame();
   const { level, progress, loading: levelLoading } = usePlayerLevel();
   const notifications = useNotifications();
   // Covers both Continue and Daily Deal — either one commits GameContext's
@@ -442,6 +486,12 @@ export default function HomePage() {
   const [hasDailyDealSave, setHasDailyDealSave] = useState(false);
   useEffect(() => {
     setHasDailyDealSave(loadDailyDealSave() !== null);
+  }, []);
+  const [weeklyChallenge, setWeeklyChallenge] = useState<WeeklyChallengeState | null>(null);
+  // Same reasoning as hasDailyDealSave above, the Weekly Challenge's own slot.
+  const [hasWeeklyChallengeSave, setHasWeeklyChallengeSave] = useState(false);
+  useEffect(() => {
+    setHasWeeklyChallengeSave(loadWeeklyChallengeSave() !== null);
   }, []);
 
   // Re-reads on every hasSavedGame flip (a game starting, finishing, or
@@ -478,6 +528,20 @@ export default function HomePage() {
         if (cloud) setDailyDeal(mergeCloudDailyDealState(cloud));
       })
       .catch((err) => console.error("Failed to pull Daily Deal streak from cloud:", err));
+  }, [user]);
+
+  // Same shape as the Daily Deal effect above, for the Weekly Challenge.
+  useEffect(() => {
+    if (!supabase || !user) {
+      setWeeklyChallenge(null);
+      return;
+    }
+    setWeeklyChallenge(loadWeeklyChallengeState());
+    pullWeeklyChallengeStreak(supabase, user.id)
+      .then((cloud) => {
+        if (cloud) setWeeklyChallenge(mergeCloudWeeklyChallengeState(cloud));
+      })
+      .catch((err) => console.error("Failed to pull Weekly Challenge streak from cloud:", err));
   }, [user]);
 
   // continueGame()/startDailyDeal() set GameContext's state synchronously,
@@ -521,7 +585,14 @@ export default function HomePage() {
     setNavigatingToGame(true);
   }
 
+  function handleWeeklyChallenge() {
+    if (hasWeeklyChallengeSave) continueWeeklyChallenge();
+    else startWeeklyChallenge();
+    setNavigatingToGame(true);
+  }
+
   const dailyDealPlayedToday = dailyDeal ? playedToday(dailyDeal) : false;
+  const weeklyChallengePlayedThisWeek = weeklyChallenge ? playedThisWeek(weeklyChallenge) : false;
   const closest = configured && user ? closestAchievement(progress) : null;
 
   return (
@@ -568,6 +639,8 @@ export default function HomePage() {
           userId={user?.id}
         />
 
+        {configured && !user && <SignInPrompt />}
+
         {/* Tinted rather than plain-bordered like the rest of the page — a
             visual notch below New Game's solid fill, but a clear notch above
             the plain nav buttons below it, matching how much attention a
@@ -598,6 +671,37 @@ export default function HomePage() {
           </button>
         </section>
 
+        {/* Daily Deal's bigger, harder sibling — a rotating event beyond the
+            quick daily round, same tinted-but-not-primary visual weight. */}
+        <section className="flex flex-col gap-3 rounded-xl border border-[var(--highlight)]/40 bg-[var(--highlight)]/10 px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-[var(--heading)]">Weekly Challenge</h2>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              {!configured || !user
+                ? "Sign in to keep a streak — anyone can still play this week's challenge."
+                : weeklyChallenge && weeklyChallenge.streak > 0
+                ? `🏆 ${weeklyChallenge.streak}-week streak`
+                : "The full 7-round game vs. 3 Hard AIs — the same table for everyone this week."}
+            </p>
+            {weeklyChallengePlayedThisWeek && (
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">Streak protected for this week.</p>
+            )}
+            {!weeklyChallengePlayedThisWeek && hasWeeklyChallengeSave && (
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">You left this one in progress.</p>
+            )}
+          </div>
+          <button
+            onClick={handleWeeklyChallenge}
+            className="shrink-0 rounded-lg bg-[var(--highlight)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:opacity-90"
+          >
+            {weeklyChallengePlayedThisWeek
+              ? "Play again"
+              : hasWeeklyChallengeSave
+                ? "Continue this week's challenge"
+                : "Play this week's challenge"}
+          </button>
+        </section>
+
         <section className="grid grid-cols-3 gap-2">
           <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label="Profile">
             <StatsIcon />
@@ -620,7 +724,6 @@ export default function HomePage() {
           configured={configured}
           user={!!user}
           friendRequests={notifications.friendRequests}
-          totalNotifications={notifications.total}
           onSignOut={signOut}
         />
       </div>

@@ -223,6 +223,51 @@ describe("GameContext — persistence", () => {
     expect(api.state!.discardPile.some((c) => c.id === discarded)).toBe(true);
   });
 
+  it("a Weekly Challenge game never writes the real saved-game slot", () => {
+    mount();
+    act(() => api.startWeeklyChallenge());
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+
+    expect(api.isWeeklyChallenge).toBe(true);
+    expect(api.isDailyDeal).toBe(false);
+    expect(localStorage.getItem("booksAndRuns:savedGame")).toBeNull();
+    // The full standard game, not a single round like Daily Deal.
+    expect(api.state!.selectedContracts.length).toBe(CONTRACTS.length);
+  });
+
+  it("a Weekly Challenge exited early can be resumed with continueWeeklyChallenge()", () => {
+    mount();
+    act(() => api.startWeeklyChallenge());
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    const discarded = api.state!.players[0].hand[0].id;
+    act(() => api.discard(discarded));
+
+    const saved = localStorage.getItem("booksAndRuns:weeklyChallengeSave");
+    expect(saved).toBeTruthy();
+    act(() => api.quitToHome());
+
+    // Fresh provider — nothing in memory — then resume.
+    mount();
+    expect(api.state).toBeNull();
+    act(() => api.continueWeeklyChallenge());
+
+    expect(api.state).not.toBeNull();
+    expect(api.isWeeklyChallenge).toBe(true);
+    expect(api.state!.discardPile.some((c) => c.id === discarded)).toBe(true);
+  });
+
+  it("starting a Weekly Challenge doesn't leave Daily Deal's flag set, and vice versa", () => {
+    mount();
+    act(() => api.startDailyDeal());
+    expect(api.isDailyDeal).toBe(true);
+    act(() => api.startWeeklyChallenge());
+    expect(api.isDailyDeal).toBe(false);
+    expect(api.isWeeklyChallenge).toBe(true);
+  });
+
   it("quitToHome() drops the game and clears the saved slot", () => {
     mount();
     act(() => api.startNewGame(TWO_PLAYERS, SHORT_GAME_CONTRACTS));
