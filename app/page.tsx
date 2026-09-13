@@ -317,6 +317,22 @@ function HomeGames({
   const yourTurn = mine.filter((g) => g.status === "active" && g.turn_user_id === userId);
   const waiting = mine.filter((g) => !(g.status === "active" && g.turn_user_id === userId));
 
+  // Multiplayer games load async (notifications.loading) while hasSavedGame
+  // is known synchronously — without this, a signed-in visitor with no
+  // local save but real multiplayer games would see nothing here at all for
+  // a beat, then have the whole section (header included) pop in once the
+  // fetch resolves, shoving Daily Deal/Profile/Achievements/Leaderboard
+  // down the page. A same-shaped skeleton row holds that space instead, so
+  // the real rows fade into a layout that's already settled.
+  if (notifications.loading && !hasSavedGame) {
+    return (
+      <section className="flex flex-col gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your games</h2>
+        <div className="h-[60px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--panel)]" />
+      </section>
+    );
+  }
+
   if (!hasSavedGame && invites.length === 0 && mine.length === 0) return null;
 
   async function respond(gameId: string, accept: boolean) {
@@ -408,7 +424,7 @@ export default function HomePage() {
   const router = useRouter();
   const { configured, user, signOut } = useAuth();
   const { hasSavedGame, continueGame, startDailyDeal, continueDailyDeal, state } = useGame();
-  const { level, progress } = usePlayerLevel();
+  const { level, progress, loading: levelLoading } = usePlayerLevel();
   const notifications = useNotifications();
   // Covers both Continue and Daily Deal — either one commits GameContext's
   // state synchronously, but navigating to /game immediately afterward isn't
@@ -594,7 +610,11 @@ export default function HomePage() {
           </ProgressTile>
         </section>
 
-        {closest && <ClosestAchievementCard achievement={closest} />}
+        {configured && user && levelLoading ? (
+          <div className="h-[72px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--panel)]" />
+        ) : (
+          closest && <ClosestAchievementCard achievement={closest} />
+        )}
 
         <MoreSection
           configured={configured}
