@@ -26,7 +26,10 @@ import {
   respondToFriendRequest,
   sendFriendRequest,
 } from "../lib/friendsStore";
-import { AvatarInfo, displayNameFor, fetchAvatarsFor, playerProfileHref } from "../lib/leaderboardStore";
+import { AvatarInfo, displayNameFor, fetchAvatarsFor, LeaderboardEntry, playerProfileHref } from "../lib/leaderboardStore";
+import { usePlayerLevel } from "../PlayerLevelContext";
+import { buildProfileShareCardInput } from "../lib/profileShareCard";
+import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
 
 function nameOf(userId: string, displayName: string | null): string {
@@ -52,6 +55,7 @@ type InviteLink =
 
 export default function FriendsPage() {
   const { configured, loading: authLoading, user } = useAuth();
+  const { level } = usePlayerLevel();
 
   const [code, setCode] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -59,6 +63,11 @@ export default function FriendsPage() {
   const [avatars, setAvatars] = useState<Record<string, AvatarInfo>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // Own profile data, fetched only for the "share to add me" card below —
+  // null for a brand-new account with no leaderboard_entries row yet
+  // (never finished a tracked game or Daily Deal), in which case shareCode
+  // falls back to a plain-text share instead of a picture.
+  const [myEntry, setMyEntry] = useState<LeaderboardEntry | null>(null);
 
   const [codeInput, setCodeInput] = useState("");
   const [addState, setAddState] = useState<AddState>({ kind: "idle" });
@@ -95,6 +104,23 @@ export default function FriendsPage() {
     } finally {
       setLoading(false);
     }
+  }, [user]);
+
+  // Own profile data for the share card — separate from load() above since
+  // a failure here shouldn't block the friend list/requests from showing,
+  // it only means shareCode() falls back to a plain-text share.
+  useEffect(() => {
+    if (!supabase || !user) return;
+    const client = supabase;
+    (async () => {
+      try {
+        const { data, error } = await client.from("leaderboard_entries").select("*").eq("user_id", user.id).maybeSingle();
+        if (error) throw error;
+        setMyEntry(data as LeaderboardEntry | null);
+      } catch (err) {
+        console.error("Failed to load your own profile card data:", err);
+      }
+    })();
   }, [user]);
 
   // Pick up ?add=CODE from a shared friend link (once, on mount).
@@ -229,7 +255,10 @@ export default function FriendsPage() {
     );
   }
 
-  async function shareCode() {
+/** Plain-text fallback for shareCode() below — used when there's no
+ * profile card data to draw yet (a brand-new account, or the fetch above
+ * failed), so "add me" still works even with nothing to show off. */
+  async function shareCodeAsText() {
     if (!code) return;
     const url = `${window.location.origin}/friends?add=${code}`;
     // One combined string in `text`, and deliberately NO separate `url`
@@ -253,6 +282,51 @@ export default function FriendsPage() {
       setShareState("copied");
       setTimeout(() => setShareState("idle"), 2000);
     } catch {
+      setShareState("error");
+      setTimeout(() => setShareState("idle"), 2000);
+    }
+  }
+
+  /** The same profile card shareProfileCard() (player/page.tsx) produces —
+   * one polished "add me" surface instead of two differently-shaped ones
+   * (see this file's own doc for why that used to feel disconnected: a
+   * shared profile link already opens a page with a real "Add friend"
+   * button on it, so the two mechanisms were always doing the same job,
+   * just looking nothing alike). The raw code + "Copy code" button below
+   * stay as-is — the one way to add someone with zero network involved,
+   * e.g. reading it aloud across a table, which a picture can't replace. */
+  async function shareCode() {
+    if (!code || !user) return;
+    if (!myEntry) {
+      await shareCodeAsText();
+      return;
+    }
+    const url = `${window.location.origin}/friends?add=${code}`;
+    // Same "why the link is never part of navigator.share itself" reasoning
+    // as shareProfileCard's own doc — written to the clipboard before any
+    // await, while the click's user-activation is still fresh.
+    try {
+      await navigator.clipboard?.writeText(`Add me as a friend on Books & Runs 🃏  My code: ${code}\n${url}`);
+    } catch {
+      // Best-effort — the picture share below still goes ahead either way.
+    }
+    try {
+      const blob = await renderProfileShareCard(
+        buildProfileShareCardInput(supabase, myEntry, level?.level ?? myEntry.level ?? 0, `Add me: ${code}`)
+      );
+      if (!blob) throw new Error("Canvas unavailable");
+      const file = new File([blob], "books-and-runs-add-me.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        const objUrl = URL.createObjectURL(blob);
+        window.open(objUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(objUrl), 30_000);
+      }
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 4000);
+    } catch (err) {
+      console.error("Failed to share profile card:", err);
       setShareState("error");
       setTimeout(() => setShareState("idle"), 2000);
     }
@@ -372,6 +446,11 @@ export default function FriendsPage() {
           {/* Your code */}
           <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your friend code</h2>
+            <p className="mt-1 text-xs text-[var(--faint)]">
+              {myEntry
+                ? "Share shares your profile card — the same picture you'd share from your profile. Whoever opens it can add you in one tap; the raw code below still works if you're just reading it out loud."
+                : "The raw code works for reading it out loud or typing it in manually; Share sends a link that adds you in one tap."}
+            </p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="select-all font-mono text-2xl font-bold tracking-widest text-[var(--heading)]">
                 {code}
@@ -393,6 +472,9 @@ export default function FriendsPage() {
                 {copied ? "Copied" : "Copy code"}
               </button>
             </div>
+            {myEntry && shareState === "copied" && (
+              <p className="mt-2 text-xs text-[var(--muted)]">Link copied — paste it along with the picture.</p>
+            )}
           </section>
 
           {/* Add a friend */}

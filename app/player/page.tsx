@@ -93,11 +93,17 @@ import {
 } from "../lib/leaderboardStore";
 import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
 import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
+import {
+  buildProfileShareCardInput,
+  formatWinRate,
+  resolveShowcaseItem,
+  ShowcaseItem,
+  TOTAL_ACHIEVEMENTS,
+} from "../lib/profileShareCard";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
 
-const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
 const TIER_LABEL: Record<AchievementTier, string> = {
   beginner: "Beginner",
   easy: "Easy",
@@ -119,29 +125,10 @@ const TIER_RING_COLOR: Record<AchievementTier, string> = {
   expert: "#38BDF8",
 };
 
-const FAMILY_BY_ID = new Map(ACHIEVEMENT_FAMILIES.map((f) => [f.id, f]));
-
-interface ShowcaseItem {
-  key: string;
-  familyId: string;
-  familyTitle: string;
-  category: AchievementCategory;
-  tier: AchievementTier;
-}
-
-/** Parses a "familyId:tier" showcase entry against the live family list —
- * returns null for anything that no longer resolves (a family renamed or
- * removed since the account pinned it), so a stale entry just quietly
- * doesn't render instead of crashing the page. */
-function resolveShowcaseItem(key: string): ShowcaseItem | null {
-  const sep = key.lastIndexOf(":");
-  if (sep === -1) return null;
-  const familyId = key.slice(0, sep);
-  const tier = key.slice(sep + 1) as AchievementTier;
-  const family = FAMILY_BY_ID.get(familyId);
-  if (!family || !ACHIEVEMENT_TIERS.includes(tier)) return null;
-  return { key, familyId, familyTitle: family.title, category: family.category, tier };
-}
+// ShowcaseItem/resolveShowcaseItem/formatWinRate/TOTAL_ACHIEVEMENTS now live
+// in profileShareCard.ts — shared with friends/page.tsx's own "share to add
+// me" card, which needs the identical transform from a leaderboard_entries
+// row. See that file's own doc.
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -226,11 +213,6 @@ function CreatorBadgeIcon() {
       <path d="M12 2.5l2.7 6.28 6.8.57-5.18 4.5 1.57 6.65L12 16.9l-5.89 3.6 1.57-6.65-5.18-4.5 6.8-.57Z" />
     </svg>
   );
-}
-
-function formatWinRate(gamesPlayed: number, gamesWon: number): string {
-  if (gamesPlayed < WIN_RATE_MIN_GAMES) return "—";
-  return `${Math.round((100 * gamesWon) / gamesPlayed)}%`;
 }
 
 function formatMpWinRate(mpPlayed: number, mpWon: number): string {
@@ -742,35 +724,7 @@ export default function PlayerProfilePage() {
       // Best-effort — the picture share below still goes ahead either way.
     }
     try {
-      const frameOption = findAvatarFrameOption(entry.avatar_frame);
-      const titleOption = findTitleOption(entry.title);
-      const blob = await renderProfileShareCard({
-        displayName: displayNameFor(entry),
-        isCreator: entry.is_creator,
-        titleLabel: titleOption?.label ?? null,
-        level: displayLevel,
-        avatarKind: entry.avatar_kind,
-        avatarEmoji: entry.avatar_emoji,
-        avatarColor: entry.avatar_color,
-        avatarPhotoUrl:
-          entry.avatar_kind === "photo" && entry.avatar_photo_path && supabase
-            ? avatarPhotoUrlFor(supabase, entry.avatar_photo_path, entry.updated_at)
-            : null,
-        frameColor: frameOption
-          ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id])
-          : null,
-        badge: entry.badge,
-        banner: entry.banner,
-        stats: [
-          { label: "Games", value: String(entry.games_played) },
-          { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
-          { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
-        ],
-        trophies: entry.showcase
-          .map(resolveShowcaseItem)
-          .filter((i): i is ShowcaseItem => !!i)
-          .map((i) => ({ category: i.category, tier: i.tier, familyTitle: i.familyTitle })),
-      });
+      const blob = await renderProfileShareCard(buildProfileShareCardInput(supabase, entry, displayLevel));
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
       // Deliberately not navigator.share({files, url}) in one call — tried

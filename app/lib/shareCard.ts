@@ -159,6 +159,11 @@ export interface ProfileShareCardInput {
    * page's ShowcaseItem, just without the `key`/`familyId` this renderer
    * doesn't need. */
   trophies: ShareTrophy[];
+  /** Overrides the default site-domain footer baked into the image (see
+   * SITE_URL above) — friends/page.tsx's own share passes the actual
+   * add-friend code/link here instead, since unlike a profile's UUID a
+   * friend code is short enough to be worth a human retyping by hand. */
+  footerText?: string;
 }
 
 const TIER_RING_COLOR: Record<AchievementTier, string> = {
@@ -544,7 +549,7 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
   ctx.textAlign = "center";
   ctx.fillStyle = faint;
   ctx.font = `500 11px ${sans}`;
-  ctx.fillText(SITE_URL, W / 2, H - footerH / 2);
+  ctx.fillText(input.footerText ?? SITE_URL, W / 2, H - footerH / 2, W - 48);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }

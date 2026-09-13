@@ -94,6 +94,17 @@ function LeaderboardIcon() {
   );
 }
 
+function FriendsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5" aria-hidden="true">
+      <circle cx="7" cy="6.5" r="2.75" fill="currentColor" />
+      <path d="M2 17a5 5 0 0 1 10 0" fill="currentColor" />
+      <circle cx="14.5" cy="7.5" r="2.15" fill="currentColor" opacity="0.55" />
+      <path d="M12.2 12a4.3 4.3 0 0 1 5.8 4" fill="currentColor" opacity="0.55" />
+    </svg>
+  );
+}
+
 function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
@@ -102,12 +113,29 @@ function ChevronIcon({ className }: { className?: string }) {
   );
 }
 
-function ProgressTile({ href, label, children }: { href: string; label: string; children: ReactNode }) {
+function ProgressTile({
+  href,
+  label,
+  badge,
+  children,
+}: {
+  href: string;
+  label: string;
+  /** A small corner count, e.g. pending friend requests — omitted (not 0)
+   * when there's nothing to flag. */
+  badge?: number;
+  children: ReactNode;
+}) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-3.5 text-center transition hover:bg-[var(--panel-soft)]"
+      className="relative flex flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-3.5 text-center transition hover:bg-[var(--panel-soft)]"
     >
+      {!!badge && (
+        <span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
+          {badge}
+        </span>
+      )}
       <span className="text-[var(--accent)]">{children}</span>
       <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
     </Link>
@@ -174,70 +202,58 @@ function MoreLink({ href, onClick, children }: { href?: string; onClick?: () => 
   );
 }
 
+/** A small uppercase divider label inside MoreSection, grouping related
+ * links so a now-8-item dropdown still scans in one glance instead of
+ * reading as one undifferentiated list. */
+function MoreGroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="px-3 pb-0.5 pt-2.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)] first:pt-0.5">
+      {children}
+    </p>
+  );
+}
+
 /**
- * Everything that isn't a primary action or part of "your progress" —
- * How to Play, Settings, Account, Scorekeeper, History, and signing in/out.
+ * Everything that isn't a primary action, "your progress" (Profile/
+ * Achievements/Leaderboard/Friends, now their own tile row), or a play
+ * mode — Clubs/Tournaments, Settings/Account/sign-out, and reference pages.
  * Collapsed by default (native <details>, same disclosure pattern Settings
- * already uses for its own InfoDetails) rather than six more full-width
- * bordered buttons stacked under Stats/Achievements/Leaderboard: at that
- * visual weight, New Game — the one thing every visit to this page is
- * actually *for* — read as no more important than "Sign out."
+ * already uses for its own InfoDetails) rather than more full-width
+ * bordered buttons stacked under the tile row: at that visual weight,
+ * New Game — the one thing every visit to this page is actually *for* —
+ * read as no more important than "Sign out." Grouped into labeled
+ * sub-sections (not just a flat list) now that it's carrying enough links
+ * on its own to need that.
  */
-function MoreSection({
-  configured,
-  user,
-  friendRequests,
-  onSignOut,
-}: {
-  configured: boolean;
-  user: boolean;
-  friendRequests: number;
-  onSignOut: () => void;
-}) {
+function MoreSection({ configured, user, onSignOut }: { configured: boolean; user: boolean; onSignOut: () => void }) {
   return (
     <details className="group rounded-lg border border-[var(--border)]">
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center gap-2">
-          More
-          {/* Only friendRequests, not useNotifications' full total — a
-              pending MP invite or your-turn game also feeds that total, but
-              neither has anywhere to go *inside* this dropdown (they're
-              already surfaced on Home itself, in <HomeGames> above this
-              section). Badging "More" with the full total showed a count
-              here that led nowhere once actually opened. */}
-          {friendRequests > 0 && (
-            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
-              {friendRequests}
-            </span>
-          )}
-        </span>
+        More
         <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
       </summary>
       <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
-        <MoreLink href="/how-to-play?from=home">How to Play</MoreLink>
         {configured && user && (
-          <MoreLink href="/friends">
-            <span className="flex items-center gap-2">
-              Friends
-              {friendRequests > 0 && (
-                <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
-                  {friendRequests}
-                </span>
-              )}
-            </span>
-          </MoreLink>
+          <>
+            <MoreGroupLabel>Play with friends</MoreGroupLabel>
+            <MoreLink href="/clubs">Clubs</MoreLink>
+            <MoreLink href="/tournaments">Tournaments</MoreLink>
+          </>
         )}
-        {configured && user && <MoreLink href="/clubs">Clubs</MoreLink>}
-        {configured && user && <MoreLink href="/tournaments">Tournaments</MoreLink>}
+
+        <MoreGroupLabel>Account</MoreGroupLabel>
         <MoreLink href="/settings">Settings</MoreLink>
         {configured && user && <MoreLink href="/account">Account</MoreLink>}
-        <MoreLink href="/scorecard">Scorekeeper</MoreLink>
-        <MoreLink href="/history">History of Books &amp; Runs</MoreLink>
         {configured && user ? (
           <MoreLink onClick={onSignOut}>Sign out</MoreLink>
         ) : (
           <MoreLink href="/sign-in">Sign in</MoreLink>
         )}
+
+        <MoreGroupLabel>Reference</MoreGroupLabel>
+        <MoreLink href="/how-to-play?from=home">How to Play</MoreLink>
+        <MoreLink href="/scorecard">Scorekeeper</MoreLink>
+        <MoreLink href="/history">History of Books &amp; Runs</MoreLink>
       </div>
     </details>
   );
@@ -712,7 +728,7 @@ export default function HomePage() {
           </button>
         </section>
 
-        <section className="grid grid-cols-3 gap-2">
+        <section className="grid grid-cols-4 gap-2">
           <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label="Profile">
             <StatsIcon />
           </ProgressTile>
@@ -722,6 +738,9 @@ export default function HomePage() {
           <ProgressTile href="/leaderboard" label="Leaderboard">
             <LeaderboardIcon />
           </ProgressTile>
+          <ProgressTile href="/friends" label="Friends" badge={notifications.friendRequests}>
+            <FriendsIcon />
+          </ProgressTile>
         </section>
 
         {configured && user && levelLoading ? (
@@ -730,12 +749,7 @@ export default function HomePage() {
           closest && <ClosestAchievementCard achievement={closest} />
         )}
 
-        <MoreSection
-          configured={configured}
-          user={!!user}
-          friendRequests={notifications.friendRequests}
-          onSignOut={signOut}
-        />
+        <MoreSection configured={configured} user={!!user} onSignOut={signOut} />
       </div>
 
       <p className="text-xs text-[var(--faint)]">
