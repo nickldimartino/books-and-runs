@@ -557,16 +557,45 @@ function stopVoice(c: AudioContext, voice: Voice, fadeOutMs: number): void {
   }, fadeOutMs + 100);
 }
 
+// How long until `voice` finishes its current chord and every chord after
+// it, up through (and including) the song's own last chord — each song's
+// chords array is written to land its last entry on a dominant/subdominant
+// "resolves the wrap" chord (see e.g. SONG_ARPEGGIO's own comments) right
+// before it cycles back to chord 0. That's the one moment in a song's own
+// phrase a crossfade actually lands cleanly: the outgoing voice is on its
+// designed resolution and about to loop, and the incoming voice opens on
+// its own tonic — not two arbitrary, unrelated chords colliding mid-bar.
+function msUntilPhraseEnd(voice: Voice, song: Song): number {
+  let ms = 0;
+  let step = voice.chordStep;
+  let arpStep = voice.arpStep;
+  for (;;) {
+    const chord = song.chords[step];
+    const notesLeft = chord.arp.length * chord.repeats - arpStep;
+    ms += notesLeft * song.noteMs;
+    if (step === song.chords.length - 1) return ms;
+    step += 1;
+    arpStep = 0;
+  }
+}
+
 function scheduleRotation(c: AudioContext): void {
   rotationTimer = window.setTimeout(() => {
     if (!running) return;
     const current = voices[voices.length - 1];
-    const nextIndex = nextRotationIndex(current.songIndex);
-    const incoming = startVoice(c, nextIndex, CROSSFADE_MS, masterGain!);
-    voices.push(incoming);
-    stopVoice(c, current, CROSSFADE_MS);
-    voices = voices.filter((v) => v === incoming || !v.stopped);
-    scheduleRotation(c);
+    const song = AMBIENT_SONGS[current.songIndex];
+    // SONG_DURATION_MS is a floor, not the exact trigger — the crossfade
+    // itself waits for the current voice to actually reach that resolving
+    // moment, however close it already is once the floor elapses.
+    rotationTimer = window.setTimeout(() => {
+      if (!running) return;
+      const nextIndex = nextRotationIndex(current.songIndex);
+      const incoming = startVoice(c, nextIndex, CROSSFADE_MS, masterGain!);
+      voices.push(incoming);
+      stopVoice(c, current, CROSSFADE_MS);
+      voices = voices.filter((v) => v === incoming || !v.stopped);
+      scheduleRotation(c);
+    }, msUntilPhraseEnd(current, song));
   }, SONG_DURATION_MS);
 }
 

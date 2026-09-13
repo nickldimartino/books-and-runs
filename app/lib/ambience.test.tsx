@@ -85,6 +85,17 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
+// A rotation no longer fires at a flat SONG_DURATION_MS — it waits for the
+// currently-playing voice to also finish its own chord phrase first (see
+// ambience.ts's msUntilPhraseEnd), so a song beginning its rotation timer
+// can take up to roughly its own full chord progression longer to actually
+// crossfade. Computed from the song data itself (not hand-copied) so this
+// stays correct if the chords/noteMs ever change.
+function worstCasePhraseMs(song: { noteMs: number; chords: { arp: number[]; repeats: number }[] }): number {
+  const totalNotes = song.chords.reduce((sum, c) => sum + c.arp.length * c.repeats, 0);
+  return totalNotes * song.noteMs;
+}
+
 describe("ambience", () => {
   it("reports supported/unsupported based on AudioContext availability", async () => {
     const { isAmbienceSupported } = await import("./ambience");
@@ -166,18 +177,46 @@ describe("ambience", () => {
     }
   });
 
+  it("waits for the current song's own chord phrase to resolve before crossfading, not a flat 3 minutes", async () => {
+    // The bug this guards: crossfading at a flat SONG_DURATION_MS landed at
+    // an arbitrary point in whichever chord happened to be playing, so the
+    // outgoing and incoming songs could clash on unrelated chords rather
+    // than the outgoing one resolving into the incoming one's tonic.
+    vi.useFakeTimers();
+    try {
+      const { startAmbience, AMBIENT_SONGS } = await import("./ambience");
+      startAmbience();
+      const firstBass = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
+
+      // Right at the 3-minute floor — song 0 (Arpeggio) is nowhere near the
+      // end of its own 8-chord phrase this soon, so nothing should have
+      // crossfaded yet.
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000);
+      expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
+      expect(firstBass.stop).not.toHaveBeenCalled();
+
+      // Now past the floor *and* the longest this phrase could still take.
+      await vi.advanceTimersByTimeAsync(worstCasePhraseMs(AMBIENT_SONGS[0]) + 1000);
+      expect(lastContext!.createBiquadFilter.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(firstBass.stop).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rotates into a new song every 3 minutes, crossfading rather than cutting the old one off", async () => {
     vi.useFakeTimers();
     try {
-      const { startAmbience } = await import("./ambience");
+      const { startAmbience, AMBIENT_SONGS } = await import("./ambience");
       startAmbience();
       const firstBass = lastContext!.createOscillator.mock.results[0].value as FakeOscillator;
       expect(lastContext!.createBiquadFilter).toHaveBeenCalledTimes(1);
       expect(firstBass.stop).not.toHaveBeenCalled();
 
-      // Comfortably past the module's own 3-minute rotation interval, plus
-      // the crossfade length that follows it.
-      await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 5000);
+      // Comfortably past the module's own 3-minute rotation floor, plus the
+      // longest this song's own chord phrase could still take to resolve
+      // (see msUntilPhraseEnd), plus the crossfade length that follows it.
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + worstCasePhraseMs(AMBIENT_SONGS[0]) + 5000);
 
       // A second voice — its own filter/delay graph — has started for the
       // incoming song, and the outgoing one's bass root has actually been
@@ -196,8 +235,17 @@ describe("ambience", () => {
       startAmbience();
 
       // 11 rotation firings: song index 0,1,2,...,9 (forward through all
-      // ten), then turns around into 8, 7 — never straight back to 0.
-      await vi.advanceTimersByTimeAsync(11 * (3 * 60 * 1000 + 5000));
+      // ten), then turns around into 8, 7 — never straight back to 0. Each
+      // waits up to its own *currently playing* song's full phrase length
+      // past the 3-minute floor (see msUntilPhraseEnd) — summing each
+      // step's own worst case (rather than the longest song's for every
+      // step) so this lands just past exactly 11 rotations, not 12.
+      const fromSongIndexPerRotation = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8];
+      const totalWaitMs = fromSongIndexPerRotation.reduce(
+        (sum, i) => sum + 3 * 60 * 1000 + worstCasePhraseMs(AMBIENT_SONGS[i]),
+        2000
+      );
+      await vi.advanceTimersByTimeAsync(totalWaitMs);
 
       // Every song's bass root sits at or below 220Hz (A3); every arpeggio
       // note and sparkle sits at C4 (261.63Hz) or higher — so filtering by

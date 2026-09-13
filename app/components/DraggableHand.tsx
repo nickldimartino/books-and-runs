@@ -311,6 +311,15 @@ export function DraggableHand({
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>, card: Card) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    // Without this, a mouse-driven press-and-drag also triggers the
+    // browser's own default "start a text/content selection" gesture —
+    // touchAction: "none" below only ever covered touch scrolling, never
+    // mouse selection — so the hold-then-drag motion painted a selection
+    // highlight across the hand (and whatever's nearby) underneath the
+    // custom drag. preventDefault on pointerdown is what actually
+    // suppresses that; it doesn't affect click/pointerup or keyboard
+    // activation (onKeyDown), which go through separate event paths.
+    e.preventDefault();
     // Defensively close out any previous drag whose listeners never got a
     // chance to detach (the exact failure mode this file used to have).
     dragRef.current?.detach();
@@ -360,7 +369,7 @@ export function DraggableHand({
   }
 
   return (
-    <div ref={handRootRef} className="flex flex-wrap justify-center gap-2">
+    <div ref={handRootRef} className="flex flex-wrap justify-center gap-2 select-none">
       {orderedCards.map((card) => {
         const isDragging = dragId === card.id;
         return (
