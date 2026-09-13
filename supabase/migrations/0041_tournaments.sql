@@ -244,8 +244,8 @@ begin
     select
       p.user_id,
       l.display_name,
-      count(*)::int filter (where g.status = 'complete'),
-      count(*)::int filter (where p.outcome = 'won'),
+      (count(*) filter (where g.status = 'complete'))::int,
+      (count(*) filter (where p.outcome = 'won'))::int,
       coalesce(sum(p.final_score) filter (where g.status = 'complete'), 0)
     from public.tournament_games tg
     join public.mp_games g on g.id = tg.game_id
@@ -253,7 +253,12 @@ begin
     left join public.leaderboard_entries l on l.user_id = p.user_id
     where tg.tournament_id = p_tournament_id
     group by p.user_id, l.display_name
-    order by total_score asc;
+    -- Ordinal position, not the bare name `total_score` — that name is
+    -- also this function's own RETURNS TABLE output parameter, and
+    -- PL/pgSQL's variable-vs-column resolution for a bare identifier in
+    -- embedded SQL is ambiguous (at best an error, at worst a silent
+    -- no-op sort) when the two collide.
+    order by 5 asc;
 end;
 $$;
 
