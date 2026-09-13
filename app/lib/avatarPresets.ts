@@ -7,7 +7,8 @@
 // emoji_ok / leaderboard_avatar_color_ok CHECKs, migration 0026's premium
 // additions) — keep those in sync with these if any list ever changes.
 
-import { AchievementCategory, AchievementProgressState, allAchievements } from "@/achievements";
+import { AchievementProgressState } from "@/achievements";
+import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked } from "./cosmeticUnlocks";
 
 export const EMOJI_OPTIONS: readonly string[] = [
   "😀", "😎", "🤠", "🥸", "🤓", "🧐", "😺", "🐯", "🦁", "🐵", "🐼", "🐨",
@@ -16,9 +17,10 @@ export const EMOJI_OPTIONS: readonly string[] = [
   "♦️", "♣️", "🃏", "🎭", "🍀", "⚓", "🎨", "🥷", "🦖", "🐉",
 ] as const;
 
-export type PremiumEmojiUnlock =
-  | { kind: "level"; level: number }
-  | { kind: "categoryMastered"; category: AchievementCategory; categoryLabel: string };
+/** Kept as its own name (rather than importing CosmeticUnlockRule directly
+ * everywhere) since this file predates the shared cosmeticUnlocks.ts —
+ * same type either way. */
+export type PremiumEmojiUnlock = CosmeticUnlockRule;
 
 export interface PremiumEmojiOption {
   emoji: string;
@@ -121,13 +123,10 @@ export function isPremiumEmojiUnlocked(
   level: number,
   progress: AchievementProgressState
 ): boolean {
-  const unlock = option.unlock;
-  if (unlock.kind === "level") return level >= unlock.level;
-  const inCategory = allAchievements(progress).filter((a) => a.category === unlock.category);
-  return inCategory.length > 0 && inCategory.every((a) => a.tier !== "expert" || a.unlocked);
+  return isCosmeticUnlocked(option.unlock, level, progress);
 }
 
 /** A short "how to unlock this" line for the picker's lock tooltip. */
 export function premiumEmojiRequirementLabel(unlock: PremiumEmojiUnlock): string {
-  return unlock.kind === "level" ? `Unlocks at Level ${unlock.level}` : `Master every ${unlock.categoryLabel} achievement`;
+  return cosmeticRequirementLabel(unlock);
 }

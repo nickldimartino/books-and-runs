@@ -37,6 +37,17 @@ export interface LeaderboardEntry {
   /** Pinned "familyId:tier" strings (e.g. "books_melded:hard") — up to 6,
    * see migration 0026. Self-reported like everything else here. */
   showcase: string[];
+  /** A ring around the whole avatar — see profileCosmetics.ts's
+   * AVATAR_FRAME_OPTIONS and AvatarFrame.tsx. Null means no frame. */
+  avatar_frame: string | null;
+  /** A short earned flair shown under the display name — see
+   * profileCosmetics.ts's TITLE_OPTIONS. Null means no title chosen. */
+  title: string | null;
+  /** Public mirror of this account's equipped card back/face (see
+   * migration 0028's own doc for why these live here instead of a read
+   * policy on the private `settings` table). Null until they've set one. */
+  showcase_card_back: string | null;
+  showcase_card_face: string | null;
   level: number;
   total_xp: number;
   achievements_unlocked: number;
@@ -306,9 +317,26 @@ const DEFAULT_AVATAR: AvatarInfo = { kind: "emoji", emoji: null, color: null, ph
  * means that check and the server's own (re-derived from the same
  * underlying stats) disagreed, most likely stale client-side progress
  * data. */
-export class PremiumEmojiLockedError extends Error {
+/** Thrown by updateLeaderboardAvatarEmoji/AvatarFrame/Title when migration
+ * 0028's trigger rejects a gated cosmetic the account hasn't earned yet —
+ * the client-side lock check (cosmeticUnlocks.ts's isCosmeticUnlocked)
+ * should normally catch this before the request ever goes out, so seeing
+ * this in practice means that check and the server's own (re-derived from
+ * the same underlying stats) disagreed, most likely stale client-side
+ * progress data. */
+export class CosmeticLockedError extends Error {
+  constructor(public readonly cosmeticType: "avatar_emoji" | "avatar_frame" | "title") {
+    super("You haven't unlocked that yet.");
+    this.name = "CosmeticLockedError";
+  }
+}
+
+/** Kept as its own name for existing callers — same thing as
+ * `new CosmeticLockedError("avatar_emoji")`. */
+export class PremiumEmojiLockedError extends CosmeticLockedError {
   constructor() {
-    super("You haven't unlocked that avatar option yet.");
+    super("avatar_emoji");
+    this.message = "You haven't unlocked that avatar option yet.";
     this.name = "PremiumEmojiLockedError";
   }
 }
@@ -367,6 +395,70 @@ export async function revertToEmojiAvatar(supabase: SupabaseClient, userId: stri
   const { error } = await supabase.from("leaderboard_entries").upsert({
     user_id: userId,
     avatar_kind: "emoji",
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Sets (or clears, with null) the signed-in user's avatar frame — see
+ * profileCosmetics.ts's AVATAR_FRAME_OPTIONS. Throws CosmeticLockedError
+ * for a frame migration 0028's trigger rejects as not yet earned. */
+export async function updateLeaderboardAvatarFrame(
+  supabase: SupabaseClient,
+  userId: string,
+  frame: string | null
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    avatar_frame: frame,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) {
+    if (error.message?.includes("avatar_frame_locked")) throw new CosmeticLockedError("avatar_frame");
+    throw error;
+  }
+}
+
+/** Sets (or clears, with null) the signed-in user's nameplate title — see
+ * profileCosmetics.ts's TITLE_OPTIONS. Throws CosmeticLockedError for a
+ * title migration 0028's trigger rejects as not yet earned. */
+export async function updateLeaderboardTitle(
+  supabase: SupabaseClient,
+  userId: string,
+  title: string | null
+): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    title,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) {
+    if (error.message?.includes("title_locked")) throw new CosmeticLockedError("title");
+    throw error;
+  }
+}
+
+/** Mirrors the signed-in user's current card back choice onto their public
+ * leaderboard row (see migration 0028's own doc) — called from
+ * accountSettingsSync.ts's pushCardBack, the same moment it syncs to the
+ * private `settings` table. Ungated — this is already free customization
+ * the account owns, just not shown publicly before. A partial upsert
+ * (only this one column), same as every other single-field update in this
+ * file — a card-face update elsewhere can't accidentally clobber this. */
+export async function updateShowcaseCardBack(supabase: SupabaseClient, userId: string, cardBack: string): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    showcase_card_back: cardBack,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Same as updateShowcaseCardBack, for card face. */
+export async function updateShowcaseCardFace(supabase: SupabaseClient, userId: string, cardFace: string): Promise<void> {
+  const { error } = await supabase.from("leaderboard_entries").upsert({
+    user_id: userId,
+    showcase_card_face: cardFace,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

@@ -15,6 +15,7 @@ import {
   WIN_RATE_MIN_GAMES,
 } from "@/achievements";
 import { useAuth } from "../AuthContext";
+import { AvatarFrame } from "../components/AvatarFrame";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PlayerAvatar } from "../components/PlayerAvatar";
@@ -162,6 +163,10 @@ export default function LeaderboardPage() {
   // covers the optimistic state right after a click, before the reload.
   const [relatedIds, setRelatedIds] = useState<Set<string>>(new Set());
   const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
+  // Actual friends only (not pending requests, unlike relatedIds above) —
+  // just for the "Friends" view toggle below.
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [scope, setScope] = useState<"all" | "friends">("all");
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -223,6 +228,7 @@ export default function LeaderboardPage() {
         friends.forEach((f) => s.add(f.userId));
         requests.forEach((r) => s.add(r.otherUserId));
         setRelatedIds(s);
+        setFriendIds(new Set(friends.map((f) => f.userId)));
       })
       .catch((err) => console.error("Failed to load friend state:", err));
     return () => {
@@ -326,21 +332,48 @@ export default function LeaderboardPage() {
         </EmptyState>
       ) : (
         <>
-          <label className="flex items-center gap-2 self-start text-sm text-[var(--muted)]">
-            Sort by
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.key} value={opt.key}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+              Sort by
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex overflow-hidden rounded-lg border border-[var(--border)] text-sm">
+              <button
+                onClick={() => setScope("all")}
+                className={`px-3 py-1.5 font-medium transition ${scope === "all" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+              >
+                All players
+              </button>
+              <button
+                onClick={() => setScope("friends")}
+                className={`px-3 py-1.5 font-medium transition ${scope === "friends" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+              >
+                Friends
+              </button>
+            </div>
+          </div>
 
+          {(() => {
+            const visibleEntries =
+              scope === "friends" ? entries.filter((e) => friendIds.has(e.user_id) || e.user_id === user?.id) : entries;
+            if (scope === "friends" && visibleEntries.length === 0) {
+              return (
+                <EmptyState icon="🤝">
+                  None of your friends have finished a tracked game or a Daily Deal yet.
+                </EmptyState>
+              );
+            }
+            return (
           <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
@@ -358,7 +391,7 @@ export default function LeaderboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortEntries(entries, sortKey).map((entry, i) => {
+                {sortEntries(visibleEntries, sortKey).map((entry, i) => {
                   const isYou = entry.user_id === user?.id;
                   return (
                     <tr
@@ -373,16 +406,18 @@ export default function LeaderboardPage() {
                           className="inline-flex items-center gap-1.5 whitespace-nowrap hover:underline"
                         >
                           <span className="text-[var(--faint)]">{i + 1}.</span>
-                          <PlayerAvatar
-                            avatar={{
-                              kind: entry.avatar_kind,
-                              emoji: entry.avatar_emoji,
-                              color: entry.avatar_color,
-                              photoPath: entry.avatar_photo_path,
-                            }}
-                            updatedAt={entry.updated_at}
-                            size={22}
-                          />
+                          <AvatarFrame frame={entry.avatar_frame} size={22}>
+                            <PlayerAvatar
+                              avatar={{
+                                kind: entry.avatar_kind,
+                                emoji: entry.avatar_emoji,
+                                color: entry.avatar_color,
+                                photoPath: entry.avatar_photo_path,
+                              }}
+                              updatedAt={entry.updated_at}
+                              size={22}
+                            />
+                          </AvatarFrame>
                           {displayNameFor(entry)}
                         </Link>
                         {user && !isYou && !relatedIds.has(entry.user_id) && (
@@ -425,6 +460,8 @@ export default function LeaderboardPage() {
               </tbody>
             </table>
           </div>
+            );
+          })()}
         </>
       )}
 

@@ -39,11 +39,13 @@ import {
 import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AchievementIcon } from "../components/AchievementIcons";
+import { AvatarFrame } from "../components/AvatarFrame";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
+import { RankBadge } from "../components/RankBadge";
 import {
   COLOR_OPTIONS,
   EMOJI_OPTIONS,
@@ -52,10 +54,15 @@ import {
   premiumEmojiRequirementLabel,
 } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
+import { cardBackLabel, loadLocalCardBack } from "../lib/cardBackStore";
+import { cardFaceLabel, loadLocalCardFace } from "../lib/cardFaceStore";
+import { cosmeticRequirementLabel, isCosmeticUnlocked } from "../lib/cosmeticUnlocks";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
 import {
   AvatarInfo,
+  avatarPhotoUrlFor,
+  CosmeticLockedError,
   DisplayNameTakenError,
   LeaderboardEntry,
   MAX_BIO_LENGTH,
@@ -70,13 +77,20 @@ import {
   showcaseKeyFor,
   syncLeaderboardStats,
   updateLeaderboardAvatarEmoji,
+  updateLeaderboardAvatarFrame,
   updateLeaderboardAvatarPhoto,
   updateLeaderboardBio,
   updateLeaderboardDisplayName,
   updateLeaderboardShowcase,
+  updateLeaderboardTitle,
+  updateShowcaseCardBack,
+  updateShowcaseCardFace,
 } from "../lib/leaderboardStore";
 import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
+import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
+import { computeRank } from "../lib/rank";
 import { RoundHistoryEntry } from "../lib/recordGameResult";
+import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
@@ -257,6 +271,10 @@ function emptyEntry(userId: string): LeaderboardEntry {
     avatar_color: null,
     avatar_photo_path: null,
     showcase: [],
+    avatar_frame: null,
+    title: null,
+    showcase_card_back: null,
+    showcase_card_face: null,
     level: 0,
     total_xp: 0,
     achievements_unlocked: 0,
@@ -305,7 +323,22 @@ export default function PlayerProfilePage() {
         console.error("Failed to load profile:", error);
         setLoadError(true);
       } else {
-        setEntry((data as LeaderboardEntry | null) ?? emptyEntry(profileId));
+        const row = (data as LeaderboardEntry | null) ?? emptyEntry(profileId);
+        setEntry(row);
+        // Backfill the public card-back/face mirror for an account that
+        // set these before migration 0028 existed — same bootstrap-push
+        // idea as accountSettingsSync.ts's bootstrapMissingAccountSettings.
+        // Self-view itself never needs to wait on this (see displayCardBack/
+        // Face below, which read local storage directly for isSelf) — this
+        // is purely so a *visitor* to this profile later sees it too.
+        if (profileId === user.id) {
+          if (row.showcase_card_back === null) {
+            updateShowcaseCardBack(client, profileId, loadLocalCardBack()).catch(() => {});
+          }
+          if (row.showcase_card_face === null) {
+            updateShowcaseCardFace(client, profileId, loadLocalCardFace()).catch(() => {});
+          }
+        }
       }
       setLoading(false);
     })();
@@ -337,6 +370,43 @@ export default function PlayerProfilePage() {
       setRelated("none");
     }
   }
+
+  // ── Head-to-head record (only meaningful for someone else's profile) ───
+  // Your own multiplayer history, not theirs — mp_my_history only ever
+  // returns games *you* played in, filtered here to the ones this
+  // profile's account also sat at. "Beat them" means your score was
+  // better in a game you both finished, independent of who won the whole
+  // table — the closest a >2-player game has to a real 1v1 record.
+  const [h2hHistory, setH2hHistory] = useState<MpHistoryEntry[]>([]);
+  useEffect(() => {
+    if (!supabase || !user || !profileId || isSelf) {
+      setH2hHistory([]);
+      return;
+    }
+    getMyMpHistory(supabase, 200)
+      .then(setH2hHistory)
+      .catch((err) => console.error("Failed to load head-to-head history:", err));
+  }, [user, profileId, isSelf]);
+
+  const headToHead = useMemo(() => {
+    if (!user || !profileId || isSelf) return null;
+    let wins = 0;
+    let losses = 0;
+    let ties = 0;
+    for (const g of h2hHistory) {
+      const me = g.seats.find((s) => s.userId === user.id);
+      const them = g.seats.find((s) => s.userId === profileId);
+      if (!me || !them) continue;
+      const myScore = g.cumulative_scores[String(me.seat)];
+      const theirScore = g.cumulative_scores[String(them.seat)];
+      if (myScore == null || theirScore == null) continue;
+      if (myScore < theirScore) wins++;
+      else if (myScore > theirScore) losses++;
+      else ties++;
+    }
+    const gamesTogether = wins + losses + ties;
+    return gamesTogether > 0 ? { wins, losses, ties, gamesTogether } : null;
+  }, [h2hHistory, user, profileId, isSelf]);
 
   // ── Report photo ──────────────────────────────────────────────────────
   const [reportState, setReportState] = useState<"idle" | "open" | "sending" | "sent" | "error">("idle");
@@ -502,6 +572,95 @@ export default function PlayerProfilePage() {
     }
   }
 
+  // ── Self-editing: avatar frame ──────────────────────────────────────────
+  const [frameSaveState, setFrameSaveState] = useState<SaveState>("idle");
+  const [frameSaveError, setFrameSaveError] = useState<string | null>(null);
+
+  async function chooseFrame(frameId: string | null) {
+    if (!supabase || !user) return;
+    setFrameSaveState("saving");
+    setFrameSaveError(null);
+    try {
+      await updateLeaderboardAvatarFrame(supabase, user.id, frameId);
+      setEntry((prev) => (prev ? { ...prev, avatar_frame: frameId } : prev));
+      setFrameSaveState("saved");
+    } catch (err) {
+      if (err instanceof CosmeticLockedError) setFrameSaveError(err.message);
+      else console.error("Failed to save avatar frame:", err);
+      setFrameSaveState("error");
+    }
+  }
+
+  // ── Self-editing: nameplate title ───────────────────────────────────────
+  const [titleSaveState, setTitleSaveState] = useState<SaveState>("idle");
+  const [titleSaveError, setTitleSaveError] = useState<string | null>(null);
+
+  async function chooseTitle(titleId: string | null) {
+    if (!supabase || !user) return;
+    setTitleSaveState("saving");
+    setTitleSaveError(null);
+    try {
+      await updateLeaderboardTitle(supabase, user.id, titleId);
+      setEntry((prev) => (prev ? { ...prev, title: titleId } : prev));
+      setTitleSaveState("saved");
+    } catch (err) {
+      if (err instanceof CosmeticLockedError) setTitleSaveError(err.message);
+      else console.error("Failed to save title:", err);
+      setTitleSaveState("error");
+    }
+  }
+
+  // ── Share profile card ──────────────────────────────────────────────────
+  const [shareState, setShareState] = useState<"idle" | "working" | "error">("idle");
+
+  async function shareProfileCard() {
+    if (!entry) return;
+    setShareState("working");
+    try {
+      const frameOption = findAvatarFrameOption(entry.avatar_frame);
+      const titleOption = findTitleOption(entry.title);
+      const rank = computeRank(entry.games_played, entry.games_won);
+      const blob = await renderProfileShareCard({
+        displayName: displayNameFor(entry),
+        titleLabel: titleOption?.label ?? null,
+        level: entry.level,
+        rankLabel: rank.tier?.label ?? null,
+        avatarKind: entry.avatar_kind,
+        avatarEmoji: entry.avatar_emoji,
+        avatarColor: entry.avatar_color,
+        avatarPhotoUrl:
+          entry.avatar_kind === "photo" && entry.avatar_photo_path && supabase
+            ? avatarPhotoUrlFor(supabase, entry.avatar_photo_path, entry.updated_at)
+            : null,
+        frameColor: frameOption
+          ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id])
+          : null,
+        stats: [
+          { label: "Games", value: String(entry.games_played) },
+          { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
+          { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
+        ],
+        trophyColors: entry.showcase
+          .map(resolveShowcaseItem)
+          .filter((i): i is ShowcaseItem => !!i)
+          .map((i) => TIER_RING_COLOR[i.tier]),
+      });
+      if (!blob) throw new Error("Canvas unavailable");
+      const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "My Books & Runs profile" });
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      }
+      setShareState("idle");
+    } catch (err) {
+      console.error("Failed to share profile card:", err);
+      setShareState("error");
+    }
+  }
+
   // ── Private section (self only): the old /stats page's own data ────────
   const [privateStats, setPrivateStats] = useState<PlayerStats | null>(null);
   const [history, setHistory] = useState<GameHistoryRow[]>([]);
@@ -573,6 +732,15 @@ export default function PlayerProfilePage() {
 
   const achievements = useMemo(() => allAchievements(progress), [progress]);
   const unlocked = useMemo(() => achievements.filter((a) => a.unlocked), [achievements]);
+  // Same "closest goal" nudge Home already shows for its own card — surfaced
+  // here too, since it's exactly the kind of thing a profile visit is for.
+  const closestAchievement = useMemo(
+    () =>
+      achievements
+        .filter((a) => !a.unlocked && a.progressFraction > 0 && a.progressFraction < 1)
+        .sort((a, b) => b.progressFraction - a.progressFraction)[0] ?? null,
+    [achievements]
+  );
   const masteredFamilies = useMemo(() => {
     const per = new Map<string, number>();
     for (const a of unlocked) per.set(a.familyId, (per.get(a.familyId) ?? 0) + 1);
@@ -687,6 +855,13 @@ export default function PlayerProfilePage() {
         photoPath: entry.avatar_photo_path,
       }
     : undefined;
+  const titleOption = entry ? findTitleOption(entry.title) : null;
+  const rank = entry ? computeRank(entry.games_played, entry.games_won) : { tier: null, winRate: null };
+  // Self-view reads local storage directly (always the freshest copy of
+  // your own choice); viewing someone else reads the public mirror
+  // migration 0028 added (see the load effect's own bootstrap-push doc).
+  const displayCardBack = isSelf ? loadLocalCardBack() : (entry?.showcase_card_back ?? null);
+  const displayCardFace = isSelf ? loadLocalCardFace() : (entry?.showcase_card_face ?? null);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
@@ -708,12 +883,44 @@ export default function PlayerProfilePage() {
 
           {/* ── Public — same for everyone, including your own view ── */}
           <section className="flex flex-col items-center gap-2 text-center">
-            <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
+            <AvatarFrame frame={entry.avatar_frame} size={88}>
+              <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={88} />
+            </AvatarFrame>
             <h1 className="text-xl font-bold text-[var(--heading)]">{displayNameFor(entry)}</h1>
-            <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)]">
-              Level {entry.level}
-            </span>
+            {titleOption && (
+              <p className="-mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
+                {titleOption.label}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)]">
+                Level {entry.level}
+              </span>
+              <RankBadge rank={rank} />
+            </div>
             {entry.bio && <p className="max-w-xs text-sm text-[var(--muted)]">{entry.bio}</p>}
+
+            {(displayCardBack || displayCardFace) && (
+              <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-[var(--faint)]">
+                <span className="rounded-full border border-[var(--border)] px-2 py-0.5">
+                  Card back: {cardBackLabel(displayCardBack)}
+                </span>
+                <span className="rounded-full border border-[var(--border)] px-2 py-0.5">
+                  Card face: {cardFaceLabel(displayCardFace)}
+                </span>
+              </div>
+            )}
+
+            {!isSelf && headToHead && (
+              <p className="text-xs text-[var(--muted)]">
+                Head-to-head:{" "}
+                <span className="font-semibold text-[var(--heading)]">
+                  {headToHead.wins}-{headToHead.losses}
+                  {headToHead.ties > 0 ? `-${headToHead.ties}` : ""}
+                </span>{" "}
+                across {headToHead.gamesTogether} multiplayer game{headToHead.gamesTogether === 1 ? "" : "s"} together
+              </p>
+            )}
 
             {!isSelf && (
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
@@ -737,13 +944,25 @@ export default function PlayerProfilePage() {
                 )}
               </div>
             )}
-            {isSelf && (
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              {isSelf && (
+                <button
+                  onClick={() => setEditingProfile((v) => !v)}
+                  className="rounded-lg border border-[var(--accent)]/60 px-4 py-1.5 text-xs font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                >
+                  {editingProfile ? "Done editing" : "Edit profile"}
+                </button>
+              )}
               <button
-                onClick={() => setEditingProfile((v) => !v)}
-                className="mt-2 rounded-lg border border-[var(--accent)]/60 px-4 py-1.5 text-xs font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                onClick={shareProfileCard}
+                disabled={shareState === "working"}
+                className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-60"
               >
-                {editingProfile ? "Done editing" : "Edit profile"}
+                {shareState === "working" ? "Preparing…" : "Share profile card"}
               </button>
+            </div>
+            {shareState === "error" && (
+              <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
             )}
 
             {(reportState === "open" || reportState === "sending") && (
@@ -950,6 +1169,95 @@ export default function PlayerProfilePage() {
                 )}
               </section>
 
+              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Avatar frame</h2>
+                <p className="text-xs text-[var(--faint)]">
+                  A ring around your whole avatar, separate from the picture inside it — earned by leveling up or
+                  mastering an achievement category.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => chooseFrame(null)}
+                    className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                      !entry.avatar_frame ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]" : "hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    <AvatarFrame frame={null} size={44}>
+                      <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
+                    </AvatarFrame>
+                    <span className="text-[10px] text-[var(--faint)]">None</span>
+                  </button>
+                  {AVATAR_FRAME_OPTIONS.map((option) => {
+                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => (unlocked ? chooseFrame(option.id) : undefined)}
+                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                          !unlocked
+                            ? "cursor-default opacity-40"
+                            : entry.avatar_frame === option.id
+                              ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                              : "hover:bg-[var(--panel-soft)]"
+                        }`}
+                      >
+                        <AvatarFrame frame={unlocked ? option.id : null} size={44}>
+                          <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
+                        </AvatarFrame>
+                        <span className="text-[10px] text-[var(--faint)]">
+                          {unlocked ? option.label : "🔒"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {frameSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
+                {frameSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {frameSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{frameSaveError ?? "Couldn't save — try again."}</p>
+                )}
+              </section>
+
+              <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Title</h2>
+                <p className="text-xs text-[var(--faint)]">Shown under your name — the same earn-it-first rewards as your avatar frame.</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => chooseTitle(null)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      !entry.title ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                    }`}
+                  >
+                    None
+                  </button>
+                  {TITLE_OPTIONS.map((option) => {
+                    const unlocked = isCosmeticUnlocked(option.unlock, level?.level ?? 0, progress);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => (unlocked ? chooseTitle(option.id) : undefined)}
+                        title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                          !unlocked
+                            ? "cursor-default border-[var(--border)] text-[var(--faint)] opacity-50"
+                            : entry.title === option.id
+                              ? "border-[var(--accent)] text-[var(--accent)]"
+                              : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                        }`}
+                      >
+                        {unlocked ? option.label : `🔒 ${option.label}`}
+                      </button>
+                    );
+                  })}
+                </div>
+                {titleSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
+                {titleSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {titleSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{titleSaveError ?? "Couldn't save — try again."}</p>
+                )}
+              </section>
+
               <section className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Display name</h2>
                 <p className="text-xs text-[var(--faint)]">
@@ -1106,6 +1414,35 @@ export default function PlayerProfilePage() {
                       )}
                     </div>
                   </section>
+
+                  {/* Closest goal — same nudge Home shows on its own card,
+                      surfaced here too since a profile visit is exactly
+                      the moment to see what's next. */}
+                  {closestAchievement && (
+                    <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
+                      <div className="flex items-center gap-3">
+                        <AchievementIcon
+                          category={closestAchievement.category}
+                          className="h-6 w-6 shrink-0 text-[var(--accent)]"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[var(--heading)]">
+                            {Math.round(closestAchievement.progressFraction * 100)}% of the way to{" "}
+                            {TIER_LABEL[closestAchievement.tier]} · {closestAchievement.familyTitle}
+                          </p>
+                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
+                            <div
+                              className="h-full rounded-full bg-[var(--accent)]"
+                              style={{ width: `${Math.round(closestAchievement.progressFraction * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <Link href="/achievements" className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline">
+                          View →
+                        </Link>
+                      </div>
+                    </section>
+                  )}
 
                   {/* Highlights */}
                   <section className="grid grid-cols-2 gap-3">

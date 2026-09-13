@@ -25,15 +25,17 @@ import { DEFAULT_THEME, saveLocalTheme } from "./themeStore";
 
 function fakeSupabase() {
   const upserts: Record<string, unknown>[] = [];
+  const tables: string[] = [];
   const client = {
-    from: () => ({
+    from: (table: string) => ({
       upsert: async (row: Record<string, unknown>) => {
         upserts.push(row);
+        tables.push(table);
         return { error: null };
       },
     }),
   };
-  return { client: client as unknown as SupabaseClient, upserts };
+  return { client: client as unknown as SupabaseClient, upserts, tables };
 }
 
 function blankRow(): AccountSettingsRow {
@@ -168,16 +170,29 @@ describe("pushHouseSettingsPatch", () => {
 
 describe("the small per-store push helpers", () => {
   it("pushTheme/pushCardBack/pushCardFace/pushColorblindMode each upsert their one field", async () => {
-    const { client, upserts } = fakeSupabase();
+    const { client, upserts, tables } = fakeSupabase();
     pushTheme(client, "u1", "midnight");
     pushCardBack(client, "u1", "match");
     pushCardFace(client, "u1", "classic");
     pushColorblindMode(client, "u1", "tritanopia");
     await Promise.resolve();
 
-    expect(upserts).toHaveLength(4);
-    expect(upserts.map((u) => Object.keys(u).find((k) => k !== "user_id" && k !== "updated_at")))
+    const settingsUpserts = upserts.filter((_, i) => tables[i] === "settings");
+    expect(settingsUpserts).toHaveLength(4);
+    expect(settingsUpserts.map((u) => Object.keys(u).find((k) => k !== "user_id" && k !== "updated_at")))
       .toEqual(["theme", "card_back", "card_face", "colorblind_mode"]);
+  });
+
+  it("pushCardBack/pushCardFace also mirror to leaderboard_entries for the profile page's cosmetics showcase", async () => {
+    const { client, upserts, tables } = fakeSupabase();
+    pushCardBack(client, "u1", "match");
+    pushCardFace(client, "u1", "classic");
+    await Promise.resolve();
+
+    const showcaseUpserts = upserts.filter((_, i) => tables[i] === "leaderboard_entries");
+    expect(showcaseUpserts).toHaveLength(2);
+    expect(showcaseUpserts[0]).toMatchObject({ user_id: "u1", showcase_card_back: "match" });
+    expect(showcaseUpserts[1]).toMatchObject({ user_id: "u1", showcase_card_face: "classic" });
   });
 });
 

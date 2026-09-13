@@ -109,6 +109,178 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob | nul
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }
 
+export interface ProfileShareCardInput {
+  displayName: string;
+  titleLabel: string | null;
+  level: number;
+  rankLabel: string | null;
+  avatarKind: "emoji" | "photo";
+  avatarEmoji: string | null;
+  avatarColor: string | null;
+  avatarPhotoUrl: string | null;
+  /** A solid ring color, or null for no frame — the "grandmaster" rotating
+   * gradient frame (see AvatarFrame.tsx) isn't attempted here, a static
+   * export has no motion to show off anyway; it just renders framed with
+   * one of its own gradient stops instead of failing to render at all. */
+  frameColor: string | null;
+  stats: { label: string; value: string }[];
+  /** Tier ring colors for up to 6 pinned trophies, in Trophy Case order. */
+  trophyColors: string[];
+}
+
+function loadImageForCanvas(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+/**
+ * Renders a shareable "profile card" PNG — avatar (+ frame), name, title,
+ * level/rank, a few headline stats, and Trophy Case dots. Same visual
+ * language and canvas approach as renderShareCard above (a second,
+ * differently-shaped card rather than a generalized one: a game result is
+ * a list of rows, a profile is a single subject with an avatar — trying to
+ * force both through one shape would've made each harder to read, not
+ * easier to maintain).
+ */
+export async function renderProfileShareCard(input: ProfileShareCardInput): Promise<Blob | null> {
+  const scale = 2;
+  const W = 540;
+  const hasStats = input.stats.length > 0;
+  const hasTrophies = input.trophyColors.length > 0;
+  const H = 216 + (hasStats ? 78 : 0) + (hasTrophies ? 54 : 0);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.scale(scale, scale);
+
+  const bg = themeColor("--bg", "#0a2b20");
+  const heading = themeColor("--heading", "#fef3c7");
+  const text = themeColor("--text", "#f5f0e6");
+  const faint = themeColor("--faint", "rgba(209,250,229,0.45)");
+  const accent = themeColor("--accent", "#fbbf24");
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W / 2, -40, 0, W / 2, -40, W * 0.9);
+  glow.addColorStop(0, hexWithAlpha(accent, 0.14));
+  glow.addColorStop(1, "transparent");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  const sans =
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+  ctx.textBaseline = "middle";
+
+  ctx.fillStyle = faint;
+  ctx.font = `600 14px ${sans}`;
+  ctx.textAlign = "left";
+  ctx.fillText("🃏  BOOKS & RUNS", 32, 34);
+
+  const avatarSize = 84;
+  const avatarX = 32;
+  const avatarY = 56;
+  const cx = avatarX + avatarSize / 2;
+  const cy = avatarY + avatarSize / 2;
+
+  if (input.frameColor) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, avatarSize / 2 + 6, 0, Math.PI * 2);
+    ctx.fillStyle = input.frameColor;
+    ctx.fill();
+  }
+
+  let drewPhoto = false;
+  if (input.avatarKind === "photo" && input.avatarPhotoUrl) {
+    const img = await loadImageForCanvas(input.avatarPhotoUrl);
+    if (img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, avatarSize / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+      ctx.restore();
+      drewPhoto = true;
+    }
+  }
+  if (!drewPhoto) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, avatarSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = input.avatarColor ?? "#3B82F6";
+    ctx.fill();
+    if (input.avatarEmoji) {
+      ctx.textAlign = "center";
+      ctx.font = `${Math.round(avatarSize * 0.5)}px ${sans}`;
+      ctx.fillText(input.avatarEmoji, cx, cy + 2);
+    }
+  }
+
+  const textX = avatarX + avatarSize + 24;
+  ctx.textAlign = "left";
+  ctx.fillStyle = heading;
+  ctx.font = `800 26px ${sans}`;
+  ctx.fillText(input.displayName, textX, avatarY + 20);
+
+  if (input.titleLabel) {
+    ctx.fillStyle = accent;
+    ctx.font = `600 14px ${sans}`;
+    ctx.fillText(input.titleLabel, textX, avatarY + 46);
+  }
+
+  ctx.fillStyle = faint;
+  ctx.font = `600 13px ${sans}`;
+  const levelLine = input.rankLabel ? `Level ${input.level}  ·  ${input.rankLabel}` : `Level ${input.level}`;
+  ctx.fillText(levelLine, textX, avatarY + (input.titleLabel ? 68 : 46));
+
+  let y = avatarY + avatarSize + 26;
+  ctx.strokeStyle = hexWithAlpha(text, 0.14);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(32, y);
+  ctx.lineTo(W - 32, y);
+  ctx.stroke();
+  y += 14;
+
+  if (hasStats) {
+    const colW = (W - 64) / input.stats.length;
+    input.stats.forEach((s, i) => {
+      const x = 32 + colW * i + colW / 2;
+      ctx.textAlign = "center";
+      ctx.fillStyle = heading;
+      ctx.font = `800 22px ${sans}`;
+      ctx.fillText(s.value, x, y + 24);
+      ctx.fillStyle = faint;
+      ctx.font = `600 11px ${sans}`;
+      ctx.fillText(s.label.toUpperCase(), x, y + 48);
+    });
+    y += 78;
+  }
+
+  if (hasTrophies) {
+    ctx.textAlign = "left";
+    ctx.fillStyle = faint;
+    ctx.font = `600 11px ${sans}`;
+    ctx.fillText("TROPHY CASE", 32, y + 6);
+    const dotY = y + 28;
+    input.trophyColors.forEach((color, i) => {
+      const x = 32 + i * 34 + 12;
+      ctx.beginPath();
+      ctx.arc(x, dotY, 12, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+  }
+
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
+}
+
 function wrapText(
   ctx: CanvasRenderingContext2D,
   str: string,
