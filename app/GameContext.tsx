@@ -31,6 +31,15 @@ import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
 import { layOffOptions } from "@/meld";
 import { roundSeed, seededRng } from "@/deck";
 import { MoveLogEntry } from "@/moveLog";
+import {
+  CounterDeltas,
+  discardDeltas,
+  drawDeltas,
+  layOffDeltas,
+  meldDeltas,
+  roundWonDeltas,
+  tableCompositionDeltas,
+} from "@/replayStats";
 import { Card, ContractRequirement, GameState } from "@/types";
 import { createTutorialGame } from "@/tutorial";
 import { createDailyDealGame, dateSeed, localDateKey } from "./lib/dailyDealStore";
@@ -311,6 +320,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const bump = useCallback((key: string, amount = 1) => {
     sessionCountersRef.current[key] = (sessionCountersRef.current[key] ?? 0) + amount;
   }, []);
+  // Applies a whole replayStats.ts deltas object in one go — the usual way
+  // bump() gets called now, so the exact same delta-computing functions a
+  // server-side replay will eventually use are what credits live play too.
+  const applyDeltas = useCallback(
+    (deltas: CounterDeltas) => {
+      for (const [key, amount] of Object.entries(deltas)) bump(key, amount);
+    },
+    [bump]
+  );
   const getSessionCounters = useCallback(() => sessionCountersRef.current, []);
 
   // See UndoSnapshot's own comment for exactly what this does and doesn't
@@ -582,10 +600,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // game (only relevant if YOU are actually seated, per YOU_PLAYER_ID).
       sessionCountersRef.current = {};
       if (state.players.some((p) => p.id === YOU_PLAYER_ID)) {
-        const humanCount = configs.filter((c) => !c.isAI).length;
-        if (humanCount >= 2) bump("pass_and_play_games");
-        if (humanCount === 1) bump("solo_vs_ai_games");
-        if (configs.length >= 6) bump("large_table_games");
+        applyDeltas(tableCompositionDeltas(configs));
       }
 
       const humans = configs.filter((c) => !c.isAI).length;
@@ -603,7 +618,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         runAiLoop();
       }
     },
-    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, bump, clearUndoState, setTrackStatsBoth]
+    [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, applyDeltas, clearUndoState, setTrackStatsBoth]
   );
 
   const startTutorialGame = useCallback(() => {
@@ -813,12 +828,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (isYou) {
-        bump("turns_taken");
-        bump(actuallyFromDiscard ? "cards_drawn_from_discard" : "cards_drawn_blind");
-        if (card.isWild) bump("wilds_drawn");
-        if (card.rank === "JOKER") bump("jokers_drawn");
-      }
+      if (isYou) applyDeltas(drawDeltas(card, actuallyFromDiscard));
 
       setLastDrawnCardId(card.id);
       setHasDrawnBoth(true);
@@ -827,7 +837,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hapticLight();
       commit();
     },
-    [commit, setHasDrawnBoth, bump, clearUndoState, emitFlight]
+    [commit, setHasDrawnBoth, applyDeltas, clearUndoState, emitFlight]
   );
 
   const sortHand = useCallback(
@@ -883,21 +893,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         { seat: s.currentPlayerIndex, type: "meldGroups", groups, preferredRunStarts },
       ];
 
-      if (isYou) {
-        bump(`completed_round_${contract.round}`);
-        for (const m of melds) {
-          const wildCount = m.cards.filter((c) => c.isWild).length;
-          if (m.type === "book") {
-            bump("books_melded");
-            if (m.cards.length > contract.bookSize) bump("oversized_books_melded");
-          } else {
-            bump("runs_melded");
-            if (m.cards.length > contract.runSize) bump("oversized_runs_melded");
-          }
-          if (wildCount > 0) bump("wilds_used_in_melds", wildCount);
-          else bump("melds_with_zero_wilds");
-        }
-      }
+      if (isYou) applyDeltas(meldDeltas(melds, contract));
 
       // finishIfWentOut only ever ends the round by declaring *this* current
       // player the round's winner (see endRound(state, player.id) inside
@@ -907,10 +903,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // own comment) — checking it here meant these counters could only
       // ever bump on whichever round happened to be the game's last one.
       const wentOut = finishIfWentOut(s);
-      if (isYou && wentOut) {
-        bump("rounds_won");
-        bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
-      }
+      if (isYou && wentOut) applyDeltas(roundWonDeltas(contract, false));
       playMeld();
       hapticMedium();
       emitFlight({ kind: "meld", cards: melds.flatMap((m) => m.cards), byId: player.id, isAI: false });
@@ -920,7 +913,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       commit();
       return true;
     },
-    [commit, bump, armUndo, emitFlight]
+    [commit, applyDeltas, armUndo, emitFlight]
   );
 
   const layOff = useCallback(
@@ -940,20 +933,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const ok = layOffCard(s, cardId, meldId, position);
       if (ok) {
         moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "layOff", cardId, meldId, position }];
-        if (isYou && card && meld) {
-          bump("cards_laid_off");
-          if (card.isWild) bump("wilds_laid_off");
-          if (meld.ownerId !== player.id) bump("laid_off_onto_opponent");
-          if (wasAmbiguous) bump("ambiguous_wild_choices_made");
-        }
+        if (isYou && card && meld) applyDeltas(layOffDeltas(card, meld, player.id, wasAmbiguous));
         // See the identical comment in confirmMeld — wentOut alone already
         // means you won this round; state.winnerId is the game's overall
         // winner, a different and unrelated thing.
         const wentOut = finishIfWentOut(s);
         if (isYou && wentOut) {
           const contract = s.selectedContracts[s.round - 1];
-          bump("rounds_won");
-          bump(contract.wholeHandMeld ? "rounds_won_final_round" : "rounds_won_no_discard");
+          applyDeltas(roundWonDeltas(contract, false));
         }
         playCardTap();
         hapticLight();
@@ -965,7 +952,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       return ok;
     },
-    [commit, bump, armUndo, emitFlight]
+    [commit, applyDeltas, armUndo, emitFlight]
   );
 
   /**
@@ -1044,7 +1031,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       if (discarded) emitFlight({ kind: "discard", card: discarded, byId: player.id, isAI: false });
       if (isYou) {
-        bump("cards_discarded");
+        applyDeltas(discardDeltas());
         // discardAndAdvance only ever ends the round for the player whose
         // turn it currently is (endRound(state, player.id) inside it) — see
         // the identical comment in confirmMeld/layOff for why this used to
@@ -1052,10 +1039,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // meant this could only ever fire on a game's actual last round —
         // impossible for "Just in Time" specifically, since the real final
         // round (3 Runs) never has a discard to trigger it with at all.
-        if (roundEnded) {
-          bump("rounds_won");
-          bump("rounds_won_via_discard");
-        }
+        if (roundEnded) applyDeltas(roundWonDeltas(s.selectedContracts[s.round - 1], true));
       }
       playCardTap();
       hapticLight();
@@ -1073,7 +1057,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, bump, clearUndoState, emitFlight]
+    [commit, runAiLoop, setHasDrawnBoth, advanceBuyQueue, applyDeltas, clearUndoState, emitFlight]
   );
 
   const advanceRound = useCallback(() => {

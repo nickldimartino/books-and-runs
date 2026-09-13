@@ -16,6 +16,7 @@ import { allAchievements } from "@/achievements";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { Confetti } from "./Confetti";
 import { UnlockToast } from "./UnlockToast";
+import { finalGameDeltas, mergeDeltas } from "@/replayStats";
 import { Difficulty, GameState } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
@@ -144,9 +145,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
 
     const you = state.players.find((p) => p.id === YOU_PLAYER_ID);
     const counters = { ...getSessionCounters() };
-    if (you && you.cumulativeScore === 0) {
-      counters.zero_penalty_games = (counters.zero_penalty_games ?? 0) + 1;
-    }
+    if (you) mergeDeltas(counters, finalGameDeltas(you.cumulativeScore));
 
     // The per-game XP sources (finishing, winning, difficulty bonus) are
     // fully known from this game alone — matches the exact rule
