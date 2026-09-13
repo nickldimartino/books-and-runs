@@ -47,6 +47,56 @@ With two signed-in test accounts that are already friends:
    response shows full cards only for that caller's own seat, counts for the
    rest, and no `drawPile` contents anywhere.
 
+## `solo-verify` — server-verified solo/pass-and-play stats
+
+Closes the one gap multiplayer never had: a solo/pass-and-play game runs
+entirely in the browser (no server referee, so it works fully offline), and
+until this function existed, the client wrote its own final stats straight
+into `player_stats`/`achievement_counters`/`game_history` — nothing stopped
+someone from calling the Supabase client directly and writing whatever
+numbers they wanted. This function is the fix: the client sends the game's
+starting seed and its full move log (see `app/GameContext.tsx`'s
+`getSeed()`/`getMoveLog()`), and this function independently replays the
+exact same game through the real engine
+([`../../src/solo/replay.ts`](../../src/solo/replay.ts), pure and
+unit-tested — `src/solo/replay.test.ts`) before writing anything. A replay
+that doesn't hold up — an illegal move, a seed that deals a different game,
+a fabricated extra draw — gets the whole submission rejected, no partial
+writes. Final `player_stats`/achievement-counter deltas/`game_history` are
+all *derived* from the verified replay, never taken from anything the
+client claims.
+
+### Deploy
+
+```bash
+node scripts/bundle-solo-verify-engine.mjs
+npx supabase functions deploy solo-verify
+```
+
+Re-run the bundle step whenever anything in `src/` changes — same reasoning
+as `mp`'s own bundle step, but with its own `_engine/` copy and a smaller
+SKIP list (no `ai/` or `mp/`: solo-verify replays already-concrete logged
+moves, never re-runs AI strategy code).
+
+Requires the migration that locks down direct client writes to
+`player_stats`/`achievement_counters` (see the migrations README) to have
+been run — until then this function and the client's old direct-write path
+both work, which is fine during rollout but means the exploit isn't closed
+yet.
+
+### Smoke test after deploy
+
+With a signed-in test account, play (and finish) a solo game in the app,
+then confirm in the Supabase dashboard that `player_stats.games_played` and
+`game_history` both picked up the new game. Then confirm the hole is
+actually closed:
+
+```js
+// From the browser console, signed in — should now be rejected once the
+// RLS-lockdown migration has run:
+await window.supabase.from("player_stats").update({ games_won: 999999 }).eq("user_id", (await window.supabase.auth.getUser()).data.user.id);
+```
+
 ## `contact` — bug reports & feature requests
 
 Takes a submission from the Support page (`app/support/page.tsx`) and emails

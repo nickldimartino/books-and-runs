@@ -27,10 +27,22 @@ import {
   startNextRound,
 } from "../gameEngine";
 import { roundSeed, seededRng } from "../deck";
+import { layOffOptions } from "../meld";
 import { MoveLogEntry } from "../moveLog";
-import { ContractRequirement, GameState } from "../types";
+import {
+  CounterDeltas,
+  discardDeltas,
+  drawDeltas,
+  layOffDeltas,
+  meldDeltas,
+  mergeDeltas,
+  roundWonDeltas,
+} from "../replayStats";
+import { ContractRequirement, GameState, YOU_PLAYER_ID } from "../types";
 
-export type ReplayResult = { ok: true; state: GameState } | { ok: false; error: string };
+export type ReplayResult =
+  | { ok: true; state: GameState; counterDeltas: CounterDeltas }
+  | { ok: false; error: string };
 
 /** Advances past every round already over when this is called, and after
  * every folded move — a round boundary needs no log entry of its own (see
@@ -76,42 +88,56 @@ export function replaySoloGame(
   // a fabricated log could draw an unbounded number of cards in one "turn".
   let turnDrawn = false;
 
+  // Credited only for whichever seat is the actual tracked account — same
+  // isYou gating every replayStats.ts call site already uses live in
+  // GameContext.tsx. Other seats (AI, or another pass-and-play human) never
+  // earn anything here, same as today.
+  const counterDeltas: CounterDeltas = {};
+
   for (const entry of moveLog) {
     if (state.gameOver) return { ok: false, error: "moves logged after the game already ended" };
     if (entry.seat !== state.currentPlayerIndex) {
       return { ok: false, error: "a logged move's seat doesn't match whose turn it actually was" };
     }
+    const isYou = state.players[entry.seat]?.id === YOU_PLAYER_ID;
+    const contract = selectedContracts[state.round - 1];
 
     switch (entry.type) {
       case "draw": {
         if (turnDrawn) return { ok: false, error: "drew more than once in a single turn" };
-        if (entry.fromDiscard) {
-          if (!drawFromDiscard(state)) drawFromPile(state);
-        } else {
-          drawFromPile(state);
-        }
-        // A null-card draw (piles truly exhausted) ends the round itself —
-        // turnDrawn is irrelevant once roundOver, and gets reset for the
-        // next round below regardless.
+        const card = entry.fromDiscard ? drawFromDiscard(state) ?? drawFromPile(state) : drawFromPile(state);
+        // A null card (piles truly exhausted) ends the round itself, with
+        // nothing to credit — turnDrawn still flips true below since it
+        // gets reset for the next round regardless (see roundBefore check).
+        if (card && isYou) mergeDeltas(counterDeltas, drawDeltas(card, entry.fromDiscard));
         turnDrawn = true;
         break;
       }
       case "meldContract": {
         if (!turnDrawn) return { ok: false, error: "melded before drawing" };
-        if (!attemptMeldContract(state)) return { ok: false, error: "an AI meld attempt didn't hold up on replay" };
+        const melds = attemptMeldContract(state);
+        if (!melds) return { ok: false, error: "an AI meld attempt didn't hold up on replay" };
+        if (isYou) mergeDeltas(counterDeltas, meldDeltas(melds, contract));
         break;
       }
       case "meldGroups": {
         if (!turnDrawn) return { ok: false, error: "melded before drawing" };
-        if (!meldChosenGroups(state, entry.groups, entry.preferredRunStarts)) {
-          return { ok: false, error: "a meld didn't hold up on replay" };
-        }
+        const melds = meldChosenGroups(state, entry.groups, entry.preferredRunStarts);
+        if (!melds) return { ok: false, error: "a meld didn't hold up on replay" };
+        if (isYou) mergeDeltas(counterDeltas, meldDeltas(melds, contract));
         break;
       }
       case "layOff": {
         if (!turnDrawn) return { ok: false, error: "laid off before drawing" };
+        const player = state.players[state.currentPlayerIndex];
+        const card = player.hand.find((c) => c.id === entry.cardId);
+        const meld = state.melds.find((m) => m.id === entry.meldId);
+        const wasAmbiguous = !!(card && meld && layOffOptions(card, meld).length === 2);
         if (!layOffCard(state, entry.cardId, entry.meldId, entry.position)) {
           return { ok: false, error: "a lay-off didn't hold up on replay" };
+        }
+        if (isYou && card && meld) {
+          mergeDeltas(counterDeltas, layOffDeltas(card, meld, player.id, wasAmbiguous));
         }
         break;
       }
@@ -121,6 +147,15 @@ export function replaySoloGame(
         const ended = discardAndAdvance(state, entry.cardId ?? "");
         if (!ended && state.currentPlayerIndex === seatBefore) {
           return { ok: false, error: "a discard didn't hold up on replay" };
+        }
+        if (isYou) {
+          mergeDeltas(counterDeltas, discardDeltas());
+          // A real (non-null) discarded card that ended the round is a win
+          // "via discard"; cardId: null only ever comes from a no-discard
+          // auto-out (finishIfWentOut / playAITurn's round-7 path) — see
+          // moveLog.ts. Matches the exact viaDiscard GameContext.tsx itself
+          // passes at each of those call sites.
+          if (ended) mergeDeltas(counterDeltas, roundWonDeltas(contract, entry.cardId !== null));
         }
         turnDrawn = false;
         break;
@@ -139,5 +174,5 @@ export function replaySoloGame(
   }
 
   if (!state.gameOver) return { ok: false, error: "the move log doesn't reach a finished game" };
-  return { ok: true, state };
+  return { ok: true, state, counterDeltas };
 }

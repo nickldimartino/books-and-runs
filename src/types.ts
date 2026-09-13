@@ -9,6 +9,20 @@
 // multiplayer game, so anything that wouldn't survive JSON.stringify /
 // JSON.parse can't live on it (see the note on Meld.wildCardIds).
 
+/**
+ * The seat id that represents "the signed-in account" in a solo/pass-and-
+ * play game, where several human players can share one device/session but
+ * at most one of them is actually the account owner. New Game always
+ * assigns this id to the first human slot ("You"). Not cryptographically
+ * enforced — anyone could rename that seat or seat a different person in
+ * slot 0 — but it's the same convention every account-linked feature in
+ * the app relies on: stats (app/lib/recordGameResult.ts, which re-exports
+ * this for its existing importers), achievement counters
+ * (app/GameContext.tsx), and the solo-verify Edge Function's own replay.
+ * Lives here (not app/lib) so a Deno bundle of src/ can use it too.
+ */
+export const YOU_PLAYER_ID = "human-0";
+
 export type Suit = "hearts" | "diamonds" | "clubs" | "spades" | "joker";
 export type Rank =
   | "A" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10"

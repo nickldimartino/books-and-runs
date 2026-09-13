@@ -61,19 +61,48 @@ describe("replaySoloGame", () => {
     );
   });
 
+  it("derives sensible counter deltas for the tracked seat (human-0), gated the same way GameContext.tsx bumps live", () => {
+    const seed = 9;
+    const { moveLog } = playFullAiGame(seed, TWO_AI);
+    const result = replaySoloGame(seed, TWO_AI, SHORT_GAME_CONTRACTS, moveLog);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // turns_taken always equals seat 0's own draw-entry count exactly —
+    // the one counter every completed game is guaranteed to credit at
+    // least once, so this stays a real (non-vacuous) check regardless of
+    // which branches this particular seed's AI-vs-AI play happened to hit.
+    const yourDrawCount = moveLog.filter((e) => e.seat === 0 && e.type === "draw").length;
+    expect(yourDrawCount).toBeGreaterThan(0);
+    expect(result.counterDeltas.turns_taken).toBe(yourDrawCount);
+  });
+
+  it("credits nothing when human-0 isn't seated at all (an all-non-tracked game)", () => {
+    const untracked: PlayerConfig[] = [
+      { id: "ai-0", name: "Bot A", isAI: true, difficulty: "medium" },
+      { id: "ai-1", name: "Bot B", isAI: true, difficulty: "medium" },
+    ];
+    const seed = 9;
+    const { moveLog } = playFullAiGame(seed, untracked);
+    const result = replaySoloGame(seed, untracked, SHORT_GAME_CONTRACTS, moveLog);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.counterDeltas).toEqual({});
+  });
+
   it("handles a meld or lay-off that empties the hand mid-game (going out with no discard, not just round 7)", () => {
-    // Run enough seeds that at least one game's log contains a "discard"
-    // entry with cardId: null from somewhere other than the final round —
-    // the finishIfWentOut path (see GameContext.tsx's confirmMeld/layOff)
-    // that playAITurn's own inline equivalent already covers for AI turns.
-    let sawMidGameAutoOut = false;
+    // AI strategies (src/ai/*.ts) take no rng argument and fall back to
+    // real Math.random for their own decisions — only the deal itself is
+    // seeded here — so whether any given seed's game happens to include a
+    // mid-game "discard, cardId: null" auto-out (the finishIfWentOut path;
+    // see GameContext.tsx's confirmMeld/layOff) isn't itself deterministic
+    // run to run. This loop just confirms replay stays correct across many
+    // games regardless of which branches they happen to hit; the
+    // finishIfWentOut behavior itself has its own deterministic,
+    // hand-crafted regression test in app/GameContext.test.tsx.
     for (let seed = 0; seed < 40; seed++) {
       const { finalState, moveLog } = playFullAiGame(seed, TWO_AI);
-      const midGameAutoOut = moveLog.some(
-        (e, i) => e.type === "discard" && e.cardId === null && i < moveLog.length - 1
-      );
-      if (midGameAutoOut) sawMidGameAutoOut = true;
-
       const result = replaySoloGame(seed, TWO_AI, SHORT_GAME_CONTRACTS, moveLog);
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -82,7 +111,6 @@ describe("replaySoloGame", () => {
         );
       }
     }
-    expect(sawMidGameAutoOut).toBe(true);
   });
 
   it("rejects a move log with a tampered lay-off target", () => {

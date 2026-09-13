@@ -1,17 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Difficulty, GameState } from "@/types";
+import { Difficulty, GameState, YOU_PLAYER_ID } from "@/types";
 import { joinNames } from "./formatNames";
 
-/**
- * The seat id that represents "the signed-in account" in pass-and-play,
- * where several human players can share one device/session but at most one
- * of them is actually the account owner. New Game always assigns this id to
- * the first human slot ("You"). Not cryptographically enforced — anyone
- * could rename that seat or seat a different person in slot 0 — but it's
- * the same convention every account-linked feature in this app relies on
- * (stats here, and achievement counters in GameContext.tsx).
- */
-export const YOU_PLAYER_ID = "human-0";
+// Re-exported so every existing `import { YOU_PLAYER_ID } from "./lib/recordGameResult"`
+// keeps working — the constant itself now lives in src/types.ts (see its
+// own doc) so a Deno bundle of src/ can use it too.
+export { YOU_PLAYER_ID };
 
 export interface RoundHistoryEntry {
   round: number;
