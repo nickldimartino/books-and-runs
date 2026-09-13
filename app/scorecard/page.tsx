@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CONTRACTS, ContractRequirement, SHORT_GAME_CONTRACTS } from "@/types";
+import { PageTip } from "../components/PageTip";
 import {
   clearScorecard,
   loadScorecard,
@@ -126,12 +127,11 @@ export default function ScorecardPage() {
         ← Home
       </Link>
 
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Scorekeeper</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          For scoring the physical card game at the table — just addition, nothing fancy.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">Scorekeeper</h1>
+
+      <PageTip id="scorecard" title="Just a score sheet">
+        For scoring the physical card game at the table — just addition, nothing fancy.
+      </PageTip>
 
       {phase === "setup" ? (
         <>

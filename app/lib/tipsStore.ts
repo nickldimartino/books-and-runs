@@ -16,7 +16,8 @@ export type TipId =
   | "achievements"
   | "player-profile"
   | "leaderboard"
-  | "friends";
+  | "friends"
+  | "scorecard";
 
 const KEY = "booksAndRuns:seenTips";
 
