@@ -32,11 +32,16 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
   { id: "ice", label: "Ice", css: "linear-gradient(135deg, #0e7490, #a5f3fc)" },
   { id: "aurora", label: "Aurora", css: "linear-gradient(135deg, #0f766e, #7c3aed)" },
   { id: "blossom", label: "Blossom", css: "linear-gradient(135deg, #be185d, #8b5cf6)" },
-  { id: "storm", label: "Storm", css: "linear-gradient(135deg, #1e293b, #4338ca)" },
+  // Deliberately not sharing "slate"'s own #1e293b start stop (the two
+  // used to be identical at one end) — a darker, more neutral charcoal.
+  { id: "storm", label: "Storm", css: "linear-gradient(135deg, #111827, #4338ca)" },
   { id: "lagoon", label: "Lagoon", css: "linear-gradient(135deg, #164e63, #22d3ee)" },
   { id: "wildfire", label: "Wildfire", css: "linear-gradient(135deg, #7f1d1d, #f59e0b)" },
   { id: "twilight", label: "Twilight", css: "linear-gradient(135deg, #312e81, #db2777)" },
-  { id: "denim", label: "Denim", css: "linear-gradient(135deg, #1e3a8a, #60a5fa)" },
+  // Deliberately not sharing "ocean"'s own #1e3a8a stop (denim used to
+  // start exactly where ocean ends) — a muted, faded-fabric blue instead
+  // of another vivid-to-deep pairing.
+  { id: "denim", label: "Denim", css: "linear-gradient(135deg, #1e40af, #93c5fd)" },
   { id: "plum", label: "Plum", css: "linear-gradient(135deg, #581c47, #d946ef)" },
   { id: "mint", label: "Mint", css: "linear-gradient(135deg, #166534, #2dd4bf)" },
   { id: "cottonCandy", label: "Cotton Candy", css: "linear-gradient(135deg, #f472b6, #67e8f9)" },

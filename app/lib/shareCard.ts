@@ -17,13 +17,6 @@ import {
   MEDAL_RIBBON_ELEMENTS,
 } from "./achievementIconPaths";
 
-/** Always baked into the image itself, not just copied to the clipboard —
- * see renderProfileShareCard's own doc for why a picture-only share (the
- * one thing every share target reliably supports, see shareProfileCard's
- * comment in player/page.tsx) needs this to guarantee the link actually
- * reaches whoever receives it. */
-const SITE_URL = "books-and-runs.vercel.app";
-
 export interface ShareRow {
   rank: number;
   /** "Lv15" — the account level for you, the theoretical level for an AI. */
@@ -159,10 +152,13 @@ export interface ProfileShareCardInput {
    * page's ShowcaseItem, just without the `key`/`familyId` this renderer
    * doesn't need. */
   trophies: ShareTrophy[];
-  /** Overrides the default site-domain footer baked into the image (see
-   * SITE_URL above) — friends/page.tsx's own share passes the actual
-   * add-friend code/link here instead, since unlike a profile's UUID a
-   * friend code is short enough to be worth a human retyping by hand. */
+  /** An optional line baked into the image itself, below the Trophy Case —
+   * friends/page.tsx's own share passes the add-friend code here (unlike a
+   * profile's UUID, short enough to be worth a human retyping by hand). A
+   * plain profile share leaves this unset and gets no footer at all; the
+   * link itself now travels alongside the picture in the same share
+   * action (see shareProfileCard in player/page.tsx) instead of being
+   * baked into the image as text. */
   footerText?: string;
 }
 
@@ -317,12 +313,9 @@ function loadImageForCanvas(url: string): Promise<HTMLImageElement | null> {
  * differently-shaped card rather than a generalized one: a game result is
  * a list of rows, a profile is a single subject with an avatar — trying to
  * force both through one shape would've made each harder to read, not
- * easier to maintain). The site URL is baked into the image itself (see
- * SITE_URL above) — sharing this picture is the one thing every share
- * target reliably supports (see shareProfileCard's own comment in
- * player/page.tsx for why the link isn't also passed to navigator.share),
- * so the link has to travel with the pixels to reliably reach whoever
- * receives it.
+ * easier to maintain). No site URL is baked into the image — the caller
+ * passes the actual link alongside the picture in one navigator.share
+ * call instead (see shareProfileCard in player/page.tsx).
  */
 export async function renderProfileShareCard(input: ProfileShareCardInput): Promise<Blob | null> {
   const scale = 2;
@@ -332,7 +325,12 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
   const hasStats = input.stats.length > 0;
   const hasTrophies = input.trophies.length > 0;
   const headerH = 216;
-  const footerH = 30;
+  // Only reserved when the caller actually has something to say here (see
+  // ProfileShareCardInput.footerText) — a plain profile share has nothing
+  // to add below the Trophy Case, and the site's own URL used to get baked
+  // in as a default, which just duplicated whatever link/text the actual
+  // share action already carries alongside the picture.
+  const footerH = input.footerText ? 30 : 0;
   const H = headerH + (hasStats ? 78 : 0) + (hasTrophies ? 118 : 0) + footerH;
 
   const canvas = document.createElement("canvas");
@@ -545,11 +543,12 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     y += 118;
   }
 
-  // The link, baked into the image itself — see this function's own doc.
-  ctx.textAlign = "center";
-  ctx.fillStyle = faint;
-  ctx.font = `500 11px ${sans}`;
-  ctx.fillText(input.footerText ?? SITE_URL, W / 2, H - footerH / 2, W - 48);
+  if (input.footerText) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = faint;
+    ctx.font = `500 11px ${sans}`;
+    ctx.fillText(input.footerText, W / 2, H - footerH / 2, W - 48);
+  }
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }

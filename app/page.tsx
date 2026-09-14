@@ -137,7 +137,13 @@ function ProgressTile({
         </span>
       )}
       <span className="text-[var(--accent)]">{children}</span>
-      <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
+      {/* Fixed size across every tile (not shrunk per-label to fit) so
+          "Achievements"/"Leaderboard" read the same weight as "Profile"/
+          "Friends" — w-full lets the longer labels wrap onto a centered
+          second line instead of crowding the tile's own padding. */}
+      <span className="w-full px-0.5 text-center text-[11px] font-medium leading-tight text-[var(--muted)]">
+        {label}
+      </span>
     </Link>
   );
 }

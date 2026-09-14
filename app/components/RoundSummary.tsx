@@ -74,6 +74,12 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
     const client = supabase;
     const userId = user.id;
     const sessionDeltas = getSessionCounters();
+    // Reset before recomputing — otherwise a round that unlocks nothing new
+    // still shows the previous round's "unlocked this round" card, since
+    // the setters below only ever fire on an actual new unlock/level-up,
+    // never on the empty case.
+    setUnlockedAchievements([]);
+    setLeveledUpTo(null);
 
     (async () => {
       let before: AchievementProgressState | null = null;

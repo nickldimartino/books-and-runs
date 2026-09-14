@@ -22,6 +22,7 @@
 // uses the same pattern.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ACHIEVEMENT_FAMILIES,
@@ -319,6 +320,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
 export default function PlayerProfilePage() {
   const { configured, loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
+  const router = useRouter();
   const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -701,49 +703,51 @@ export default function PlayerProfilePage() {
   }
 
   // ── Share profile card ──────────────────────────────────────────────────
-  // "copied" is the normal success state, not just an error fallback — see
-  // the clipboard-write below for why the link is never part of the actual
-  // share payload, which means nothing else on screen previously told the
-  // person it had been copied at all. Without that, "share the picture"
-  // silently dropped the link on the floor unless they already knew to
-  // paste it themselves afterward.
-  const [shareState, setShareState] = useState<"idle" | "working" | "copied" | "error">("idle");
+  const [shareState, setShareState] = useState<"idle" | "working" | "shared" | "error">("idle");
 
   async function shareProfileCard() {
     if (!entry) return;
     setShareState("working");
-    // Written first, before any await — Safari in particular only honors
-    // navigator.clipboard.writeText while the click's user-activation is
-    // still fresh, and it silently no-ops (the promise still resolves)
-    // rather than throwing once that window has passed. Doing this before
-    // the async canvas render below, not after, is what actually gets the
-    // link onto the clipboard instead of just appearing to.
     try {
-      await navigator.clipboard?.writeText(`${window.location.origin}${playerProfileHref(entry.user_id)}`);
-    } catch {
-      // Best-effort — the picture share below still goes ahead either way.
-    }
-    try {
-      const blob = await renderProfileShareCard(buildProfileShareCardInput(supabase, entry, displayLevel));
+      // Re-fetch this account's own row instead of trusting local `entry`
+      // state — it's normally fresh (every cosmetic picker above updates it
+      // immediately on save), but a share should always reflect exactly
+      // what's actually saved, not whatever happens to be in memory.
+      let freshEntry = entry;
+      if (supabase) {
+        const { data } = await supabase.from("leaderboard_entries").select("*").eq("user_id", entry.user_id).maybeSingle();
+        if (data) freshEntry = data as LeaderboardEntry;
+      }
+      const url = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
+      const blob = await renderProfileShareCard(buildProfileShareCardInput(supabase, freshEntry, displayLevel));
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
-      // Deliberately not navigator.share({files, url}) in one call — tried
-      // that twice already; on at least one real device, canShare({files,
-      // url}) reported true but the actual share sheet still silently
-      // dropped the picture and sent only the link. Sharing the file alone
-      // is the one thing reliably supported wherever canShare says files
-      // work at all; the clipboard copy above gets the link into the same
-      // chat with one paste, without depending on any share target's
-      // handling of a multi-part payload.
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      // One share action carries both the picture and the link — no
+      // separate clipboard copy. A couple of real devices have been seen
+      // silently dropping the picture when a `url` rides along with
+      // `files`, so this only adds `url` when canShare confirms the
+      // combined payload actually works; otherwise it falls back to the
+      // picture alone rather than risk losing it.
+      const canShareBoth = navigator.canShare?.({ files: [file], url });
+      if (navigator.share && canShareBoth) {
+        await navigator.share({ files: [file], url });
+      } else if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
       } else {
-        const url = URL.createObjectURL(blob);
-        window.open(url, "_blank");
-        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+        // No native share sheet on this platform to hand the link to
+        // alongside the picture — copying it is the closest one-action
+        // equivalent, so it still travels with the download.
+        try {
+          await navigator.clipboard?.writeText(url);
+        } catch {
+          // Best-effort — the picture still opened either way.
+        }
       }
-      setShareState("copied");
-      setTimeout(() => setShareState((s) => (s === "copied" ? "idle" : s)), 4000);
+      setShareState("shared");
+      setTimeout(() => setShareState((s) => (s === "shared" ? "idle" : s)), 4000);
     } catch (err) {
       // A user backing out of the native share sheet also lands here (some
       // platforms reject navigator.share's promise on cancel) — that's not
@@ -1034,9 +1038,21 @@ export default function PlayerProfilePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <Link href="/" className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-        ← Home
-      </Link>
+      <button
+        onClick={() => {
+          // Return to wherever this profile was opened from (the Friends
+          // list, Leaderboard, a Clubs roster, ...) instead of always
+          // landing on Home — history.length > 1 means this tab actually
+          // has an in-app page to go back to; a profile opened fresh (a
+          // shared link, a new tab) has nothing behind it, so Home is the
+          // only sane fallback.
+          if (typeof window !== "undefined" && window.history.length > 1) router.back();
+          else router.push("/");
+        }}
+        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+      >
+        ← Back
+      </button>
 
       {authLoading || loading || !entry ? (
         <LoadingSpinner />
@@ -1149,10 +1165,8 @@ export default function PlayerProfilePage() {
                   </button>
                 )}
               </div>
-              {shareState === "copied" && (
-                <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>
-                  Link copied — paste it along with the picture.
-                </p>
+              {shareState === "shared" && (
+                <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>Shared.</p>
               )}
               {shareState === "error" && (
                 <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>

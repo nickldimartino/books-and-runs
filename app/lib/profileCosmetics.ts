@@ -88,12 +88,21 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   // entry is only the flat fallback the share card's canvas uses (a static
   // PNG can't show rotation anyway — see shareCard.ts, same simplification
   // already applied to grandmaster there).
-  specialist: "#7C3AED",
-  virtuoso: "#D9D9DC",
-  ascendant: "#F0C14B",
-  ironwill: "#9CA3AF",
+  //
+  // Each of these five matches its own same-named banner's palette
+  // (bannerPresets.ts) instead of a generic tier color — Ascendant used to
+  // render as plain gold (indistinguishable from the free "citrine"), for
+  // instance, despite its "Aurora Crown" banner being indigo-to-pink; now
+  // the frame and banner actually read as one reward. That also clears up
+  // what had become a pile of near-identical greys/golds/purples sitting
+  // next to their free equivalents in the picker (specialist vs. violet,
+  // virtuoso vs. mist, ascendant vs. citrine, ironwill vs. mist/slate).
+  specialist: "#4C1D95",
+  virtuoso: "#E9A8F9",
+  ascendant: "#C4B5FD",
+  ironwill: "#52525B",
   unbroken: "#F97316",
-  undefeated: "#22C55E",
+  undefeated: "#FACC15",
   prismatic: "#EC4899",
   // "dealerstable" ("Rose Cut" — see AvatarFrame.tsx) gets a faceted icy
   // conic gradient live; this is only the flat fallback the share card's

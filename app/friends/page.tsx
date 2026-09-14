@@ -302,28 +302,42 @@ export default function FriendsPage() {
       return;
     }
     const url = `${window.location.origin}/friends?add=${code}`;
-    // Same "why the link is never part of navigator.share itself" reasoning
-    // as shareProfileCard's own doc — written to the clipboard before any
-    // await, while the click's user-activation is still fresh.
     try {
-      await navigator.clipboard?.writeText(`Add me as a friend on Books & Runs 🃏  My code: ${code}\n${url}`);
-    } catch {
-      // Best-effort — the picture share below still goes ahead either way.
-    }
-    try {
+      // Re-fetch this account's own row instead of trusting `myEntry`,
+      // which was only ever fetched once on mount — a share should always
+      // reflect whatever's actually saved, not a page-load snapshot.
+      let freshEntry = myEntry;
+      if (supabase) {
+        const { data } = await supabase.from("leaderboard_entries").select("*").eq("user_id", user.id).maybeSingle();
+        if (data) freshEntry = data as LeaderboardEntry;
+      }
       const blob = await renderProfileShareCard(
-        buildProfileShareCardInput(supabase, myEntry, level?.level ?? myEntry.level ?? 0, `Add me: ${code}`)
+        buildProfileShareCardInput(supabase, freshEntry, level?.level ?? freshEntry.level ?? 0, `Add me: ${code}`)
       );
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-add-me.png", { type: "image/png" });
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      // One share action carries the picture and the link together — no
+      // separate clipboard copy. Only add `url` when canShare confirms the
+      // combined payload works; a couple of real devices have been seen
+      // silently dropping the picture when a bare `url` rides along with
+      // `files` outside that check.
+      if (navigator.share && navigator.canShare?.({ files: [file], url })) {
+        await navigator.share({ files: [file], url });
+      } else if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
       } else {
         const objUrl = URL.createObjectURL(blob);
         window.open(objUrl, "_blank");
         setTimeout(() => URL.revokeObjectURL(objUrl), 30_000);
+        // No native share sheet here to hand the link to alongside the
+        // picture — copying it is the closest one-action equivalent.
+        try {
+          await navigator.clipboard?.writeText(`Add me as a friend on Books & Runs 🃏  My code: ${code}\n${url}`);
+        } catch {
+          // Best-effort — the picture still opened either way.
+        }
       }
-      setShareState("copied");
+      setShareState("shared");
       setTimeout(() => setShareState("idle"), 4000);
     } catch (err) {
       console.error("Failed to share profile card:", err);
@@ -472,9 +486,6 @@ export default function FriendsPage() {
                 {copied ? "Copied" : "Copy code"}
               </button>
             </div>
-            {myEntry && shareState === "copied" && (
-              <p className="mt-2 text-xs text-[var(--muted)]">Link copied — paste it along with the picture.</p>
-            )}
           </section>
 
           {/* Add a friend */}
