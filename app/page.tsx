@@ -144,13 +144,15 @@ function ProgressTile({
       <span className="text-[var(--accent)]">{children}</span>
       {/* Fixed size across every tile (not shrunk per-label to fit) so
           "Achievements"/"Leaderboard" read the same weight as "Profile"/
-          "Friends" — tracking-tight buys back enough width to size this
-          up a notch from the first pass, which came out illegibly small.
-          Still one line, no wrap: there's no space in "Achievements" to
-          break at, so a wrap only ever produced an ugly mid-word split.
-          overflow/ellipsis is a safety net for a narrower screen than any
-          device this actually ships to. */}
-      <span className="block w-full overflow-hidden text-ellipsis whitespace-nowrap text-center text-[9px] font-medium leading-tight tracking-tighter text-[var(--muted)]">
+          "Friends" — back to a normal, legible size. There's no space in
+          "Achievements" for the browser to wrap at on its own, so
+          hyphens:auto asks it to break the word properly (dictionary
+          hyphenation, e.g. "Achieve-ments") instead of either an
+          arbitrary mid-word split or shrinking the text to fit one line. */}
+      <span
+        className="block w-full text-center text-xs font-medium leading-tight text-[var(--muted)]"
+        style={{ hyphens: "auto", overflowWrap: "break-word" }}
+      >
         {label}
       </span>
     </Link>
@@ -747,10 +749,15 @@ export default function HomePage() {
           <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label="Profile">
             <StatsIcon />
           </ProgressTile>
-          <ProgressTile href="/achievements" label="Achievements">
+          {/* Soft hyphens (­) — invisible unless the browser actually
+              needs to wrap there, at which point it renders a real hyphen.
+              CSS hyphens:auto turned out not to fire reliably here; this
+              gets the same clean "Achieve-/ments" break with no CSS
+              feature-detection risk, since it's just a normal character. */}
+          <ProgressTile href="/achievements" label={"Achieve­ments"}>
             <AchievementsIcon />
           </ProgressTile>
-          <ProgressTile href="/leaderboard" label="Leaderboard">
+          <ProgressTile href="/leaderboard" label={"Leader­board"}>
             <LeaderboardIcon />
           </ProgressTile>
           <ProgressTile href="/friends" label="Friends" badge={notifications.friendRequests}>
