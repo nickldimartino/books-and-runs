@@ -324,8 +324,17 @@ export default function PlayerProfilePage() {
   const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
-    setProfileId(new URLSearchParams(window.location.search).get("id"));
-  }, []);
+    // A bare "/player" (no `?id=`) means "my own profile" — UnlockToast and
+    // this page's own Account tip both link that way rather than building
+    // playerProfileHref(user.id) themselves. Without this fallback,
+    // profileId stayed null forever for a signed-in visitor (nothing below
+    // ever loads without one), so the page just hung on its loading
+    // spinner. Re-runs once `user` resolves, since auth loads async and
+    // may not be ready on the first pass.
+    const idParam = new URLSearchParams(window.location.search).get("id");
+    if (idParam) setProfileId(idParam);
+    else if (user) setProfileId(user.id);
+  }, [user]);
 
   const [entry, setEntry] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);

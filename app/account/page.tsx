@@ -8,6 +8,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
 import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
@@ -268,6 +269,15 @@ export default function AccountPage() {
         <LoadingSpinner />
       ) : (
         <>
+          <PageTip id="account" title="Sign-in and security">
+            This is separate from your profile — display name, avatar, and bio live on your{" "}
+            <Link href="/player" className="underline hover:text-[var(--heading)]">
+              profile
+            </Link>{" "}
+            page instead. Here it&apos;s just email, password, two-factor authentication, and a way
+            to export or delete everything tied to this account.
+          </PageTip>
+
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Email</h2>
             <p className="text-xs text-[var(--muted)]">Signed in as {user?.email}.</p>

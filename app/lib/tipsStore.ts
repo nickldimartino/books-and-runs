@@ -8,6 +8,7 @@
 
 export type TipId =
   | "home"
+  | "account"
   | "new-game"
   | "new-game-local"
   | "new-game-multiplayer"
