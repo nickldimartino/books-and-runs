@@ -132,9 +132,12 @@ function ProgressTile({
       // min-w-0 matters here: without it, a grid item's default min-width
       // is its content's un-wrapped size, so a single long word like
       // "Achievements" (no space to break at) was forcing this tile wider
-      // than its own grid track instead of wrapping — the tile visibly
-      // drifted off its border and out of alignment with the row.
-      className="relative flex min-w-0 flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-1 py-3.5 text-center transition hover:bg-[var(--panel-soft)]"
+      // than its own grid track instead of shrinking to fit it — the tile
+      // visibly drifted off its border and out of alignment with the row.
+      // container-type turns this tile itself into the sizing reference
+      // for the label's font-size below, so the fit is exact on any
+      // device instead of a guess pegged to one viewport width.
+      className="relative flex min-w-0 flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-1 py-3.5 text-center transition hover:bg-[var(--panel-soft)] [container-type:inline-size]"
     >
       {!!badge && (
         <span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
@@ -142,16 +145,17 @@ function ProgressTile({
         </span>
       )}
       <span className="text-[var(--accent)]">{children}</span>
-      {/* Fixed size across every tile (not shrunk per-label to fit) so
-          "Achievements"/"Leaderboard" read the same weight as "Profile"/
-          "Friends" — back to a normal, legible size. There's no space in
-          "Achievements" for the browser to wrap at on its own, so
-          hyphens:auto asks it to break the word properly (dictionary
-          hyphenation, e.g. "Achieve-ments") instead of either an
-          arbitrary mid-word split or shrinking the text to fit one line. */}
+      {/* One line, no wrap, no hyphens — sized in cqw (a percentage of
+          this tile's own rendered width, via [container-type:inline-size]
+          above) instead of a fixed px value, so the font scales with the
+          actual button instead of being tuned for one screen size and
+          either overflowing a narrower one or looking small on a wider
+          one. The clamp() floor/ceiling just keeps it off the extremes on
+          a truly tiny or huge tile. Calibrated so "Achievements" (the
+          longest label) fills the tile without reaching its padding. */}
       <span
-        className="block w-full text-center text-xs font-medium leading-tight text-[var(--muted)]"
-        style={{ hyphens: "auto", overflowWrap: "break-word" }}
+        className="block w-full overflow-hidden text-ellipsis whitespace-nowrap text-center font-medium leading-tight text-[var(--muted)]"
+        style={{ fontSize: "clamp(7px, 12.5cqw, 15px)" }}
       >
         {label}
       </span>
@@ -749,15 +753,10 @@ export default function HomePage() {
           <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label="Profile">
             <StatsIcon />
           </ProgressTile>
-          {/* Soft hyphens (­) — invisible unless the browser actually
-              needs to wrap there, at which point it renders a real hyphen.
-              CSS hyphens:auto turned out not to fire reliably here; this
-              gets the same clean "Achieve-/ments" break with no CSS
-              feature-detection risk, since it's just a normal character. */}
-          <ProgressTile href="/achievements" label={"Achieve­ments"}>
+          <ProgressTile href="/achievements" label="Achievements">
             <AchievementsIcon />
           </ProgressTile>
-          <ProgressTile href="/leaderboard" label={"Leader­board"}>
+          <ProgressTile href="/leaderboard" label="Leaderboard">
             <LeaderboardIcon />
           </ProgressTile>
           <ProgressTile href="/friends" label="Friends" badge={notifications.friendRequests}>
