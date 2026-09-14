@@ -628,6 +628,11 @@ export default function PlayerProfilePage() {
   // ── Self-editing: avatar frame ──────────────────────────────────────────
   const [frameSaveState, setFrameSaveState] = useState<SaveState>("idle");
   const [frameSaveError, setFrameSaveError] = useState<string | null>(null);
+  // Tapping any gated option (locked or already-earned) shows how it's
+  // unlocked — the hover `title` tooltip these buttons also carry never
+  // reaches a touch device, so without this a phone had no way to see the
+  // requirement at all, before or after earning it.
+  const [frameInfo, setFrameInfo] = useState<string | null>(null);
 
   async function chooseFrame(frameId: string | null) {
     if (!supabase || !user) return;
@@ -647,6 +652,7 @@ export default function PlayerProfilePage() {
   // ── Self-editing: nameplate title ───────────────────────────────────────
   const [titleSaveState, setTitleSaveState] = useState<SaveState>("idle");
   const [titleSaveError, setTitleSaveError] = useState<string | null>(null);
+  const [titleInfo, setTitleInfo] = useState<string | null>(null);
 
   async function chooseTitle(titleId: string | null) {
     if (!supabase || !user) return;
@@ -666,6 +672,7 @@ export default function PlayerProfilePage() {
   // ── Self-editing: profile banner ────────────────────────────────────────
   const [bannerSaveState, setBannerSaveState] = useState<SaveState>("idle");
   const [bannerSaveError, setBannerSaveError] = useState<string | null>(null);
+  const [bannerInfo, setBannerInfo] = useState<string | null>(null);
 
   async function chooseBanner(bannerId: string | null) {
     if (!supabase || !user) return;
@@ -686,6 +693,7 @@ export default function PlayerProfilePage() {
   // separate from the picture itself (see migration 0031's own doc). ──────
   const [badgeSaveState, setBadgeSaveState] = useState<SaveState>("idle");
   const [badgeSaveError, setBadgeSaveError] = useState<string | null>(null);
+  const [badgeInfo, setBadgeInfo] = useState<string | null>(null);
 
   async function chooseBadge(badge: string | null) {
     if (!supabase || !user) return;
@@ -1344,7 +1352,10 @@ export default function PlayerProfilePage() {
                 </p>
                 <div className="grid grid-cols-8 gap-1.5">
                   <button
-                    onClick={() => chooseBadge(null)}
+                    onClick={() => {
+                      chooseBadge(null);
+                      setBadgeInfo(null);
+                    }}
                     aria-label="No badge"
                     className={`grid aspect-square place-items-center rounded-lg text-[10px] text-[var(--faint)] transition ${
                       !entry.badge ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
@@ -1357,7 +1368,13 @@ export default function PlayerProfilePage() {
                     return (
                       <button
                         key={option.emoji}
-                        onClick={() => (unlocked ? chooseBadge(option.emoji) : undefined)}
+                        onClick={() => {
+                          if (unlocked) chooseBadge(option.emoji);
+                          // Tapping shows how it's unlocked whether or not
+                          // it's earned yet — the hover `title` below never
+                          // reaches a touch device.
+                          setBadgeInfo(`${option.emoji} — ${premiumEmojiRequirementLabel(option.unlock)}`);
+                        }}
                         aria-label={
                           unlocked
                             ? `Use ${option.emoji} as your badge`
@@ -1385,11 +1402,14 @@ export default function PlayerProfilePage() {
                     );
                   })}
                 </div>
-                {entry.badge && (
-                  <p className="text-[10px] text-[var(--faint)]">
-                    {premiumEmojiRequirementLabel(PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === entry.badge)!.unlock)}
-                  </p>
-                )}
+                {(() => {
+                  // Whatever was last tapped, falling back to an
+                  // explanation of the currently-equipped badge so this
+                  // line isn't just blank the moment the tab opens.
+                  const equippedOption = entry.badge ? PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === entry.badge) : undefined;
+                  const shown = badgeInfo ?? (equippedOption && `${equippedOption.emoji} — ${premiumEmojiRequirementLabel(equippedOption.unlock)}`);
+                  return shown ? <p className="text-[10px] text-[var(--faint)]">{shown}</p> : null;
+                })()}
                 {badgeSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                 {badgeSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {badgeSaveState === "error" && (
@@ -1463,7 +1483,10 @@ export default function PlayerProfilePage() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={() => chooseFrame(null)}
+                    onClick={() => {
+                      chooseFrame(null);
+                      setFrameInfo(null);
+                    }}
                     className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                       !entry.avatar_frame ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]" : "hover:bg-[var(--panel-soft)]"
                     }`}
@@ -1478,7 +1501,15 @@ export default function PlayerProfilePage() {
                     return (
                       <button
                         key={option.id}
-                        onClick={() => (unlocked ? chooseFrame(option.id) : undefined)}
+                        onClick={() => {
+                          if (unlocked) chooseFrame(option.id);
+                          // A tap surfaces the requirement whether or not
+                          // it's earned yet — the hover `title` below never
+                          // reaches a touch device, and even an already-
+                          // unlocked item is worth a reminder of how it
+                          // was earned.
+                          if (option.unlock) setFrameInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
+                        }}
                         title={unlocked ? undefined : option.unlock && cosmeticRequirementLabel(option.unlock)}
                         className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                           !unlocked
@@ -1498,6 +1529,7 @@ export default function PlayerProfilePage() {
                     );
                   })}
                 </div>
+                {frameInfo && <p className="text-[11px] text-[var(--faint)]">{frameInfo}</p>}
                 {frameSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                 {frameSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {frameSaveState === "error" && (
@@ -1512,7 +1544,10 @@ export default function PlayerProfilePage() {
                 <p className="text-xs text-[var(--faint)]">Shown under your name — earned the same way your badge is.</p>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => chooseTitle(null)}
+                    onClick={() => {
+                      chooseTitle(null);
+                      setTitleInfo(null);
+                    }}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                       !entry.title ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                     }`}
@@ -1524,7 +1559,10 @@ export default function PlayerProfilePage() {
                     return (
                       <button
                         key={option.id}
-                        onClick={() => (unlocked ? chooseTitle(option.id) : undefined)}
+                        onClick={() => {
+                          if (unlocked) chooseTitle(option.id);
+                          setTitleInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
+                        }}
                         title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock)}
                         className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                           !unlocked
@@ -1539,6 +1577,7 @@ export default function PlayerProfilePage() {
                     );
                   })}
                 </div>
+                {titleInfo && <p className="text-[11px] text-[var(--faint)]">{titleInfo}</p>}
                 {titleSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                 {titleSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {titleSaveState === "error" && (
@@ -1556,7 +1595,10 @@ export default function PlayerProfilePage() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={() => chooseBanner(null)}
+                    onClick={() => {
+                      chooseBanner(null);
+                      setBannerInfo(null);
+                    }}
                     className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                       !entry.banner ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]" : "hover:bg-[var(--panel-soft)]"
                     }`}
@@ -1569,7 +1611,10 @@ export default function PlayerProfilePage() {
                     return (
                       <button
                         key={option.id}
-                        onClick={() => (unlocked ? chooseBanner(option.id) : undefined)}
+                        onClick={() => {
+                          if (unlocked) chooseBanner(option.id);
+                          if (option.unlock) setBannerInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
+                        }}
                         title={unlocked ? undefined : option.unlock && cosmeticRequirementLabel(option.unlock)}
                         className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                           !unlocked
@@ -1587,6 +1632,7 @@ export default function PlayerProfilePage() {
                     );
                   })}
                 </div>
+                {bannerInfo && <p className="text-[11px] text-[var(--faint)]">{bannerInfo}</p>}
                 {bannerSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                 {bannerSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
                 {bannerSaveState === "error" && (

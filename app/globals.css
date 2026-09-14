@@ -1996,6 +1996,16 @@ html[data-intro]::before {
   animation: foil-sweep 5s ease-in-out infinite;
   pointer-events: none;
 }
+/* Diamond scatter on top of the Prismatic banner's rainbow gradient (see
+   ProfileBanner.tsx's PRISMATIC_DIAMONDS) — reuses .gem-stone/.gem-diamond
+   from the Dealer's Table banner, just placed by percentage across the
+   whole surface instead of along a wood border. */
+.prismatic-diamonds {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .prismatic-foil::after {
     animation: none;

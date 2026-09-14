@@ -129,7 +129,12 @@ function ProgressTile({
   return (
     <Link
       href={href}
-      className="relative flex flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-3.5 text-center transition hover:bg-[var(--panel-soft)]"
+      // min-w-0 matters here: without it, a grid item's default min-width
+      // is its content's un-wrapped size, so a single long word like
+      // "Achievements" (no space to break at) was forcing this tile wider
+      // than its own grid track instead of wrapping — the tile visibly
+      // drifted off its border and out of alignment with the row.
+      className="relative flex min-w-0 flex-col items-center gap-1.5 rounded-lg border border-[var(--border)] px-1.5 py-3.5 text-center transition hover:bg-[var(--panel-soft)]"
     >
       {!!badge && (
         <span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--on-accent)]">
@@ -139,9 +144,12 @@ function ProgressTile({
       <span className="text-[var(--accent)]">{children}</span>
       {/* Fixed size across every tile (not shrunk per-label to fit) so
           "Achievements"/"Leaderboard" read the same weight as "Profile"/
-          "Friends" — w-full lets the longer labels wrap onto a centered
-          second line instead of crowding the tile's own padding. */}
-      <span className="w-full px-0.5 text-center text-[11px] font-medium leading-tight text-[var(--muted)]">
+          "Friends" — small enough that every label fits on one line at
+          this width; overflow/ellipsis is only a safety net for a
+          narrower screen than any device this actually ships to, since a
+          mid-word wrap (there's no space in "Achievements" to break at)
+          looked worse than a single tight line. */}
+      <span className="block w-full overflow-hidden text-ellipsis whitespace-nowrap px-0.5 text-center text-[8px] font-medium leading-tight text-[var(--muted)]">
         {label}
       </span>
     </Link>
