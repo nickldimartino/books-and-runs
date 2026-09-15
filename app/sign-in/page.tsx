@@ -1,5 +1,11 @@
 "use client";
 
+// Sign in / sign up / forgot-password, all as one form that swaps its mode
+// rather than three separate pages — plus the two-factor code prompt
+// AuthContext's mfaPending state kicks into when an account has 2FA turned
+// on (see /account). `?next=` sends a signed-out visitor back to whatever
+// in-app page asked them to sign in (e.g. a shared friend link).
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";

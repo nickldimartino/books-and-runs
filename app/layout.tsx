@@ -1,3 +1,8 @@
+// The root layout — mounted once for every route. Wires up the app-wide
+// provider tree (see CODEBASE_MAP.md §3a for the full mount order and why
+// it's ordered the way it is) plus SEO/social metadata and the pre-paint
+// theme script below. Nothing route-specific belongs here.
+
 import type { Metadata, Viewport } from "next";
 import { AccountSettingsSync } from "./AccountSettingsSync";
 import { AccountSwitchGuard } from "./AccountSwitchGuard";

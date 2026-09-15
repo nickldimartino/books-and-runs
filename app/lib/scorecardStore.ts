@@ -1,3 +1,8 @@
+// localStorage persistence for the standalone pen-and-paper scorekeeper
+// (app/scorecard/page.tsx) — a plain score grid with no game engine behind
+// it, for scoring the physical card game at a real table. Entirely local;
+// nothing here ever touches Supabase.
+
 const KEY = "booksAndRuns:scorecard";
 
 export type RoundMode = "all" | "short" | "custom";

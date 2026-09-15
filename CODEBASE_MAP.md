@@ -150,14 +150,20 @@ AuthProvider
 | `OpponentStrip.tsx` | game + MP screens | Sticky top strip: one chip per opponent; tap for a header-style activity popover (last pickup / last discard / bio). |
 | `CardFlightLayer.tsx` | game screen | `forwardRef` + `fly()` — animates card clones from A→B. Pure presentation; no-ops under reduced-motion. |
 | `TutorialOverlay.tsx` | game screen | The coach-mark bubbles positioned over `data-tutorial="…"` targets. |
+| `SoundQuickToggle.tsx` | game screen | One-tap mute/unmute for sound effects + ambient music, without a trip to Settings. |
+| `UndoRing.tsx` | game screen | The ring around Undo that visibly drains over its grace window (`GameContext.UNDO_GRACE_MS`) — pure CSS animation, remounted via `key={expiresAt}`. |
 | `GameOverScreen.tsx` | game screen | Final standings, share image, **records the game** (stats/achievements/XP/leaderboard), shows achievement unlocks. |
 | `RoundSummary.tsx` | game + MP screens | Between-round panel; also flushes per-round achievement progress and shows mid-game unlocks. |
 | `AchievementUnlock.tsx` / `AchievementIcons.tsx` | round summary + game over + MP | Shared "you unlocked this" card; one line-art icon per achievement category. |
+| `UnlockToast.tsx` | game over + MP | Top-of-screen toast for a newly-earned profile cosmetic (avatar emoji/frame/title/banner) — see `allCosmetics.ts`'s `diffNewlyUnlockedCosmetics`. Separate from `AchievementUnlock.tsx`, which is for achievements themselves. |
 | `Confetti.tsx` | game over | Win celebration. |
 | `PassGate.tsx` / `BuyOfferGate.tsx` | game screen | "Pass the device to X" interstitial; the (disabled) buy-the-discard offer. |
+| `PlayerAvatar.tsx` / `AvatarFrame.tsx` / `PremiumBadgeIcon.tsx` | profile, Leaderboard, Friends, OpponentStrip | `PlayerAvatar` renders the picture itself (photo or emoji-on-color); `AvatarFrame` wraps it in an earned ring (flat color for most, a special conic-gradient + shimmer treatment for `grandmaster`/`prismatic`/`dealerstable` — see `profileCosmetics.ts`/`globals.css`'s `.prismatic-foil`/`.diamond-foil`/`.dealers-table-*`); `PremiumBadgeIcon` draws the earned corner-badge overlay as hand-drawn line art instead of a raw emoji glyph. |
+| `ProfileBanner.tsx` | profile page | Wraps the profile header in a wide color strip (`bannerPresets.ts`). `prismatic` and `dealerstable` are real layered DOM (a diamond scatter over the rainbow gradient; a jeweled wood band around a felt table) rather than the single `background` string every other banner uses. |
+| `EmptyState.tsx` | Leaderboard, Friends, other empty lists | Shared "nothing here yet" card (icon + explanation + optional action) — one consistent tone for a brand-new account instead of each page inventing its own. |
 | `CardFanHero.tsx` | home | The decorative fanned-cards hero. |
 | `LoadingSpinner.tsx` | data pages | A card-flip loading state. |
-| `PageTip.tsx` | Home, New Game (×3), MP play, Settings, Achievements | A first-visit-only dismissible banner (see `tipsStore.ts`); permanently replaced several pages' old always-visible explanatory paragraphs. |
+| `PageTip.tsx` | one per route — see `tipsStore.ts`'s `TipId` union for the current list | A first-visit-only dismissible banner; permanently replaced several pages' old always-visible explanatory paragraphs. |
 | `IntroSplash.tsx` | home | The one-time "dealing" animation on first visit to `/` this session (`sessionStorage`, not `tipsStore` — replays every new session, purely decorative). |
 
 ### 3d. Stores & helpers (`app/lib/`)
@@ -173,6 +179,7 @@ AuthProvider
 | `cardFaceStore.ts` | `cardFace` — 6 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
 | `accountSettingsSync.ts` | Mirrors the five stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set, and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
+| `accountScope.ts` | Detects a genuine account handoff on this device (as opposed to the same account continuing, or a guest session) — the logic `AccountSwitchGuard.tsx` calls before resetting every local cache above, so one account's leftovers can't leak into (or get pushed into the cloud row of) a different account that signs in next. |
 | `tipsStore.ts` | `seenTips` — which first-visit page tips (`PageTip.tsx`) have been dismissed; "Show again" in Settings clears it. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
@@ -207,14 +214,42 @@ client's word. See §8 for the full design.
 | `friendsStore.ts` | Friend RPC wrappers (`getFriends`, `sendFriendRequest`, `addFriendByCode`, …). |
 | `clubsStore.ts` | Club RPC wrappers (migration 0040) — create/rename/delete, add/remove member (owner-only, only onto an existing friend), `getClubStandings` (real MP stats, filtered + re-ranked to the roster). |
 | `tournamentsStore.ts` | Tournament RPC wrappers (migration 0041) — a round-robin series among a fixed roster, not a bracket. `createTournament` links an already-created mp_games row as round 1; `addTournamentRound` links a rematch as the next one; `getTournamentStandings` sums each player's `mp_participants.final_score`/`outcome` live across every linked game. Never touches the `mp` Edge Function itself. |
+| `mpSchema.ts` | Runtime (zod) validation of what the `mp` Edge Function's responses actually contain — the function is still the authority, but a malformed/truncated response surfaces as a clean "couldn't load" instead of a React crash three components deep. Checks only the shape the play screen reads, not every field. |
+
+**Cosmetics** (avatar, frame, title, banner, badge — see migration 0028's
+`cosmetic_unlocks` table for the server-side mirror of the unlock rules
+below)
+
+| File | Role |
+|---|---|
+| `cosmeticUnlocks.ts` | The shared `CosmeticUnlockRule` union + `isCosmeticUnlocked`/`cosmeticRequirementLabel` — one unlock-condition system for every gated cosmetic (badge, frame, title, banner), computed from an `UnlockContext` built out of an account's own live data. |
+| `avatarPresets.ts` | Free `EMOJI_OPTIONS`/`COLOR_OPTIONS` for a picture-less avatar, plus the 13 earned `PREMIUM_EMOJI_OPTIONS` badges (level milestones + one per achievement category + the Epic/Mythic/Prismatic tier badges). |
+| `profileCosmetics.ts` | `AVATAR_FRAME_OPTIONS` (+ `AVATAR_FRAME_COLOR`) and `TITLE_OPTIONS` — frames are free flat colors except `grandmaster`/`prismatic`/`dealerstable`, which `AvatarFrame.tsx` special-cases into an animated ring instead of using the flat-color map. |
+| `bannerPresets.ts` | `BANNER_OPTIONS` — a CSS `background` string per banner (2-stop linear or conic gradient only, so `shareCard.ts`'s canvas parser can replay it) plus an `unlock` rule; `prismatic`/`dealerstable` get a real layered-DOM treatment in `ProfileBanner.tsx` beyond what this flat string shows. |
+| `allCosmetics.ts` | `ALL_GATED_COSMETICS` — every gated badge/frame/title/banner in one flat list, and `diffNewlyUnlockedCosmetics` (before/after progress snapshots → what just unlocked) that `UnlockToast.tsx` renders. |
+| `achievementIconPaths.ts` | Raw path/circle/rect data for the 9 achievement-category icons — one shared source `AchievementIcons.tsx` renders as JSX and `shareCard.ts` replays as `Path2D` draws on a `<canvas>` (which has no SVG renderer), so the two can't visually drift apart. |
+| `achievementRarity.ts` | "Only 4% of players have this" — reads migration 0029's `achievement_unlock_counts` (a daily-refreshed summary table; the underlying per-account rows are owner-only, so a client can't compute this itself). |
+| `avatarUpload.ts` | Client-side prep for an uploaded profile photo — center-cropped to a square and downsized via `<canvas>` before it ever leaves the device, then uploaded to the `avatars` Storage bucket (migration 0024) at a fixed per-account path so a re-upload replaces the old file in place. |
+| `profileShareCard.ts` | `buildProfileShareCardInput` — the one place a `leaderboard_entries` row becomes a `ProfileShareCardInput` (`shareCard.ts`), so `/player`'s own share button and `/friends`' "share to add me" button (a friend-code footer swapped in) can't drift into two differently-rendered cards. |
 
 **Small pure formatters** — `formatNames.ts` (`joinNames`), `formatScore.ts`
 (shared int/decimal/`—` rendering), `achievementFormat.ts`, `aiPersonas.ts`
-(cosmetic AI name + blurb, New-Game-time only).
+(cosmetic AI name + blurb, New-Game-time only), `handSort.ts` (shared hand-
+sort comparators, used by both `GameContext.tsx` and `useMpGame.ts` so
+solo/pass-and-play and multiplayer hands sort identically).
 
 **Platform** — `supabaseClient.ts` (the singleton + `isSupabaseConfigured`),
-`sound.ts` (Web Audio synthesis, no files), `haptics.ts` (Capacitor / `navigator.vibrate`),
-`shareCard.ts` (canvas → PNG standings image).
+`sound.ts` (Web Audio synthesis, no files), `ambience.ts` (optional
+synthesized background pad for the game screens, same no-files approach as
+`sound.ts`), `haptics.ts` (Capacitor / `navigator.vibrate`), `shareCard.ts`
+(canvas → PNG standings/profile image), `useFocusTrap.ts` (keeps Tab
+cycling inside a modal/sheet), `errorReporter.ts` (dependency-free
+`window.onerror`/`unhandledrejection` capture → the `client_errors` table,
+migration 0016), `analytics.ts` (anonymous aggregate product counters →
+`app_events`, migration 0016 — no user id, session id, or IP, ever),
+`exportUserData.ts` (Account page's "download my data" — assembles
+everything this account owns from the same owner-RLS tables/RPCs the rest
+of the app already reads, client-side, into one JSON file).
 
 ---
 
@@ -413,16 +448,23 @@ Re-run the bundle step whenever `src/` changes.
 
 ---
 
-## 8. Audit — cleanup opportunities (last re-verified 2026-09-11)
+## 8. Audit — cleanup opportunities (last re-verified 2026-09-14)
 
 A full pass for dead code, redundancy, and optimization opportunities —
-originally done 2026-09-10, re-run from scratch after this session's
-largest batch of new features (card faces, account-wide settings sync,
-first-visit tips, account bios, security hardening). Same conclusion both
-times: the codebase is clean and unusually well-commented; findings stay
-modest even after roughly doubling in size. Nothing was removed this pass
-— every finding below was either already true and re-confirmed, or newly
-checked and found to be a false alarm.
+originally done 2026-09-10, re-run 2026-09-11, re-run again from scratch
+2026-09-14 after another large batch (Rarity Vault cosmetics tier, the
+Creator-exclusive banner/frame redesign, Clubs + Tournaments, profile
+share-card unification, home-page nav rework). Same conclusion every time:
+the codebase is clean and unusually well-commented; findings stay modest
+even as it keeps growing (~31,600 lines across 152 `app`/`src` files as of
+this pass). Nothing was removed this pass — every finding below was either
+already true and re-confirmed, or newly checked and found to be a false
+alarm.
+
+This pass also extended the check beyond dead code, into documentation
+completeness specifically (every file should open with an explanation of
+its role, not just be commented well internally) — see "Documentation
+completeness" below for that part's own method and findings.
 
 ### Applied historically (verified inert, separate commits)
 
@@ -509,17 +551,19 @@ was looking). No genuinely orphaned file exists anywhere in the repo.
    that are individually trivial to read as they are. Not a finding,
    a considered "no."
 
-### Checked and clean (both passes)
+### Checked and clean (all three passes)
 
 - No `TODO`/`FIXME`/`HACK`/`@deprecated` markers anywhere.
 - All `console.*` calls are deliberate error logging in `.catch` handlers
   (`src/demo.ts`'s plain `console.log`s are its actual output — it's a CLI
   benchmark script, not app code).
-- All 11 `eslint-disable` lines (grew from 7) are `react-hooks/exhaustive-deps`
+- All 12 `eslint-disable` lines (grew from 11) are `react-hooks/exhaustive-deps`
   or a documented `@next/next` rule exception, each with a reason in the
   adjacent comment.
 - No orphaned files — every non-route `.ts`/`.tsx` file has a real importer
-  somewhere in `app/`, `src/`, or `supabase/functions/`.
+  somewhere in `app/`, `src/`, or `supabase/functions/`. (`app/robots.ts` is
+  the one new false-positive this pass — a Next.js file-convention route,
+  same category as `manifest.ts`/`sitemap.ts`, never imported by name.)
 - No build output, `node_modules`, or oversized files accidentally tracked
   by git — the largest tracked files are `e2e/visual.spec.ts-snapshots/`
   baseline PNGs, which are supposed to be there.
@@ -527,5 +571,48 @@ was looking). No genuinely orphaned file exists anywhere in the repo.
   load (measured directly from a real `next build`'s output, not
   estimated); the Supabase SDK stays lazy-loaded off that path, enforced
   by `scripts/check-bundle.mjs` in CI so this can't silently regress.
-- `tsc`, `eslint .`, `vitest` (346, up from 199), and `next build` all
+- `tsc`, `eslint .`, `vitest` (464, up from 346), and `next build` all
   pass clean.
+
+### Documentation completeness (new this pass, 2026-09-14)
+
+Checked separately from dead-code, since a file can be internally
+well-commented and still lack the "what is this and why does it exist"
+paragraph a newcomer needs before diving in.
+
+**Method:** every non-test `.ts`/`.tsx` file in `app`/`src` checked for an
+explanatory comment near its top (imports, then a comment before the first
+real declaration — this codebase's own convention, comment right above
+what it describes, rather than always above the imports); a comment-
+density pass (comment lines ÷ total lines) to flag any file that might be
+under-explained rather than just JSX/prose-heavy; and this document's own
+component/lib tables cross-checked against the actual file list.
+
+**Result:**
+- Of 152 files, 147 already had a real explanation at the top (often
+  positioned as a JSDoc block directly above the main export rather than
+  before the imports — a deliberate, consistent convention here, not a
+  gap). 5 genuinely had none: `app/lib/scorecardStore.ts`,
+  `app/privacy/page.tsx`, `app/terms/page.tsx`, `app/sign-in/page.tsx`, and
+  `app/layout.tsx` (which was already extensively commented section-by-
+  section, just missing one lead-in sentence). All 5 fixed this pass.
+- The comment-density pass's lowest-ratio files were all either static
+  prose pages (privacy/terms/how-to-play — the visible content *is* the
+  explanation) or straightforward JSX-rendering pages whose file-header
+  comment already covers the "why"; spot-checked `clubs/page.tsx`,
+  `tournaments/page.tsx`, and `scorecard/page.tsx` specifically (real
+  feature logic, not just prose) and each had a solid header — a low ratio
+  here just means the rest is self-evident JSX, which matches this
+  project's own "comment the why, not the what" convention rather than
+  under-documenting it.
+- This document's own tables had fallen behind: 8 components
+  (`AvatarFrame`, `EmptyState`, `PlayerAvatar`, `PremiumBadgeIcon`,
+  `ProfileBanner`, `SoundQuickToggle`, `UndoRing`, `UnlockToast`) and 13
+  `app/lib/` files (`accountScope`, `achievementIconPaths`,
+  `achievementRarity`, `ambience`, `analytics`, `avatarPresets`,
+  `avatarUpload`, `errorReporter`, `exportUserData`, `handSort`,
+  `mpSchema`, `profileShareCard`, `useFocusTrap`) existed in the repo with
+  their own good file-level comments but no row in §3c/§3d. All added this
+  pass, including a new **Cosmetics** subsection in §3d for the avatar/
+  frame/title/banner/badge catalog files, which had grown into a real
+  subsystem with no documented home of its own.

@@ -1,3 +1,6 @@
+// Static terms of service — server component (no "use client"), plain
+// prose. Linked from the Home footer and Settings.
+
 import Link from "next/link";
 
 export const metadata = {
