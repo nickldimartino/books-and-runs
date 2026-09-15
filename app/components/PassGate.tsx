@@ -11,9 +11,13 @@ interface PassGateProps {
 export function PassGate({ name, onReveal }: PassGateProps) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 text-center">
-      <div>
+      {/* w-full + break-words: a max-length (20-char) custom name has no
+          spaces to wrap at on its own, and this div had no width
+          constraint of its own — a long unbroken name was overflowing
+          past the viewport instead of wrapping, clipped off both edges. */}
+      <div className="w-full max-w-full">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">Pass the device to</p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--heading)]">{name}</h1>
+        <h1 className="mt-2 break-words text-3xl font-bold text-[var(--heading)]">{name}</h1>
       </div>
       <button
         onClick={onReveal}

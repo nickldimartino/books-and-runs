@@ -134,7 +134,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
       <div className="text-center">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">{roundLabel} complete</p>
         {wentOut && (
-          <h1 className="mt-1 text-2xl font-bold text-[var(--heading)]">{wentOut.name} went out!</h1>
+          <h1 className="mt-1 break-words text-2xl font-bold text-[var(--heading)]">{wentOut.name} went out!</h1>
         )}
       </div>
 

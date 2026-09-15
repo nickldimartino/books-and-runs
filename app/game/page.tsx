@@ -1193,7 +1193,7 @@ export default function GamePage() {
           {[...playersForDisplay]
             .sort((a, b) => a.cumulativeScore - b.cumulativeScore)
             .map((p) => (
-              <li key={p.id} className="flex items-center justify-end gap-1">
+              <li key={p.id} className="flex min-w-0 items-center justify-end gap-1">
                 {p.id === YOU_PLAYER_ID && level && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
                     Lv{level.level}
@@ -1210,7 +1210,12 @@ export default function GamePage() {
                     Lv{AI_THEORETICAL_LEVEL[p.difficulty]}
                   </span>
                 )}
-                <span className="truncate">
+                {/* min-w-0 + max-w: `truncate` alone did nothing here — a
+                    flex child's min-width defaults to auto, so this span
+                    was growing to fit a full 20-char custom name instead of
+                    ever reaching its own overflow:hidden, spilling out over
+                    the "Your hand" cell next to it. */}
+                <span className="min-w-0 max-w-[120px] truncate">
                   {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
                 </span>
               </li>

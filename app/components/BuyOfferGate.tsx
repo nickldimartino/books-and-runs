@@ -18,9 +18,11 @@ interface BuyOfferGateProps {
 export function BuyOfferGate({ playerName, card, onRespond }: BuyOfferGateProps) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 text-center">
-      <div>
+      {/* Same overflow fix as PassGate.tsx — a max-length custom name has
+          no spaces to wrap at and this div had no width constraint. */}
+      <div className="w-full max-w-full">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">Pass the device to</p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--heading)]">{playerName}</h1>
+        <h1 className="mt-2 break-words text-3xl font-bold text-[var(--heading)]">{playerName}</h1>
       </div>
 
       <div className="flex flex-col items-center gap-3">

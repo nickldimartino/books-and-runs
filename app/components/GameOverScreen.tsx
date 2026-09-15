@@ -559,9 +559,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
                 : "Game over"}
         </p>
         {!isTutorial && wentOut && (
-          <p className="mt-1 text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
+          <p className="mt-1 break-words text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
         )}
-        <h1 className="win-announce mt-1 text-3xl font-bold text-[var(--heading)]">
+        <h1 className="win-announce mt-1 break-words text-3xl font-bold text-[var(--heading)]">
           {isTutorial
             ? "Nice work!"
             : isTie
