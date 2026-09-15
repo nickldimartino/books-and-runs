@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { allAchievements } from "@/achievements";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { Confetti } from "./Confetti";
+import { ReviewPrompt } from "./ReviewPrompt";
 import { UnlockToast } from "./UnlockToast";
 import { Difficulty, GameState, YOU_PLAYER_ID } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
@@ -28,6 +29,7 @@ import { useGame } from "../GameContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AnyCosmeticOption, diffNewlyUnlockedCosmetics } from "../lib/allCosmetics";
 import { track } from "../lib/analytics";
+import { shouldShowReviewPromptAfterWin } from "../lib/reviewPromptStore";
 import {
   DailyDealState,
   localDateKey,
@@ -124,6 +126,22 @@ export function GameOverScreen({ state }: { state: GameState }) {
       won: state.winnerId === YOU_PLAYER_ID,
     });
   }, [state, isTutorial, isDailyDeal, isWeeklyChallenge]);
+
+  // Asks after a real win specifically (not a tie, not the tutorial) —
+  // reviewPromptStore.ts is what actually paces this (every 3rd qualifying
+  // win, stops for good once answered), this effect just reports the one
+  // moment worth asking about. Guarded the same "once per mount" way as
+  // the analytics effect above — this screen's own `state` never changes
+  // after mount, so there's nothing to react to a second time.
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+  const reviewPromptCheckedRef = useRef(false);
+  useEffect(() => {
+    if (reviewPromptCheckedRef.current) return;
+    reviewPromptCheckedRef.current = true;
+    if (isTutorial || isTie || state.winnerId !== YOU_PLAYER_ID) return;
+    if (shouldShowReviewPromptAfterWin()) setShowReviewPrompt(true);
+  }, [state, isTutorial, isTie]);
+
   // Snapshot of achievement progress from immediately before this game's
   // writes land — captured once (a retry after a partial failure must reuse
   // it, not re-snapshot, or a partially-applied write would look like the
@@ -576,6 +594,8 @@ export function GameOverScreen({ state }: { state: GameState }) {
           </p>
         )}
       </div>
+
+      {showReviewPrompt && <ReviewPrompt onDismiss={() => setShowReviewPrompt(false)} />}
 
       <ol className="flex flex-col gap-2">
         {standings.map((p) => {

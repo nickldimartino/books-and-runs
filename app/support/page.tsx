@@ -8,7 +8,7 @@
 // see the function's own doc for why an anonymous submission is fine here.
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { loadSupabase } from "../lib/supabaseClient";
 
@@ -55,6 +55,15 @@ export default function SupportPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Pre-selects the type dropdown for a visitor arriving from a link that
+  // already knows which kind of report this is (e.g. ReviewPrompt.tsx's
+  // "not really enjoying it" / "yes!" branches) — read once on mount, not
+  // watched live, since nothing else on this page ever changes the URL.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("type");
+    if (requested === "bug" || requested === "feature") setType(requested);
+  }, []);
 
   const totalBytes = files.reduce((sum, f) => sum + f.file.size, 0);
 
