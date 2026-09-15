@@ -8,8 +8,10 @@ import type { ReactNode } from "react";
 import { CONTRACTS } from "@/types";
 import { HowToPlayBottomBackLink, HowToPlayTopBackLink } from "./BackLink";
 
+// Just the page-specific portion — see app/not-found.tsx's own comment on
+// why (the root layout's title.template appends the suffix automatically).
 export const metadata = {
-  title: "How to Play — Books & Runs",
+  title: "How to Play",
 };
 
 const PENALTY_ROWS = [

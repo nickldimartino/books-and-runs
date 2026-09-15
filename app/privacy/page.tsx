@@ -3,8 +3,9 @@
 
 import Link from "next/link";
 
+// Just the page-specific portion — see not-found.tsx's own comment on why.
 export const metadata = {
-  title: "Privacy Policy — Books & Runs",
+  title: "Privacy Policy",
 };
 
 export default function PrivacyPage() {

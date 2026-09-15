@@ -3,8 +3,9 @@
 
 import Link from "next/link";
 
+// Just the page-specific portion — see not-found.tsx's own comment on why.
 export const metadata = {
-  title: "Terms of Service — Books & Runs",
+  title: "Terms of Service",
 };
 
 export default function TermsPage() {

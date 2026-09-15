@@ -5,8 +5,11 @@
 
 import Link from "next/link";
 
+// Just the page-specific portion — the root layout's title.template
+// ("%s — Books & Runs") appends the suffix automatically; writing it here
+// too would double it in the actual browser tab.
 export const metadata = {
-  title: "History of Books & Runs — Books & Runs",
+  title: "History of Books & Runs",
 };
 
 export default function HistoryPage() {
