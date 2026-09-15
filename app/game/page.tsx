@@ -30,6 +30,7 @@ import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { UndoRing } from "../components/UndoRing";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { markGameStarted } from "../lib/firstSessionStore";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
@@ -243,6 +244,18 @@ export default function GamePage() {
     if (loadLocalSettings().ambientMusicEnabled) startAmbience();
     return () => stopAmbience();
   }, []);
+
+  // First real signal (tutorial included) that this device is no longer a
+  // brand-new visitor — see firstSessionStore.ts's own doc for what reads
+  // this on Home/New Game. Guarded so it only ever writes once per mount,
+  // not on every state change a turn produces.
+  const markedGameStartedRef = useRef(false);
+  useEffect(() => {
+    if (state && !markedGameStartedRef.current) {
+      markedGameStartedRef.current = true;
+      markGameStarted();
+    }
+  }, [state]);
 
   const lastFlightIdRef = useRef(0);
   useEffect(() => {

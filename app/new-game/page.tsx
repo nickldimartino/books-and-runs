@@ -14,6 +14,7 @@ import { PageTip } from "../components/PageTip";
 import { useGame } from "../GameContext";
 import { fetchOwnDisplayName } from "../lib/leaderboardStore";
 import { markTutorialStarting } from "../lib/localSave";
+import { hasStartedAGame } from "../lib/firstSessionStore";
 import { supabase } from "../lib/supabaseClient";
 import {
   contractsFor,
@@ -33,6 +34,18 @@ export default function NewGamePage() {
   // the account's current display name, not whatever was saved into the
   // favorite lineup.
   const [accountDisplayName, setAccountDisplayName] = useState<string | null>(null);
+  // Promotes the tutorial from a text link at the bottom to a real,
+  // accent-highlighted card up top for a session that's never played a
+  // single turn — found during a UX audit as the single most-buried
+  // feature on this screen despite being the most useful one for exactly
+  // this visitor. Read in an effect so first paint matches the server's
+  // "nothing yet" (same reasoning as PageTip.tsx). Once any game starts,
+  // firstSessionStore flips this for good — a returning player gets the
+  // original understated link back, not a permanent promoted card.
+  const [isFirstSession, setIsFirstSession] = useState(false);
+  useEffect(() => {
+    setIsFirstSession(!hasStartedAGame());
+  }, []);
 
   useEffect(() => {
     loadFavoriteGameConfigWithCloud(supabase, user?.id ?? null).then(setFavorite);
@@ -91,6 +104,23 @@ export default function NewGamePage() {
       </PageTip>
 
       <div className="flex flex-col gap-3">
+        {isFirstSession && (
+          <div className="rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 p-5">
+            <p className="text-base font-semibold text-[var(--heading)]">New here? Start with the tutorial</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              A short guided round (you vs. one Beginner AI) walking through drawing, melding, and
+              discarding — about a minute, doesn&apos;t count toward your stats.
+            </p>
+            <button
+              onClick={startTutorial}
+              disabled={startingTutorial}
+              className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            >
+              {startingTutorial ? "Starting…" : "Start tutorial"}
+            </button>
+          </div>
+        )}
+
         {favoriteForDisplay && (
           <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-5">
             <p className="text-base font-semibold text-[var(--heading)]">Play my usual</p>
@@ -139,18 +169,22 @@ export default function NewGamePage() {
         )}
       </div>
 
-      <button
-        onClick={startTutorial}
-        disabled={startingTutorial}
-        className="mt-2 self-start text-sm text-[var(--accent)] hover:underline disabled:opacity-50"
-      >
-        New here? Take the tutorial →
-      </button>
+      {!isFirstSession && (
+        <>
+          <button
+            onClick={startTutorial}
+            disabled={startingTutorial}
+            className="mt-2 self-start text-sm text-[var(--accent)] hover:underline disabled:opacity-50"
+          >
+            New here? Take the tutorial →
+          </button>
 
-      <p className="text-xs text-[var(--faint)]">
-        The tutorial is a short guided round (you vs. one Beginner AI) walking through drawing,
-        melding, and discarding. It doesn&apos;t count toward your stats.
-      </p>
+          <p className="text-xs text-[var(--faint)]">
+            The tutorial is a short guided round (you vs. one Beginner AI) walking through drawing,
+            melding, and discarding. It doesn&apos;t count toward your stats.
+          </p>
+        </>
+      )}
     </main>
   );
 }

@@ -28,6 +28,7 @@ import { playerProfileHref, pullDailyDealStreak, pullWeeklyChallengeStreak } fro
 import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame, loadWeeklyChallengeSave } from "./lib/localSave";
 import { loadSupabase, supabase } from "./lib/supabaseClient";
 import { useNotifications } from "./lib/useNotifications";
+import { hasStartedAGame } from "./lib/firstSessionStore";
 import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
 import { usePlayerLevel } from "./PlayerLevelContext";
 import { formatAchievementProgress } from "./lib/achievementFormat";
@@ -286,12 +287,23 @@ function MoreSection({ configured, user, onSignOut }: { configured: boolean; use
  * menu, which read as an afterthought buried among Settings/History/
  * Scorekeeper rather than the one thing that unlocks stats, achievements,
  * the leaderboard, and playing with friends at all.
+ *
+ * `softened` (a session that's never played a single turn) drops the
+ * filled accent pill to a plain outlined one and the tinted background to
+ * a bare border — this and the two daily-content cards below it used to
+ * match New Game's own visual weight, competing for a first tap instead of
+ * clearly playing second fiddle to it. Full weight returns the moment a
+ * game actually starts (see firstSessionStore.ts).
  */
-function SignInPrompt() {
+function SignInPrompt({ softened }: { softened: boolean }) {
   return (
     <Link
       href="/sign-in"
-      className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left transition hover:bg-[var(--accent)]/15"
+      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
+        softened
+          ? "border-[var(--border)] hover:bg-[var(--panel-soft)]"
+          : "border-[var(--accent)]/40 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"
+      }`}
     >
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-[var(--heading)]">Sign in to save your progress</span>
@@ -299,7 +311,13 @@ function SignInPrompt() {
           Track your level and achievements, climb the leaderboard, and play multiplayer with friends.
         </span>
       </span>
-      <span className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)]">
+      <span
+        className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold ${
+          softened
+            ? "border border-[var(--accent)]/50 text-[var(--accent)]"
+            : "bg-[var(--accent)] text-[var(--on-accent)]"
+        }`}
+      >
         Sign in
       </span>
     </Link>
@@ -523,6 +541,16 @@ export default function HomePage() {
   // `dailyDeal` above: this page fully remounts on every visit, and nothing
   // else on Home changes this mid-visit.
   const [hasDailyDealSave, setHasDailyDealSave] = useState(false);
+  // Softens the Sign-in/Daily Deal/Weekly Challenge CTAs below so they
+  // don't compete with New Game on a session that's never played a single
+  // turn — see firstSessionStore.ts's own doc. Read in an effect, not the
+  // initializer, so the very first client render matches the server's
+  // "nothing yet" (same reasoning PageTip.tsx already follows) rather than
+  // flashing the softened treatment then un-softening it a frame later.
+  const [isFirstSession, setIsFirstSession] = useState(false);
+  useEffect(() => {
+    setIsFirstSession(!hasStartedAGame());
+  }, []);
   useEffect(() => {
     setHasDailyDealSave(loadDailyDealSave() !== null);
   }, []);
@@ -678,14 +706,21 @@ export default function HomePage() {
           userId={user?.id}
         />
 
-        {configured && !user && <SignInPrompt />}
+        {configured && !user && <SignInPrompt softened={isFirstSession} />}
 
         {/* Tinted rather than plain-bordered like the rest of the page — a
             visual notch below New Game's solid fill, but a clear notch above
             the plain nav buttons below it, matching how much attention a
             once-a-day hook actually deserves: more than "here's a settings
-            page," less than the primary CTA. */}
-        <section className="flex flex-col gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between">
+            page," less than the primary CTA. On a session that's never
+            played a single turn, even that notch competes with New Game —
+            see isFirstSession's own doc — so it drops to a plain border and
+            an outlined button until a game actually starts. */}
+        <section
+          className={`flex flex-col gap-3 rounded-xl border px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between ${
+            isFirstSession ? "border-[var(--border)]" : "border-[var(--accent)]/40 bg-[var(--accent)]/10"
+          }`}
+        >
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-[var(--heading)]">Daily Deal</h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
@@ -704,15 +739,24 @@ export default function HomePage() {
           </div>
           <button
             onClick={handleDailyDeal}
-            className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold ${
+              isFirstSession
+                ? "border border-[var(--accent)]/50 text-[var(--accent)]"
+                : "bg-[var(--accent)] text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            }`}
           >
             {dailyDealPlayedToday ? "Play again" : hasDailyDealSave ? "Continue today's deal" : "Play today's deal"}
           </button>
         </section>
 
         {/* Daily Deal's bigger, harder sibling — a rotating event beyond the
-            quick daily round, same tinted-but-not-primary visual weight. */}
-        <section className="flex flex-col gap-3 rounded-xl border border-[var(--highlight)]/40 bg-[var(--highlight)]/10 px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between">
+            quick daily round, same tinted-but-not-primary visual weight
+            (and the same softened-until-you've-played treatment). */}
+        <section
+          className={`flex flex-col gap-3 rounded-xl border px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between ${
+            isFirstSession ? "border-[var(--border)]" : "border-[var(--highlight)]/40 bg-[var(--highlight)]/10"
+          }`}
+        >
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-[var(--heading)]">Weekly Challenge</h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
@@ -739,7 +783,11 @@ export default function HomePage() {
             // e2e suite). The card's border/wash above stays on
             // --highlight for the blue-vs-amber distinction from Daily
             // Deal; only the solid-fill button needed the safer pairing.
-            className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold ${
+              isFirstSession
+                ? "border border-[var(--accent)]/50 text-[var(--accent)]"
+                : "bg-[var(--accent)] text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
+            }`}
           >
             {weeklyChallengePlayedThisWeek
               ? "Play again"
