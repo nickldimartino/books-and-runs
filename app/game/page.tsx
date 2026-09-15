@@ -29,6 +29,7 @@ import { RoundSummary } from "../components/RoundSummary";
 import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { UndoRing } from "../components/UndoRing";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
@@ -552,7 +553,18 @@ export default function GamePage() {
     router.push("/");
   }
 
-  if (!state) return null;
+  // Briefly true right after quitToHome()/skipTutorial() clear the state
+  // ref — router.push("/") is in flight but hasn't unmounted this page
+  // yet, so without a placeholder this rendered nothing at all for a
+  // couple of frames, a jarring blank screen right after a deliberate
+  // "get me out of here" tap.
+  if (!state) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <LoadingSpinner />
+      </main>
+    );
+  }
 
   // state.players as actually rendered — YOU_PLAYER_ID's name overridden to
   // the account's current display name (see the effect above) rather than
