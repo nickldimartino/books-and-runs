@@ -68,6 +68,9 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "🏮", unlock: { kind: "dailyDealStreak", days: 30 } },
   { emoji: "🏆", unlock: { kind: "weeklyChallengeStreak", weeks: 12 } },
   { emoji: "💫", unlock: { kind: "complete" } },
+  // Supporter — earned by tipping once (app/tip/page.tsx), not by playing
+  // at all. The one badge in this list that isn't a progress reward.
+  { emoji: "☕", unlock: { kind: "supporterOnly" } },
 ] as const;
 
 /** Ring/disc color behind each non-category-mastery medal (see
@@ -88,6 +91,7 @@ export const LEVEL_MEDAL_COLOR: Record<string, string> = {
   "🏮": "#f97316",
   "🏆": "#facc15",
   "💫": "#ec4899",
+  "☕": "#8b5e3c",
 };
 
 /** The premium option for a given emoji, or null for a free (or unknown)

@@ -183,6 +183,38 @@ npx supabase secrets set RESEND_API_KEY=re_xxx SUPPORT_EMAIL=you@example.com
 npx supabase functions deploy contact
 ```
 
+## `stripe-webhook` — the tip jar
+
+Records a completed Stripe Payment Link checkout from the "Support the
+developer" page (`app/tip/page.tsx`) into `supporter_payments` (migration
+0043) — the ☕ Supporter badge unlocks off that table, never off anything
+the client claims. No Stripe SDK: verifies the `Stripe-Signature` header
+directly with Deno's Web Crypto (see the function's own doc for why).
+
+Requires migration 0043 to have run first.
+
+### Deploy
+
+```bash
+npx supabase functions deploy stripe-webhook --no-verify-jwt
+npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx
+```
+
+`--no-verify-jwt` matters — Stripe's own requests carry no Supabase JWT at
+all, so the platform's default auth gate would reject every delivery before
+the function's own signature check ever ran.
+
+Then, one-time setup in the Stripe Dashboard:
+1. Create a free Stripe account if you don't have one.
+2. **Payment Links** → create one per tip tier you want (Settings' own
+   Help section links to `/tip`, which expects a `PAYMENT_LINKS` array —
+   fill in the real URLs in `app/tip/page.tsx`).
+3. **Developers → Webhooks → Add endpoint** → paste this function's URL
+   (`$SUPABASE_URL/functions/v1/stripe-webhook`) → subscribe to
+   `checkout.session.completed` only.
+4. Copy the endpoint's own "Signing secret" (starts `whsec_`, different
+   from any API key) into `STRIPE_WEBHOOK_SECRET` above.
+
 `RESEND_API_KEY` comes from a (free-tier is plenty) [Resend](https://resend.com)
 account. Without a verified custom domain, Resend's shared `onboarding@resend.dev`
 sender can only deliver to the email address the Resend account itself was

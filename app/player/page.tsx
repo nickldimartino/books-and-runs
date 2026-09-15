@@ -781,6 +781,10 @@ export default function PlayerProfilePage() {
   const [history, setHistory] = useState<GameHistoryRow[]>([]);
   const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
   const [dailyDealBestStreak, setDailyDealBestStreak] = useState<number | null>(null);
+  // Whether this account has ever completed a tip (migration 0043's
+  // supporter_payments — written only by the stripe-webhook function, so
+  // this is a read of real ground truth, not anything self-reported).
+  const [isSupporter, setIsSupporter] = useState(false);
   const [mpStats, setMpStats] = useState<MpStats | null>(null);
   const [mpHistory, setMpHistory] = useState<MpHistoryEntry[]>([]);
   const [privateLoading, setPrivateLoading] = useState(true);
@@ -820,7 +824,16 @@ export default function PlayerProfilePage() {
         .maybeSingle<{ daily_deal_best_streak: number }>(),
       // Best-effort (needs migrations 0010/0011).
       getMyMpStats(client).catch(() => ({ ...EMPTY_MP_STATS })),
-    ]).then(([statsRes, historyRes, countersRes, dailyDealRes, mp]) => {
+      // Needs migration 0043 — a query error (an unmigrated project, no
+      // such table yet) resolves with data: null same as any other
+      // Supabase error, never rejects, so `?? []` alone already covers it.
+      client
+        .from("supporter_payments")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .then((res) => res.data ?? []),
+    ]).then(([statsRes, historyRes, countersRes, dailyDealRes, mp, supporterRows]) => {
       if (statsRes.error) {
         setPrivateStatsError(true);
       } else {
@@ -839,6 +852,7 @@ export default function PlayerProfilePage() {
         mpBestWinStreak: mp.bestWinStreak,
       });
       setDailyDealBestStreak(dailyDealRes.data?.daily_deal_best_streak ?? 0);
+      setIsSupporter(supporterRows.length > 0);
       setPrivateLoading(false);
     });
 
@@ -860,8 +874,9 @@ export default function PlayerProfilePage() {
         dailyDealBestStreak: entry?.daily_deal_best_streak ?? 0,
         weeklyChallengeBestStreak: entry?.weekly_challenge_best_streak ?? 0,
         isCreator: entry?.is_creator ?? false,
+        isSupporter,
       }),
-    [level, entry, progress]
+    [level, entry, progress, isSupporter]
   );
 
   // Self-heal: an equipped cosmetic can end up over-privileged relative to

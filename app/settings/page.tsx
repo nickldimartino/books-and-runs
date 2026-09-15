@@ -682,6 +682,21 @@ export default function SettingsPage() {
                 Contact us
               </Link>
             </section>
+
+            <section className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--heading)]">Enjoying the game?</p>
+                <p className="text-xs text-[var(--faint)]">
+                  An optional one-time tip — never required, never changes anything about the game.
+                </p>
+              </div>
+              <Link
+                href="/tip"
+                className="shrink-0 rounded-lg bg-[var(--panel)] px-3 py-2 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+              >
+                Support the developer
+              </Link>
+            </section>
           </SettingsSection>
 
           {confirmingReset ? (

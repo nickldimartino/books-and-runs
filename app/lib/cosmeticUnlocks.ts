@@ -37,7 +37,11 @@ export type CosmeticUnlockRule =
   | { kind: "complete" }
   /** Exclusive to leaderboard_entries.is_creator — not earnable by anyone
    * else, at any level or achievement count. */
-  | { kind: "creatorOnly" };
+  | { kind: "creatorOnly" }
+  /** Earned by having ever completed a tip — see migration 0043's
+   * supporter_payments (server-verified, written only by the
+   * stripe-webhook Edge Function) and app/tip/page.tsx. */
+  | { kind: "supporterOnly" };
 
 /** Everything a rule might need to check itself against. Callers that
  * don't have every field yet (e.g. allCosmetics.ts's before/after unlock-
@@ -53,6 +57,7 @@ export interface UnlockContext {
   dailyDealBestStreak: number;
   weeklyChallengeBestStreak: number;
   isCreator: boolean;
+  isSupporter: boolean;
 }
 
 export function makeUnlockContext(
@@ -65,6 +70,7 @@ export function makeUnlockContext(
     dailyDealBestStreak: partial.dailyDealBestStreak ?? 0,
     weeklyChallengeBestStreak: partial.weeklyChallengeBestStreak ?? 0,
     isCreator: partial.isCreator ?? false,
+    isSupporter: partial.isSupporter ?? false,
   };
 }
 
@@ -105,6 +111,8 @@ export function isCosmeticUnlocked(rule: CosmeticUnlockRule, ctx: UnlockContext)
       return ctx.level >= 250 && ctx.dailyDealBestStreak >= 30 && allCategoriesMastered(ctx.progress);
     case "creatorOnly":
       return ctx.isCreator;
+    case "supporterOnly":
+      return ctx.isSupporter;
   }
 }
 
@@ -129,5 +137,7 @@ export function cosmeticRequirementLabel(rule: CosmeticUnlockRule): string {
       return "Master every category, reach Level 250, and a 30-day Daily Deal streak";
     case "creatorOnly":
       return "Exclusive to the creator of Books & Runs";
+    case "supporterOnly":
+      return "Unlocked by tipping — see Settings → Help → Support the developer";
   }
 }

@@ -134,6 +134,7 @@ AuthProvider
 | `/how-to-play` | Rules reference. `BackLink` returns to wherever you came from (`?from=game`). |
 | `/sign-in`, `/reset-password`, `/privacy`, `/terms` | Auth + legal. |
 | `/support` | Bug report / feature request form (type dropdown, subject, description, optional reply-to email, up to 5 attachments). Submits to the `contact` Edge Function, which emails it — the destination address is a Supabase secret, never shipped to the client. Works signed out. Linked from the Home footer and Settings' Help section. |
+| `/tip` | "Support the developer" — an optional one-time tip via Stripe Payment Links (`PAYMENT_LINKS` in the file itself), gated behind sign-in so a completed payment can be attributed back to an account. Grants the ☕ Supporter badge — see the `stripe-webhook` Edge Function and migration 0043. Linked from Settings' Help section. |
 | `layout.tsx`, `manifest.ts` | Root layout, PWA manifest. Loads `public/init.js` — a plain synchronous `<script src>` (not `next/script`, deliberately — see the file's own comment) that applies the saved theme/colorblind/card-back/intro-splash state before first paint, so there's no flash of the wrong theme. |
 | `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js`, **production only**. A dev-mode registration used to shadow local code changes with a stale cache — a confusing "why isn't my edit showing up" trap that can persist across dev-server restarts, since the cache lives in the browser, not the server. Offline shell caching — plain runtime caching, no build-time precache manifest. Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. Also re-checks for a new deploy on every `visibilitychange` and fires `br:sw-update-available` once a newer service worker actually takes over — the standalone-app equivalent of a browser tab's reload button, since a home-screen install has no such button of its own. |
 | `UpdateAvailableBanner.tsx` | Mounted in the root layout; listens for `br:sw-update-available` and shows a dismissible "new version ready" banner with a Refresh button. Never auto-reloads — see `ServiceWorkerRegistrar.tsx`'s own doc for the detection side. |
@@ -188,6 +189,7 @@ AuthProvider
 | `scorecardStore.ts` | `scorecard` — the standalone scorekeeper's grid. |
 | `pushSubscriptions.ts` | Web Push opt-in (Settings page): register `public/sw.js`, subscribe/unsubscribe via `PushManager`, keep `push_subscriptions` (migration 0020) in step. The actual send is server-side — see `mp/index.ts`'s `sendPushForEvent`. |
 | `pendingSaveQueue.ts` | `pendingSaves` — finished games whose Supabase write failed; retried by `PendingSaveSync`. |
+| `firstSessionStore.ts` | `hasStartedAGame` — whether this device has ever started a game (tutorial included). Softens Home's Sign-in/Daily Deal/Weekly Challenge CTAs and promotes New Game's tutorial link to a real button for a session that's never played; returns to normal the moment one does. |
 
 **Recording a finished game (the write path)**
 
@@ -346,6 +348,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0040 | Clubs — `clubs` + `club_members` (owner-curated, only onto an existing friend), RPCs for create/rename/delete/add/remove member, and `club_standings()` (a filtered, re-ranked view of real multiplayer stats — no new stats pipeline). |
 | 0041 | Tournaments — a round-robin series, not a bracket (see `tournamentsStore.ts`'s own doc). `tournaments` + `tournament_games` link a fixed roster's ordinary multiplayer games together; no `mp` Edge Function changes. RPCs create/link/cancel a series and compute live standings from `mp_participants`. |
 | 0042 | The Rarity Vault — Epic (3/6-of-9 categories mastered), Mythic (Level 250, 500 games, 30-day Daily Deal streak, 12-week Weekly Challenge streak), and Prismatic (all of the above at once) cosmetic tiers, plus a Creator-only frame + banner. New `cosmetic_unlocked()` requirement kinds; see `cosmeticUnlocks.ts`. |
+| 0043 | The tip jar — `supporter_payments` (service-role-write-only, same ground-truth pattern as `daily_deal_completions`/`weekly_challenge_completions`), written by the new `stripe-webhook` Edge Function after a completed Stripe Payment Link checkout. Grants the ☕ Supporter badge via a new `supporter_only` `cosmetic_unlocked()` branch. See `app/tip/page.tsx`. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -394,6 +397,23 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
   migration, no `_engine/` copy — self-contained.
 - Deploy: `npx supabase secrets set RESEND_API_KEY=... SUPPORT_EMAIL=...`
   then `npx supabase functions deploy contact`.
+
+### Edge Function (`supabase/functions/stripe-webhook/`)
+
+- `index.ts` — Deno, single route, no Supabase JWT auth (Stripe calls this
+  directly — deployed with `--no-verify-jwt`). Verifies the
+  `Stripe-Signature` header manually via Web Crypto (no Stripe SDK — the
+  scheme is simple enough not to need one), then records a completed
+  `checkout.session.completed` into `supporter_payments` (migration 0043)
+  with the service-role client. `client_reference_id` on the Payment
+  Link's own URL (appended by `app/tip/page.tsx`) is what ties a payment
+  back to an account — Payment Links have no server-side "create
+  checkout" step of their own to attach metadata another way. No
+  `_engine/` copy — self-contained.
+- Deploy: `npx supabase functions deploy stripe-webhook --no-verify-jwt`
+  then `npx supabase secrets set STRIPE_WEBHOOK_SECRET=...` — see
+  `supabase/functions/README.md` for the one-time Stripe Dashboard setup
+  (Payment Links + the webhook endpoint itself).
 
 ---
 
