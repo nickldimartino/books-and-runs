@@ -17,6 +17,7 @@ export type TipId =
   | "achievements"
   | "player-profile"
   | "leaderboard"
+  | "leaderboard-season"
   | "friends"
   | "scorecard"
   | "clubs"

@@ -398,10 +398,8 @@ export default function LeaderboardPage() {
 
       <PageTip id="leaderboard" title="Finding your friends">
         Every signed-in account, ranked by whichever stat you sort by below — or tap the
-        &quot;Friends&quot; toggle to rank against just the people you&apos;ve added. &quot;This
-        month&quot; resets on the 1st, so there&apos;s always a fresh race even if you&apos;re
-        behind on the all-time board. Tap any name to open their profile. Set your own name on
-        the{" "}
+        &quot;Friends&quot; toggle to rank against just the people you&apos;ve added. Tap any
+        name to open their profile. Set your own name on the{" "}
         <Link href="/account" className="underline hover:text-[var(--heading)]">
           Account
         </Link>{" "}
@@ -444,9 +442,11 @@ export default function LeaderboardPage() {
           </div>
 
           {view === "season" && (
-            <p className="-mt-3 text-xs text-[var(--faint)]">
-              Games played and won since {seasonLabel()} began — resets on the 1st of every month.
-            </p>
+            <PageTip id="leaderboard-season" title="This month">
+              Games played and won since {seasonLabel()} began — resets on the 1st of every
+              month, so there&apos;s always a fresh race even if you&apos;re behind on the
+              all-time board.
+            </PageTip>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">

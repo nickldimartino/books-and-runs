@@ -44,6 +44,7 @@ export interface AccountSettingsRow {
   sound_volume: number | null;
   highlight_layoffs: boolean | null;
   show_whose_turn: boolean | null;
+  show_meld_hint: boolean | null;
   ambient_music_enabled: boolean | null;
   ambient_volume: number | null;
   ambient_track: string | null;
@@ -65,13 +66,14 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
   sound_volume: null,
   highlight_layoffs: null,
   show_whose_turn: null,
+  show_meld_hint: null,
   ambient_music_enabled: null,
   ambient_volume: null,
   ambient_track: null,
 };
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, ambient_music_enabled, ambient_volume, ambient_track";
+  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -124,6 +126,7 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     hapticsEnabled: row.haptics_on ?? current.hapticsEnabled,
     highlightLayoffs: row.highlight_layoffs ?? current.highlightLayoffs,
     showWhoseTurn: row.show_whose_turn ?? current.showWhoseTurn,
+    showMeldHint: row.show_meld_hint ?? current.showMeldHint,
     soundVolume: row.sound_volume ?? current.soundVolume,
     ambientMusicEnabled: row.ambient_music_enabled ?? current.ambientMusicEnabled,
     ambientVolume: row.ambient_volume ?? current.ambientVolume,
@@ -198,6 +201,7 @@ export function bootstrapMissingAccountSettings(
   if (row.sound_volume === null) patch.sound_volume = local.soundVolume;
   if (row.highlight_layoffs === null) patch.highlight_layoffs = local.highlightLayoffs;
   if (row.show_whose_turn === null) patch.show_whose_turn = local.showWhoseTurn;
+  if (row.show_meld_hint === null) patch.show_meld_hint = local.showMeldHint;
   if (row.ambient_music_enabled === null) patch.ambient_music_enabled = local.ambientMusicEnabled;
   if (row.ambient_volume === null) patch.ambient_volume = local.ambientVolume;
   if (row.ambient_track === null) patch.ambient_track = local.ambientTrack;
@@ -218,6 +222,7 @@ type SettingsPatch = Partial<{
   sound_volume: number;
   highlight_layoffs: boolean;
   show_whose_turn: boolean;
+  show_meld_hint: boolean;
   ambient_music_enabled: boolean;
   ambient_volume: number;
   ambient_track: string;
@@ -256,6 +261,7 @@ export function pushHouseSettingsPatch(supabase: SupabaseClient | null, userId: 
   if (patch.hapticsEnabled !== undefined) immediate.haptics_on = patch.hapticsEnabled;
   if (patch.highlightLayoffs !== undefined) immediate.highlight_layoffs = patch.highlightLayoffs;
   if (patch.showWhoseTurn !== undefined) immediate.show_whose_turn = patch.showWhoseTurn;
+  if (patch.showMeldHint !== undefined) immediate.show_meld_hint = patch.showMeldHint;
   if (patch.ambientMusicEnabled !== undefined) immediate.ambient_music_enabled = patch.ambientMusicEnabled;
   if (patch.ambientTrack !== undefined) immediate.ambient_track = patch.ambientTrack;
   if (Object.keys(immediate).length > 0) {
@@ -334,6 +340,7 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     sound_volume: DEFAULT_SETTINGS.soundVolume,
     highlight_layoffs: DEFAULT_SETTINGS.highlightLayoffs,
     show_whose_turn: DEFAULT_SETTINGS.showWhoseTurn,
+    show_meld_hint: DEFAULT_SETTINGS.showMeldHint,
     ambient_music_enabled: DEFAULT_SETTINGS.ambientMusicEnabled,
     ambient_volume: DEFAULT_SETTINGS.ambientVolume,
     ambient_track: DEFAULT_SETTINGS.ambientTrack,

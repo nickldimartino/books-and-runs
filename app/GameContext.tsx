@@ -1107,8 +1107,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // independently of how it was chosen, so an auto-solved meld and a
     // manually-selected one that happened to land on the same cards are
     // indistinguishable to it, and don't need a new move-log entry type.
+    // preferredRunStarts is required, not optional, here: the solver can
+    // land on a run whose wild placement is genuinely ambiguous (e.g.
+    // naturals 3-4-5 + a wild could be "2-3-4-5" or "3-4-5-6") — without
+    // telling the replay which window it actually used, meldChosenGroups
+    // can't silently guess (see its own doc) and rejects the move, which
+    // rejects the whole game's stats. A book meld has no runStartIndex, so
+    // its entry here is just undefined — meldChosenGroups only consults
+    // this array for groups it classifies as a run in the first place.
     const groups = melds.map((m) => m.cards.map((c) => c.id));
-    moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "meldGroups", groups }];
+    const preferredRunStarts = melds.map((m) => m.runStartIndex);
+    moveLogRef.current = [
+      ...moveLogRef.current,
+      { seat: s.currentPlayerIndex, type: "meldGroups", groups, preferredRunStarts },
+    ];
     applyDeltas(meldDeltas(melds, contract));
     const wentOut = finishIfWentOut(s);
     if (wentOut) {

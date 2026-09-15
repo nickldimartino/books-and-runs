@@ -682,6 +682,7 @@ export default function GamePage() {
   const savedSettings = loadLocalSettings();
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
+  const showMeldHint = savedSettings.showMeldHint;
 
   const meldsByOwner = new Map<string, Meld[]>();
   for (const meld of state.melds) {
@@ -991,15 +992,19 @@ export default function GamePage() {
             AI-only — lays the contract in one tap when the current hand
             can complete it, skipping manual group-building entirely.
             Armed as undoable exactly like a manual meld, so a result you
-            don't like is one tap to revert (see GameContext's Undo). */}
-        <button
-          onClick={hintMeldContract}
-          disabled={!hasDrawn || !!pendingGroupChoice || !canHintMeldContract()}
-          title="Automatically lays your contract if your hand can complete it right now"
-          className="rounded-lg border border-dashed border-[var(--muted)]/50 px-4 py-2 text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          💡 Hint: Auto-meld
-        </button>
+            don't like is one tap to revert (see GameContext's Undo). Off by
+            default (Settings → "Hint: Auto-meld" button) — this plays part
+            of your turn for you, unlike the passive highlight-only assists. */}
+        {showMeldHint && (
+          <button
+            onClick={hintMeldContract}
+            disabled={!hasDrawn || !!pendingGroupChoice || !canHintMeldContract()}
+            title="Automatically lays your contract if your hand can complete it right now"
+            className="rounded-lg border border-dashed border-[var(--muted)]/50 px-4 py-2 text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            💡 Hint: Auto-meld
+          </button>
+        )}
       </div>
     </section>
   );

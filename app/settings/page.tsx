@@ -571,6 +571,13 @@ export default function SettingsPage() {
             onChange={(v) => updateSettings({ showWhoseTurn: v })}
             description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
           />
+
+          <BoolToggle
+            label="“Hint: Auto-meld” button"
+            value={settings.showMeldHint}
+            onChange={(v) => updateSettings({ showMeldHint: v })}
+            description="Show a button that lays your contract for you in one tap whenever your hand can complete it. Off by default — unlike the other assists above, this plays part of your turn for you."
+          />
           </SettingsSection>
 
           {configured && user && (

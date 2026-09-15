@@ -40,6 +40,12 @@ export interface HouseSettings {
   // Show the "Whose turn is it?" button on the game board, which pops up a
   // brief on-screen reminder of whose turn it currently is.
   showWhoseTurn: boolean;
+  // The "💡 Hint: Auto-meld" button (GameContext.tsx's hintMeldContract) —
+  // off by default, unlike every other assist toggle here: those highlight
+  // information you could work out yourself, this one plays a chunk of your
+  // turn for you, which should be something a player opts into rather than
+  // discovers already sitting on the board.
+  showMeldHint: boolean;
   // Sound-effect volume, 0–1. Independent of soundEnabled (which is the
   // on/off master). Applied in sound.ts.
   soundVolume: number;
@@ -68,6 +74,7 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   hapticsEnabled: true,
   highlightLayoffs: true,
   showWhoseTurn: true,
+  showMeldHint: false,
   soundVolume: 0.7,
   ambientMusicEnabled: false,
   ambientVolume: 0.4,

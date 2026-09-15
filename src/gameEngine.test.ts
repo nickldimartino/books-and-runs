@@ -215,6 +215,32 @@ describe("attemptMeldContract", () => {
     expect(state.players[0].hasMeldedContract).toBe(false);
     expect(state.players[0].hand).toHaveLength(13);
   });
+
+  // Regression for a real bug: GameContext.tsx's hintMeldContract logs
+  // attemptMeldContract's result as an ordinary meldGroups move for
+  // solo-verify to replay (see meldChosenGroups below). If that log entry
+  // ever drops the solved runStartIndex, a run whose wild placement is
+  // genuinely ambiguous (as here — naturals 3-4-5 plus a Joker could be
+  // "2-3-4-5" or "3-4-5-6") replays as rejected, which rejects the whole
+  // game's stats. This pins the contract both sides must honor: whatever
+  // runStartIndex attemptMeldContract actually used has to round-trip back
+  // in as meldChosenGroups' preferredRunStarts.
+  it("an auto-solved run's runStartIndex must round-trip through meldChosenGroups as preferredRunStarts", () => {
+    const hand = makeHand([["3", "hearts"], ["4", "hearts"], ["5", "hearts"], "JOKER"]);
+    const req = { round: 1, books: 0, runs: 1, bookSize: 3, runSize: 4, label: "1 Run", wholeHandMeld: false };
+    const solvedState = makeGameState({ selectedContracts: [req], players: [makePlayer({ id: "p1", hand })] });
+    const melds = attemptMeldContract(solvedState)!;
+    expect(melds).not.toBeNull();
+
+    const groups = melds.map((m) => m.cards.map((c) => c.id));
+
+    const replayWithout = makeGameState({ selectedContracts: [req], players: [makePlayer({ id: "p1", hand })] });
+    expect(meldChosenGroups(replayWithout, groups)).toBeNull();
+
+    const preferredRunStarts = melds.map((m) => m.runStartIndex);
+    const replayWith = makeGameState({ selectedContracts: [req], players: [makePlayer({ id: "p1", hand })] });
+    expect(meldChosenGroups(replayWith, groups, preferredRunStarts)).not.toBeNull();
+  });
 });
 
 describe("meldChosenGroups", () => {
