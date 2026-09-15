@@ -16,6 +16,7 @@
 // doesn't work on one shared pass-and-play screen.
 
 import {
+  attemptMeldContract,
   buyDiscard,
   createGame,
   discardAndAdvance,
@@ -28,7 +29,7 @@ import {
   startNextRound,
 } from "@/gameEngine";
 import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
-import { layOffOptions } from "@/meld";
+import { layOffOptions, solveContract, solveWholeHandContract } from "@/meld";
 import { roundSeed, seededRng } from "@/deck";
 import { MoveLogEntry } from "@/moveLog";
 import {
@@ -140,6 +141,16 @@ interface GameContextValue {
   revealHand: () => void;
   draw: (fromDiscard: boolean) => void;
   confirmMeld: (groups: string[][], preferredRunStarts?: (number | undefined)[]) => boolean;
+  /** Auto-lays your contract if your current hand can complete it right
+   * now — the same solver AI already uses every turn (attemptMeldContract),
+   * just exposed to a human player. False (no state change) if you've
+   * already melded this round or no valid grouping exists yet. Armed as
+   * undoable exactly like a manual confirmMeld, so a result you don't like
+   * is one tap to revert. */
+  hintMeldContract: () => boolean;
+  /** Read-only — whether hintMeldContract would currently succeed, for
+   * enabling/disabling its button without actually melding anything. */
+  canHintMeldContract: () => boolean;
   layOff: (cardId: string, meldId: string, position?: "low" | "high") => boolean;
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
@@ -1062,6 +1073,58 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [commit, applyDeltas, armUndo, emitFlight]
   );
 
+  // solveContract/solveWholeHandContract are pure — this is the read-only
+  // "could hintMeldContract succeed right now" check a Hint button uses to
+  // enable/disable itself without actually melding anything, mirroring
+  // attemptMeldContract's own guards without its side effects.
+  const canHintMeldContract = useCallback(() => {
+    const s = stateRef.current;
+    if (!s || !hasDrawnRef.current) return false;
+    const player = s.players[s.currentPlayerIndex];
+    if (player.id !== YOU_PLAYER_ID || player.hasMeldedContract) return false;
+    const req = s.selectedContracts[s.round - 1];
+    const solved = req.wholeHandMeld
+      ? solveWholeHandContract(player.hand, req, player.id)
+      : solveContract(player.hand, req, player.id);
+    return solved !== null;
+  }, []);
+
+  const hintMeldContract = useCallback(() => {
+    const s = stateRef.current;
+    if (!s || !hasDrawnRef.current) return false;
+    const player = s.players[s.currentPlayerIndex];
+    if (player.id !== YOU_PLAYER_ID) return false;
+    const contract = s.selectedContracts[s.round - 1];
+    // Same snapshot-before-mutating reasoning as confirmMeld — armed as an
+    // undo option below, same as if this grouping had been chosen by hand.
+    const preActionState = structuredClone(s);
+    const preActionCounters = { ...sessionCountersRef.current };
+    const preActionMoveLogLength = moveLogRef.current.length;
+    const melds = attemptMeldContract(s);
+    if (!melds) return false;
+    // Logged as an ordinary meldGroups move — solo-verify's replay
+    // re-validates this exact grouping through meldChosenGroups
+    // independently of how it was chosen, so an auto-solved meld and a
+    // manually-selected one that happened to land on the same cards are
+    // indistinguishable to it, and don't need a new move-log entry type.
+    const groups = melds.map((m) => m.cards.map((c) => c.id));
+    moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "meldGroups", groups }];
+    applyDeltas(meldDeltas(melds, contract));
+    const wentOut = finishIfWentOut(s);
+    if (wentOut) {
+      moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "discard", cardId: null }];
+      applyDeltas(roundWonDeltas(contract, false));
+    }
+    playMeld();
+    hapticMedium();
+    emitFlight({ kind: "meld", cards: melds.flatMap((m) => m.cards), byId: player.id, isAI: false });
+    if (!wentOut) {
+      armUndo({ state: preActionState, sessionCounters: preActionCounters, moveLogLength: preActionMoveLogLength });
+    }
+    commit();
+    return true;
+  }, [commit, applyDeltas, armUndo, emitFlight]);
+
   const layOff = useCallback(
     (cardId: string, meldId: string, position?: "low" | "high") => {
       const s = stateRef.current;
@@ -1292,6 +1355,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       revealHand,
       draw,
       confirmMeld,
+      hintMeldContract,
+      canHintMeldContract,
       layOff,
       discard,
       sortHand,
@@ -1332,6 +1397,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       revealHand,
       draw,
       confirmMeld,
+      hintMeldContract,
+      canHintMeldContract,
       layOff,
       discard,
       sortHand,

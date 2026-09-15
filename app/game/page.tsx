@@ -146,6 +146,8 @@ export default function GamePage() {
     revealHand,
     draw,
     confirmMeld,
+    hintMeldContract,
+    canHintMeldContract,
     layOff,
     discard,
     sortHand,
@@ -983,6 +985,20 @@ export default function GamePage() {
           className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
         >
           Confirm Meld
+        </button>
+        {/* The exact solver AI already runs every turn (attemptMeldContract
+            in src/gameEngine.ts), just exposed here instead of being
+            AI-only — lays the contract in one tap when the current hand
+            can complete it, skipping manual group-building entirely.
+            Armed as undoable exactly like a manual meld, so a result you
+            don't like is one tap to revert (see GameContext's Undo). */}
+        <button
+          onClick={hintMeldContract}
+          disabled={!hasDrawn || !!pendingGroupChoice || !canHintMeldContract()}
+          title="Automatically lays your contract if your hand can complete it right now"
+          className="rounded-lg border border-dashed border-[var(--muted)]/50 px-4 py-2 text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          💡 Hint: Auto-meld
         </button>
       </div>
     </section>
