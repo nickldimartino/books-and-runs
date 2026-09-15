@@ -22,7 +22,14 @@ import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
-import { displayNameFor, LeaderboardEntry, playerProfileHref, syncLeaderboardStats } from "../lib/leaderboardStore";
+import {
+  displayNameFor,
+  fetchSeasonSnapshots,
+  LeaderboardEntry,
+  playerProfileHref,
+  SeasonSnapshot,
+  syncLeaderboardStats,
+} from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
@@ -70,6 +77,7 @@ type SortKey =
   | "win_rate"
   | "average_score"
   | "games_played"
+  | "games_won"
   | "worst_score"
   | "daily_deal_streak"
   | "daily_deal_best_streak"
@@ -77,24 +85,62 @@ type SortKey =
   | "mp_win_rate"
   | "mp_best_win_streak";
 
-// minWidth matches each column's own tuned width from before this was a
-// shared render loop (e.g. "Achievements" needs more room for "199/200"
-// than "Level" needs for a single number) — kept per-key rather than
-// flattened to one shared value so the table's layout doesn't regress.
-const SORT_OPTIONS: { key: SortKey; label: string; minWidth: string }[] = [
-  { key: "level", label: "Level", minWidth: "60px" },
-  { key: "achievements", label: "Achievements", minWidth: "80px" },
-  { key: "total_xp", label: "Total XP", minWidth: "80px" },
-  { key: "win_rate", label: "Win rate", minWidth: "70px" },
-  { key: "average_score", label: "Avg. score", minWidth: "90px" },
-  { key: "games_played", label: "Games", minWidth: "70px" },
-  { key: "worst_score", label: "Worst score", minWidth: "90px" },
-  { key: "daily_deal_streak", label: "Daily streak", minWidth: "90px" },
-  { key: "daily_deal_best_streak", label: "Best streak", minWidth: "90px" },
-  { key: "mp_games_won", label: "MP wins", minWidth: "70px" },
-  { key: "mp_win_rate", label: "MP win rate", minWidth: "90px" },
-  { key: "mp_best_win_streak", label: "MP streak", minWidth: "80px" },
+interface Column {
+  key: SortKey;
+  label: string;
+  // minWidth matches each column's own tuned width from before this was a
+  // shared render loop (e.g. "Achievements" needs more room for "199/200"
+  // than "Level" needs for a single number) — kept per-key rather than
+  // flattened to one shared value so the table's layout doesn't regress.
+  minWidth: string;
+  render: (entry: LeaderboardEntry) => React.ReactNode;
+}
+
+// Single source of truth for both the "Sort by" dropdown and the table's
+// header/body cells — the season view (below) is just a filtered subset of
+// this same list, reusing the exact same render logic against
+// season-adjusted entries (see seasonAdjustedEntry).
+const COLUMNS: Column[] = [
+  { key: "level", label: "Level", minWidth: "60px", render: (e) => e.level },
+  {
+    key: "achievements",
+    label: "Achievements",
+    minWidth: "80px",
+    render: (e) => `${e.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`,
+  },
+  { key: "total_xp", label: "Total XP", minWidth: "80px", render: (e) => e.total_xp },
+  { key: "win_rate", label: "Win rate", minWidth: "70px", render: formatWinRate },
+  { key: "average_score", label: "Avg. score", minWidth: "90px", render: (e) => formatScore(e.average_score) },
+  { key: "games_played", label: "Games", minWidth: "70px", render: (e) => e.games_played },
+  { key: "games_won", label: "Wins", minWidth: "70px", render: (e) => e.games_won },
+  { key: "worst_score", label: "Worst score", minWidth: "90px", render: (e) => formatScore(e.worst_score) },
+  { key: "daily_deal_streak", label: "Daily streak", minWidth: "90px", render: (e) => e.daily_deal_streak },
+  {
+    key: "daily_deal_best_streak",
+    label: "Best streak",
+    minWidth: "90px",
+    render: (e) => e.daily_deal_best_streak,
+  },
+  { key: "mp_games_won", label: "MP wins", minWidth: "70px", render: (e) => e.mp_games_won ?? 0 },
+  {
+    key: "mp_win_rate",
+    label: "MP win rate",
+    minWidth: "90px",
+    render: (e) =>
+      (e.mp_games_played ?? 0) >= MP_WIN_RATE_MIN_GAMES
+        ? `${Math.round((100 * (e.mp_games_won ?? 0)) / (e.mp_games_played ?? 1))}%`
+        : "—",
+  },
+  { key: "mp_best_win_streak", label: "MP streak", minWidth: "80px", render: (e) => e.mp_best_win_streak ?? 0 },
 ];
+
+// The season (this-month) board only ranks stats that actually reset —
+// level/XP/achievements/daily-streaks/MP stats stay all-time-only by
+// design (see migration 0044's own doc: a season is a delta of
+// games_played/games_won, nothing else is diffable from a single monthly
+// snapshot).
+const SEASON_COLUMN_KEYS: SortKey[] = ["games_played", "games_won", "win_rate"];
+const SEASON_COLUMNS: Column[] = COLUMNS.filter((c) => SEASON_COLUMN_KEYS.includes(c.key));
 
 /**
  * A single number per sort key where *higher always means "ranks first"*.
@@ -120,6 +166,8 @@ function sortValue(entry: LeaderboardEntry, key: SortKey): number {
       return entry.total_xp;
     case "games_played":
       return entry.games_played;
+    case "games_won":
+      return entry.games_won;
     case "win_rate":
       return entry.games_played < WIN_RATE_MIN_GAMES ? -Infinity : entry.games_won / entry.games_played;
     case "average_score":
@@ -153,12 +201,43 @@ function sortEntries(entries: LeaderboardEntry[], key: SortKey): LeaderboardEntr
   });
 }
 
+/**
+ * Rewrites games_played/games_won as this-season deltas (current cumulative
+ * minus the last monthly snapshot — see migration 0044) — every other field
+ * is passed through unchanged, so this same entry can go straight into
+ * formatWinRate/SEASON_COLUMNS' render functions with no special-casing.
+ * An account with no snapshot yet (newer than the last one taken) gets a
+ * baseline of 0, so its whole cumulative total counts for this season —
+ * correct, since all of it happened within the season. Clamped at 0 as a
+ * defensive floor only — cumulative totals never actually decrease.
+ */
+function seasonAdjustedEntry(entry: LeaderboardEntry, snapshots: Record<string, SeasonSnapshot>): LeaderboardEntry {
+  const base = snapshots[entry.user_id];
+  return {
+    ...entry,
+    games_played: Math.max(0, entry.games_played - (base?.games_played ?? 0)),
+    games_won: Math.max(0, entry.games_won - (base?.games_won ?? 0)),
+  };
+}
+
+/** "September 2026" — matches leaderboardStore.ts's currentSeasonStart, in
+ * the visitor's own locale but the same UTC month boundary the snapshot
+ * itself uses, so this label always names the season actually being shown. */
+function seasonLabel(): string {
+  return new Date().toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
 export default function LeaderboardPage() {
   const { configured, loading: authLoading, user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("level");
+  const [sortKeyAllTime, setSortKeyAllTime] = useState<SortKey>("level");
+  const [sortKeySeason, setSortKeySeason] = useState<SortKey>("games_played");
+  const [view, setView] = useState<"allTime" | "season">("allTime");
+  const [seasonSnapshots, setSeasonSnapshots] = useState<Record<string, SeasonSnapshot>>({});
+  const sortKey = view === "season" ? sortKeySeason : sortKeyAllTime;
+  const setSortKey = view === "season" ? setSortKeySeason : setSortKeyAllTime;
   // Accounts you already friended or have a request pending with (either
   // direction) — the "Add friend" button is hidden for these. `requested`
   // covers the optimistic state right after a click, before the reload.
@@ -237,6 +316,22 @@ export default function LeaderboardPage() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!supabase || entries.length === 0) return;
+    let cancelled = false;
+    fetchSeasonSnapshots(
+      supabase,
+      entries.map((e) => e.user_id)
+    )
+      .then((snapshots) => {
+        if (!cancelled) setSeasonSnapshots(snapshots);
+      })
+      .catch((err) => console.error("Failed to load season snapshots:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [entries]);
+
   async function addFriend(targetId: string) {
     if (!supabase) return;
     setRequestedIds((prev) => new Set(prev).add(targetId));
@@ -303,8 +398,10 @@ export default function LeaderboardPage() {
 
       <PageTip id="leaderboard" title="Finding your friends">
         Every signed-in account, ranked by whichever stat you sort by below — or tap the
-        &quot;Friends&quot; toggle to rank against just the people you&apos;ve added. Tap any name to
-        open their profile. Set your own name on the{" "}
+        &quot;Friends&quot; toggle to rank against just the people you&apos;ve added. &quot;This
+        month&quot; resets on the 1st, so there&apos;s always a fresh race even if you&apos;re
+        behind on the all-time board. Tap any name to open their profile. Set your own name on
+        the{" "}
         <Link href="/account" className="underline hover:text-[var(--heading)]">
           Account
         </Link>{" "}
@@ -331,6 +428,27 @@ export default function LeaderboardPage() {
         </EmptyState>
       ) : (
         <>
+          <div className="flex overflow-hidden self-start rounded-lg border border-[var(--border)] text-sm">
+            <button
+              onClick={() => setView("allTime")}
+              className={`px-3 py-1.5 font-medium transition ${view === "allTime" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+            >
+              All-time
+            </button>
+            <button
+              onClick={() => setView("season")}
+              className={`px-3 py-1.5 font-medium transition ${view === "season" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+            >
+              This month
+            </button>
+          </div>
+
+          {view === "season" && (
+            <p className="-mt-3 text-xs text-[var(--faint)]">
+              Games played and won since {seasonLabel()} began — resets on the 1st of every month.
+            </p>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
               Sort by
@@ -339,9 +457,9 @@ export default function LeaderboardPage() {
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
                 className="rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.key} value={opt.key}>
-                    {opt.label}
+                {(view === "season" ? SEASON_COLUMNS : COLUMNS).map((col) => (
+                  <option key={col.key} value={col.key}>
+                    {col.label}
                   </option>
                 ))}
               </select>
@@ -363,28 +481,40 @@ export default function LeaderboardPage() {
           </div>
 
           {(() => {
-            const visibleEntries =
+            const scopedEntries =
               scope === "friends" ? entries.filter((e) => friendIds.has(e.user_id) || e.user_id === user?.id) : entries;
-            if (scope === "friends" && visibleEntries.length === 0) {
+            if (scope === "friends" && scopedEntries.length === 0) {
               return (
                 <EmptyState icon="🤝">
                   None of your friends have finished a tracked game or a Daily Deal yet.
                 </EmptyState>
               );
             }
+            const visibleEntries =
+              view === "season"
+                ? scopedEntries.map((e) => seasonAdjustedEntry(e, seasonSnapshots)).filter((e) => e.games_played > 0)
+                : scopedEntries;
+            if (view === "season" && visibleEntries.length === 0) {
+              return (
+                <EmptyState icon="🗓️">
+                  Nobody&apos;s finished a tracked game this month yet — play one to be the first.
+                </EmptyState>
+              );
+            }
+            const activeColumns = view === "season" ? SEASON_COLUMNS : COLUMNS;
             return (
           <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="bg-[var(--panel)] text-xs text-[var(--faint)]">
                   <th className="sticky left-0 bg-[var(--panel)] px-3 py-2 font-medium">Player</th>
-                  {SORT_OPTIONS.map((opt) => (
+                  {activeColumns.map((col) => (
                     <th
-                      key={opt.key}
-                      style={{ minWidth: opt.minWidth }}
-                      className={`px-2 py-2 text-center font-medium ${sortKey === opt.key ? "text-[var(--accent)]" : ""}`}
+                      key={col.key}
+                      style={{ minWidth: col.minWidth }}
+                      className={`px-2 py-2 text-center font-medium ${sortKey === col.key ? "text-[var(--accent)]" : ""}`}
                     >
-                      {opt.label}
+                      {col.label}
                     </th>
                   ))}
                 </tr>
@@ -435,24 +565,14 @@ export default function LeaderboardPage() {
                           </button>
                         )}
                       </td>
-                      <td className="px-2 py-2 text-center font-semibold text-[var(--heading)]">{entry.level}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">
-                        {entry.achievements_unlocked}/{TOTAL_ACHIEVEMENTS}
-                      </td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.total_xp}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{formatWinRate(entry)}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.average_score)}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.games_played}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{formatScore(entry.worst_score)}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.daily_deal_streak}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.daily_deal_best_streak}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.mp_games_won ?? 0}</td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">
-                        {(entry.mp_games_played ?? 0) >= MP_WIN_RATE_MIN_GAMES
-                          ? `${Math.round((100 * (entry.mp_games_won ?? 0)) / (entry.mp_games_played ?? 1))}%`
-                          : "—"}
-                      </td>
-                      <td className="px-2 py-2 text-center text-[var(--muted)]">{entry.mp_best_win_streak ?? 0}</td>
+                      {activeColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className={`px-2 py-2 text-center ${col.key === "level" ? "font-semibold text-[var(--heading)]" : "text-[var(--muted)]"}`}
+                        >
+                          {col.render(entry)}
+                        </td>
+                      ))}
                     </tr>
                   );
                 })}

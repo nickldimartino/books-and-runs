@@ -570,6 +570,48 @@ export async function fetchAvatarsFor(supabase: SupabaseClient, userIds: string[
   return avatars;
 }
 
+export interface SeasonSnapshot {
+  games_played: number;
+  games_won: number;
+}
+
+/** The current season's key, e.g. "2026-09-01" — matches the UTC month
+ * boundary snapshot_season_start() (migration 0044) snapshots against, so a
+ * lookup against season_snapshots for this value always hits this month's
+ * baseline. Computed from UTC (not local time) so this always agrees with
+ * the server regardless of the visitor's own timezone. */
+export function currentSeasonStart(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/**
+ * This season's starting games_played/games_won baseline for a set of
+ * accounts, keyed by user_id — see migration 0044's own doc. "This season"
+ * for an account is its current (cumulative) leaderboard_entries numbers
+ * minus this baseline; an account missing from the result was never
+ * snapshotted yet (e.g. it didn't exist at the last snapshot), so its
+ * baseline is 0 — meaning its full current total counts for this season,
+ * which is correct since all of it happened within the season.
+ */
+export async function fetchSeasonSnapshots(
+  supabase: SupabaseClient,
+  userIds: string[]
+): Promise<Record<string, SeasonSnapshot>> {
+  if (userIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("season_snapshots")
+    .select("user_id, games_played, games_won")
+    .eq("season_start", currentSeasonStart())
+    .in("user_id", userIds);
+  if (error) throw error;
+  const snapshots: Record<string, SeasonSnapshot> = {};
+  for (const row of (data ?? []) as { user_id: string; games_played: number; games_won: number }[]) {
+    snapshots[row.user_id] = { games_played: row.games_played, games_won: row.games_won };
+  }
+  return snapshots;
+}
+
 /** The public URL for an uploaded avatar photo, from its Storage path — see
  * migration 0024's own doc for why the path (not a full URL) is what's
  * stored: this can be recomputed any time, so nothing goes stale. Every
