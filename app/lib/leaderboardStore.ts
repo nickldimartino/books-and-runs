@@ -65,6 +65,12 @@ export interface LeaderboardEntry {
    * migration 0030, never through any client update function. A profile
    * badge, not a permission: nothing else in the app reads this. */
   is_creator: boolean;
+  /** True for an account deliberately flagged (SQL-editor-only, see
+   * migration 0047) as a throwaway account used to test multiplayer/Clubs/
+   * Tournaments — excluded from the public leaderboard query and from
+   * achievement-rarity's own denominator, so testing doesn't skew either.
+   * Never set by any client-facing function. */
+  is_test_account: boolean;
   level: number;
   total_xp: number;
   achievements_unlocked: number;

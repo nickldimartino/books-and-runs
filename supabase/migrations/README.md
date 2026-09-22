@@ -66,6 +66,7 @@ tells you a project's real state.
 | 0044 | Seasonal (monthly) leaderboard — `season_snapshots` (user_id, season_start, games_played, games_won) and `snapshot_season_start()`, scheduled monthly via `pg_cron` (plus a run-once backfill for the current month). Purely additive: only ever reads `leaderboard_entries`, never writes to it — the app derives "this month" client-side as current cumulative minus the snapshot (see `app/leaderboard/page.tsx`). The existing all-time board is untouched. |
 | 0045 | `settings.show_meld_hint` — syncs the "Hint: Auto-meld" button's Settings toggle (off by default) across devices, same nullable pattern as every column since 0022. |
 | 0046 | `settings.text_scale` — syncs the "Text size" accessibility control across devices; usable while signed out too, unlike Theme. |
+| 0047 | Hide testing accounts from the public leaderboard — `leaderboard_entries.is_test_account` (SQL-editor-only, same pattern as 0030's `is_creator`; never touched by any client-facing function), excluded client-side in `app/leaderboard/page.tsx` and in `refresh_achievement_rarity()`'s own denominator. See the migration's own comment for the exact SQL to flag/unflag an account. |
 
 ## New migrations
 

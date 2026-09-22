@@ -314,6 +314,7 @@ function emptyEntry(userId: string): LeaderboardEntry {
     banner: null,
     joined_at: null,
     is_creator: false,
+    is_test_account: false,
     level: 0,
     total_xp: 0,
     achievements_unlocked: 0,

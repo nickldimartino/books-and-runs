@@ -288,7 +288,14 @@ export default function LeaderboardPage() {
             if (error) {
               setLoadError(true);
             } else {
-              setEntries((data as LeaderboardEntry[]) ?? []);
+              // Filtered client-side, not in the query itself — a project
+              // that hasn't run migration 0047 yet has no is_test_account
+              // column at all, and PostgREST errors on filtering by a
+              // column select("*") would otherwise tolerate as simply
+              // undefined (see the select's own comment above). !undefined
+              // reads as "not a test account," so this is a no-op until
+              // 0047 runs and something actually gets flagged.
+              setEntries(((data as LeaderboardEntry[]) ?? []).filter((e) => !e.is_test_account));
             }
             setLoading(false);
           });

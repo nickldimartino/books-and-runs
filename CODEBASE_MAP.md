@@ -353,6 +353,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0044 | Seasonal leaderboard — `season_snapshots` (user_id, season_start, games_played, games_won), populated monthly by `snapshot_season_start()` via `pg_cron` (plus a run-once backfill). Read-only from the client's perspective (any signed-in user can select, same as `leaderboard_entries`); `app/leaderboard/page.tsx` computes "this month" as current cumulative minus the snapshot. Doesn't touch `leaderboard_entries` or the all-time board at all. |
 | 0045 | `settings.show_meld_hint` — syncs the "Hint: Auto-meld" button's Settings toggle (off by default) across devices, same nullable pattern as every other Settings column since 0022. |
 | 0046 | `settings.text_scale` — syncs the "Text size" accessibility control (see `textScaleStore.ts`) across devices. Unlike Theme, usable while signed out too — this column only matters once someone is signed in and wants it to follow them. |
+| 0047 | `leaderboard_entries.is_test_account` — hides a flagged testing account from the public leaderboard (filtered client-side in `app/leaderboard/page.tsx`, since a project that hasn't run this migration yet has no such column) and from `refresh_achievement_rarity()`'s denominator. SQL-editor-only, same pattern as 0030's `is_creator`. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
