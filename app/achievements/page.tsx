@@ -271,6 +271,20 @@ export default function AchievementsPage() {
   );
 }
 
+/** The progress line shown under a tier: the raw "current / threshold"
+ * fraction is only actually informative for a tier you haven't cleared yet
+ * — once unlocked, showing e.g. "67 / 1 books melded" or "67 / 10 books
+ * melded" for every already-cleared tier in a family just repeats the same
+ * climbing counter against thresholds you passed a while ago, over and
+ * over. A cleared tier says so instead; formatAchievementProgress's real
+ * fraction is reserved for the ones you're still working toward. (Not
+ * shared into achievementFormat.ts itself — Home's "closest achievement"
+ * tile and AchievementUnlock.tsx's just-unlocked toast both have their own
+ * reasons to keep showing the real number even for an unlocked instance.) */
+function progressLine(achievement: AchievementInstance): string {
+  return achievement.unlocked ? "Unlocked" : formatAchievementProgress(achievement);
+}
+
 function cardClassName(unlocked: boolean): string {
   return `rounded-lg border px-4 py-3 ${
     unlocked ? "border-[var(--accent)]/50 bg-[var(--accent)]/10" : "border-[var(--border)] bg-[var(--panel)]"
@@ -311,7 +325,7 @@ function AchievementCardContent({ achievement, compact }: { achievement: Achieve
           </>
         )}
       </div>
-      <p className="mt-1 text-xs text-[var(--faint)]">{formatAchievementProgress(achievement)}</p>
+      <p className="mt-1 text-xs text-[var(--faint)]">{progressLine(achievement)}</p>
       {!achievement.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
           <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
@@ -418,9 +432,11 @@ function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
         </span>
       </button>
       <p className="mt-1 text-xs text-[var(--faint)]">
-        {isMastered ? "All 5 tiers unlocked" : `${TIER_LABEL[headline.tier]}${headline.unlocked ? " unlocked" : ""}`}
-        {" — "}
-        {formatAchievementProgress(headline)}
+        {isMastered
+          ? "All 5 tiers unlocked"
+          : headline.unlocked
+            ? `${TIER_LABEL[headline.tier]} unlocked`
+            : `${TIER_LABEL[headline.tier]} — ${formatAchievementProgress(headline)}`}
       </p>
       {!headline.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">

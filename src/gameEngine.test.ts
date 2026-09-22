@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   attemptMeldContract,
   buyDiscard,
+  canLayOffMultiple,
   createGame,
   discardAndAdvance,
   drawFromDiscard,
   drawFromPile,
   eligibleBuyers,
   layOffCard,
+  layOffMultiple,
   meldChosenGroups,
   startNextRound,
 } from "./gameEngine";
@@ -571,6 +573,130 @@ describe("layOffCard", () => {
     });
     expect(layOffCard(state, naturalTwo.id, run.id, "low")).toBe(true);
     expect(run.wildCardIds ?? []).toEqual([]);
+  });
+});
+
+describe("layOffMultiple / canLayOffMultiple", () => {
+  it("lays off several same-rank cards onto a book in one call, order-independent", () => {
+    const meld: Meld = {
+      id: "meld1",
+      type: "book",
+      ownerId: "p1",
+      cards: makeHand([["5", "hearts"], ["5", "clubs"], ["5", "spades"]]),
+    };
+    const eights = [
+      makeCard("5", "diamonds", { id: "a" }),
+      makeCard("5", "diamonds", { id: "b" }),
+    ];
+    const state = makeGameState({
+      melds: [meld],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: eights })],
+    });
+    expect(canLayOffMultiple(state, ["a", "b"], meld.id)).toBe(true);
+    expect(layOffMultiple(state, ["a", "b"], meld.id)).toBe(true);
+    expect(state.players[0].hand).toHaveLength(0);
+    expect(meld.cards.map((c) => c.id)).toEqual(
+      expect.arrayContaining(["a", "b"])
+    );
+  });
+
+  // The actual point of this function: the player selects 4H and 5H in
+  // whatever order they happened to tap them, extending a run currently
+  // starting at 6 — only 5-then-4 is a legal sequence (4 doesn't connect to
+  // a run starting at 6 until 5 has already extended it), so this only
+  // passes if the search tries orders other than "as given."
+  it("finds the correct order to extend a run's low end regardless of selection order", () => {
+    const run: Meld = {
+      id: "run1",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 5, // "6"
+      cards: makeHand([["6", "diamonds"], ["7", "diamonds"], ["8", "diamonds"], ["9", "diamonds"]]),
+    };
+    const four = makeCard("4", "diamonds", { id: "four" });
+    const five = makeCard("5", "diamonds", { id: "five" });
+    const state = makeGameState({
+      melds: [run],
+      // Selected in the "wrong" order (4 before 5) — the search must still
+      // find the 5-then-4 order that actually works.
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [four, five] })],
+    });
+    expect(canLayOffMultiple(state, ["four", "five"], run.id)).toBe(true);
+    expect(layOffMultiple(state, ["four", "five"], run.id)).toBe(true);
+    expect(run.cards.map((c) => c.id)).toEqual(["four", "five", ...run.cards.slice(2).map((c) => c.id)]);
+    expect(run.runStartIndex).toBe(3); // "4"
+    expect(state.players[0].hand).toHaveLength(0);
+  });
+
+  it("uses a wild to bridge a gap before the natural card past it", () => {
+    const run: Meld = {
+      id: "run1",
+      type: "run",
+      ownerId: "p1",
+      runStartIndex: 5, // "6"
+      cards: makeHand([["6", "diamonds"], ["7", "diamonds"], ["8", "diamonds"], ["9", "diamonds"]]),
+    };
+    const originalIds = run.cards.map((c) => c.id);
+    const four = makeCard("4", "diamonds", { id: "four" });
+    const wild = makeCard("JOKER", "joker", { id: "wild" });
+    const state = makeGameState({
+      melds: [run],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [four, wild] })],
+    });
+    expect(layOffMultiple(state, ["four", "wild"], run.id)).toBe(true);
+    expect(run.cards.map((c) => c.id)).toEqual(["four", "wild", ...originalIds]);
+    expect(run.runStartIndex).toBe(3); // "4"
+  });
+
+  it("rejects the whole batch (no partial lay-off) when no order works", () => {
+    const meld: Meld = {
+      id: "meld1",
+      type: "book",
+      ownerId: "p1",
+      cards: makeHand([["5", "hearts"], ["5", "clubs"], ["5", "spades"]]),
+    };
+    const good = makeCard("5", "diamonds", { id: "good" });
+    const bad = makeCard("6", "diamonds", { id: "bad" });
+    const state = makeGameState({
+      melds: [meld],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [good, bad] })],
+    });
+    expect(canLayOffMultiple(state, ["good", "bad"], meld.id)).toBe(false);
+    expect(layOffMultiple(state, ["good", "bad"], meld.id)).toBe(false);
+    expect(state.players[0].hand).toHaveLength(2);
+    expect(meld.cards).toHaveLength(3);
+  });
+
+  it("requires at least 2 distinct cards", () => {
+    const meld: Meld = {
+      id: "meld1",
+      type: "book",
+      ownerId: "p1",
+      cards: makeHand([["5", "hearts"], ["5", "clubs"], ["5", "spades"]]),
+    };
+    const one = makeCard("5", "diamonds", { id: "one" });
+    const state = makeGameState({
+      melds: [meld],
+      players: [makePlayer({ id: "p1", hasMeldedContract: true, hand: [one] })],
+    });
+    expect(layOffMultiple(state, ["one"], meld.id)).toBe(false);
+    expect(layOffMultiple(state, ["one", "one"], meld.id)).toBe(false);
+  });
+
+  it("requires the player to have melded their own contract first", () => {
+    const meld: Meld = {
+      id: "meld1",
+      type: "book",
+      ownerId: "p1",
+      cards: makeHand([["5", "hearts"], ["5", "clubs"], ["5", "spades"]]),
+    };
+    const cards = [makeCard("5", "diamonds", { id: "a" }), makeCard("5", "diamonds", { id: "b" })];
+    const state = makeGameState({
+      melds: [meld],
+      players: [makePlayer({ id: "p1", hasMeldedContract: false, hand: cards })],
+    });
+    expect(canLayOffMultiple(state, ["a", "b"], meld.id)).toBe(false);
+    expect(layOffMultiple(state, ["a", "b"], meld.id)).toBe(false);
   });
 });
 

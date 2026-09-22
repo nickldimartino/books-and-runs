@@ -149,6 +149,8 @@ export default function GamePage() {
     hintMeldContract,
     canHintMeldContract,
     layOff,
+    layOffMultiple,
+    canLayOffMultiple,
     discard,
     sortHand,
     reorderHand,
@@ -665,6 +667,15 @@ export default function GamePage() {
   const contract = state.selectedContracts[state.round - 1];
   const discardTop = state.discardPile[state.discardPile.length - 1];
   const selectedCard = player.hand.find((c) => c.id === selectedCardIds[0]) ?? null;
+  // Post-meld multi-select (2+ cards) is only ever for laying several cards
+  // off together in one action — see layOffMultiple in GameContext.tsx.
+  // Discard still requires exactly one (handleDiscardSelected already
+  // enforces that), and pre-meld multi-select is for building a book/run,
+  // an entirely different flow gated on !player.hasMeldedContract.
+  const selectedCardsForLayOff: Card[] =
+    player.hasMeldedContract && selectedCardIds.length > 1
+      ? selectedCardIds.map((id) => player.hand.find((c) => c.id === id)).filter((c): c is Card => !!c)
+      : [];
 
   const stagedCardIds = new Set(pendingGroups.flatMap((g) => g.cardIds));
   const visibleHand = player.hand.filter((c) => !stagedCardIds.has(c.id));
@@ -722,22 +733,22 @@ export default function GamePage() {
   const selectedCardCanLayOff =
     hasDrawn &&
     player.hasMeldedContract &&
-    !!selectedCard &&
-    state.melds.some((m) => layOffOptions(selectedCard, m).length > 0);
+    (selectedCardsForLayOff.length > 1
+      ? state.melds.some((m) => canLayOffMultiple(selectedCardIds, m.id))
+      : !!selectedCard && state.melds.some((m) => layOffOptions(selectedCard, m).length > 0));
 
   function handleCardClick(card: Card) {
     setGroupError(null);
     setPendingLayOff(null);
     setLayOffError(null);
-    if (player.hasMeldedContract) {
-      // Post-meld: single-select, for laying off or discarding one card.
-      setSelectedCardIds((prev) => (prev[0] === card.id ? [] : [card.id]));
-    } else {
-      // Pre-meld: multi-select, for building a book/run to stage.
-      setSelectedCardIds((prev) =>
-        prev.includes(card.id) ? prev.filter((id) => id !== card.id) : [...prev, card.id]
-      );
-    }
+    // Post-meld now multi-selects too (toggle, same as pre-meld) — for
+    // laying several cards off together in one action (layOffMultiple) as
+    // well as the original single-card lay-off/discard. Discard itself
+    // still only ever acts on selectedCardIds[0] when exactly one is
+    // selected (handleDiscardSelected), so this doesn't change that.
+    setSelectedCardIds((prev) =>
+      prev.includes(card.id) ? prev.filter((id) => id !== card.id) : [...prev, card.id]
+    );
   }
 
   // The specific reason a lay-off attempt just failed — checked in the same
@@ -752,11 +763,31 @@ export default function GamePage() {
   function layOffFailureReason(): string {
     if (!hasDrawn) return "Draw a card before laying off.";
     if (!player.hasMeldedContract) return "Meld your own contract before laying off.";
+    if (selectedCardsForLayOff.length > 1) {
+      return "Those cards can't all be laid off there together — try selecting them again, or lay them off one at a time.";
+    }
     return "That card can't be laid off there anymore — try selecting it again.";
   }
 
   function handleMeldClick(meld: Meld) {
-    if (!selectedCard || !player.hasMeldedContract) return;
+    if (!player.hasMeldedContract) return;
+    if (selectedCardsForLayOff.length > 1) {
+      // Multi-select: lay every selected card off onto this one meld in a
+      // single action — layOffMultiple works out the right order/direction
+      // per card itself (see gameEngine.ts's resolveLayOffOrder), so there's
+      // no ambiguous-wild prompt to show here the way the single-card path
+      // sometimes needs; it either finds a way to place all of them or it
+      // doesn't (see layOffFailureReason for that message).
+      const ok = layOffMultiple(selectedCardIds, meld.id);
+      if (ok) {
+        setSelectedCardIds([]);
+        setLayOffError(null);
+      } else {
+        setLayOffError(layOffFailureReason());
+      }
+      return;
+    }
+    if (!selectedCard) return;
     const options = layOffOptions(selectedCard, meld);
     if (options.length === 0) return;
     if (options.length === 1) {
@@ -1042,7 +1073,7 @@ export default function GamePage() {
             disabled={!selectedCardCanLayOff || !!pendingLayOff}
             className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Lay off card
+            {selectedCardsForLayOff.length > 1 ? "Lay off cards" : "Lay off card"}
           </button>
           <button
             onClick={handleDiscardSelected}
@@ -1462,9 +1493,10 @@ export default function GamePage() {
                           const isValidTarget =
                             hasDrawn &&
                             !pendingLayOff &&
-                            !!selectedCard &&
                             player.hasMeldedContract &&
-                            layOffOptions(selectedCard, meld).length > 0;
+                            (selectedCardsForLayOff.length > 1
+                              ? canLayOffMultiple(selectedCardIds, meld.id)
+                              : !!selectedCard && layOffOptions(selectedCard, meld).length > 0);
                           return (
                             <button
                               key={meld.id}

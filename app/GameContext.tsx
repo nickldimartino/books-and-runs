@@ -18,6 +18,7 @@
 import {
   attemptMeldContract,
   buyDiscard,
+  canLayOffMultiple as engineCanLayOffMultiple,
   createGame,
   discardAndAdvance,
   drawFromDiscard,
@@ -26,6 +27,7 @@ import {
   layOffCard,
   meldChosenGroups,
   PlayerConfig,
+  resolveLayOffOrder,
   startNextRound,
 } from "@/gameEngine";
 import { aiWantsToBuyDiscard, playAITurn } from "@/ai/index";
@@ -152,6 +154,16 @@ interface GameContextValue {
    * enabling/disabling its button without actually melding anything. */
   canHintMeldContract: () => boolean;
   layOff: (cardId: string, meldId: string, position?: "low" | "high") => boolean;
+  /** Lays off several selected cards onto one meld in a single action (e.g.
+   * three 8s onto a book, or two sequential run cards) — see gameEngine.ts's
+   * resolveLayOffOrder for how the right order/direction per card is found
+   * automatically. All-or-nothing, one undo step for the whole batch. 2+
+   * card ids only; a single card should go through layOff instead. */
+  layOffMultiple: (cardIds: string[], meldId: string) => boolean;
+  /** Read-only — whether layOffMultiple would currently succeed for these
+   * exact cards onto this exact meld, for enabling/disabling a "Lay off
+   * cards" button without laying anything off. */
+  canLayOffMultiple: (cardIds: string[], meldId: string) => boolean;
   discard: (cardId: string) => void;
   sortHand: (mode: SortMode) => void;
   reorderHand: (cardIdsInOrder: string[]) => void;
@@ -1182,6 +1194,72 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [commit, applyDeltas, armUndo, emitFlight]
   );
 
+  // "could layOffMultiple succeed right now" for these exact cards/meld,
+  // without actually laying anything off — mirrors canHintMeldContract's
+  // own read-only/mutator split above.
+  const canLayOffMultiple = useCallback((cardIds: string[], meldId: string) => {
+    const s = stateRef.current;
+    if (!s || !hasDrawnRef.current) return false;
+    return engineCanLayOffMultiple(s, cardIds, meldId);
+  }, []);
+
+  const layOffMultiple = useCallback(
+    (cardIds: string[], meldId: string) => {
+      const s = stateRef.current;
+      if (!s || !hasDrawnRef.current) return false;
+      const player = s.players[s.currentPlayerIndex];
+      const isYou = player.id === YOU_PLAYER_ID;
+      const meld = s.melds.find((m) => m.id === meldId);
+      if (!meld) return false;
+      // Resolved read-only, against the state as it is right now — applied
+      // for real just below via the exact same layOffCard the single-card
+      // path uses, one step per given card.
+      const order = resolveLayOffOrder(s, cardIds, meldId);
+      if (!order) return false;
+
+      // One snapshot for the whole batch — undoing a multi-card lay-off
+      // should revert all of it in one tap, not the last card only (see
+      // the identical single-snapshot reasoning in confirmMeld/hintMeldContract).
+      const preActionState = structuredClone(s);
+      const preActionCounters = { ...sessionCountersRef.current };
+      const preActionMoveLogLength = moveLogRef.current.length;
+
+      for (const step of order) {
+        // Looked up before layOffCard removes it from hand — same ordering
+        // the single-card layOff already relies on for its own delta call.
+        const card = player.hand.find((c) => c.id === step.cardId);
+        layOffCard(s, step.cardId, meldId, step.direction);
+        // Logged as ordinary layOff entries, one per card, in the order
+        // actually applied — indistinguishable to solo-verify's replay
+        // from the same cards laid off one at a time by hand, so no new
+        // move-log entry type is needed (same trick as hintMeldContract's
+        // meldGroups entry).
+        moveLogRef.current = [
+          ...moveLogRef.current,
+          { seat: s.currentPlayerIndex, type: "layOff", cardId: step.cardId, meldId, position: step.direction },
+        ];
+        if (isYou && card) applyDeltas(layOffDeltas(card, meld, player.id, step.wasAmbiguous));
+        if (card) emitFlight({ kind: "layoff", card, meldId, byId: player.id, isAI: false });
+      }
+
+      const wentOut = finishIfWentOut(s);
+      if (wentOut) {
+        moveLogRef.current = [...moveLogRef.current, { seat: s.currentPlayerIndex, type: "discard", cardId: null }];
+      }
+      if (isYou && wentOut) {
+        applyDeltas(roundWonDeltas(s.selectedContracts[s.round - 1], false));
+      }
+      playCardTap();
+      hapticLight();
+      if (!wentOut) {
+        armUndo({ state: preActionState, sessionCounters: preActionCounters, moveLogLength: preActionMoveLogLength });
+      }
+      commit();
+      return true;
+    },
+    [commit, applyDeltas, armUndo, emitFlight]
+  );
+
   /**
    * Advances the pending "buy the discard" queue after a discard, in turn
    * order: AI candidates decide immediately via a quick heuristic and are
@@ -1370,6 +1448,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hintMeldContract,
       canHintMeldContract,
       layOff,
+      layOffMultiple,
+      canLayOffMultiple,
       discard,
       sortHand,
       reorderHand,
@@ -1412,6 +1492,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hintMeldContract,
       canHintMeldContract,
       layOff,
+      layOffMultiple,
+      canLayOffMultiple,
       discard,
       sortHand,
       reorderHand,

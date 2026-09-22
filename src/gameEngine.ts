@@ -345,6 +345,121 @@ export function layOffCard(
   return true;
 }
 
+// A brute-force ordering search (see resolveLayOffOrder below) over N cards is
+// worst-case N! branches — bounded here mostly for UI sanity (nobody wants
+// to lay off more than a handful of cards in one tap) rather than genuine
+// performance need: each branch is a legality check that fails fast for
+// almost every wrong order (a run only ever has one card that legally
+// extends a given end at a given moment), so real hands prune to a tiny
+// fraction of the worst case well before this cap would matter.
+const MAX_LAYOFF_BATCH = 6;
+
+/**
+ * Every order N given cards could be laid off onto one meld in (and, for a
+ * wild with room on both ends, every direction it could go in at each
+ * point), tried until one succeeds — a run only accepts one specific rank
+ * at a time on a given end, so which card goes on first matters (e.g.
+ * laying off 4H before 5H onto a run currently ending at 6H fails; 5H then
+ * 4H succeeds), and a wild standing in for a middle rank has to go on
+ * before a natural card past it does. A wild's own direction can be
+ * genuinely ambiguous in isolation (room on both ends, neither already
+ * wild) — laid off alone that's exactly layOffCard's existing "ask the
+ * player" case (see GameContext's pendingLayOff), but *within* a batch it's
+ * often only ambiguous until you consider what the rest of the batch needs:
+ * a wild plus a natural card the wild is meant to bridge to has only one
+ * direction that lets the natural card go on next, so both of the wild's
+ * options are tried as separate branches here rather than requiring the
+ * caller to have already resolved it.
+ *
+ * Returns the valid order — each step's own resolved direction included,
+ * since a wild's direction can depend on what's laid off before it and a
+ * caller applying this for real (or crediting per-card achievement deltas
+ * the same way GameContext's single-card layOff already does — see
+ * wasAmbiguous below) needs that same direction and ambiguity-at-the-time
+ * repeated, not re-derived — or null if no order/direction combination
+ * lays off every given card. Pure — searches against throwaway clones via
+ * layOffCard itself (the exact same legality check a single manual lay-off
+ * already goes through), never touches `state`. Exported (not just used
+ * internally by canLayOffMultiple/layOffMultiple below) so GameContext.tsx
+ * can build one move-log entry and delta bundle per underlying card, the
+ * same shape a manual one-at-a-time lay-off of the same cards would have
+ * produced.
+ */
+export interface LayOffStep {
+  cardId: string;
+  direction: "low" | "high";
+  // Whether *this* card had a genuine low-vs-high choice at the moment it
+  // was laid off (mirrors GameContext.tsx's own wasAmbiguous, computed the
+  // same way — layOffOptions(card, meld).length === 2 right before this
+  // step's own layOffCard call) — feeds ambiguous_wild_choices_made the
+  // same as a manual lay-off would.
+  wasAmbiguous: boolean;
+}
+
+export function resolveLayOffOrder(state: GameState, cardIds: string[], meldId: string): LayOffStep[] | null {
+  function search(remaining: string[], working: GameState): LayOffStep[] | null {
+    if (remaining.length === 0) return [];
+    const meld = working.melds.find((m) => m.id === meldId);
+    const player = currentPlayer(working);
+    if (!meld) return null;
+    for (let i = 0; i < remaining.length; i++) {
+      const card = player.hand.find((c) => c.id === remaining[i]);
+      if (!card) continue;
+      const options = layOffOptions(card, meld);
+      for (const direction of options) {
+        const clone = structuredClone(working);
+        if (!layOffCard(clone, remaining[i], meldId, direction)) continue;
+        const restOrder = search([...remaining.slice(0, i), ...remaining.slice(i + 1)], clone);
+        if (restOrder) {
+          return [{ cardId: remaining[i], direction, wasAmbiguous: options.length === 2 }, ...restOrder];
+        }
+      }
+    }
+    return null;
+  }
+  return search(cardIds, structuredClone(state));
+}
+
+function layOffBatchGuards(state: GameState, cardIds: string[], meldId: string): boolean {
+  const uniqueIds = new Set(cardIds);
+  if (uniqueIds.size < 2 || uniqueIds.size !== cardIds.length || uniqueIds.size > MAX_LAYOFF_BATCH) return false;
+  const player = currentPlayer(state);
+  if (!player.hasMeldedContract) return false;
+  if (!cardIds.every((id) => player.hand.some((c) => c.id === id))) return false;
+  return state.melds.some((m) => m.id === meldId);
+}
+
+/**
+ * Read-only — whether layOffMultiple would currently succeed for these
+ * exact cards onto this exact meld, for enabling/disabling a "Lay off
+ * cards" button without actually laying anything off. See layOffCard for
+ * the single-card version this generalizes; 2+ cards only (a batch of one
+ * is just layOffCard).
+ */
+export function canLayOffMultiple(state: GameState, cardIds: string[], meldId: string): boolean {
+  return layOffBatchGuards(state, cardIds, meldId) && resolveLayOffOrder(state, cardIds, meldId) !== null;
+}
+
+/**
+ * Lay off several cards from the current player's hand onto one meld in a
+ * single action — e.g. three 8s onto a book of 8s, or two sequential run
+ * cards onto one end of a run. All-or-nothing: no order that lays off
+ * every given card means no state change at all, same as a single invalid
+ * lay-off. Once a valid order is found (see resolveLayOffOrder), applies it
+ * for real via ordinary layOffCard calls — every achievement/score delta a
+ * lay-off produces already comes from that same per-card path in
+ * GameContext.tsx, so a 3-card lay-off credits exactly as if those 3 cards
+ * had been laid off one at a time, just without requiring the player to
+ * find the right order themselves.
+ */
+export function layOffMultiple(state: GameState, cardIds: string[], meldId: string): boolean {
+  if (!layOffBatchGuards(state, cardIds, meldId)) return false;
+  const order = resolveLayOffOrder(state, cardIds, meldId);
+  if (!order) return false;
+  for (const step of order) layOffCard(state, step.cardId, meldId, step.direction);
+  return true;
+}
+
 /**
  * Discard a card, ending the turn. If the player has already melded their
  * contract and their hand is already empty (melding and/or laying off used
