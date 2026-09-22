@@ -4,9 +4,11 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { accountSwitched } from "./lib/accountScope";
 import { resetLocalPreferencesToDefaults } from "./lib/accountSettingsSync";
+import { applyCardBack, loadLocalCardBack } from "./lib/cardBackStore";
 import { resetDailyDealLocal } from "./lib/dailyDealStore";
 import { clearFavoriteGameConfig } from "./lib/favoriteGameConfig";
 import { clearDailyDealSave, clearSavedGame, clearWeeklyChallengeSave } from "./lib/localSave";
+import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme } from "./lib/themeStore";
 import { resetSeenTips } from "./lib/tipsStore";
 import { resetWeeklyChallengeLocal } from "./lib/weeklyChallengeStore";
 
@@ -48,7 +50,7 @@ import { resetWeeklyChallengeLocal } from "./lib/weeklyChallengeStore";
  * switch" worth resetting for — see accountScope.ts's own doc.
  */
 export function AccountSwitchGuard() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const wasSignedIn = useRef(false);
 
   useEffect(() => {
@@ -66,6 +68,13 @@ export function AccountSwitchGuard() {
       return;
     }
 
+    // Wait for the initial session check to actually resolve before
+    // treating this as "signed out" — forcing the theme back to default
+    // while auth is still loading would show a flash of default before
+    // snapping to the real signed-in theme a moment later, the exact bug
+    // this is meant to prevent, not cause.
+    if (loading) return;
+
     // Signing out, specifically (not "never signed in this session" — a
     // guest who never had an account here has nothing of an account's to
     // leave behind). The solo save is deliberately left alone here — it
@@ -80,7 +89,19 @@ export function AccountSwitchGuard() {
       resetDailyDealLocal();
       resetWeeklyChallengeLocal();
     }
-  }, [user]);
+
+    // The theme is always default while signed out (see
+    // settings/theme/page.tsx, which no longer lets a signed-out visitor
+    // choose anything else) — checked on every confirmed-signed-out state,
+    // not just a fresh sign-out, so a device that still has a non-default
+    // theme cached from before this rule existed self-heals the next time
+    // it loads the app signed out, instead of staying wrong forever.
+    if (loadLocalTheme() !== DEFAULT_THEME) {
+      saveLocalTheme(DEFAULT_THEME);
+      applyTheme(DEFAULT_THEME);
+      applyCardBack(loadLocalCardBack(), DEFAULT_THEME);
+    }
+  }, [user, loading]);
 
   return null;
 }

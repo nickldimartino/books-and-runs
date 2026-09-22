@@ -369,8 +369,8 @@ export default function NewLocalGamePage() {
           <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-xs text-[var(--heading)]">
             Only <strong className="font-semibold">{humanNames[0]?.trim() || "the first player"}</strong>
             &apos;s stats, achievements, and leaderboard entry are affected by this game — the other
-            player{humanCount > 2 ? "s" : ""} here aren&apos;t signed in as their own account, so
-            nothing of theirs gets recorded either way.
+            player{humanCount > 2 ? "s" : ""} here {humanCount > 2 ? "aren't" : "isn't"} signed in
+            as their own account, so nothing of theirs gets recorded either way.
           </p>
         )}
 
@@ -548,7 +548,7 @@ export default function NewLocalGamePage() {
           disabled={!canStart}
           className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-40"
         >
-          {justSaved ? "Saved ✓" : favorite ? "Update my usual to this setup" : "Save this setup as my usual"}
+          {justSaved ? "Saved ✓" : favorite ? "Update my usual to match this setup" : "Save this setup as my usual"}
         </button>
       </div>
 

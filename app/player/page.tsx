@@ -221,9 +221,23 @@ function formatMpWinRate(mpPlayed: number, mpWon: number): string {
   return `${Math.round((100 * mpWon) / mpPlayed)}%`;
 }
 
-function StatTile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function StatTile({
+  label,
+  value,
+  sub,
+  className,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  /** Extra classes on the outer tile — used to give a tile an explicit
+   * width in a flex-wrap layout (see the public stat row below), where a
+   * plain grid would leave a partial last row hugging the left edge
+   * instead of centered. */
+  className?: string;
+}) {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2.5 text-center">
+    <div className={`rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2.5 text-center ${className ?? ""}`}>
       <p className="text-lg font-bold tabular-nums text-[var(--heading)]">{value}</p>
       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-[var(--faint)]">{label}</p>
       {sub && <p className="text-[10px] text-[var(--faint)]">{sub}</p>}
@@ -1742,18 +1756,25 @@ export default function PlayerProfilePage() {
             </section>
           )}
 
-          <section className="grid grid-cols-3 gap-2">
-            <StatTile label="Achievements" value={`${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`} />
-            <StatTile label="Total XP" value={entry.total_xp} />
-            <StatTile label="Games" value={entry.games_played} />
-            <StatTile label="Win rate" value={formatWinRate(entry.games_played, entry.games_won)} />
-            <StatTile label="Avg. score" value={formatScore(entry.average_score)} />
-            <StatTile label="Worst score" value={formatScore(entry.worst_score)} />
-            <StatTile label="Daily streak" value={entry.daily_deal_streak} />
-            <StatTile label="Best streak" value={entry.daily_deal_best_streak} />
-            <StatTile label="MP wins" value={entry.mp_games_won ?? 0} />
-            <StatTile label="MP win rate" value={formatMpWinRate(entry.mp_games_played ?? 0, entry.mp_games_won ?? 0)} />
-            <StatTile label="MP streak" value={entry.mp_best_win_streak ?? 0} />
+          {/* flex-wrap + a fixed 3-per-row basis (not grid-cols-3) so an
+              incomplete last row — 11 tiles is 3 full rows plus a row of
+              2 — centers instead of hugging the grid's left edge. */}
+          <section className="flex flex-wrap justify-center gap-2">
+            {[
+              { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
+              { label: "Total XP", value: entry.total_xp },
+              { label: "Games", value: entry.games_played },
+              { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
+              { label: "Avg. score", value: formatScore(entry.average_score) },
+              { label: "Worst score", value: formatScore(entry.worst_score) },
+              { label: "Daily streak", value: entry.daily_deal_streak },
+              { label: "Best streak", value: entry.daily_deal_best_streak },
+              { label: "MP wins", value: entry.mp_games_won ?? 0 },
+              { label: "MP win rate", value: formatMpWinRate(entry.mp_games_played ?? 0, entry.mp_games_won ?? 0) },
+              { label: "MP streak", value: entry.mp_best_win_streak ?? 0 },
+            ].map((tile) => (
+              <StatTile key={tile.label} label={tile.label} value={tile.value} className="w-[calc((100%-1rem)/3)]" />
+            ))}
           </section>
 
           {/* ── Trophy case — public; empty slots only shown to yourself ── */}

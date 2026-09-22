@@ -8,6 +8,7 @@
 // see the function's own doc for why an anonymous submission is fine here.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { loadSupabase } from "../lib/supabaseClient";
@@ -47,6 +48,7 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function SupportPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [type, setType] = useState<ReportType>("bug");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -55,6 +57,14 @@ export default function SupportPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Whether this visit came from ReviewPrompt.tsx (the only place that ever
+  // links here with a ?type= param — see the effect below) — if so, "back"
+  // should return to wherever that was (the game-over results, almost
+  // always still one history entry behind this page since game-over is
+  // client-side state on /game, not its own route) instead of unconditionally
+  // going Home, which would otherwise strand the player away from a result
+  // screen they were still looking at a moment ago.
+  const [cameFromReviewPrompt, setCameFromReviewPrompt] = useState(false);
 
   // Pre-selects the type dropdown for a visitor arriving from a link that
   // already knows which kind of report this is (e.g. ReviewPrompt.tsx's
@@ -62,7 +72,10 @@ export default function SupportPage() {
   // watched live, since nothing else on this page ever changes the URL.
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("type");
-    if (requested === "bug" || requested === "feature") setType(requested);
+    if (requested === "bug" || requested === "feature") {
+      setType(requested);
+      setCameFromReviewPrompt(true);
+    }
   }, []);
 
   const totalBytes = files.reduce((sum, f) => sum + f.file.size, 0);
@@ -162,12 +175,21 @@ export default function SupportPage() {
           >
             Send another
           </button>
-          <Link
-            href="/"
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
-          >
-            Home
-          </Link>
+          {cameFromReviewPrompt ? (
+            <button
+              onClick={() => router.back()}
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
+            >
+              Back to game
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
+            >
+              Home
+            </Link>
+          )}
         </div>
       </main>
     );
@@ -175,12 +197,21 @@ export default function SupportPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      {cameFromReviewPrompt ? (
+        <button
+          onClick={() => router.back()}
+          className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          ← Back to game
+        </button>
+      ) : (
+        <Link
+          href="/"
+          className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          ← Home
+        </Link>
+      )}
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Contact &amp; support</h1>
