@@ -17,6 +17,7 @@
 
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
+import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerStats.ts";
 // ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
 // deploy bundler doesn't resolve the app's extension-less imports. Run
 // `node scripts/bundle-solo-verify-engine.mjs` before every deploy.
@@ -226,24 +227,6 @@ async function handleWeeklyChallengeCompletion(uid: string, seed: number, rawWee
 
 // ── stats derivation + writes ───────────────────────────────────────────
 
-interface PlayerStatsRow {
-  games_played: number;
-  games_won: number;
-  games_tied: number;
-  best_score: number | null;
-  worst_score: number | null;
-  average_score: number | null;
-  wins_by_difficulty: Record<string, number>;
-}
-
-const EMPTY_WINS_BY_DIFFICULTY: Record<string, number> = {
-  beginner: 0,
-  easy: 0,
-  medium: 0,
-  hard: 0,
-  expert: 0,
-};
-
 interface AchievementCountersRow {
   counters: Record<string, number>;
 }
@@ -302,7 +285,7 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
     .from("player_stats")
     .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty, updated_at")
     .eq("user_id", uid)
-    .maybeSingle<PlayerStatsRow & { updated_at: string | null }>();
+    .maybeSingle<PlayerStatsFields & { updated_at: string | null }>();
   if (statsSelectError) return json({ ok: false, error: "couldn't read current stats" }, 500);
 
   // A real game — even a fast, short, 2-player one — takes a real human
@@ -321,36 +304,11 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
     }
   }
 
-  const priorGames = existingStats?.games_played ?? 0;
-  const gamesPlayed = priorGames + 1;
-  const gamesWon = (existingStats?.games_won ?? 0) + (won ? 1 : 0);
-  const gamesTied = (existingStats?.games_tied ?? 0) + (tied ? 1 : 0);
-  const bestScore =
-    existingStats?.best_score != null ? Math.min(existingStats.best_score, you.cumulativeScore) : you.cumulativeScore;
-  const worstScore =
-    existingStats?.worst_score != null
-      ? Math.max(existingStats.worst_score, you.cumulativeScore)
-      : you.cumulativeScore;
-  const priorAverage = existingStats?.average_score ?? you.cumulativeScore;
-  const averageScore = (priorAverage * priorGames + you.cumulativeScore) / gamesPlayed;
-
-  const winsByDifficulty = { ...EMPTY_WINS_BY_DIFFICULTY, ...(existingStats?.wins_by_difficulty ?? {}) };
-  if (won) {
-    const difficultiesFaced = new Set(opponents.map((o) => o.difficulty).filter((d): d is Difficulty => !!d));
-    for (const d of difficultiesFaced) {
-      if (d in winsByDifficulty) winsByDifficulty[d] += 1;
-    }
-  }
+  const update = computePlayerStatsUpdate(existingStats, you.cumulativeScore, won, tied, opponents);
 
   const { error: statsUpsertError } = await admin.from("player_stats").upsert({
     user_id: uid,
-    games_played: gamesPlayed,
-    games_won: gamesWon,
-    games_tied: gamesTied,
-    best_score: bestScore,
-    worst_score: worstScore,
-    average_score: averageScore,
-    wins_by_difficulty: winsByDifficulty,
+    ...update,
     updated_at: new Date().toISOString(),
   });
   if (statsUpsertError) return json({ ok: false, error: "couldn't save stats" }, 500);

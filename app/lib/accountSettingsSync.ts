@@ -21,9 +21,10 @@ import {
   loadLocalCardBack,
   saveLocalCardBack,
 } from "./cardBackStore";
-import { CardFaceId, DEFAULT_CARD_FACE, loadLocalCardFace, saveLocalCardFace } from "./cardFaceStore";
+import { CARD_FACES, CardFaceId, DEFAULT_CARD_FACE, loadLocalCardFace, saveLocalCardFace } from "./cardFaceStore";
 import {
   applyColorblindMode,
+  COLORBLIND_MODES,
   ColorblindMode,
   DEFAULT_COLORBLIND_MODE,
   loadLocalColorblindMode,
@@ -31,8 +32,8 @@ import {
 } from "./colorblindStore";
 import { updateShowcaseCardBack, updateShowcaseCardFace } from "./leaderboardStore";
 import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
-import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TextScale } from "./textScaleStore";
-import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, ThemeId } from "./themeStore";
+import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TEXT_SCALES, TextScale } from "./textScaleStore";
+import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "./themeStore";
 
 export interface AccountSettingsRow {
   theme: string | null;
@@ -80,6 +81,8 @@ const SELECT_COLUMNS =
 
 const SYNCED_EVENT = "br:settings-synced";
 
+const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
+
 export async function fetchAccountSettings(supabase: SupabaseClient, userId: string): Promise<AccountSettingsRow | null> {
   const { data, error } = await supabase
     .from("settings")
@@ -99,29 +102,42 @@ export async function fetchAccountSettings(supabase: SupabaseClient, userId: str
  * change up live instead of only on next visit.
  */
 export function applyAccountSettings(row: AccountSettingsRow): void {
+  // Every field below is a plain, server-writable string with no enum check
+  // visible from the client — the same "untrusted external value" shape
+  // every *local* loader in this app (loadLocalTheme, loadLocalCardBack,
+  // etc.) already validates against its own known option list before
+  // trusting it. A stale row (e.g. a theme id retired in a later release,
+  // or a hand-edited settings row) must fail the same way a bad value in
+  // localStorage already does — falling back to this device's current
+  // value — rather than getting applied to <html> and written into
+  // localStorage unvalidated for the rest of the session.
+  const validTheme = row.theme && THEMES.some((t) => t.id === row.theme) ? (row.theme as ThemeId) : null;
   const localTheme = loadLocalTheme();
-  if (row.theme) {
-    saveLocalTheme(row.theme as ThemeId);
-    applyTheme(row.theme as ThemeId);
+  if (validTheme) {
+    saveLocalTheme(validTheme);
+    applyTheme(validTheme);
   }
-  if (row.card_back) {
-    const cardBack = row.card_back as CardBackId;
-    saveLocalCardBack(cardBack);
-    applyCardBack(cardBack, (row.theme as ThemeId | null) ?? localTheme);
-  } else if (row.theme) {
+  const validCardBack =
+    row.card_back && (row.card_back === "match" || THEMES.some((t) => t.id === row.card_back))
+      ? (row.card_back as CardBackId)
+      : null;
+  if (validCardBack) {
+    saveLocalCardBack(validCardBack);
+    applyCardBack(validCardBack, validTheme ?? localTheme);
+  } else if (validTheme) {
     // Card back may be "match table theme" — re-apply it against the newly
     // synced theme even when the account never set a card back of its own.
-    applyCardBack(loadLocalCardBack(), row.theme as ThemeId);
+    applyCardBack(loadLocalCardBack(), validTheme);
   }
-  if (row.card_face) {
+  if (row.card_face && CARD_FACES.some((f) => f.id === row.card_face)) {
     saveLocalCardFace(row.card_face as CardFaceId);
   }
-  if (row.colorblind_mode) {
+  if (row.colorblind_mode && COLORBLIND_MODES.some((m) => m.id === row.colorblind_mode)) {
     const mode = row.colorblind_mode as ColorblindMode;
     saveLocalColorblindMode(mode);
     applyColorblindMode(mode);
   }
-  if (row.text_scale) {
+  if (row.text_scale && TEXT_SCALES.some((s) => s.id === row.text_scale)) {
     const scale = row.text_scale as TextScale;
     saveLocalTextScale(scale);
     applyTextScale(scale);
@@ -129,7 +145,10 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
 
   const current = loadLocalSettings();
   saveLocalSettings({
-    preferredAiDifficulty: (row.preferred_ai_difficulty_default as Difficulty | null) ?? current.preferredAiDifficulty,
+    preferredAiDifficulty:
+      row.preferred_ai_difficulty_default && DIFFICULTIES.includes(row.preferred_ai_difficulty_default as Difficulty)
+        ? (row.preferred_ai_difficulty_default as Difficulty)
+        : current.preferredAiDifficulty,
     soundEnabled: row.sound_on,
     hapticsEnabled: row.haptics_on ?? current.hapticsEnabled,
     highlightLayoffs: row.highlight_layoffs ?? current.highlightLayoffs,

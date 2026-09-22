@@ -344,7 +344,6 @@ export interface AvatarInfo {
   photoPath: string | null;
 }
 
-const DEFAULT_AVATAR: AvatarInfo = { kind: "emoji", emoji: null, color: null, photoPath: null };
 
 /** Thrown by updateLeaderboardAvatarFrame/Title/Banner/Badge when a
  * migration's trigger rejects a gated cosmetic the account hasn't earned
@@ -520,29 +519,6 @@ export async function updateShowcaseCardFace(supabase: SupabaseClient, userId: s
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
-}
-
-/** The signed-in account's own current avatar choice — used to preload the
- * profile page's editor with whatever's already saved. */
-export async function fetchOwnAvatar(supabase: SupabaseClient, userId: string): Promise<AvatarInfo> {
-  const { data, error } = await supabase
-    .from("leaderboard_entries")
-    .select("avatar_kind, avatar_emoji, avatar_color, avatar_photo_path")
-    .eq("user_id", userId)
-    .maybeSingle<{
-      avatar_kind: "emoji" | "photo" | null;
-      avatar_emoji: string | null;
-      avatar_color: string | null;
-      avatar_photo_path: string | null;
-    }>();
-  if (error) throw error;
-  if (!data) return DEFAULT_AVATAR;
-  return {
-    kind: data.avatar_kind ?? "emoji",
-    emoji: data.avatar_emoji,
-    color: data.avatar_color,
-    photoPath: data.avatar_photo_path,
-  };
 }
 
 /**

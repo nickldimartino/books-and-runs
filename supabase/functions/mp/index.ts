@@ -16,6 +16,7 @@ import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 // implementation. Pinned exact, same convention as every other dep here.
 import webpush from "npm:web-push@3.6.7";
 import { corsHeaders, json } from "../_shared/cors.ts";
+import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerStats.ts";
 // ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
 // deploy bundler doesn't resolve the app's extension-less imports. Run
 // `node scripts/bundle-mp-engine.mjs` before every deploy.
@@ -38,7 +39,6 @@ import {
   mergeDeltas,
   roundWonDeltas,
 } from "./_engine/replayStats.ts";
-import { Difficulty } from "./_engine/types.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -267,14 +267,6 @@ async function creditAchievementCounters(uid: string, deltas: CounterDeltas): Pr
   if (error) console.error("Failed to credit MP achievement counters for", uid, error);
 }
 
-const EMPTY_WINS_BY_DIFFICULTY: Record<string, number> = {
-  beginner: 0,
-  easy: 0,
-  medium: 0,
-  hard: 0,
-  expert: 0,
-};
-
 /** The "counts like any solo game" half of finishing a multiplayer game —
  * games_played/games_won/best-worst-average score/wins_by_difficulty and a
  * game_history row, for every human participant, derived from the final
@@ -309,44 +301,13 @@ async function recordMpGameOutcome(
       .from("player_stats")
       .select("games_played, games_won, games_tied, best_score, worst_score, average_score, wins_by_difficulty")
       .eq("user_id", participant.user_id)
-      .maybeSingle<{
-        games_played: number;
-        games_won: number;
-        games_tied: number;
-        best_score: number | null;
-        worst_score: number | null;
-        average_score: number | null;
-        wins_by_difficulty: Record<string, number>;
-      }>();
+      .maybeSingle<PlayerStatsFields>();
 
-    const priorGames = existing?.games_played ?? 0;
-    const gamesPlayed = priorGames + 1;
-    const gamesWon = (existing?.games_won ?? 0) + (won ? 1 : 0);
-    const gamesTied = (existing?.games_tied ?? 0) + (tied ? 1 : 0);
-    const bestScore =
-      existing?.best_score != null ? Math.min(existing.best_score, you.cumulativeScore) : you.cumulativeScore;
-    const worstScore =
-      existing?.worst_score != null ? Math.max(existing.worst_score, you.cumulativeScore) : you.cumulativeScore;
-    const priorAverage = existing?.average_score ?? you.cumulativeScore;
-    const averageScore = (priorAverage * priorGames + you.cumulativeScore) / gamesPlayed;
-
-    const winsByDifficulty = { ...EMPTY_WINS_BY_DIFFICULTY, ...(existing?.wins_by_difficulty ?? {}) };
-    if (won) {
-      const difficultiesFaced = new Set(opponents.map((o) => o.difficulty).filter((d): d is Difficulty => !!d));
-      for (const d of difficultiesFaced) {
-        if (d in winsByDifficulty) winsByDifficulty[d] += 1;
-      }
-    }
+    const update = computePlayerStatsUpdate(existing, you.cumulativeScore, won, tied, opponents);
 
     const { error: statsError } = await admin.from("player_stats").upsert({
       user_id: participant.user_id,
-      games_played: gamesPlayed,
-      games_won: gamesWon,
-      games_tied: gamesTied,
-      best_score: bestScore,
-      worst_score: worstScore,
-      average_score: averageScore,
-      wins_by_difficulty: winsByDifficulty,
+      ...update,
       updated_at: new Date().toISOString(),
     });
     if (statsError) console.error("Failed to record MP player_stats for", participant.user_id, statsError);
@@ -436,15 +397,31 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
 
   const names = await resolveNames([uid, ...uniqueHumans]);
 
-  for (const h of uniqueHumans) {
-    if (!(await areFriends(uid, h))) {
-      return json({ error: `${names.get(h) ?? "That player"} isn't in your friends list` }, 400);
+  // Each invitee's friend/active-count check is independent of the others
+  // (and of the host's own count below) — run them all concurrently rather
+  // than one round-trip pair at a time, bounded by the 2-8 player cap so
+  // this is at most ~7 requests in flight, not an unbounded fan-out. Still
+  // scanned in original order afterward so the *reported* error is exactly
+  // the same one a sequential version would have returned first.
+  const [checks, hostActiveCount] = await Promise.all([
+    Promise.all(
+      uniqueHumans.map(async (h) => ({
+        userId: h,
+        isFriend: await areFriends(uid, h),
+        count: await activeCount(h),
+      }))
+    ),
+    activeCount(uid),
+  ]);
+  for (const c of checks) {
+    if (!c.isFriend) {
+      return json({ error: `${names.get(c.userId) ?? "That player"} isn't in your friends list` }, 400);
     }
-    if ((await activeCount(h)) >= MP_GAME_CAP) {
-      return json({ error: `${names.get(h) ?? "That player"} already has ${MP_GAME_CAP} games going` }, 400);
+    if (c.count >= MP_GAME_CAP) {
+      return json({ error: `${names.get(c.userId) ?? "That player"} already has ${MP_GAME_CAP} games going` }, 400);
     }
   }
-  if ((await activeCount(uid)) >= MP_GAME_CAP) {
+  if (hostActiveCount >= MP_GAME_CAP) {
     return json({ error: `You already have ${MP_GAME_CAP} multiplayer games going` }, 400);
   }
 
@@ -488,7 +465,7 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
     }));
   await admin.from("mp_participants").insert(participants);
 
-  for (const h of uniqueHumans) await addEvent(h, "game_request", game.id, uid);
+  await Promise.all(uniqueHumans.map((h) => addEvent(h, "game_request", game.id, uid)));
 
   return json({ game_id: game.id });
 }

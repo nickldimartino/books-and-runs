@@ -9,7 +9,7 @@ import {
   removePendingSave,
 } from "./lib/pendingSaveQueue";
 import { supabase } from "./lib/supabaseClient";
-import { verifySoloGame } from "./lib/verifySoloGame";
+import { SoloVerifyError, verifySoloGame } from "./lib/verifySoloGame";
 import { usePlayerLevel } from "./PlayerLevelContext";
 
 /**
@@ -48,7 +48,7 @@ export function PendingSaveSync() {
         // verification rejection is deterministic (the exact same payload
         // will fail again identically), so drop it rather than retrying
         // forever — only a genuinely transient failure stays queued.
-        const status = (err as { status?: number } | null)?.status;
+        const status = err instanceof SoloVerifyError ? err.status : undefined;
         const permanentRejection = typeof status === "number" && status >= 400 && status < 500;
         if (permanentRejection) {
           removePendingSave(entry.id);

@@ -229,7 +229,14 @@ export async function loadCloudSave(
     .select("save, saved_at")
     .eq("user_id", userId)
     .maybeSingle<SoloSaveRow>();
-  if (error || !data) return null;
+  // A real Supabase error (network/auth/etc.) throws, same as every sibling
+  // "pull the account's synced X" function — both call sites (LocalSaveSync,
+  // page.tsx's handleContinue) already catch and treat this differently from
+  // a genuine "no save yet" (!data with no error), so silently returning
+  // null for both used to make a transient failure indistinguishable from
+  // "you have nothing saved," which could skip a real resume.
+  if (error) throw error;
+  if (!data) return null;
   return looksLikeSavedGame(data.save) ? data.save : null;
 }
 

@@ -64,6 +64,7 @@ import {
   buildDailyDealVerifyPayload,
   buildSoloVerifyPayload,
   buildWeeklyChallengeVerifyPayload,
+  SoloVerifyError,
   verifySoloGame,
 } from "../lib/verifySoloGame";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
@@ -227,7 +228,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       // retrying forever would just spam the same rejection. Only queue
       // for genuinely transient failures (offline, a 5xx, a dropped
       // connection) where a later retry could plausibly succeed.
-      const status = (err as { status?: number } | null)?.status;
+      const status = err instanceof SoloVerifyError ? err.status : undefined;
       const permanentRejection = typeof status === "number" && status >= 400 && status < 500;
       if (!permanentRejection) {
         upsertPendingSave({ id: gameId, userId: user.id, payload });

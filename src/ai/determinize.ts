@@ -102,18 +102,6 @@ export function sampleOpponentHand(state: GameState, self: Player, opponent: Pla
 }
 
 /**
- * Monte Carlo estimate, in [0, 1], of "if I hand this exact card to this
- * opponent, what's the chance it completes their contract outright" —
- * draws `samples` independent sampled hands (sampleOpponentHand) and checks
- * the real meld solver against each one plus the candidate card, returning
- * the fraction that succeed. Cheap enough to call often because it's only
- * ever worth calling at all for an opponent with a small hand (see
- * strategy.ts's isCloseToOut) — solveContract on a couple of sampled cards
- * is fast, and a large hand makes this uninformative anyway (a big random
- * hand can complete almost any contract by sheer luck, telling you nothing
- * about the real one).
- */
-/**
  * Real, not probabilistic, risk for the common "close to out" case: an
  * opponent who's already melded their contract, now just shedding whatever
  * remains via lay-offs and discards. Whether a card is eligible to lay off
@@ -134,6 +122,18 @@ export function layOffRisk(state: GameState, opponent: Player, card: Card): numb
   return opponent.hand.length <= 1 ? 1 : 0.6;
 }
 
+/**
+ * Monte Carlo estimate, in [0, 1], of "if I hand this exact card to this
+ * opponent, what's the chance it completes their contract outright" —
+ * draws `samples` independent sampled hands (sampleOpponentHand) and checks
+ * the real meld solver against each one plus the candidate card, returning
+ * the fraction that succeed. Cheap enough to call often because it's only
+ * ever worth calling at all for an opponent with a small hand (see
+ * strategy.ts's isCloseToOut) — solveContract on a couple of sampled cards
+ * is fast, and a large hand makes this uninformative anyway (a big random
+ * hand can complete almost any contract by sheer luck, telling you nothing
+ * about the real one).
+ */
 export function estimateCompletionChance(
   state: GameState,
   self: Player,
