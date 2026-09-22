@@ -32,6 +32,40 @@
   --card-back-tile: 20px;
 }
 
+/*
+ * Text-size accessibility scale — see app/lib/textScaleStore.ts's own doc
+ * for the full reasoning. Overrides Tailwind's own --text-* theme tokens
+ * (font-size per named size; --text-*--line-height is already a unitless
+ * ratio, so it scales automatically with no change needed) with a scaled
+ * version. Un-layered — like every other block in this file — so it
+ * reliably wins over Tailwind's own `@theme` layer regardless of import
+ * order. [data-no-text-scale] (the game board — see game/page.tsx and
+ * multiplayer/play/page.tsx) resets the scale back to 1 for that whole
+ * subtree; gameplay itself is deliberately never part of this.
+ */
+:root {
+  --ui-text-scale: 1;
+}
+:root[data-text-scale="large"] {
+  --ui-text-scale: 1.15;
+}
+:root[data-text-scale="xlarge"] {
+  --ui-text-scale: 1.3;
+}
+[data-no-text-scale] {
+  --ui-text-scale: 1;
+}
+:root {
+  --text-xs: calc(0.75rem * var(--ui-text-scale));
+  --text-sm: calc(0.875rem * var(--ui-text-scale));
+  --text-base: calc(1rem * var(--ui-text-scale));
+  --text-lg: calc(1.125rem * var(--ui-text-scale));
+  --text-xl: calc(1.25rem * var(--ui-text-scale));
+  --text-2xl: calc(1.5rem * var(--ui-text-scale));
+  --text-3xl: calc(1.875rem * var(--ui-text-scale));
+  --text-4xl: calc(2.25rem * var(--ui-text-scale));
+}
+
 [data-theme="daylight"] {
   --bg: #f4f1ea;
   --panel: #ffffff;

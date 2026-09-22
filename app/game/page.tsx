@@ -1141,7 +1141,10 @@ export default function GamePage() {
   );
 
   return (
-    <main className="game-felt mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6">
+    <main
+      data-no-text-scale
+      className="game-felt mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6"
+    >
       {/* Screen-reader running commentary — turn changes and your own draws.
           AI plays are announced separately by OpponentStrip's status line. */}
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">

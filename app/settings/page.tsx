@@ -15,6 +15,7 @@ import {
   pushAllDefaults,
   pushColorblindMode,
   pushHouseSettingsPatch,
+  pushTextScale,
   resetLocalPreferencesToDefaults,
 } from "../lib/accountSettingsSync";
 import {
@@ -52,6 +53,14 @@ import {
   loadLocalColorblindMode,
   saveLocalColorblindMode,
 } from "../lib/colorblindStore";
+import {
+  applyTextScale,
+  DEFAULT_TEXT_SCALE,
+  loadLocalTextScale,
+  saveLocalTextScale,
+  TEXT_SCALES,
+  TextScale,
+} from "../lib/textScaleStore";
 import { supabase } from "../lib/supabaseClient";
 import { THEME_SWATCHES } from "./themeSwatches";
 import { Difficulty } from "@/types";
@@ -317,6 +326,7 @@ export default function SettingsPage() {
   const [cardBack, setCardBack] = useState<CardBackId>(DEFAULT_CARD_BACK);
   const [cardFace, setCardFace] = useState<CardFaceId>(DEFAULT_CARD_FACE);
   const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
+  const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
   const [loading, setLoading] = useState(true);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [tipsReset, setTipsReset] = useState(false);
@@ -334,6 +344,7 @@ export default function SettingsPage() {
     setCardBack(loadLocalCardBack());
     setCardFace(loadLocalCardFace());
     setColorblindMode(loadLocalColorblindMode());
+    setTextScale(loadLocalTextScale());
   }
 
   useEffect(() => {
@@ -353,6 +364,13 @@ export default function SettingsPage() {
     pushColorblindMode(supabase, user?.id ?? null, mode);
   }
 
+  function handleTextScaleChange(scale: TextScale) {
+    setTextScale(scale);
+    saveLocalTextScale(scale);
+    applyTextScale(scale);
+    pushTextScale(supabase, user?.id ?? null, scale);
+  }
+
   // Covers everything on this page that's local-only-but-account-synced —
   // theme and colorblind mode live in their own separate stores (see their
   // own handlers above), not HouseSettings, so a plain updateSettings(
@@ -369,6 +387,7 @@ export default function SettingsPage() {
     setCardBack(DEFAULT_CARD_BACK);
     setCardFace(DEFAULT_CARD_FACE);
     setColorblindMode(DEFAULT_COLORBLIND_MODE);
+    setTextScale(DEFAULT_TEXT_SCALE);
     setConfirmingReset(false);
     pushAllDefaults(supabase, user?.id ?? null, DEFAULT_THEME);
   }
@@ -494,6 +513,31 @@ export default function SettingsPage() {
                   </button>
                 );
               })}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <InfoDetails label="Text size">
+              Makes most of the site&apos;s text bigger, for easier reading — headings, body
+              copy, form labels, buttons. The game board itself is deliberately left alone, so
+              cards and in-game controls always stay their normal size and never overflow.
+              Works signed out too.
+            </InfoDetails>
+            <div className="flex gap-2">
+              {TEXT_SCALES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => handleTextScaleChange(s.id)}
+                  title={s.description}
+                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+                    textScale === s.id
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {s.name}
+                </button>
+              ))}
             </div>
           </section>
           </SettingsSection>

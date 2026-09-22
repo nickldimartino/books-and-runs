@@ -43,6 +43,17 @@
     }
   } catch (e) {}
 
+  // Same reasoning again, for the text-size accessibility scale (see
+  // app/lib/textScaleStore.ts) — "default" removes the attribute entirely
+  // rather than storing it, so there's nothing to check against a fixed
+  // list here beyond "is this one of the two non-default values."
+  try {
+    var ts = localStorage.getItem("booksAndRuns:textScale");
+    if (ts === "large" || ts === "xlarge") {
+      document.documentElement.setAttribute("data-text-scale", ts);
+    }
+  } catch (e) {}
+
   // Same reasoning again, for the card back — computed rather than just
   // copied from data-theme, since the saved choice might be "match"
   // (mirror the table theme, the default) or a real theme id of its own.

@@ -31,6 +31,7 @@ import {
 } from "./colorblindStore";
 import { updateShowcaseCardBack, updateShowcaseCardFace } from "./leaderboardStore";
 import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
+import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TextScale } from "./textScaleStore";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, ThemeId } from "./themeStore";
 
 export interface AccountSettingsRow {
@@ -38,6 +39,7 @@ export interface AccountSettingsRow {
   card_back: string | null;
   card_face: string | null;
   colorblind_mode: string | null;
+  text_scale: string | null;
   preferred_ai_difficulty_default: string | null;
   sound_on: boolean;
   haptics_on: boolean | null;
@@ -60,6 +62,7 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
   card_back: null,
   card_face: null,
   colorblind_mode: null,
+  text_scale: null,
   preferred_ai_difficulty_default: null,
   sound_on: true,
   haptics_on: null,
@@ -73,7 +76,7 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
 };
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track";
+  "theme, card_back, card_face, colorblind_mode, text_scale, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -117,6 +120,11 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     const mode = row.colorblind_mode as ColorblindMode;
     saveLocalColorblindMode(mode);
     applyColorblindMode(mode);
+  }
+  if (row.text_scale) {
+    const scale = row.text_scale as TextScale;
+    saveLocalTextScale(scale);
+    applyTextScale(scale);
   }
 
   const current = loadLocalSettings();
@@ -166,6 +174,8 @@ export function resetLocalPreferencesToDefaults(): void {
   saveLocalCardFace(DEFAULT_CARD_FACE);
   saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
   applyColorblindMode(DEFAULT_COLORBLIND_MODE);
+  saveLocalTextScale(DEFAULT_TEXT_SCALE);
+  applyTextScale(DEFAULT_TEXT_SCALE);
 }
 
 /**
@@ -197,6 +207,7 @@ export function bootstrapMissingAccountSettings(
   if (row.card_back === null) patch.card_back = loadLocalCardBack();
   if (row.card_face === null) patch.card_face = loadLocalCardFace();
   if (row.colorblind_mode === null) patch.colorblind_mode = loadLocalColorblindMode();
+  if (row.text_scale === null) patch.text_scale = loadLocalTextScale();
   if (row.preferred_ai_difficulty_default === null) patch.preferred_ai_difficulty_default = local.preferredAiDifficulty;
   if (row.sound_volume === null) patch.sound_volume = local.soundVolume;
   if (row.highlight_layoffs === null) patch.highlight_layoffs = local.highlightLayoffs;
@@ -216,6 +227,7 @@ type SettingsPatch = Partial<{
   card_back: string;
   card_face: string;
   colorblind_mode: string;
+  text_scale: string;
   preferred_ai_difficulty_default: string;
   sound_on: boolean;
   haptics_on: boolean;
@@ -294,6 +306,13 @@ export function pushColorblindMode(supabase: SupabaseClient | null, userId: stri
   );
 }
 
+export function pushTextScale(supabase: SupabaseClient | null, userId: string | null, scale: TextScale): void {
+  if (!supabase || !userId) return;
+  upsertSettingsPatch(supabase, userId, { text_scale: scale }).catch((err) =>
+    console.error("Failed to sync text size to account:", err.message)
+  );
+}
+
 export function pushTheme(supabase: SupabaseClient | null, userId: string | null, theme: ThemeId): void {
   if (!supabase || !userId) return;
   upsertSettingsPatch(supabase, userId, { theme }).catch((err) =>
@@ -334,6 +353,7 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     card_back: DEFAULT_CARD_BACK,
     card_face: DEFAULT_CARD_FACE,
     colorblind_mode: DEFAULT_COLORBLIND_MODE,
+    text_scale: DEFAULT_TEXT_SCALE,
     preferred_ai_difficulty_default: DEFAULT_SETTINGS.preferredAiDifficulty,
     sound_on: DEFAULT_SETTINGS.soundEnabled,
     haptics_on: DEFAULT_SETTINGS.hapticsEnabled,

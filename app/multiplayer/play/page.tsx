@@ -487,7 +487,7 @@ export default function MultiplayerPlayPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 px-4 py-6">
+    <main data-no-text-scale className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 px-4 py-6">
       <div className="flex items-center justify-between">
         <BackLink />
         <div className="flex items-center gap-2">
