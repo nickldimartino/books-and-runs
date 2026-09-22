@@ -1,5 +1,14 @@
-import { test, expect, type Browser, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
+import { test, expect } from "@playwright/test";
+import {
+  canRunLiveMpTests,
+  createTestUser,
+  deleteTestUser,
+  newRunId,
+  REQUIRED_ENV_MESSAGE,
+  seedFriendship,
+  signIn,
+  type TestUser,
+} from "./helpers/testAccounts";
 
 // The one spec in this suite that exercises the LIVE multiplayer loop end
 // to end — two real signed-in browser contexts, a real game created
@@ -9,14 +18,9 @@ import { createClient } from "@supabase/supabase-js";
 // MP tests stops short of that on purpose; this is what actually proves
 // the deployed `mp` function, RLS, and Realtime all still work together.
 //
-// Needs SUPABASE_SERVICE_ROLE_KEY (Supabase dashboard → Project Settings →
-// API → "service_role" — NOT the anon key, and never expose this to a
-// browser) in addition to the usual NEXT_PUBLIC_SUPABASE_* — it creates two
-// real, throwaway auth accounts via the Admin API (bypassing email
-// confirmation) and deletes them again afterward. Skips itself entirely
-// when that's not set, both locally and in CI — this is the one spec that
-// touches real Supabase data, so it's opt-in, not part of
-// `npm run test:e2e:ci`. Run it locally with:
+// See e2e/helpers/testAccounts.ts for the shared account-creation/sign-in
+// plumbing this (and e2e/friends.spec.ts, e2e/clubs.spec.ts,
+// e2e/tournaments.spec.ts) all use. Run this one locally with:
 //   SUPABASE_SERVICE_ROLE_KEY=<service_role key> npm run test:e2e -- e2e/multiplayer.spec.ts
 //
 // In CI this only runs for real if a SUPABASE_SERVICE_ROLE_KEY repo secret
@@ -24,83 +28,26 @@ import { createClient } from "@supabase/supabase-js";
 // resolves to an empty string there, same as not having it locally, so it
 // self-skips by default rather than needing a separate opt-in job.
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+test.skip(!canRunLiveMpTests(), REQUIRED_ENV_MESSAGE);
 
-test.skip(
-  !SUPABASE_URL || !ANON_KEY || !SERVICE_KEY,
-  "needs NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY"
-);
-
-const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const PASSWORD = "e2e-Test-Password-1!";
-const userA = { email: `e2e-mp-a-${RUN_ID}@example.com`, password: PASSWORD };
-const userB = { email: `e2e-mp-b-${RUN_ID}@example.com`, password: PASSWORD };
-let userAId = "";
-let userBId = "";
-
-function admin() {
-  // service_role bypasses RLS — only ever used here, in Node, never shipped
-  // to a page. Not persisted; a fresh client per call is cheap and avoids
-  // any risk of a stale session across beforeAll/afterAll.
-  return createClient(SUPABASE_URL!, SERVICE_KEY!, { auth: { persistSession: false } });
-}
+const RUN_ID = newRunId();
+let userA: TestUser;
+let userB: TestUser;
 
 test.beforeAll(async () => {
-  const a = admin();
-
-  const { data: created1, error: err1 } = await a.auth.admin.createUser({
-    email: userA.email,
-    password: userA.password,
-    email_confirm: true,
-  });
-  if (err1 || !created1.user) throw new Error(`Failed to create test user A: ${err1?.message}`);
-  userAId = created1.user.id;
-
-  const { data: created2, error: err2 } = await a.auth.admin.createUser({
-    email: userB.email,
-    password: userB.password,
-    email_confirm: true,
-  });
-  if (err2 || !created2.user) throw new Error(`Failed to create test user B: ${err2?.message}`);
-  userBId = created2.user.id;
-
+  userA = await createTestUser("mp-a", RUN_ID);
+  userB = await createTestUser("mp-b", RUN_ID);
   // Pre-seed an accepted friendship directly — the friend-request flow
-  // itself is covered elsewhere; this spec is about game create → accept →
-  // play, not re-proving "Send invites" needs an accepted friend first.
-  const { error: friendErr } = await a
-    .from("friendships")
-    .insert({ requester_id: userAId, addressee_id: userBId, status: "accepted", responded_at: new Date().toISOString() });
-  if (friendErr) throw new Error(`Failed to seed test friendship: ${friendErr.message}`);
+  // itself is covered by e2e/friends.spec.ts; this spec is about game
+  // create → accept → play, not re-proving "Send invites" needs an
+  // accepted friend first.
+  await seedFriendship(userA.id, userB.id);
 });
 
 test.afterAll(async () => {
-  const a = admin();
-  // auth.users → profiles/friendships/mp_participants/push_subscriptions/etc.
-  // all cascade on delete (see the migrations' `on delete cascade` FKs), so
-  // deleting the two accounts is enough to leave no trace of this run.
-  if (userAId) await a.auth.admin.deleteUser(userAId).catch(() => {});
-  if (userBId) await a.auth.admin.deleteUser(userBId).catch(() => {});
+  await deleteTestUser(userA);
+  await deleteTestUser(userB);
 });
-
-async function signIn(browser: Browser, email: string, password: string): Promise<Page> {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.addInitScript(() => {
-    try {
-      sessionStorage.setItem("booksAndRuns:introSeen", "1");
-    } catch {
-      /* ignore */
-    }
-  });
-  await page.goto("/sign-in");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
-  await page.getByRole("button", { name: /^sign in$/i }).click();
-  await page.waitForURL("/", { timeout: 15_000 });
-  return page;
-}
 
 test("create → accept → one full turn between two real accounts", async ({ browser }) => {
   test.setTimeout(90_000);
