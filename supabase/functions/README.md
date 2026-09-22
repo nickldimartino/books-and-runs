@@ -209,19 +209,10 @@ Then, one-time setup in the Stripe Dashboard:
 2. **Payment Links** → create one per fixed-price tip tier you want
    (Settings' own Help section links to `/tip`, which expects a
    `PAYMENT_LINKS` array — fill in the real URLs in `app/tip/page.tsx`).
-3. For the "Custom amount" tier specifically: still Payment Links → + New,
-   but when setting the price, switch it from a fixed amount to **"Customer
-   chooses price"** (Stripe's toggle for this sits right next to the amount
-   field) — optionally set a minimum/suggested amount so the field isn't
-   totally blank. Everything else about creating the link is identical to a
-   fixed-price one; paste the resulting URL into `PAYMENT_LINKS`' `"Custom
-   amount"` entry the same as any other tier. Nothing server-side needs to
-   know or care which kind of link a payment came from — the webhook below
-   reads whatever `amount_total` the completed session actually reports.
-4. **Developers → Webhooks → Add endpoint** → paste this function's URL
+3. **Developers → Webhooks → Add endpoint** → paste this function's URL
    (`$SUPABASE_URL/functions/v1/stripe-webhook`) → subscribe to
    `checkout.session.completed` only.
-5. Copy the endpoint's own "Signing secret" (starts `whsec_`, different
+4. Copy the endpoint's own "Signing secret" (starts `whsec_`, different
    from any API key) into `STRIPE_WEBHOOK_SECRET` above.
 
 `RESEND_API_KEY` comes from a (free-tier is plenty) [Resend](https://resend.com)

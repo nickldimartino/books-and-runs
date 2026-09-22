@@ -3,8 +3,9 @@
 // "Support the developer" — an optional, one-time tip via Stripe Payment
 // Links, never a subscription and never anything that touches gameplay.
 // Each tier below is its own Payment Link (Stripe Dashboard → Payment
-// Links → +New) rather than one variable-amount link, since a fixed price
-// per link is simpler to reason about than a custom-amount field.
+// Links → +New) rather than one variable-amount link — Stripe Payment
+// Links don't support a customer-chooses-the-price option, so a fixed
+// price per link is the only way to do this with Payment Links at all.
 //
 // Attribution works without any backend "create checkout" step: Payment
 // Links accept `?client_reference_id=<value>` appended to the URL, and
@@ -30,9 +31,13 @@ interface TipTier {
 }
 
 const PAYMENT_LINKS: TipTier[] = [
-  { label: "Coffee", blurb: "☕ A small thank-you", paymentLinkUrl: "" },
-  { label: "Round of cards", blurb: "🃏 Appreciated more than you'd think", paymentLinkUrl: "" },
-  { label: "Full table", blurb: "🎉 Goes a genuinely long way", paymentLinkUrl: "" },
+  { label: "Coffee", blurb: "☕ A small thank-you", paymentLinkUrl: "https://buy.stripe.com/test_cNi00i5Ul2LB9692VPfEk06" },
+  {
+    label: "Round of cards",
+    blurb: "🃏 Appreciated more than you'd think",
+    paymentLinkUrl: "https://buy.stripe.com/test_28EfZg4Qh3PFaadcwpfEk05",
+  },
+  { label: "Full table", blurb: "🎉 Goes a genuinely long way", paymentLinkUrl: "https://buy.stripe.com/test_5kQ28qeqRfynaad9kdfEk04" },
 ];
 
 export default function TipPage() {
