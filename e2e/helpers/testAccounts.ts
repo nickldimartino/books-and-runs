@@ -32,6 +32,23 @@ export function adminClient(): SupabaseClient {
   return createClient(SUPABASE_URL!, SERVICE_KEY!, { auth: { persistSession: false } });
 }
 
+/** A real, anon-key-authenticated client signed in as one test user — for
+ * driving app/lib's own client functions (createMpGame, submitMpMove,
+ * createTournament, ...) directly from Node, bypassing both the browser
+ * and any UI-level gate a form might add on top of what the server itself
+ * actually requires (see e2e/helpers/playMpGame.ts's own doc for why that
+ * matters: a solo-vs-AI game is a legitimate server-side capability the
+ * New Game/Tournament forms just don't expose a button for). Not the same
+ * as adminClient() above — this carries a real user session and goes
+ * through ordinary RLS/Edge Function auth, exactly like a real signed-in
+ * browser tab would. */
+export async function signedInClient(email: string, password: string): Promise<SupabaseClient> {
+  const client = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(`Failed to sign in as ${email}: ${error.message}`);
+  return client;
+}
+
 export interface TestUser {
   email: string;
   password: string;

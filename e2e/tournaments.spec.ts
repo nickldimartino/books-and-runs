@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { createTournament } from "../app/lib/tournamentsStore";
+import { createMpGame } from "../app/lib/mpStore";
+import { autoCompleteMpGame } from "./helpers/playMpGame";
 import {
   canRunLiveMpTests,
   createTestUser,
@@ -7,24 +10,29 @@ import {
   REQUIRED_ENV_MESSAGE,
   seedFriendship,
   signIn,
+  signedInClient,
   type TestUser,
 } from "./helpers/testAccounts";
 
 // Live end-to-end coverage of Tournaments — create a series (which itself
 // creates a real round-1 multiplayer game via createMpGame, then links it
 // via tournament_create, see tournaments/new/page.tsx), see it from both
-// the host's and the invitee's own tournament lists, and cancel it.
+// the host's and the invitee's own tournament lists, and cancel it. A
+// second test plays a whole series to completion and back — round 1
+// finishing for real unlocks "Start next round" in the UI, which starts a
+// real round 2 (rematchMpGame + addTournamentRound), which then finishes
+// too and shows the series-won banner.
 //
-// Deliberately stops short of playing round 1 to completion and starting
-// round 2: "Start next round" only unlocks once the *last* round's real MP
-// game reaches status "complete", which — like e2e/multiplayer.spec.ts's
-// own single real turn — would mean grinding an actual Contract Rummy hand
-// to an unpredictable number of turns through the UI. That's not a good
-// trade for a fast, reliable CI run; addTournamentRound/rematchMpGame
-// themselves are exercised at that point regardless of who plays the game
-// out, so what's actually new to prove here is series creation, the
-// resulting round's real link to a real mp_games row, and both
-// participants being able to see and manage it — which this covers.
+// That second test uses e2e/helpers/playMpGame.ts's autoCompleteMpGame
+// against a solo-vs-AI game (bypassing the New Tournament form's own
+// "invite at least one friend" gate by calling createMpGame/createTournament
+// directly — a legitimate server-side capability the form just has no
+// button for, see that helper's own doc) rather than grinding a real
+// 2-human game through the UI turn by turn, which — like
+// e2e/multiplayer.spec.ts's own single real turn — would take an
+// unpredictable number of turns for a Contract Rummy hand to resolve. The
+// first test below still proves the realistic 2-human-invite path end to
+// end; this one proves round-to-round progression and series completion.
 
 test.skip(!canRunLiveMpTests(), REQUIRED_ENV_MESSAGE);
 
@@ -96,4 +104,47 @@ test("create a series → round 1 is a real linked MP game → visible to both �
 
   await pageB.goto(tournamentUrl);
   await expect(pageB.getByText(/^cancelled$/i)).toBeVisible({ timeout: 15_000 });
+});
+
+test("a full series plays round to round and reaches series complete", async ({ browser }) => {
+  test.setTimeout(90_000);
+
+  const client = await signedInClient(userA.email, userA.password);
+
+  // Round 1: solo vs. one AI, a single contract round each game — the
+  // smallest, fastest legal game this engine supports — so autoCompleteMpGame
+  // finishes it in a handful of turns rather than a full 7-round game.
+  const { game_id: round1GameId } = await createMpGame(client, {
+    contractRounds: [1],
+    seats: [{ kind: "ai", difficulty: "beginner", name: "E2E Bot" }],
+  });
+  const tournamentId = await createTournament(client, {
+    name: `${TOURNAMENT_NAME} Full Series`,
+    totalRounds: 2,
+    contractRounds: [1],
+    clubId: null,
+    gameId: round1GameId,
+  });
+  await autoCompleteMpGame(client, round1GameId);
+
+  // From here on, the real UI: round 1 already complete unlocks "Start
+  // round 2" — the exact button a host would tap after a real round ends.
+  const pageA = await signIn(browser, userA.email, userA.password);
+  await pageA.goto(`/tournaments?id=${tournamentId}`);
+
+  const startRound2 = pageA.getByRole("button", { name: /start round 2/i });
+  await expect(startRound2).toBeVisible({ timeout: 15_000 });
+  await startRound2.click();
+  // Lands on the freshly-created round-2 game itself.
+  await pageA.waitForURL(/\/multiplayer\/play\?g=/, { timeout: 15_000 });
+  const round2GameId = new URL(pageA.url()).searchParams.get("g")!;
+
+  await pageA.goto(`/tournaments?id=${tournamentId}`);
+  await expect(pageA.getByRole("link", { name: /round 2/i })).toBeVisible({ timeout: 15_000 });
+
+  // Finish round 2 the same way — the series is now complete.
+  await autoCompleteMpGame(client, round2GameId);
+  await pageA.goto(`/tournaments?id=${tournamentId}`);
+  await expect(pageA.getByText(/won the series/i)).toBeVisible({ timeout: 15_000 });
+  await expect(pageA.getByRole("button", { name: /start round/i })).not.toBeVisible();
 });
