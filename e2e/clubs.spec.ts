@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { syncLeaderboardStats } from "../app/lib/leaderboardStore";
-import { createMpGame } from "../app/lib/mpStore";
+import { createMpGame, respondToMpGame } from "../app/lib/mpStore";
 import { autoCompleteMpGame } from "./helpers/playMpGame";
 import {
   canRunLiveMpTests,
@@ -109,18 +109,28 @@ test("create → add member → both see it → rename → leave → delete", as
 test("standings show a member's real multiplayer record once they've actually played", async ({ browser }) => {
   test.setTimeout(90_000);
 
-  const client = await signedInClient(userA.email, userA.password);
-  const { game_id: gameId } = await createMpGame(client, {
+  // The mp function genuinely requires a second real human friend to
+  // create a game at all ("invite at least one friend" is enforced
+  // server-side, not just a UI gate — see playMpGame.ts's own doc), so B
+  // plays this real game too. Only A's leaderboard_entries.mp_* gets
+  // synced below, though — that column is self-reported (pulled on a
+  // Leaderboard/Account/Home visit, not pushed automatically the instant a
+  // game ends — see leaderboardStore.ts's own doc), so B's own row stays
+  // at its stale "0W / 0" here exactly as it would for a real player who
+  // hasn't happened to visit one of those pages since — that's the actual
+  // point being tested, not an artifact of the test setup.
+  const clientA = await signedInClient(userA.email, userA.password);
+  const clientB = await signedInClient(userB.email, userB.password);
+  const { game_id: gameId } = await createMpGame(clientA, {
     contractRounds: [1],
-    seats: [{ kind: "ai", difficulty: "beginner", name: "E2E Bot" }],
+    seats: [{ kind: "human", user_id: userB.id }],
   });
-  await autoCompleteMpGame(client, gameId);
-  // leaderboard_entries.mp_* is self-reported (see leaderboardStore.ts's
-  // own doc) — a real signed-in visit to Leaderboard/Account/Home would
-  // trigger this same sync; calling it directly is just a faster, more
-  // deterministic way to reach the same state than waiting on a page's own
-  // mount effect.
-  await syncLeaderboardStats(client, userA.id);
+  // A game starts "pending" until every invitee accepts — same real step
+  // as clicking "Accept" from Home (see e2e/multiplayer.spec.ts) — no move
+  // can be submitted before that.
+  await respondToMpGame(clientB, gameId, true);
+  await autoCompleteMpGame({ 0: clientA, 1: clientB }, gameId);
+  await syncLeaderboardStats(clientA, userA.id);
 
   const pageA = await signIn(browser, userA.email, userA.password);
   const pageB = await signIn(browser, userB.email, userB.password);

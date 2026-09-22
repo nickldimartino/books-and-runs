@@ -169,9 +169,20 @@ function TournamentList() {
   );
 }
 
+// mp_games.seats is stored exactly as src/mp/types.ts's MpSeat shapes it
+// (handleCreate in the mp Edge Function writes it verbatim) — userId
+// (camelCase), not user_id. This previously read the wrong key, which
+// silently dropped every human seat when starting a tournament's next
+// round (see handleStartNextRound below): rematchMpGame filters out the
+// host by matching userId === myUserId, and separately drops any "human"
+// entry whose userId is falsy — with the wrong key, every human seat's
+// userId read as undefined, so the host-filter never matched anyone *and*
+// the human seats it should have kept all got dropped anyway, leaving no
+// invited players at all and the mp function's own "invite at least one
+// friend" rejection.
 interface MpGameSeatRow {
   seats: (
-    | { seat: number; kind: "human"; user_id: string; name: string }
+    | { seat: number; kind: "human"; userId: string; name: string }
     | { seat: number; kind: "ai"; difficulty: string; name: string }
   )[];
   contract_rounds: number[];
@@ -275,7 +286,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
         isAI: s.kind === "ai",
         difficulty: s.kind === "ai" ? (s.difficulty as Difficulty) : undefined,
         name: s.name,
-        userId: s.kind === "human" ? s.user_id : undefined,
+        userId: s.kind === "human" ? s.userId : undefined,
       }));
       const { game_id } = await rematchMpGame(supabase, players, user.id, data.contract_rounds);
       await addTournamentRound(supabase, tournamentId, game_id);

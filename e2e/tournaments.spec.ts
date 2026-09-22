@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createTournament } from "../app/lib/tournamentsStore";
-import { createMpGame } from "../app/lib/mpStore";
+import { createMpGame, respondToMpGame } from "../app/lib/mpStore";
 import { autoCompleteMpGame } from "./helpers/playMpGame";
 import {
   canRunLiveMpTests,
@@ -38,6 +38,12 @@ test.skip(!canRunLiveMpTests(), REQUIRED_ENV_MESSAGE);
 
 const RUN_ID = newRunId();
 const TOURNAMENT_NAME = `E2E Series ${RUN_ID}`;
+// Tournament names are capped at 40 chars server-side (tournament_create's
+// own check, matching the New Tournament form's maxLength) — TOURNAMENT_NAME
+// alone is already close to that once RUN_ID's timestamp+random suffix is
+// in it, so the second test below needs its own, shorter name rather than
+// appending anything to TOURNAMENT_NAME.
+const FULL_SERIES_NAME = `E2E FS ${RUN_ID}`;
 let userA: TestUser;
 let userB: TestUser;
 
@@ -96,7 +102,9 @@ test("create a series → round 1 is a real linked MP game → visible to both �
   await expect(pageB.getByRole("button", { name: /cancel tournament/i })).not.toBeVisible();
 
   // Host cancels; the status updates for the host immediately, and for B
-  // on their next visit.
+  // on their next visit. Back to the detail page first — "Cancel
+  // tournament" only exists there, not on the list pageA was just on.
+  await pageA.goto(tournamentUrl);
   pageA.once("dialog", (dialog) => dialog.accept());
   await pageA.getByRole("button", { name: /cancel tournament/i }).click();
   await expect(pageA.getByText(/^cancelled$/i)).toBeVisible({ timeout: 15_000 });
@@ -109,23 +117,35 @@ test("create a series → round 1 is a real linked MP game → visible to both �
 test("a full series plays round to round and reaches series complete", async ({ browser }) => {
   test.setTimeout(90_000);
 
-  const client = await signedInClient(userA.email, userA.password);
+  // The mp function genuinely requires a second real human friend to
+  // create a game at all ("invite at least one friend" is enforced
+  // server-side, not just a UI gate — see playMpGame.ts's own doc), so B
+  // is a real seat here too, not an AI. rematchMpGame carries the same
+  // roster into round 2 automatically, so both clients are needed there
+  // as well.
+  const clientA = await signedInClient(userA.email, userA.password);
+  const clientB = await signedInClient(userB.email, userB.password);
+  const seatClients = { 0: clientA, 1: clientB };
 
-  // Round 1: solo vs. one AI, a single contract round each game — the
-  // smallest, fastest legal game this engine supports — so autoCompleteMpGame
-  // finishes it in a handful of turns rather than a full 7-round game.
-  const { game_id: round1GameId } = await createMpGame(client, {
+  // A single contract round each game — the smallest, fastest legal game
+  // this engine supports — so autoCompleteMpGame finishes it in a handful
+  // of turns rather than a full 7-round game.
+  const { game_id: round1GameId } = await createMpGame(clientA, {
     contractRounds: [1],
-    seats: [{ kind: "ai", difficulty: "beginner", name: "E2E Bot" }],
+    seats: [{ kind: "human", user_id: userB.id }],
   });
-  const tournamentId = await createTournament(client, {
-    name: `${TOURNAMENT_NAME} Full Series`,
+  // A game starts "pending" until every invitee accepts — same real step
+  // as clicking "Accept" from Home (see e2e/multiplayer.spec.ts) — no move
+  // can be submitted before that.
+  await respondToMpGame(clientB, round1GameId, true);
+  const tournamentId = await createTournament(clientA, {
+    name: FULL_SERIES_NAME,
     totalRounds: 2,
     contractRounds: [1],
     clubId: null,
     gameId: round1GameId,
   });
-  await autoCompleteMpGame(client, round1GameId);
+  await autoCompleteMpGame(seatClients, round1GameId);
 
   // From here on, the real UI: round 1 already complete unlocks "Start
   // round 2" — the exact button a host would tap after a real round ends.
@@ -138,12 +158,15 @@ test("a full series plays round to round and reaches series complete", async ({ 
   // Lands on the freshly-created round-2 game itself.
   await pageA.waitForURL(/\/multiplayer\/play\?g=/, { timeout: 15_000 });
   const round2GameId = new URL(pageA.url()).searchParams.get("g")!;
+  // Round 2 is its own fresh mp_games row — "pending" again until B
+  // accepts, exactly like round 1.
+  await respondToMpGame(clientB, round2GameId, true);
 
   await pageA.goto(`/tournaments?id=${tournamentId}`);
   await expect(pageA.getByRole("link", { name: /round 2/i })).toBeVisible({ timeout: 15_000 });
 
   // Finish round 2 the same way — the series is now complete.
-  await autoCompleteMpGame(client, round2GameId);
+  await autoCompleteMpGame(seatClients, round2GameId);
   await pageA.goto(`/tournaments?id=${tournamentId}`);
   await expect(pageA.getByText(/won the series/i)).toBeVisible({ timeout: 15_000 });
   await expect(pageA.getByRole("button", { name: /start round/i })).not.toBeVisible();

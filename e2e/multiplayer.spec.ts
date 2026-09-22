@@ -84,11 +84,36 @@ test("create → accept → one full turn between two real accounts", async ({ b
   const drawButton = pageA.getByRole("button", { name: /draw from the pile/i });
   await expect(drawButton).toBeEnabled({ timeout: 20_000 });
   await drawButton.click();
+  // The draw button disables the instant the click fires (it's gated by
+  // `g.busy` too, not just the server-confirmed `youHaveDrawn` — see
+  // useMpGame.ts), so waiting on *it* alone doesn't prove the real network
+  // round trip through the mp function has actually landed. That matters
+  // here: useMpGame.ts has a `useEffect` that resets `selectedIds` to `[]`
+  // whenever `view.youHaveDrawn` flips (among other view fields) — a local
+  // card selection made *before* that effect has fired gets silently wiped
+  // out the instant it does. A real player never notices (their own reaction
+  // time is far slower than the round trip), but Playwright can click a
+  // card within that same window, so this waits for a signal that's only
+  // ever true once the server's response — and thus that reset effect —
+  // has already landed: the "draw a card to start" prompt is gated on
+  // `!drawn` (multiplayer/play/page.tsx), i.e. the same `view.youHaveDrawn`
+  // this effect keys off.
+  await expect(pageA.getByText(/draw a card to start/i)).not.toBeVisible({ timeout: 15_000 });
 
+  // The interactive hand — the "Your hand" heading, the card buttons, and
+  // the meld/discard/end-turn controls — only exists once "Manage your
+  // hand" is open (it's a bottom-sheet dialog, not part of the base page).
+  await pageA.getByRole("button", { name: /jump to your hand/i }).click();
   const handSection = pageA.locator("section", { has: pageA.getByRole("heading", { name: /your hand/i }) });
-  const firstCard = handSection.getByRole("button").first();
+  // Not just "the first button in the section" — that same section also
+  // has "Sort by suit"/"Sort by rank" buttons ahead of the actual cards in
+  // DOM order. Every real card's own accessible name is "<rank> of <suit>"
+  // (or bare "Joker") — see PlayingCard.tsx's cardLabel — which neither
+  // sort button's name matches.
+  const firstCard = handSection.getByRole("button", { name: /of (hearts|diamonds|clubs|spades)|^joker/i }).first();
   await firstCard.waitFor({ timeout: 15_000 });
   await firstCard.click();
+  await expect(firstCard).toHaveAttribute("aria-pressed", "true", { timeout: 5_000 });
   await pageA.getByRole("button", { name: /set as discard/i }).click();
   await pageA.getByRole("button", { name: /end turn/i }).click();
 
