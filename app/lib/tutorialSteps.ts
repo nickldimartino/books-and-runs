@@ -119,7 +119,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: "layoff-hint",
     target: "hand",
     title: "Laying off",
-    body: "With your contract melded, you can add single cards onto any meld on the table — yours or an opponent's. Watch for a small ↓ badge on a card, in your table's accent color: it means that card fits somewhere. Nothing qualifies this turn, but keep an eye out. You can turn the hint off in Settings.",
+    body: "With your contract melded, you can add single cards onto any meld on the table — yours or an opponent's. Watch for a small ↓ badge on a card: it means that card fits somewhere. Nothing qualifies this turn, but keep an eye out. You can turn the hint off in Settings.",
     gate: { type: "tap" },
   },
   {

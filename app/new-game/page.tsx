@@ -99,8 +99,8 @@ export default function NewGamePage() {
       <PageTip id="new-game" title="Pick your pace">
         Solo &amp; pass-and-play is one sitting on this device — against AI, or passing it around a
         table. With friends is slower-paced: everyone plays on their own time, no need to be online
-        together. Once you&apos;ve played a game, a one-tap &quot;Play my usual&quot; shortcut shows
-        up here too.
+        together. Once you&apos;ve played a game, a one-tap &quot;Quick Deal&quot; shortcut shows up
+        here too.
       </PageTip>
 
       <div className="flex flex-col gap-3">
@@ -123,7 +123,7 @@ export default function NewGamePage() {
 
         {favoriteForDisplay && (
           <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-5">
-            <p className="text-base font-semibold text-[var(--heading)]">Play my usual</p>
+            <p className="text-base font-semibold text-[var(--heading)]">Quick Deal</p>
             <p className="mt-1 text-sm text-[var(--muted)]">{describeFavoriteGameConfig(favoriteForDisplay)}</p>
             <button
               onClick={playFavorite}

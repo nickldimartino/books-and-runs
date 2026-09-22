@@ -287,7 +287,7 @@ export default function NewLocalGamePage() {
         <section className="flex flex-col gap-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-[var(--heading)]">Your usual</h2>
+              <h2 className="text-sm font-semibold text-[var(--heading)]">Quick Deal</h2>
               <p className="mt-0.5 truncate text-xs text-[var(--muted)]">
                 {describeFavoriteGameConfig(favoriteForDisplay)}
               </p>
@@ -548,7 +548,7 @@ export default function NewLocalGamePage() {
           disabled={!canStart}
           className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-40"
         >
-          {justSaved ? "Saved ✓" : favorite ? "Update my usual to match this setup" : "Save this setup as my usual"}
+          {justSaved ? "Saved ✓" : favorite ? "Update Quick Deal to this setup" : "Save as Quick Deal"}
         </button>
       </div>
 

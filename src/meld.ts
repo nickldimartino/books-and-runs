@@ -167,7 +167,17 @@ export function solveContract(
     (c) => c.wildsNeeded <= wilds.length
   );
 
-  // search books first, then runs, preferring low-wild candidates
+  // Preferring low-wild candidates within each pool, same as before — what's
+  // new is that picking runs is nested *inside* a successful book pick
+  // (see tryPickBooks' countNeeded === 0 base case) instead of running
+  // afterward as a separate, independent step. A contract needing both
+  // (e.g. "1 Book + 1 Run") can have a hand where the cheapest (fewest-wild)
+  // book choice happens to use a card the only viable run also needs — the
+  // old two-phase version committed to that book first and, if the run
+  // search then failed, gave up immediately instead of trying a different
+  // book. This backtracks properly: a run-search failure un-picks the book
+  // and the for-loop below tries the next book candidate, so any hand with
+  // *some* valid combination is found, not just the first one attempted.
   const sortedBooks = [...bookCands].sort((a, b) => a.wildsNeeded - b.wildsNeeded);
   const sortedRuns = [...runCands].sort((a, b) => a.wildsNeeded - b.wildsNeeded);
 
@@ -178,10 +188,10 @@ export function solveContract(
     return list.reduce((sum, c) => sum + c.naturalCards.filter((nc) => nc.rank === "2").length, 0);
   }
 
-  function tryPick(pool: Candidate[], countNeeded: number, startFrom: number): boolean {
+  function tryPickRuns(countNeeded: number, startFrom: number): boolean {
     if (countNeeded === 0) return true;
-    for (let i = startFrom; i < pool.length; i++) {
-      const cand = pool[i];
+    for (let i = startFrom; i < sortedRuns.length; i++) {
+      const cand = sortedRuns[i];
       if (cand.naturalCards.some((c) => usedCardIds.has(c.id))) continue;
       const wildsUsedSoFar = chosen.reduce((sum, c) => sum + c.wildsNeeded, 0);
       const twosClaimedIfChosen = twosClaimedBy(chosen) + twosClaimedBy([cand]);
@@ -190,7 +200,7 @@ export function solveContract(
       chosen.push(cand);
       cand.naturalCards.forEach((c) => usedCardIds.add(c.id));
 
-      if (tryPick(pool, countNeeded - 1, i + 1)) return true;
+      if (tryPickRuns(countNeeded - 1, i + 1)) return true;
 
       chosen.pop();
       cand.naturalCards.forEach((c) => usedCardIds.delete(c.id));
@@ -198,10 +208,27 @@ export function solveContract(
     return false;
   }
 
-  const booksOk = tryPick(sortedBooks, requirement.books, 0);
-  if (!booksOk) return null;
-  const runsOk = tryPick(sortedRuns, requirement.runs, 0);
-  if (!runsOk) return null;
+  function tryPickBooks(countNeeded: number, startFrom: number): boolean {
+    if (countNeeded === 0) return tryPickRuns(requirement.runs, 0);
+    for (let i = startFrom; i < sortedBooks.length; i++) {
+      const cand = sortedBooks[i];
+      if (cand.naturalCards.some((c) => usedCardIds.has(c.id))) continue;
+      const wildsUsedSoFar = chosen.reduce((sum, c) => sum + c.wildsNeeded, 0);
+      const twosClaimedIfChosen = twosClaimedBy(chosen) + twosClaimedBy([cand]);
+      if (wildsUsedSoFar + cand.wildsNeeded + twosClaimedIfChosen > wilds.length) continue;
+
+      chosen.push(cand);
+      cand.naturalCards.forEach((c) => usedCardIds.add(c.id));
+
+      if (tryPickBooks(countNeeded - 1, i + 1)) return true;
+
+      chosen.pop();
+      cand.naturalCards.forEach((c) => usedCardIds.delete(c.id));
+    }
+    return false;
+  }
+
+  if (!tryPickBooks(requirement.books, 0)) return null;
 
   // build final Meld objects, assigning wild cards to fill shortfalls — for
   // runs, wilds go into their exact gap slot (via runSlots) so the meld

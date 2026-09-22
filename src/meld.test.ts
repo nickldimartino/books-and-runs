@@ -57,6 +57,35 @@ describe("solveContract", () => {
     expect(nineBook?.wildCardIds).toEqual([]);
   });
 
+  // Regression: the search used to commit to whichever book candidate
+  // needed the fewest wilds, then search runs against whatever cards were
+  // left over — with no backtracking if that particular book choice turned
+  // out to strand the only viable run. Here the cheapest book (7-7-7, 0
+  // wilds) uses 7H, which is also the only card that completes the only
+  // possible run (5H-6H-7H-8H); a *different*, valid book (9-9 + the one
+  // wild) leaves 7H free instead. A correct solver has to try that second
+  // book once the first one's run search fails, not give up.
+  it("backtracks to a different book when the cheapest one strands the only run", () => {
+    const hand = [
+      ...makeHand([
+        ["7", "hearts"],
+        ["7", "diamonds"],
+        ["7", "clubs"],
+        ["9", "diamonds"],
+        ["9", "clubs"],
+        ["5", "hearts"],
+        ["6", "hearts"],
+        ["8", "hearts"],
+      ]),
+      makeCard("JOKER", "joker"),
+    ];
+    const melds = solveContract(hand, CONTRACTS[1], "p1"); // round 2: 1 Book + 1 Run
+    expect(melds).not.toBeNull();
+    expect(melds!.some((m) => m.type === "run" && m.cards.some((c) => c.rank === "7" && c.suit === "hearts"))).toBe(
+      true
+    );
+  });
+
   it("returns null when the contract can't currently be met", () => {
     const hand = makeHand([
       ["5", "hearts"],
