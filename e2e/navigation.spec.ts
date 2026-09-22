@@ -34,7 +34,12 @@ test("New Game leads to the solo / with-friends fork", async ({ page }) => {
   await expect(page).toHaveURL(/\/new-game$/);
   await expect(page.getByRole("link", { name: /solo & pass-and-play/i })).toBeVisible();
   await expect(page.getByText(/turn-based online/i)).toBeVisible();
-  await expect(page.getByRole("button", { name: /take the tutorial/i })).toBeVisible();
+  // This spec's beforeEach clears every booksAndRuns* key, so this always
+  // runs as a true first session — new-game/page.tsx promotes the tutorial
+  // CTA to a highlighted "Start tutorial" card for exactly that visitor
+  // (see its own doc); the plain "Take the tutorial →" link only comes
+  // back once firstSessionStore records a game has been played.
+  await expect(page.getByRole("button", { name: /start tutorial/i })).toBeVisible();
 });
 
 test("an unknown route shows the themed 404, not the framework default", async ({ page }) => {
