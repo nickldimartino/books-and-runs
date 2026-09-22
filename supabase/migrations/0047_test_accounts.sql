@@ -35,10 +35,16 @@
 alter table public.leaderboard_entries
   add column if not exists is_test_account boolean not null default false;
 
--- Same function as 0029/0042, extended with one more exclusion in its own
--- WHERE clause — everything else about it (the per-tier loop, the SQL it
--- builds per requirement kind) is unchanged. Verbatim copy of 0042's
--- version otherwise.
+-- Same function 0029 originally defined, extended with one more exclusion
+-- in its own WHERE clause — everything else (the per-family loop over
+-- achievement_thresholds, the per-tier VALUES unnest, the SQL built per
+-- requirement kind) is unchanged from 0029's version. There is no separate
+-- achievement_families table — every family's row (source_kind/source_key/
+-- lower_is_better plus its five *_threshold columns) already lives directly
+-- on achievement_thresholds, one row per family; an earlier version of this
+-- migration wrongly assumed a two-table split that was never created,
+-- which is what made this fail with "relation achievement_families does
+-- not exist" the first time it ran.
 create or replace function public.refresh_achievement_rarity()
 returns void
 language plpgsql
@@ -46,21 +52,35 @@ security definer
 set search_path = public
 as $$
 declare
+  total integer;
   fam record;
   tier_rec record;
   cond text;
-  cnt bigint;
-  total bigint;
+  cnt integer;
 begin
+  -- Same "real activity" population the Leaderboard itself ranks (see
+  -- migration 0006/leaderboard/page.tsx's own filter), now also excluding
+  -- flagged test accounts from both the numerator and denominator below.
   select count(*) into total
   from public.leaderboard_entries
   where (games_played > 0 or daily_deal_best_streak > 0)
     and not is_test_account;
 
-  for fam in select * from public.achievement_families loop
-    for tier_rec in select * from public.achievement_thresholds where family_id = fam.family_id loop
+  for fam in select * from public.achievement_thresholds loop
+    for tier_rec in
+      select * from (values
+        ('beginner', fam.beginner_threshold),
+        ('easy', fam.easy_threshold),
+        ('medium', fam.medium_threshold),
+        ('hard', fam.hard_threshold),
+        ('expert', fam.expert_threshold)
+      ) as t(name, threshold)
+    loop
       cond := case fam.source_kind
-        when 'counter' then format('coalesce((ac.counters ->> %L)::numeric, 0) >= %s', fam.source_key, tier_rec.threshold)
+        when 'counter' then format(
+          'coalesce((ac.counters ->> %L)::numeric, 0) %s %s',
+          fam.source_key, case when fam.lower_is_better then '<=' else '>=' end, tier_rec.threshold
+        )
         when 'gamesPlayed' then format('coalesce(le.games_played, 0) >= %s', tier_rec.threshold)
         when 'gamesWon' then format('coalesce(le.games_won, 0) >= %s', tier_rec.threshold)
         when 'bestScore' then format(
