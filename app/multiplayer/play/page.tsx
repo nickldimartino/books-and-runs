@@ -88,6 +88,7 @@ export default function MultiplayerPlayPage() {
 
   const [rematchBusy, setRematchBusy] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [respondBusy, setRespondBusy] = useState<"accept" | "decline" | null>(null);
   const [layoffArmed, setLayoffArmed] = useState(false);
   const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
   // Same hand-drawer treatment as solo/pass-and-play's game screen (see
@@ -282,11 +283,25 @@ export default function MultiplayerPlayPage() {
     );
     const pendingParticipants = g.pending?.participants ?? [];
     const isHost = !!user && g.pending?.host_id === user.id;
+    // A push notification for a new invite (mp/index.ts's sendPushForEvent)
+    // deep-links straight here rather than to Home — without this, an
+    // invitee who arrived that way could only ever see everyone else's
+    // status, with no way to act on their own invite short of backing out
+    // to Home, where the exact same accept/decline exists (see
+    // page.tsx's HomeGames).
+    const myParticipant = pendingParticipants.find((p) => p.user_id === user?.id);
+    const needsMyResponse = !isHost && myParticipant?.invite_status === "invited";
 
     async function handleCancelPending() {
       setCancelBusy(true);
       await g.cancelPending();
       setCancelBusy(false);
+    }
+
+    async function handleRespondPending(accept: boolean) {
+      setRespondBusy(accept ? "accept" : "decline");
+      await g.respondPending(accept);
+      setRespondBusy(null);
     }
 
     return (
@@ -326,6 +341,25 @@ export default function MultiplayerPlayPage() {
 
         {g.error && <p className="text-xs text-[var(--danger)]">{g.error}</p>}
 
+        {needsMyResponse && (
+          <div className="flex w-full gap-2">
+            <button
+              onClick={() => handleRespondPending(true)}
+              disabled={respondBusy !== null}
+              className="flex-1 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            >
+              {respondBusy === "accept" ? "Accepting…" : "Accept"}
+            </button>
+            <button
+              onClick={() => handleRespondPending(false)}
+              disabled={respondBusy !== null}
+              className="flex-1 rounded-md border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
+            >
+              {respondBusy === "decline" ? "Declining…" : "Decline"}
+            </button>
+          </div>
+        )}
+
         <button
           onClick={g.refresh}
           className="rounded-md border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] hover:bg-[var(--panel-soft)]"
@@ -333,8 +367,8 @@ export default function MultiplayerPlayPage() {
           Refresh
         </button>
 
-        {/* Only the host can withdraw a still-pending invite — an invitee's
-            way out is declining it from Home instead (respondToMpGame). */}
+        {/* Only the host can withdraw a still-pending invite — an invitee
+            declines instead, above (or from Home — same respondToMpGame). */}
         {g.status === "pending" && isHost && (
           <button
             onClick={handleCancelPending}

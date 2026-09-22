@@ -30,6 +30,7 @@ import {
   nudgeMpGame,
   rematchMpGame,
   resignMpGame,
+  respondToMpGame,
   submitMpMove,
 } from "./mpStore";
 import { loadAchievementProgressState } from "./loadAchievementProgress";
@@ -98,6 +99,11 @@ export interface UseMpGame {
    * only meaningful while `status === "pending"` and you're the host.
    * Resolves true on success (the pending screen then shows "cancelled"). */
   cancelPending: () => Promise<boolean>;
+  /** Accepts or declines a still-pending invite from this same screen —
+   * only meaningful while `status === "pending"` and you're an invitee, not
+   * the host. Resolves true on success (accept moves the game toward
+   * dealing once everyone's in; decline cancels it for everyone). */
+  respondPending: (accept: boolean) => Promise<boolean>;
 
   /** Bump the current-turn player's notification badge. `nudgeState`
    * reflects the last attempt. */
@@ -428,6 +434,31 @@ export function useMpGame(gameId: string | null): UseMpGame {
     }
   }, [gameId, refresh]);
 
+  // Accept/decline a still-pending invite from this same screen — the
+  // Home page's invite cards already call respondToMpGame directly, but a
+  // push notification deep-links straight to /multiplayer/play?g=<id> (see
+  // mp/index.ts's sendPushForEvent), which previously stranded the invitee
+  // on the "waiting for players" list with no way to act on their own
+  // invite, only Home had Accept/Decline buttons.
+  const respondPending = useCallback(
+    async (accept: boolean): Promise<boolean> => {
+      if (!supabase || !gameId) return false;
+      setBusy(true);
+      setError(null);
+      try {
+        await respondToMpGame(supabase, gameId, accept);
+        refresh(); // picks up the now-active (or, on decline, cancelled) status
+        return true;
+      } catch (err) {
+        setError(err instanceof MpError ? err.message : "Couldn't respond to this invite.");
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [gameId, refresh]
+  );
+
   const nudge = useCallback(async () => {
     if (!supabase || !gameId) return;
     try {
@@ -494,6 +525,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
     commitTurn,
     resign,
     cancelPending,
+    respondPending,
     nudge,
     nudgeState,
     rematch,
