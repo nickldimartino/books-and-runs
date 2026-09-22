@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { playAITurn } from "./index";
 import { CONTRACTS } from "../types";
 import { makeCard, makeGameState, makeHand, makePlayer } from "../testHelpers";
@@ -145,7 +145,16 @@ describe("playAITurn — move log", () => {
       discardPile: [makeCard("K", "clubs")], // <=1 card: nothing left to reshuffle in either
     });
 
+    // wantsDiscardPileDraw's default rng is the real Math.random — medium's
+    // own MISTAKE_CHANCE (strategy.ts) means it occasionally takes the lone
+    // King anyway regardless of whether it helps a 9-9-9 hand, which isn't
+    // what this test is about (it's checking the round-ends-with-no-moves
+    // path, not the mistake-roll subsystem — that's strategy.test.ts's own
+    // job). Pin it so the real discardHelpsHand judgment always applies:
+    // 1 is never < any (0,1) chance, so the mistake roll never fires.
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(1);
     const entries = playAITurn(state);
+    randomSpy.mockRestore();
 
     expect(entries).toEqual([{ seat: 0, type: "draw", fromDiscard: false }]);
     expect(state.roundOver).toBe(true);
