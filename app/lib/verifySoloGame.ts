@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MoveLogEntry } from "@/moveLog";
 import { ContractRequirement, GameState } from "@/types";
+import { callEdgeFunction } from "./callEdgeFunction";
 import { RoundHistoryEntry } from "./recordGameResult";
 
 /**
@@ -60,30 +61,10 @@ export interface SoloVerifyResult {
 }
 
 export async function verifySoloGame(supabase: SupabaseClient, payload: SoloVerifyPayload): Promise<SoloVerifyResult> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new SoloVerifyError("You're signed out.", 401);
-
-  const res = await fetch(FN_BASE, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify(payload),
+  return callEdgeFunction<SoloVerifyResult>(supabase, FN_BASE, payload, SoloVerifyError, {
+    fallbackMessage: "Verification failed.",
+    isOk: (body) => body.ok === true,
   });
-
-  let body: Record<string, unknown> = {};
-  try {
-    body = await res.json();
-  } catch {
-    /* empty / non-JSON */
-  }
-  if (!res.ok || body.ok !== true) {
-    throw new SoloVerifyError(typeof body.error === "string" ? body.error : "Verification failed.", res.status);
-  }
-  return body as unknown as SoloVerifyResult;
 }
 
 /** Builds the payload from a finished game's state + GameContext's own

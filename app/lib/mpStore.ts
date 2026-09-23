@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { callEdgeFunction } from "./callEdgeFunction";
 import type { MpAction, RedactedView } from "@/mp/types";
 
 /**
@@ -29,30 +30,7 @@ async function callMp<T>(
   path: "create" | "respond" | "cancel" | "state" | "move" | "resign",
   payload: Record<string, unknown>
 ): Promise<T> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new MpError("You're signed out.", 401);
-
-  const res = await fetch(`${FN_BASE}/${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  let body: Record<string, unknown> = {};
-  try {
-    body = await res.json();
-  } catch {
-    /* empty / non-JSON */
-  }
-  if (!res.ok) {
-    throw new MpError(typeof body.error === "string" ? body.error : "Request failed.", res.status);
-  }
-  return body as T;
+  return callEdgeFunction<T>(supabase, `${FN_BASE}/${path}`, payload, MpError);
 }
 
 // ── seat config sent to /create ──────────────────────────────────────────
