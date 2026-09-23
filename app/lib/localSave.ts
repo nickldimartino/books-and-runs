@@ -4,6 +4,13 @@ import { GameState } from "@/types";
 import { readLocalStorage, removeLocalStorage, writeLocalStorage } from "./localStorageUtil";
 import { RoundHistoryEntry } from "./recordGameResult";
 
+// localStorage persistence for an in-progress solo/pass-and-play game (and
+// its Daily Deal / Weekly Challenge siblings below, each in their own save
+// slot — see DAILY_DEAL_SAVE_KEY's own doc for why they're kept separate).
+// This is the source of truth GameContext.tsx reads and writes locally;
+// LocalSaveSync.tsx mirrors the real-game slot to the account when signed
+// in, so it resumes across devices too.
+
 const SAVE_KEY = "booksAndRuns:savedGame";
 
 // A Daily Deal in progress gets its own slot, entirely separate from

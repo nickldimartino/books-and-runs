@@ -720,6 +720,17 @@ component/lib tables cross-checked against the actual file list.
 `localStorageUtil.ts`, `text.ts`, `useSyncedLocalPreference.ts`,
 `callEdgeFunction.ts`) each checked against the same convention before
 being added to this document's tables — all 7 already had a real
-explanation directly above their one real export, no gaps to fix. Not a
-full 164-file re-sweep (nothing suggested broad drift since 09-14, only
-new files), just a targeted check of what actually changed.
+explanation directly above their one real export, no gaps to fix.
+
+A second, fully independent re-check the same day (not just trusting
+this document's own prior claim) went further: all 165 current
+`app`/`src` files plus the 7 Supabase Edge Function files, each read in
+full rather than pattern-matched. Found 2 genuine gaps that had crept in
+since 09-14 — `app/lib/dailyDealStore.ts` and `app/lib/localSave.ts`
+each had every individual piece well-commented but never stated the
+file's own overall purpose in one place, unlike sibling files
+(`weeklyChallengeStore.ts`, `scorecardStore.ts`) that do. Both fixed.
+Also added a one-line comment to `supabase/functions/_shared/cors.ts`,
+which had none — genuinely tiny/self-evident, but every other file here,
+including equally small ones, still carries at least a line explaining
+itself, so it was worth the one-line cost for consistency.

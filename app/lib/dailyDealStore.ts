@@ -4,6 +4,13 @@ import { CONTRACTS, ContractRequirement, GameState } from "@/types";
 import { AI_PERSONAS } from "./aiPersonas";
 import { YOU_PLAYER_ID } from "./recordGameResult";
 
+// The Daily Deal — a single seeded round (see dateSeed below) that's the
+// same fixed table and shuffle for everyone playing it on a given calendar
+// day, plus this device's completion streak. Local-only: syncs a streak
+// summary via mergeCloudDailyDealState, but the deal/result history itself
+// never leaves the device. weeklyChallengeStore.ts is this store's own
+// bigger, harder sibling — seeded by ISO week instead of day.
+
 const KEY = "booksAndRuns:dailyDeal";
 // How many past days' results to keep around — enough for a small "last two
 // weeks" glance without the record growing forever in localStorage.
