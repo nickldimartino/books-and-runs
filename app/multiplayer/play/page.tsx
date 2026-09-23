@@ -473,6 +473,11 @@ export default function MultiplayerPlayPage() {
   const layoffTargets = selectedCard
     ? view.melds.filter((m) => layOffOptions(selectedCard, m).length > 0).map((m) => m.id)
     : [];
+  // Same badge solo's DiscardPile shows (see game/page.tsx's
+  // discardTopCanLayOff) — was missing here even though the pieces
+  // (layOffOptions, the same canLayOff gate the hand cards already use)
+  // were already in place.
+  const discardTopCanLayOff = canLayOff && !!view.discardTop && view.melds.some((m) => layOffOptions(view.discardTop!, m).length > 0);
 
   const meldsByOwner = groupMeldsByOwner(view.melds);
 
@@ -672,7 +677,7 @@ export default function MultiplayerPlayPage() {
             className="disabled:opacity-50"
             aria-label="Take the top of the discard pile"
           >
-            <DiscardPile cards={view.discardPile} />
+            <DiscardPile cards={view.discardPile} canLayOff={discardTopCanLayOff} />
           </button>
           <span className="text-xs text-[var(--faint)]">Discard pile</span>
         </div>
