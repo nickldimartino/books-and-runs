@@ -128,10 +128,10 @@ actually closed:
 await window.supabase.from("player_stats").update({ games_won: 999999 }).eq("user_id", (await window.supabase.auth.getUser()).data.user.id);
 ```
 
-## `daily-deal-reminder` — streak-at-risk push
+## `daily-deal-reminder` — streak-at-risk push (Daily Deal *and* Weekly Challenge)
 
 Push notifications previously only ever fired for multiplayer events
-(`your_turn`/`game_request`/`nudge`, see `mp`'s own `PUSH_COPY`) — this is
+(`your_turn`/`game_request`/`nudge`, see `mp`'s own `PUSH_COPY`) — this was
 the first one for anything else. A `pg_cron` job (see
 [`../migrations/0038_daily_deal_reminder_cron.sql`](../migrations/0038_daily_deal_reminder_cron.sql))
 calls this once a day; it finds every account whose Daily Deal streak is a
@@ -139,6 +139,14 @@ real, server-verified one (migration 0036) but hasn't been extended to today
 yet, and sends each a push through the same `push_subscriptions` table and
 VAPID keys `mp` uses. Reuses the same **Turn notifications** on/off setting
 on the Settings page — there's no separate toggle for this.
+
+Also checks Weekly Challenge streaks (migration 0039) on the same daily
+firing, but only actually queries/sends on Saturday and Sunday (UTC) — a
+week-long "haven't played this week yet" condition is true for 6 of 7 days,
+so it's gated to the 2 days where that's a real warning rather than daily
+spam. Still deployed under this function's original name rather than a
+second function/cron job/Vault secret for an identical shape — see the
+function's own top-of-file comment for the reasoning.
 
 Not user-triggered, so it has no JWT to check — auth is a single shared
 secret (`CRON_SECRET`) instead of the per-user pattern every other function

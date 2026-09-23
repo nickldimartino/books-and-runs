@@ -1959,9 +1959,9 @@ export default function PlayerProfilePage() {
                       </span>
                     </summary>
                     {history.length === 0 ? (
-                      <p className="border-t border-[var(--border)] px-4 py-3 text-sm text-[var(--faint)]">
-                        No games recorded yet.
-                      </p>
+                      <div className="border-t border-[var(--border)] p-3">
+                        <EmptyState icon="🎲">No solo or pass-and-play games recorded yet.</EmptyState>
+                      </div>
                     ) : (
                       <ul className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
                         {history.map((g) => {
