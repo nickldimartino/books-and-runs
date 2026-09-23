@@ -2,7 +2,10 @@
 // title, banner), flattened into one list purely for "did anything just
 // newly unlock" diffing (see GameOverScreen.tsx and useMpGame.ts) — not
 // for any picker UI, which each still reads from its own catalog
-// (avatarPresets.ts, profileCosmetics.ts, bannerPresets.ts).
+// (avatarPresets.ts, profileCosmetics.ts, bannerPresets.ts). Boutique items
+// (source: "boutique", no `unlock` rule) are deliberately filtered out of
+// every catalog below — nothing to "newly unlock" for something that's
+// already free from the moment it ships.
 
 import { AchievementProgressState } from "@/achievements";
 import { PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
@@ -18,14 +21,24 @@ export interface AnyCosmeticOption {
 }
 
 export const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
-  ...PREMIUM_EMOJI_OPTIONS.map((o) => ({ kind: "badge" as const, id: o.emoji, label: `${o.emoji} badge`, unlock: o.unlock })),
+  ...PREMIUM_EMOJI_OPTIONS.filter((o) => o.unlock).map((o) => ({
+    kind: "badge" as const,
+    id: o.emoji,
+    label: `${o.emoji} badge`,
+    unlock: o.unlock as CosmeticUnlockRule,
+  })),
   ...AVATAR_FRAME_OPTIONS.filter((o) => o.unlock).map((o) => ({
     kind: "avatar_frame" as const,
     id: o.id,
     label: `${o.label} frame`,
     unlock: o.unlock as CosmeticUnlockRule,
   })),
-  ...TITLE_OPTIONS.map((o) => ({ kind: "title" as const, id: o.id, label: `"${o.label}" title`, unlock: o.unlock })),
+  ...TITLE_OPTIONS.filter((o) => o.unlock).map((o) => ({
+    kind: "title" as const,
+    id: o.id,
+    label: `"${o.label}" title`,
+    unlock: o.unlock as CosmeticUnlockRule,
+  })),
   ...BANNER_OPTIONS.filter((o) => o.unlock).map((o) => ({
     kind: "banner" as const,
     id: o.id,

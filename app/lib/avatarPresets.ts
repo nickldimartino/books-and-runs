@@ -14,6 +14,7 @@
 // actually has, not a competing picture of their own.
 
 import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked, UnlockContext } from "./cosmeticUnlocks";
+import { CosmeticRarity } from "./cosmeticRarity";
 
 export const EMOJI_OPTIONS: readonly string[] = [
   "😀", "😎", "🤠", "🥸", "🤓", "🧐", "😺", "🐯", "🦁", "🐵", "🐼", "🐨",
@@ -29,7 +30,17 @@ export type PremiumEmojiUnlock = CosmeticUnlockRule;
 
 export interface PremiumEmojiOption {
   emoji: string;
-  unlock: PremiumEmojiUnlock;
+  /** Absent only for a `source: "boutique"` item — every earned badge
+   * carries one. */
+  unlock?: PremiumEmojiUnlock;
+  /** Visual-weight tier — absent means "derive it from `unlock`" via
+   * cosmeticRarity.ts's defaultRarityForUnlock; only items that should
+   * diverge from that default set it explicitly. */
+  rarity?: CosmeticRarity;
+  /** Set only on items that would eventually be purchasable — auto-
+   * unlocked for everyone today (no real paywall yet), surfaced together
+   * in the Boutique tab. Never combined with `unlock` on the same item. */
+  source?: "boutique";
 }
 
 /**
@@ -165,10 +176,11 @@ export function isValidColor(hex: string): boolean {
  * 0026's server-side trigger — that's what actually decides on save.
  */
 export function isPremiumEmojiUnlocked(option: PremiumEmojiOption, ctx: UnlockContext): boolean {
-  return isCosmeticUnlocked(option.unlock, ctx);
+  return !option.unlock || isCosmeticUnlocked(option.unlock, ctx);
 }
 
-/** A short "how to unlock this" line for the picker's lock tooltip. */
-export function premiumEmojiRequirementLabel(unlock: PremiumEmojiUnlock): string {
-  return cosmeticRequirementLabel(unlock);
+/** A short "how to unlock this" line for the picker's lock tooltip — for a
+ * boutique item (no `unlock` rule) that's simply that it's free. */
+export function premiumEmojiRequirementLabel(unlock: PremiumEmojiUnlock | undefined): string {
+  return unlock ? cosmeticRequirementLabel(unlock) : "Free";
 }

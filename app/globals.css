@@ -2014,15 +2014,73 @@ html[data-intro]::before {
   }
 }
 
-/* Foil shine on an Expert-tier trophy (player/page.tsx's TrophyBadge) — a
-   diagonal highlight sweeping across the medal every few seconds, so the
-   rarest tier reads as visibly special rather than just "one more colored
-   circle." A ::after overlay (not a background on the medal itself) so it
-   layers over the medal's own ring color/icon without replacing either. */
+/* One shared foil-shine technique — a diagonal highlight sweeping across
+   an element every few seconds, so a rare/epic/mythic/apex cosmetic reads
+   as visibly special rather than just "one more colored circle." A ::after
+   overlay (not a background on the element itself) so it layers over
+   whatever the element's own color/icon/gradient is without replacing it.
+   Every tuning knob (how wide the band is, how bright, how fast, how far
+   it travels) is a CSS custom property so this one block serves every
+   rarity tier (see cosmeticRarity.ts's RARITY_VISUAL) instead of a
+   separate near-duplicate class per item, which is what this file used to
+   have (.trophy-foil/.prismatic-foil/.diamond-foil, each hand-tuning the
+   same 6 properties slightly differently) — those three still exist below,
+   now as thin aliases setting only the variables that made them distinct,
+   not their own copy of the ::after structure. */
 @keyframes foil-sweep {
   0%, 20% { transform: translateX(-120%) rotate(20deg); }
   60%, 100% { transform: translateX(120%) rotate(20deg); }
 }
+.foil-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.foil-sweep::after {
+  content: "";
+  position: absolute;
+  inset: var(--foil-inset, -20%);
+  background: linear-gradient(
+    var(--foil-angle, 100deg),
+    transparent var(--foil-band-start, 40%),
+    rgba(255, 255, 255, var(--foil-opacity, 0.65)) var(--foil-band-mid, 50%),
+    transparent var(--foil-band-end, 60%)
+  );
+  transform: translateX(-120%) rotate(20deg);
+  animation: foil-sweep var(--foil-duration, 3.2s) ease-in-out infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .foil-sweep::after {
+    animation: none;
+    display: none;
+  }
+}
+
+/* Rarity-tier foil presets (cosmeticRarity.ts's CosmeticRarity) — common/
+   uncommon/rare deliberately have no entry here at all: no sweep is itself
+   part of the escalation, not every tier moves. Apply .foil-sweep plus one
+   of these on any badge/frame/banner element whose rarity is epic or
+   above. */
+.rarity-ring--epic {
+  --foil-duration: 3.2s;
+  --foil-opacity: 0.55;
+}
+.rarity-ring--mythic {
+  --foil-duration: 4.2s;
+  --foil-opacity: 0.7;
+  --foil-inset: -25%;
+  --foil-band-start: 41%;
+  --foil-band-end: 59%;
+}
+.rarity-ring--apex {
+  --foil-duration: 5s;
+  --foil-opacity: 0.75;
+  --foil-inset: -30%;
+  --foil-band-start: 42%;
+  --foil-band-end: 58%;
+}
+
+/* Expert-tier trophy medals (player/page.tsx's TrophyBadge). */
 .trophy-foil {
   position: relative;
   overflow: hidden;
@@ -2048,12 +2106,9 @@ html[data-intro]::before {
   }
 }
 
-/* Same technique as .trophy-foil above, sized for a bigger element (the
-   Prismatic avatar frame ring and profile banner — see AvatarFrame.tsx/
-   ProfileBanner.tsx) — a slower, wider sweep so it reads as "shimmering"
-   rather than "flickering" on something this much larger than a trophy
-   medal. Reserved for the one apex reward that sits a tier above
-   Grandmaster's own (static) conic-gradient cosmetics. */
+/* Prismatic ("The Complete Table") — the sole apex-rarity reward, wider and
+   slower than the epic/mythic presets above so it reads as "shimmering"
+   on an element this much bigger than a trophy medal. */
 .prismatic-foil {
   position: relative;
   overflow: hidden;
@@ -2086,7 +2141,9 @@ html[data-intro]::before {
 
 /* "Rose Cut" Dealer's Table avatar frame (AvatarFrame.tsx) — same foil
    technique as .prismatic-foil, tuned icy-white and a touch faster so a
-   faceted stone reads as glinting rather than shimmering. */
+   faceted stone reads as glinting rather than shimmering. Creator-
+   exclusive (provenance-gated, not grind-gated) — deliberately kept as its
+   own one-off treatment rather than folded into the rarity ladder above. */
 .diamond-foil {
   position: relative;
   overflow: hidden;

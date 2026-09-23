@@ -45,13 +45,27 @@ const PRISMATIC_DIAMONDS: readonly { top: number; left: number; size: number }[]
 export function ProfileBanner({ banner, children }: { banner: string | null; children: ReactNode }) {
   const option = findBannerOption(banner);
 
+  // "grandmaster" (mastering every achievement category) — mythic rarity,
+  // one tier below Prismatic's apex. Gets a moderate foil shimmer of its
+  // own now (it previously had none at all) via the same shared
+  // .rarity-ring--mythic preset the new top-tier badges use.
+  if (banner === "grandmaster") {
+    return (
+      <div
+        className="foil-sweep rarity-ring--mythic relative overflow-hidden rounded-2xl px-6 py-6"
+        style={{ background: `linear-gradient(rgba(0,0,0,0.32), rgba(0,0,0,0.32)), ${option!.css}` }}
+      >
+        {children}
+      </div>
+    );
+  }
+
   // "prismatic" — the single apex reward (every category mastered, Level
-  // 250, and a 30-day Daily Deal streak, all at once) — used to be almost
-  // the same rotating-rainbow banner as "grandmaster" (mastering every
-  // category alone), differing only by a passing light-sweep. It's now
-  // diamond-studded corner to corner on top of that same rainbow base, so
-  // it reads as a clearly rarer tier rather than a slightly-shinier
-  // repaint of Grandmaster.
+  // 250, and a 30-day Daily Deal streak, all at once). Diamond-studded
+  // corner to corner on top of its own full 7-stop rainbow base (unlike
+  // Grandmaster's narrower 2-color sweep above), plus a wider/slower foil
+  // shimmer, so the two read as genuinely different tiers rather than one
+  // being a slightly-shinier repaint of the other.
   if (banner === "prismatic") {
     return (
       <div

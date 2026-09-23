@@ -250,15 +250,16 @@ function roundedRectPath2D(x: number, y: number, w: number, h: number, r: number
   return p;
 }
 
-/** Parses `linear-gradient(135deg, c1, c2)` (every non-grandmaster banner —
- * see bannerPresets.ts) into its two color stops. */
+/** Parses `linear-gradient(135deg, c1, c2)` (every 2-stop banner — see
+ * bannerPresets.ts) into its two color stops. */
 function parseLinearGradientStops(css: string): [string, string] | null {
   const m = css.match(/linear-gradient\([^,]+,\s*([^,]+),\s*([^)]+)\)/);
   return m ? [m[1].trim(), m[2].trim()] : null;
 }
 
-/** Parses `conic-gradient(from 0deg, c1, c2, ..., cN)` (grandmaster only)
- * into its ordered color stops. */
+/** Parses `conic-gradient(from 0deg, c1, c2, ..., cN)` (grandmaster and
+ * prismatic — the two rotating-ring rewards, see bannerPresets.ts) into its
+ * ordered color stops. */
 function parseConicGradientStops(css: string): string[] | null {
   const m = css.match(/conic-gradient\([^,]+,\s*(.+)\)/);
   return m ? m[1].split(",").map((s) => s.trim()) : null;
@@ -266,10 +267,10 @@ function parseConicGradientStops(css: string): string[] | null {
 
 /** Fills [0,0,w,h] with the given banner preset's gradient, same visual
  * language as ProfileBanner.tsx (a 135° linear gradient approximated here
- * as corner-to-corner, close enough for a shared image) — or, for the one
- * conic-gradient preset (grandmaster), a real conic gradient where the
- * browser supports it, falling back to a diagonal approximation of the
- * same stops otherwise. */
+ * as corner-to-corner, close enough for a shared image) — or, for the two
+ * conic-gradient presets (grandmaster, prismatic), a real conic gradient
+ * where the browser supports it, falling back to a diagonal approximation
+ * of the same stops otherwise. */
 function fillBannerGradient(ctx: CanvasRenderingContext2D, css: string, w: number, h: number): void {
   const conicStops = parseConicGradientStops(css);
   if (conicStops) {
@@ -436,7 +437,7 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     ctx.fill();
     const premium = findPremiumEmojiOption(input.badge);
     const iconSize = badgeRadius * 1.3;
-    if (premium?.unlock.kind === "categoryMastered") {
+    if (premium?.unlock?.kind === "categoryMastered") {
       drawIconElements(ctx, ACHIEVEMENT_ICON_ELEMENTS[premium.unlock.category], badgeCx, badgeCy, iconSize, heading);
     } else if (premium) {
       drawMedalIcon(ctx, badgeCx, badgeCy, iconSize, heading, LEVEL_MEDAL_COLOR[premium.emoji] ?? heading);

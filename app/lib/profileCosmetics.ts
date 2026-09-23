@@ -12,13 +12,21 @@
 // exception, earned by mastering every achievement category instead,
 // a different kind of flex than a level number.
 
+import { CosmeticRarity } from "./cosmeticRarity";
 import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 
 export interface AvatarFrameOption {
   id: string;
   label: string;
-  /** Absent for a free pick — only "grandmaster" has one. */
+  /** Absent for a free pick — only "grandmaster" and the Epic/Mythic/
+   * Prismatic/Creator set have one. */
   unlock?: CosmeticUnlockRule;
+  /** Visual-weight tier — absent means "derive it from `unlock`" via
+   * cosmeticRarity.ts's defaultRarityForUnlock. */
+  rarity?: CosmeticRarity;
+  /** Set only on items that would eventually be purchasable — auto-
+   * unlocked for everyone today, surfaced together in the Boutique tab. */
+  source?: "boutique";
 }
 
 /** A ring drawn around the whole avatar (photo or emoji), independent of
@@ -119,7 +127,14 @@ export function findAvatarFrameOption(id: string | null): AvatarFrameOption | nu
 export interface TitleOption {
   id: string;
   label: string;
-  unlock: CosmeticUnlockRule;
+  /** Absent only for a `source: "boutique"` item. */
+  unlock?: CosmeticUnlockRule;
+  /** Visual-weight tier — absent means "derive it from `unlock`" via
+   * cosmeticRarity.ts's defaultRarityForUnlock. */
+  rarity?: CosmeticRarity;
+  /** Set only on items that would eventually be purchasable — auto-
+   * unlocked for everyone today, surfaced together in the Boutique tab. */
+  source?: "boutique";
 }
 
 /** Shown under the display name (see player/page.tsx) — a short earned

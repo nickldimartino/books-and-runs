@@ -28,7 +28,7 @@ function MedalIcon({ fill }: { fill: string }) {
 }
 
 export function PremiumBadgeIcon({ option, className }: { option: PremiumEmojiOption; className?: string }) {
-  if (option.unlock.kind === "categoryMastered") {
+  if (option.unlock?.kind === "categoryMastered") {
     return <AchievementIcon category={option.unlock.category} className={className} />;
   }
   return (

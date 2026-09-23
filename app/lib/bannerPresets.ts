@@ -6,6 +6,7 @@
 // for mastering every achievement category — three cosmetics, one prestige
 // reward. Kept in sync with migration 0029's leaderboard_banner_ok CHECK.
 
+import { CosmeticRarity } from "./cosmeticRarity";
 import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 
 export interface BannerOption {
@@ -15,6 +16,12 @@ export interface BannerOption {
    * never depends on loading anything external. */
   css: string;
   unlock?: CosmeticUnlockRule;
+  /** Visual-weight tier — absent means "derive it from `unlock`" via
+   * cosmeticRarity.ts's defaultRarityForUnlock. */
+  rarity?: CosmeticRarity;
+  /** Set only on items that would eventually be purchasable — auto-
+   * unlocked for everyone today, surfaced together in the Boutique tab. */
+  source?: "boutique";
 }
 
 export const BANNER_OPTIONS: readonly BannerOption[] = [
@@ -45,10 +52,16 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
   { id: "plum", label: "Plum", css: "linear-gradient(135deg, #581c47, #d946ef)" },
   { id: "mint", label: "Mint", css: "linear-gradient(135deg, #166534, #2dd4bf)" },
   { id: "cottonCandy", label: "Cotton Candy", css: "linear-gradient(135deg, #f472b6, #67e8f9)" },
+  // Was the same 7-stop full-rainbow conic gradient Prismatic uses (see
+  // ProfileBanner.tsx's own history comment) — narrowed to its own tight
+  // 2-color violet/gold sweep (mythic rarity, cosmeticRarity.ts) so the two
+  // hardest rewards in the game read as genuinely different tiers rather
+  // than "the same motif, one with more garnish." Matches the avatar
+  // frame's own grandmaster gradient (AvatarFrame.tsx).
   {
     id: "grandmaster",
     label: "Grandmaster",
-    css: "conic-gradient(from 0deg, #f43f5e, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #a855f7, #f43f5e)",
+    css: "conic-gradient(from 0deg, #a855f7, #f5c518, #a855f7)",
     unlock: { kind: "allCategoriesMastered" },
   },
   // Epic/Mythic — see cosmeticUnlocks.ts's own doc for the new rule kinds.
