@@ -1,3 +1,4 @@
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 import { SoloVerifyPayload } from "./verifySoloGame";
 
 const QUEUE_KEY = "booksAndRuns:pendingSaves";
@@ -19,10 +20,9 @@ export interface PendingSave {
 }
 
 export function loadPendingSaves(): PendingSave[] {
-  if (typeof window === "undefined") return [];
+  const raw = readLocalStorage(QUEUE_KEY);
+  if (!raw) return [];
   try {
-    const raw = window.localStorage.getItem(QUEUE_KEY);
-    if (!raw) return [];
     return JSON.parse(raw) as PendingSave[];
   } catch {
     return [];
@@ -30,12 +30,7 @@ export function loadPendingSaves(): PendingSave[] {
 }
 
 function saveQueue(queue: PendingSave[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-  } catch {
-    // storage unavailable/full — the in-session "Try again" button still works
-  }
+  writeLocalStorage(QUEUE_KEY, JSON.stringify(queue));
 }
 
 /** Adds a new entry, or overwrites the existing one with the same id. */

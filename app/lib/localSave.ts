@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MoveLogEntry } from "@/moveLog";
 import { GameState } from "@/types";
+import { readLocalStorage, removeLocalStorage, writeLocalStorage } from "./localStorageUtil";
 import { RoundHistoryEntry } from "./recordGameResult";
 
 const SAVE_KEY = "booksAndRuns:savedGame";
@@ -89,113 +90,63 @@ function looksLikeSavedGame(v: unknown): v is SavedGame {
   );
 }
 
-export function loadSavedGame(): SavedGame | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(SAVE_KEY);
+/**
+ * One save slot's load/save/clear trio, parametrized by storage key — the
+ * real game, Daily Deal, and Weekly Challenge saves are identical in shape
+ * and validity check (looksLikeSavedGame) and only ever differed by which
+ * key they used and whether they fired an event, previously three
+ * line-for-line copies of the same three functions. Events are optional:
+ * only the real save slot fires them (LocalSaveSync listens, to mirror it
+ * to the account — Daily Deal/Weekly Challenge saves are deliberately
+ * local-only, see DAILY_DEAL_SAVE_KEY's own doc).
+ */
+function makeSaveSlot(key: string, events?: { save?: string; clear?: string }) {
+  function load(): SavedGame | null {
+    const raw = readLocalStorage(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!looksLikeSavedGame(parsed)) {
-      // Unusable — drop it so a reload doesn't keep hitting the same crash.
-      clearSavedGame();
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!looksLikeSavedGame(parsed)) {
+        // Unusable — drop it so a reload doesn't keep hitting the same crash.
+        clear();
+        return null;
+      }
+      return parsed;
+    } catch {
       return null;
     }
-    return parsed;
-  } catch {
-    return null;
   }
+
+  function save(data: Omit<SavedGame, "savedAt">): void {
+    const wrote = writeLocalStorage(key, JSON.stringify({ ...data, savedAt: Date.now() }));
+    // Only on an actual successful write — matches the original per-slot
+    // functions, which had emit() inside the same try block as setItem, so
+    // a throw (quota full, storage disabled) skipped it too.
+    if (wrote && events?.save) emit(events.save);
+  }
+
+  function clear(): void {
+    removeLocalStorage(key);
+    if (events?.clear) emit(events.clear);
+  }
+
+  return { load, save, clear };
 }
 
-export function saveGame(data: Omit<SavedGame, "savedAt">): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(SAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
-    emit(SOLO_SAVE_EVENT);
-  } catch {
-    // storage unavailable/full — local persistence is a nicety, not required
-  }
-}
+const soloSlot = makeSaveSlot(SAVE_KEY, { save: SOLO_SAVE_EVENT, clear: SOLO_CLEAR_EVENT });
+export const loadSavedGame = soloSlot.load;
+export const saveGame = soloSlot.save;
+export const clearSavedGame = soloSlot.clear;
 
-export function clearSavedGame(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(SAVE_KEY);
-  } catch {
-    // ignore
-  }
-  emit(SOLO_CLEAR_EVENT);
-}
+const dailyDealSlot = makeSaveSlot(DAILY_DEAL_SAVE_KEY);
+export const loadDailyDealSave = dailyDealSlot.load;
+export const saveDailyDealGame = dailyDealSlot.save;
+export const clearDailyDealSave = dailyDealSlot.clear;
 
-/** Same shape and validity check as the real saved game, just a different
- * slot — see DAILY_DEAL_SAVE_KEY's own doc for why these are kept separate. */
-export function loadDailyDealSave(): SavedGame | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(DAILY_DEAL_SAVE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!looksLikeSavedGame(parsed)) {
-      clearDailyDealSave();
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function saveDailyDealGame(data: Omit<SavedGame, "savedAt">): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(DAILY_DEAL_SAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
-  } catch {
-    // storage unavailable/full — local persistence is a nicety, not required
-  }
-}
-
-export function clearDailyDealSave(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(DAILY_DEAL_SAVE_KEY);
-  } catch {
-    // ignore
-  }
-}
-
-/** Same shape/validity check, the Weekly Challenge's own slot. */
-export function loadWeeklyChallengeSave(): SavedGame | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(WEEKLY_CHALLENGE_SAVE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!looksLikeSavedGame(parsed)) {
-      clearWeeklyChallengeSave();
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function saveWeeklyChallengeGame(data: Omit<SavedGame, "savedAt">): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(WEEKLY_CHALLENGE_SAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
-  } catch {
-    // storage unavailable/full — local persistence is a nicety, not required
-  }
-}
-
-export function clearWeeklyChallengeSave(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(WEEKLY_CHALLENGE_SAVE_KEY);
-  } catch {
-    // ignore
-  }
-}
+const weeklyChallengeSlot = makeSaveSlot(WEEKLY_CHALLENGE_SAVE_KEY);
+export const loadWeeklyChallengeSave = weeklyChallengeSlot.load;
+export const saveWeeklyChallengeGame = weeklyChallengeSlot.save;
+export const clearWeeklyChallengeSave = weeklyChallengeSlot.clear;
 
 /**
  * Writes a SavedGame pulled from the cloud straight into local storage

@@ -5,6 +5,8 @@
 // <meta name="theme-color"> tag in step; layout.tsx re-applies the saved
 // choice before first paint so there's no flash. Persisted in localStorage.
 
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 export type ThemeId =
   | "midnight"
   | "daylight"
@@ -219,22 +221,12 @@ export const DEFAULT_THEME: ThemeId = "midnight";
 const KEY = "booksAndRuns:theme";
 
 export function loadLocalTheme(): ThemeId {
-  if (typeof window === "undefined") return DEFAULT_THEME;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return THEMES.some((t) => t.id === raw) ? (raw as ThemeId) : DEFAULT_THEME;
-  } catch {
-    return DEFAULT_THEME;
-  }
+  const raw = readLocalStorage(KEY);
+  return THEMES.some((t) => t.id === raw) ? (raw as ThemeId) : DEFAULT_THEME;
 }
 
 export function saveLocalTheme(theme: ThemeId): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, theme);
-  } catch {
-    // storage unavailable/full — theme just won't persist across visits
-  }
+  writeLocalStorage(KEY, theme);
 }
 
 export function applyTheme(theme: ThemeId): void {

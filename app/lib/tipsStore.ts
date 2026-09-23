@@ -6,6 +6,8 @@
 // Settings clears every seen flag at once, for anyone who wants a refresher
 // or is trying a fresh browser profile.
 
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 export type TipId =
   | "home"
   | "account"
@@ -27,10 +29,9 @@ export type TipId =
 const KEY = "booksAndRuns:seenTips";
 
 function loadSeen(): Set<TipId> {
-  if (typeof window === "undefined") return new Set();
+  const raw = readLocalStorage(KEY);
+  if (!raw) return new Set();
   try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return new Set();
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? new Set(parsed as TipId[]) : new Set();
   } catch {
@@ -39,12 +40,7 @@ function loadSeen(): Set<TipId> {
 }
 
 function saveSeen(seen: Set<TipId>): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify([...seen]));
-  } catch {
-    // storage unavailable/full — the tip just reappears next visit
-  }
+  writeLocalStorage(KEY, JSON.stringify([...seen]));
 }
 
 export function isTipSeen(id: TipId): boolean {

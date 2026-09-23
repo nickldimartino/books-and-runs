@@ -4,6 +4,8 @@
 // win, not the first game finished — a genuine positive moment, not
 // interrupting someone who's still deciding whether they like the game.
 
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 const RESPONDED_KEY = "booksAndRuns:reviewPromptResponded";
 const WINS_SINCE_SHOWN_KEY = "booksAndRuns:reviewPromptWinsSinceShown";
 
@@ -14,24 +16,22 @@ const WINS_SINCE_SHOWN_KEY = "booksAndRuns:reviewPromptWinsSinceShown";
 const WIN_THRESHOLD = 3;
 
 function readWins(): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    return Number(window.localStorage.getItem(WINS_SINCE_SHOWN_KEY) ?? "0") || 0;
-  } catch {
-    return 0;
-  }
+  return Number(readLocalStorage(WINS_SINCE_SHOWN_KEY) ?? "0") || 0;
 }
 
 function writeWins(n: number): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(WINS_SINCE_SHOWN_KEY, String(n));
-  } catch {
-    // best-effort — worst case this just asks again sooner than intended
-  }
+  writeLocalStorage(WINS_SINCE_SHOWN_KEY, String(n));
 }
 
 export function hasRespondedToReviewPrompt(): boolean {
+  // Deliberately not just "readLocalStorage(...) === '1'": a genuinely
+  // absent key (never responded) and a read that failed outright (private
+  // browsing, storage disabled) both come back as null from
+  // readLocalStorage, but they need different fallbacks here — an absent
+  // key means the prompt hasn't been answered yet (show it), while a
+  // broken read means this device can't reliably remember an answer at
+  // all, so defaulting to "already responded" avoids nagging forever on
+  // every visit instead of just once.
   if (typeof window === "undefined") return true;
   try {
     return window.localStorage.getItem(RESPONDED_KEY) === "1";
@@ -43,12 +43,7 @@ export function hasRespondedToReviewPrompt(): boolean {
 /** Picking either button (not just closing the prompt) calls this — stops
  * it from ever showing again on this device. */
 export function markReviewPromptResponded(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(RESPONDED_KEY, "1");
-  } catch {
-    // best-effort
-  }
+  writeLocalStorage(RESPONDED_KEY, "1");
 }
 
 /** Call once per real (non-tutorial, non-tie) win — returns whether the

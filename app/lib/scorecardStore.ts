@@ -3,6 +3,8 @@
 // it, for scoring the physical card game at a real table. Entirely local;
 // nothing here ever touches Supabase.
 
+import { readLocalStorage, removeLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 const KEY = "booksAndRuns:scorecard";
 
 export type RoundMode = "all" | "short" | "custom";
@@ -24,10 +26,9 @@ export interface SavedScorecard {
 }
 
 export function loadScorecard(): SavedScorecard | null {
-  if (typeof window === "undefined") return null;
+  const raw = readLocalStorage(KEY);
+  if (!raw) return null;
   try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return null;
     return JSON.parse(raw) as SavedScorecard;
   } catch {
     return null;
@@ -35,21 +36,11 @@ export function loadScorecard(): SavedScorecard | null {
 }
 
 export function saveScorecard(data: SavedScorecard): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(data));
-  } catch {
-    // storage unavailable/full — local persistence is a nicety, not required
-  }
+  writeLocalStorage(KEY, JSON.stringify(data));
 }
 
 export function clearScorecard(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(KEY);
-  } catch {
-    // ignore
-  }
+  removeLocalStorage(KEY);
 }
 
 export function newPlayerId(): string {

@@ -7,6 +7,8 @@
 // Save-button-gated toggles in Settings — instead of waiting for "Save
 // settings".
 
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 export type ColorblindMode = "off" | "protanopia" | "deuteranopia" | "tritanopia";
 
 export interface ColorblindOption {
@@ -40,22 +42,12 @@ export const DEFAULT_COLORBLIND_MODE: ColorblindMode = "off";
 const KEY = "booksAndRuns:colorblindMode";
 
 export function loadLocalColorblindMode(): ColorblindMode {
-  if (typeof window === "undefined") return DEFAULT_COLORBLIND_MODE;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return COLORBLIND_MODES.some((m) => m.id === raw) ? (raw as ColorblindMode) : DEFAULT_COLORBLIND_MODE;
-  } catch {
-    return DEFAULT_COLORBLIND_MODE;
-  }
+  const raw = readLocalStorage(KEY);
+  return COLORBLIND_MODES.some((m) => m.id === raw) ? (raw as ColorblindMode) : DEFAULT_COLORBLIND_MODE;
 }
 
 export function saveLocalColorblindMode(mode: ColorblindMode): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, mode);
-  } catch {
-    // storage unavailable/full — the choice just won't persist across visits
-  }
+  writeLocalStorage(KEY, mode);
 }
 
 export function applyColorblindMode(mode: ColorblindMode): void {

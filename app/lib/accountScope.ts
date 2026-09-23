@@ -16,6 +16,8 @@
 //   user A -> guest -> user B  a switch, once B signs in
 //   user A -> user B           a switch (this device had no guest interlude)
 
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 const KEY = "booksAndRuns:lastRealUserId";
 
 /**
@@ -31,18 +33,8 @@ const KEY = "booksAndRuns:lastRealUserId";
  * time this shipped) is not itself a switch — nothing to reset against.
  */
 export function accountSwitched(userId: string): boolean {
-  if (typeof window === "undefined") return false;
-  let last: string | null;
-  try {
-    last = window.localStorage.getItem(KEY);
-  } catch {
-    return false;
-  }
+  const last = readLocalStorage(KEY);
   if (last === userId) return false;
-  try {
-    window.localStorage.setItem(KEY, userId);
-  } catch {
-    // ignore — worst case this same check runs again next time
-  }
+  writeLocalStorage(KEY, userId);
   return last !== null;
 }

@@ -24,6 +24,8 @@
 // accessibility need, not a look to keep in sync across devices for its
 // own sake, so there's no reason to gate it behind an account.
 
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+
 export type TextScale = "default" | "large" | "xlarge";
 
 export interface TextScaleOption {
@@ -43,22 +45,12 @@ export const DEFAULT_TEXT_SCALE: TextScale = "default";
 const KEY = "booksAndRuns:textScale";
 
 export function loadLocalTextScale(): TextScale {
-  if (typeof window === "undefined") return DEFAULT_TEXT_SCALE;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return TEXT_SCALES.some((s) => s.id === raw) ? (raw as TextScale) : DEFAULT_TEXT_SCALE;
-  } catch {
-    return DEFAULT_TEXT_SCALE;
-  }
+  const raw = readLocalStorage(KEY);
+  return TEXT_SCALES.some((s) => s.id === raw) ? (raw as TextScale) : DEFAULT_TEXT_SCALE;
 }
 
 export function saveLocalTextScale(scale: TextScale): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, scale);
-  } catch {
-    // storage unavailable/full — the choice just won't persist across visits
-  }
+  writeLocalStorage(KEY, scale);
 }
 
 export function applyTextScale(scale: TextScale): void {

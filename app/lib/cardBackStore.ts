@@ -1,3 +1,4 @@
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 import { THEMES, ThemeId } from "./themeStore";
 
 // A card back is any of the same 38 theme identities — see globals.css's
@@ -14,23 +15,13 @@ export const DEFAULT_CARD_BACK: CardBackId = "match";
 const KEY = "booksAndRuns:cardBack";
 
 export function loadLocalCardBack(): CardBackId {
-  if (typeof window === "undefined") return DEFAULT_CARD_BACK;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (raw === "match") return "match";
-    return THEMES.some((t) => t.id === raw) ? (raw as ThemeId) : DEFAULT_CARD_BACK;
-  } catch {
-    return DEFAULT_CARD_BACK;
-  }
+  const raw = readLocalStorage(KEY);
+  if (raw === "match") return "match";
+  return THEMES.some((t) => t.id === raw) ? (raw as ThemeId) : DEFAULT_CARD_BACK;
 }
 
 export function saveLocalCardBack(id: CardBackId): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, id);
-  } catch {
-    // storage unavailable/full — the choice just won't persist across visits
-  }
+  writeLocalStorage(KEY, id);
 }
 
 /**

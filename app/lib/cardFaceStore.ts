@@ -16,6 +16,7 @@
 // markup, not just color.
 
 import { useEffect, useState } from "react";
+import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 
 export type CardFaceId = "classic" | "realistic" | "bold" | "minimal" | "retro" | "pixel";
 
@@ -64,13 +65,8 @@ const KEY = "booksAndRuns:cardFace";
 const EVENT = "br:cardface-changed";
 
 export function loadLocalCardFace(): CardFaceId {
-  if (typeof window === "undefined") return DEFAULT_CARD_FACE;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return CARD_FACES.some((f) => f.id === raw) ? (raw as CardFaceId) : DEFAULT_CARD_FACE;
-  } catch {
-    return DEFAULT_CARD_FACE;
-  }
+  const raw = readLocalStorage(KEY);
+  return CARD_FACES.some((f) => f.id === raw) ? (raw as CardFaceId) : DEFAULT_CARD_FACE;
 }
 
 /** A human label for a card face id — used on the profile page to show
@@ -81,13 +77,12 @@ export function cardFaceLabel(id: string | null): string {
 }
 
 export function saveLocalCardFace(id: CardFaceId): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, id);
-  } catch {
-    // storage unavailable/full — the choice just won't persist across visits
-  }
-  window.dispatchEvent(new Event(EVENT));
+  writeLocalStorage(KEY, id);
+  // Unconditional (even if the write above silently failed) and guarded
+  // separately from writeLocalStorage's own SSR check, same as the
+  // original — useCardFace's listener is what keeps an already-open picker
+  // in sync without a remount, and only ever exists client-side anyway.
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
 }
 
 /** Live-reads the current card face, updating in place if it changes
