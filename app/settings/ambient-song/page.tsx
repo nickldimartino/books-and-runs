@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
-import { onAccountSettingsSynced, pushHouseSettingsPatch } from "../../lib/accountSettingsSync";
+import { pushHouseSettingsPatch } from "../../lib/accountSettingsSync";
 import { AmbientTrackChoice, loadLocalSettings, saveLocalSettings } from "../../lib/settingsStore";
 import { supabase } from "../../lib/supabaseClient";
+import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
 import { AmbientSongPicker } from "../AmbientSongPicker";
 
 /**
@@ -18,24 +18,16 @@ import { AmbientSongPicker } from "../AmbientSongPicker";
  */
 export default function AmbientSongSettingsPage() {
   const { user } = useAuth();
-  const [ambientTrack, setAmbientTrack] = useState<AmbientTrackChoice>("rotate");
-  const [ambientMusicEnabled, setAmbientMusicEnabled] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  function loadFromLocal() {
+  // ambientMusicEnabled rides along in the same synced value even though
+  // this page never sets it itself (only reads it, to gray out the picker)
+  // — it needs to reload from the same sync event ambientTrack does.
+  const [{ ambientTrack, ambientMusicEnabled }, setAmbientState, loading] = useSyncedLocalPreference(() => {
     const settings = loadLocalSettings();
-    setAmbientTrack(settings.ambientTrack);
-    setAmbientMusicEnabled(settings.ambientMusicEnabled);
-  }
-
-  useEffect(() => {
-    loadFromLocal();
-    setLoading(false);
-    return onAccountSettingsSynced(loadFromLocal);
-  }, []);
+    return { ambientTrack: settings.ambientTrack, ambientMusicEnabled: settings.ambientMusicEnabled };
+  });
 
   function handleChange(id: AmbientTrackChoice) {
-    setAmbientTrack(id);
+    setAmbientState({ ambientTrack: id, ambientMusicEnabled });
     saveLocalSettings({ ...loadLocalSettings(), ambientTrack: id });
     pushHouseSettingsPatch(supabase, user?.id ?? null, { ambientTrack: id });
   }

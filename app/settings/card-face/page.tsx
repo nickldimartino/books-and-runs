@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
-import { onAccountSettingsSynced, pushCardFace } from "../../lib/accountSettingsSync";
+import { pushCardFace } from "../../lib/accountSettingsSync";
 import { CardFaceId, loadLocalCardFace, saveLocalCardFace } from "../../lib/cardFaceStore";
 import { supabase } from "../../lib/supabaseClient";
+import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
 import { CardFacePicker } from "../CardFacePicker";
 
 /**
@@ -17,14 +17,7 @@ import { CardFacePicker } from "../CardFacePicker";
  */
 export default function CardFaceSettingsPage() {
   const { user } = useAuth();
-  const [cardFace, setCardFace] = useState<CardFaceId>("classic");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setCardFace(loadLocalCardFace());
-    setLoading(false);
-    return onAccountSettingsSynced(() => setCardFace(loadLocalCardFace()));
-  }, []);
+  const [cardFace, setCardFace, loading] = useSyncedLocalPreference(loadLocalCardFace);
 
   function handleChange(id: CardFaceId) {
     setCardFace(id);

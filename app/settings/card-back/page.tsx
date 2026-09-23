@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
-import { onAccountSettingsSynced, pushCardBack } from "../../lib/accountSettingsSync";
+import { pushCardBack } from "../../lib/accountSettingsSync";
 import { applyCardBack, CardBackId, loadLocalCardBack, saveLocalCardBack } from "../../lib/cardBackStore";
 import { supabase } from "../../lib/supabaseClient";
-import { loadLocalTheme, ThemeId } from "../../lib/themeStore";
+import { loadLocalTheme } from "../../lib/themeStore";
+import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
 import { SwatchPicker } from "../SwatchPicker";
 
 /**
@@ -18,24 +18,16 @@ import { SwatchPicker } from "../SwatchPicker";
  */
 export default function CardBackSettingsPage() {
   const { user } = useAuth();
-  const [cardBack, setCardBack] = useState<CardBackId>("match");
-  // Read-only here — needed only to resolve "match" into a real id when
-  // applying a card back, not something this page ever changes itself.
-  const [theme, setTheme] = useState<ThemeId>("midnight");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setCardBack(loadLocalCardBack());
-    setTheme(loadLocalTheme());
-    setLoading(false);
-    return onAccountSettingsSynced(() => {
-      setCardBack(loadLocalCardBack());
-      setTheme(loadLocalTheme());
-    });
-  }, []);
+  // theme rides along read-only — needed only to resolve "match" into a
+  // real id when applying a card back, not something this page ever
+  // changes itself, but it still needs to reload on the same sync event.
+  const [{ cardBack, theme }, setCardBackState, loading] = useSyncedLocalPreference(() => ({
+    cardBack: loadLocalCardBack(),
+    theme: loadLocalTheme(),
+  }));
 
   function handleCardBackChange(id: CardBackId) {
-    setCardBack(id);
+    setCardBackState({ cardBack: id, theme });
     saveLocalCardBack(id);
     applyCardBack(id, theme);
     pushCardBack(supabase, user?.id ?? null, id);

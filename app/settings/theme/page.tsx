@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
-import { onAccountSettingsSynced, pushTheme } from "../../lib/accountSettingsSync";
+import { pushTheme } from "../../lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "../../lib/cardBackStore";
 import { supabase } from "../../lib/supabaseClient";
 import { applyTheme, loadLocalTheme, saveLocalTheme, ThemeId } from "../../lib/themeStore";
+import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
 import { SwatchPicker } from "../SwatchPicker";
 
 /**
@@ -26,14 +26,7 @@ import { SwatchPicker } from "../SwatchPicker";
  */
 export default function ThemeSettingsPage() {
   const { configured, loading: authLoading, user } = useAuth();
-  const [theme, setTheme] = useState<ThemeId>("midnight");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setTheme(loadLocalTheme());
-    setLoading(false);
-    return onAccountSettingsSynced(() => setTheme(loadLocalTheme()));
-  }, []);
+  const [theme, setTheme, loading] = useSyncedLocalPreference(loadLocalTheme);
 
   function handleThemeChange(id: ThemeId) {
     setTheme(id);
