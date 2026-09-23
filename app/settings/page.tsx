@@ -217,6 +217,45 @@ function ChevronRightIcon() {
 // were pushing Settings to roughly 4 phone-screens of scrolling before
 // reaching a single toggle, so both now live on their own dedicated pages
 // (see SwatchPicker's own doc) and this is all that's left of them here.
+// The shared "current selection, tap to change" row shape behind
+// SwatchLinkRow/CardFaceLinkRow/AmbientSongLinkRow below — same label +
+// link + name/"Tap to change" + chevron shell, differing only in what
+// `preview` shows for that particular setting (a swatch circle, a real
+// rendered card, or a plain glyph) and whether the row can be disabled.
+function SettingsLinkRow({
+  label,
+  href,
+  name,
+  disabled,
+  preview,
+}: {
+  label: string;
+  href: string;
+  name: string;
+  disabled?: boolean;
+  preview: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-[var(--muted)]">{label}</label>
+      <Link
+        href={disabled ? "#" : href}
+        aria-disabled={disabled}
+        className={`flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition ${
+          disabled ? "pointer-events-none opacity-50" : "hover:bg-[var(--panel-soft)]"
+        }`}
+      >
+        {preview}
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
+          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
+        </span>
+        <ChevronRightIcon />
+      </Link>
+    </section>
+  );
+}
+
 function SwatchLinkRow({
   href,
   label,
@@ -229,12 +268,11 @@ function SwatchLinkRow({
   swatch: { bg: string; panel: string; accent: string };
 }) {
   return (
-    <section className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-[var(--muted)]">{label}</label>
-      <Link
-        href={href}
-        className="flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition hover:bg-[var(--panel-soft)]"
-      >
+    <SettingsLinkRow
+      label={label}
+      href={href}
+      name={name}
+      preview={
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent)]"
           style={{ background: swatch.bg }}
@@ -242,58 +280,44 @@ function SwatchLinkRow({
         >
           <span className="h-5 w-5 rounded-full border" style={{ background: swatch.panel, borderColor: swatch.accent }} />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
-          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
-        </span>
-        <ChevronRightIcon />
-      </Link>
-    </section>
+      }
+    />
   );
 }
 
-// The same "current selection, tap to change" row as SwatchLinkRow, but
-// previewing an actual small rendered card instead of a flat color circle —
-// what's being chosen here is a drawing, not a color, so a real preview of
-// it is more honest than a swatch.
+// The same row as SwatchLinkRow, but previewing an actual small rendered
+// card instead of a flat color circle — what's being chosen here is a
+// drawing, not a color, so a real preview of it is more honest than a
+// swatch.
 function CardFaceLinkRow({ name, cardFace }: { name: string; cardFace: CardFaceId }) {
   return (
-    <section className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-[var(--muted)]">Card face</label>
-      <Link
-        href="/settings/card-face"
-        className="flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition hover:bg-[var(--panel-soft)]"
-      >
+    <SettingsLinkRow
+      label="Card face"
+      href="/settings/card-face"
+      name={name}
+      preview={
         <span
           className="card-face flex h-9 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md"
           aria-hidden="true"
         >
           <CardFace card={{ id: "preview", suit: "hearts", rank: "7", isWild: false }} style={cardFace} />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
-          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
-        </span>
-        <ChevronRightIcon />
-      </Link>
-    </section>
+      }
+    />
   );
 }
 
-// The same "current selection, tap to change" row as SwatchLinkRow/
-// CardFaceLinkRow, but with a plain music-note glyph instead of a swatch
-// or a card preview — there's no color or drawing to show off here.
+// The same row as SwatchLinkRow/CardFaceLinkRow, but with a plain
+// music-note glyph instead of a swatch or a card preview — there's no
+// color or drawing to show off here.
 function AmbientSongLinkRow({ name, disabled }: { name: string; disabled: boolean }) {
   return (
-    <section className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-[var(--muted)]">Ambient song</label>
-      <Link
-        href={disabled ? "#" : "/settings/ambient-song"}
-        aria-disabled={disabled}
-        className={`flex items-center gap-3 rounded-lg bg-[var(--panel)] px-3 py-2.5 transition ${
-          disabled ? "pointer-events-none opacity-50" : "hover:bg-[var(--panel-soft)]"
-        }`}
-      >
+    <SettingsLinkRow
+      label="Ambient song"
+      href="/settings/ambient-song"
+      name={name}
+      disabled={disabled}
+      preview={
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--panel-soft)] text-[var(--accent)]"
           aria-hidden="true"
@@ -302,13 +326,8 @@ function AmbientSongLinkRow({ name, disabled }: { name: string; disabled: boolea
             <path d="M8 3v9.28a3 3 0 1 0 1.5 2.6V6.5l6-1.2v6.98a3 3 0 1 0 1.5 2.6V2L8 3.6V3Z" />
           </svg>
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
-          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
-        </span>
-        <ChevronRightIcon />
-      </Link>
-    </section>
+      }
+    />
   );
 }
 
