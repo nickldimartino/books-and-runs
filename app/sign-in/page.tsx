@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
+import { CenteredMessage } from "../components/CenteredMessage";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -51,19 +52,11 @@ export default function SignInPage() {
 
   if (!configured) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in isn&apos;t set up yet</h1>
-        <p className="text-sm text-[var(--muted)]">
-          This app doesn&apos;t have a Supabase project connected. Local pass-and-play games work
-          fine without one — accounts and stats just aren&apos;t available yet.
-        </p>
-        <button
-          onClick={() => router.replace("/")}
-          className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Back to Home
-        </button>
-      </main>
+      <CenteredMessage
+        title="Sign in isn't set up yet"
+        body="This app doesn't have a Supabase project connected. Local pass-and-play games work fine without one — accounts and stats just aren't available yet."
+        backOnClick={() => router.replace("/")}
+      />
     );
   }
 

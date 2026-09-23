@@ -8,9 +8,10 @@
 // and land back here.
 
 import Link from "next/link";
-import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
+import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -348,18 +349,7 @@ export default function FriendsPage() {
   }
 
   if (!authLoading && !configured) {
-    return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Friends aren&apos;t set up yet</h1>
-        <p className="text-sm text-[var(--muted)]">This app doesn&apos;t have a Supabase project connected yet.</p>
-        <Link
-          href="/"
-          className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Back to Home
-        </Link>
-      </Shell>
-    );
+    return <CenteredMessage title="Friends aren't set up yet" body="This app doesn't have a Supabase project connected yet." />;
   }
 
   if (!authLoading && configured && !user) {
@@ -367,28 +357,15 @@ export default function FriendsPage() {
       ? `/sign-in?next=${encodeURIComponent(`/friends?add=${linkCode}`)}`
       : "/sign-in";
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">
-          {linkCode ? "Sign in to add this friend" : "Sign in to add friends"}
-        </h1>
-        <p className="text-sm text-[var(--muted)]">
-          {linkCode
+      <CenteredMessage
+        title={linkCode ? "Sign in to add this friend" : "Sign in to add friends"}
+        body={
+          linkCode
             ? "Someone shared a friend link with you. Sign in and you'll come right back here to accept it."
-            : "Friends let you start multiplayer games together. Your friend list is tied to your account."}
-        </p>
-        <Link
-          href={signInHref}
-          className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
-        >
-          Sign in
-        </Link>
-        <Link
-          href="/"
-          className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Back to Home
-        </Link>
-      </Shell>
+            : "Friends let you start multiplayer games together. Your friend list is tied to your account."
+        }
+        signIn={signInHref}
+      />
     );
   }
 
@@ -636,10 +613,3 @@ export default function FriendsPage() {
   );
 }
 
-function Shell({ children }: { children: ReactNode }) {
-  return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-      {children}
-    </main>
-  );
-}

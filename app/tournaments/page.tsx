@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
+import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -64,28 +65,17 @@ export default function TournamentsPage() {
 
   if (!authLoading && !configured) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Tournaments aren&apos;t set up yet</h1>
-        <p className="text-sm text-[var(--muted)]">This app doesn&apos;t have a Supabase project connected yet.</p>
-        <Link href="/" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </Shell>
+      <CenteredMessage title="Tournaments aren't set up yet" body="This app doesn't have a Supabase project connected yet." />
     );
   }
 
   if (!authLoading && configured && !user) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in for tournaments</h1>
-        <p className="text-sm text-[var(--muted)]">A tournament series is tied to your account, like any multiplayer game.</p>
-        <Link href="/sign-in" className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
-          Sign in
-        </Link>
-        <Link href="/" className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </Shell>
+      <CenteredMessage
+        title="Sign in for tournaments"
+        body="A tournament series is tied to your account, like any multiplayer game."
+        signIn
+      />
     );
   }
 
@@ -230,13 +220,12 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
   if (loadError) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Tournament not found</h1>
-        <p className="text-sm text-[var(--muted)]">Couldn&apos;t load it — check your connection and try again.</p>
-        <Link href="/tournaments" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          ← Tournaments
-        </Link>
-      </Shell>
+      <CenteredMessage
+        title="Tournament not found"
+        body="Couldn't load it — check your connection and try again."
+        backHref="/tournaments"
+        backLabel="← Tournaments"
+      />
     );
   }
 
@@ -250,13 +239,12 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
   if (tournament === null) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Tournament not found</h1>
-        <p className="text-sm text-[var(--muted)]">It may have been deleted, or you&apos;re not a participant.</p>
-        <Link href="/tournaments" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          ← Tournaments
-        </Link>
-      </Shell>
+      <CenteredMessage
+        title="Tournament not found"
+        body="It may have been deleted, or you're not a participant."
+        backHref="/tournaments"
+        backLabel="← Tournaments"
+      />
     );
   }
 

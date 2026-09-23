@@ -12,6 +12,7 @@ import Link from "next/link";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
+import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -57,30 +58,11 @@ export default function ClubsPage() {
   const clubId = useClubId();
 
   if (!authLoading && !configured) {
-    return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Clubs aren&apos;t set up yet</h1>
-        <p className="text-sm text-[var(--muted)]">This app doesn&apos;t have a Supabase project connected yet.</p>
-        <Link href="/" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </Shell>
-    );
+    return <CenteredMessage title="Clubs aren't set up yet" body="This app doesn't have a Supabase project connected yet." />;
   }
 
   if (!authLoading && configured && !user) {
-    return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in for clubs</h1>
-        <p className="text-sm text-[var(--muted)]">A club is a standing group tied to your account.</p>
-        <Link href="/sign-in" className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
-          Sign in
-        </Link>
-        <Link href="/" className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </Shell>
-    );
+    return <CenteredMessage title="Sign in for clubs" body="A club is a standing group tied to your account." signIn />;
   }
 
   if (authLoading || clubId === undefined) {
@@ -232,13 +214,12 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
   if (loadError) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Club not found</h1>
-        <p className="text-sm text-[var(--muted)]">Couldn&apos;t load it — check your connection and try again.</p>
-        <Link href="/clubs" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          ← Clubs
-        </Link>
-      </Shell>
+      <CenteredMessage
+        title="Club not found"
+        body="Couldn't load it — check your connection and try again."
+        backHref="/clubs"
+        backLabel="← Clubs"
+      />
     );
   }
 
@@ -252,13 +233,12 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
   if (club === null) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Club not found</h1>
-        <p className="text-sm text-[var(--muted)]">It may have been deleted, or you&apos;re not a member.</p>
-        <Link href="/clubs" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          ← Clubs
-        </Link>
-      </Shell>
+      <CenteredMessage
+        title="Club not found"
+        body="It may have been deleted, or you're not a member."
+        backHref="/clubs"
+        backLabel="← Clubs"
+      />
     );
   }
 

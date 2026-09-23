@@ -42,6 +42,7 @@ import { usePlayerLevel } from "../PlayerLevelContext";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { AvatarFrame } from "../components/AvatarFrame";
 import { BackLink } from "../components/BackLink";
+import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -1016,43 +1017,22 @@ export default function PlayerProfilePage() {
 
   if (!authLoading && !configured) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Profiles aren&apos;t set up yet</h1>
-        <p className="text-sm text-[var(--muted)]">This app doesn&apos;t have a Supabase project connected yet.</p>
-        <Link href="/" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </main>
+      <CenteredMessage title="Profiles aren't set up yet" body="This app doesn't have a Supabase project connected yet." />
     );
   }
 
   if (!authLoading && configured && !user) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in to see this profile</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Profiles are only visible to signed-in accounts — not the general public.
-        </p>
-        <Link href="/sign-in" className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
-          Sign in
-        </Link>
-        <Link href="/" className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </main>
+      <CenteredMessage
+        title="Sign in to see this profile"
+        body="Profiles are only visible to signed-in accounts — not the general public."
+        signIn
+      />
     );
   }
 
   if (profileId === null) {
-    return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">No profile to show</h1>
-        <p className="text-sm text-[var(--muted)]">This link is missing whose profile to open.</p>
-        <Link href="/" className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-          Back to Home
-        </Link>
-      </main>
-    );
+    return <CenteredMessage title="No profile to show" body="This link is missing whose profile to open." />;
   }
 
   const avatarInfo: AvatarInfo | undefined = entry

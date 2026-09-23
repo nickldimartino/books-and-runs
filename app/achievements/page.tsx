@@ -11,6 +11,7 @@ import { useAuth } from "../AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { BackLink } from "../components/BackLink";
+import { CenteredMessage } from "../components/CenteredMessage";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { formatAchievementProgress } from "../lib/achievementFormat";
@@ -120,18 +121,10 @@ export default function AchievementsPage() {
 
   if (!authLoading && !configured) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Achievements aren&apos;t set up yet</h1>
-        <p className="text-sm text-[var(--muted)]">
-          This app doesn&apos;t have a Supabase project connected yet.
-        </p>
-        <Link
-          href="/"
-          className="mt-2 rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          Back to Home
-        </Link>
-      </main>
+      <CenteredMessage
+        title="Achievements aren't set up yet"
+        body="This app doesn't have a Supabase project connected yet."
+      />
     );
   }
 
