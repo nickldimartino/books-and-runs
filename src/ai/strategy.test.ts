@@ -129,13 +129,8 @@ describe("beginnerStrategy.chooseDiscard", () => {
     const player = makePlayer({ hand });
     const state = makeGameState({ round: 1, players: [player] });
 
-    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.4); // index 1 of 3 -> the wild
-    try {
-      const discard = beginnerStrategy.chooseDiscard(state, player);
-      expect(discard.id).toBe("the-wild");
-    } finally {
-      randomSpy.mockRestore();
-    }
+    const discard = beginnerStrategy.chooseDiscard(state, player, () => 0.4); // index 1 of 3 -> the wild
+    expect(discard.id).toBe("the-wild");
   });
 });
 

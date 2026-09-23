@@ -98,11 +98,13 @@ function noteProgress(state: GameState) {
 //     ever melds and the draw/discard churn never resolves (a real game
 //     melds within a handful of turns, so this bound is very generous).
 // Either way endRound(null) scores every hand, same as a stock-out.
+const DEADLOCK_MELDED_MULTIPLIER = 4;
+const DEADLOCK_STALL_MULTIPLIER = 60;
 function roundIsDeadlocked(state: GameState): boolean {
   const stalled = state.stalledTurns ?? 0;
   const n = state.players.length;
-  if (state.players.every((p) => p.hasMeldedContract) && stalled > n * 4) return true;
-  return stalled > n * 60;
+  if (state.players.every((p) => p.hasMeldedContract) && stalled > n * DEADLOCK_MELDED_MULTIPLIER) return true;
+  return stalled > n * DEADLOCK_STALL_MULTIPLIER;
 }
 
 /**

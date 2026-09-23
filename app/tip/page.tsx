@@ -74,31 +74,39 @@ export default function TipPage() {
         <div className="flex flex-col gap-3">
           {PAYMENT_LINKS.map((tier) => {
             const enabled = !!tier.paymentLinkUrl;
-            const href = enabled
-              ? `${tier.paymentLinkUrl}?client_reference_id=${encodeURIComponent(user.id)}`
-              : undefined;
-            return (
-              <a
-                key={tier.label}
-                href={href}
-                target={enabled ? "_blank" : undefined}
-                rel={enabled ? "noopener noreferrer" : undefined}
-                aria-disabled={!enabled}
-                className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition ${
-                  enabled
-                    ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"
-                    : "cursor-not-allowed border-[var(--border)] opacity-50"
-                }`}
-                onClick={(e) => {
-                  if (!enabled) e.preventDefault();
-                }}
-              >
+            const className = `flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition ${
+              enabled
+                ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"
+                : "cursor-not-allowed border-[var(--border)] opacity-50"
+            }`;
+            const content = (
+              <>
                 <span>
                   <span className="block text-sm font-semibold text-[var(--heading)]">{tier.label}</span>
                   <span className="mt-0.5 block text-xs text-[var(--muted)]">{tier.blurb}</span>
                 </span>
                 <span className="shrink-0 text-[var(--accent)]">→</span>
+              </>
+            );
+            // A real disabled <button>, not aria-disabled on an <a> with a
+            // click-preventDefault escape hatch — aria-disabled doesn't
+            // reliably stop keyboard activation or screen reader
+            // interaction on an anchor the way a native disabled attribute
+            // does on a button.
+            return enabled ? (
+              <a
+                key={tier.label}
+                href={`${tier.paymentLinkUrl}?client_reference_id=${encodeURIComponent(user.id)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={className}
+              >
+                {content}
               </a>
+            ) : (
+              <button key={tier.label} type="button" disabled className={className}>
+                {content}
+              </button>
             );
           })}
           {!anyLinksConfigured && (
