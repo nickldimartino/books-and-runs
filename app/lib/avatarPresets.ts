@@ -82,27 +82,44 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   // Supporter — earned by tipping once (app/tip/page.tsx), not by playing
   // at all. The one badge in this list that isn't a progress reward.
   { emoji: "☕", unlock: { kind: "supporterOnly" } },
+  // Stepping-stones added alongside the rarity system (see
+  // cosmeticRarity.ts) — none of these needed a new requirement_kind, just
+  // a new threshold on a rule that already existed. Explicit `rarity` only
+  // where it needs to sit below the floor defaultRarityForUnlock would
+  // otherwise place it (🔰 is meant to read as more entry-level than 🥉).
+  { emoji: "🔰", unlock: { kind: "level", level: 5 }, rarity: "common" },
+  { emoji: "🛡️", unlock: { kind: "level", level: 150 } },
+  { emoji: "🎯", unlock: { kind: "categoriesMasteredCount", count: 1 } },
+  { emoji: "🕯️", unlock: { kind: "dailyDealStreak", days: 7 } },
+  // Boutique — auto-unlocked for everyone while there's no real paywall
+  // yet (see player/page.tsx's Boutique tab). No `unlock` rule at all: a
+  // cosmetic_type/cosmetic_key with no cosmetic_unlocks row is already
+  // unconditionally free at the server (cosmetic_unlocked(), see
+  // migration 0043) — nothing new to enforce here.
+  { emoji: "🎩", source: "boutique", rarity: "rare" },
+  { emoji: "🕶️", source: "boutique", rarity: "rare" },
 ] as const;
 
-/** Ring/disc color behind each non-category-mastery medal (see
- * PremiumBadgeIcon.tsx's MedalIcon) — bronze/silver/gold/diamond for the
- * original 4 level milestones, then each new Epic/Mythic/Prismatic
- * reward's own signature color (matching its avatar frame). Category-
- * mastery badges don't need an entry here — they're colored by their own
- * achievement tier instead (see AchievementIcon). */
+/** Ring/disc color for every badge that still renders as MedalIcon (see
+ * PremiumBadgeIcon.tsx) — the original 4 level milestones, Supporter, and
+ * the newer stepping-stone badges. The Epic/Mythic/Apex "flex" rewards
+ * (🧭🏵️🌌⚔️🏮🏆💫) used to be colored medals too, but now render through
+ * their own distinct icon shapes (rarityBadgeIconPaths.ts) in plain
+ * currentColor instead — no entries needed here for those. Category-
+ * mastery badges likewise don't need an entry — they're colored by their
+ * own achievement tier instead (see AchievementIcon). */
 export const LEVEL_MEDAL_COLOR: Record<string, string> = {
   "🥉": "#CD7F32",
   "🥈": "#B0B8C1",
   "🥇": "#F5C518",
   "💎": "#38BDF8",
-  "🧭": "#a855f7",
-  "🏵️": "#e5e7eb",
-  "🌌": "#f0c14b",
-  "⚔️": "#9ca3af",
-  "🏮": "#f97316",
-  "🏆": "#facc15",
-  "💫": "#ec4899",
   "☕": "#8b5e3c",
+  "🔰": "#94a3b8",
+  "🛡️": "#0ea5e9",
+  "🎯": "#f97316",
+  "🕯️": "#fb923c",
+  "🎩": "#312e81",
+  "🕶️": "#1e293b",
 };
 
 /** The premium option for a given emoji, or null for a free (or unknown)

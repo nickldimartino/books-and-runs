@@ -16,6 +16,30 @@ import {
   MEDAL_DISC,
   MEDAL_RIBBON_ELEMENTS,
 } from "./achievementIconPaths";
+import {
+  AURORA_CROWN_ELEMENTS,
+  APEX_STARBURST_ELEMENTS,
+  DAILY_FIRE_ELEMENTS,
+  ECLIPSE_ELEMENTS,
+  FORGE_ELEMENTS,
+  NOVA_ELEMENTS,
+  VICTORY_LAP_ELEMENTS,
+} from "./rarityBadgeIconPaths";
+
+// Same map as PremiumBadgeIcon.tsx's RARITY_BADGE_ELEMENTS — kept as a
+// second copy rather than a shared export since one lives in a .tsx
+// component file this .ts module shouldn't import from; both read from the
+// same rarityBadgeIconPaths.ts source data, so they can't drift apart on
+// the actual icon shapes, only (in principle) on this lookup table itself.
+const RARITY_BADGE_ICON_ELEMENTS: Partial<Record<string, IconElement[]>> = {
+  "🧭": ECLIPSE_ELEMENTS,
+  "⚔️": FORGE_ELEMENTS,
+  "🏵️": NOVA_ELEMENTS,
+  "🌌": AURORA_CROWN_ELEMENTS,
+  "🏮": DAILY_FIRE_ELEMENTS,
+  "🏆": VICTORY_LAP_ELEMENTS,
+  "💫": APEX_STARBURST_ELEMENTS,
+};
 
 export interface ShareRow {
   rank: number;
@@ -437,8 +461,11 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     ctx.fill();
     const premium = findPremiumEmojiOption(input.badge);
     const iconSize = badgeRadius * 1.3;
+    const rarityElements = premium ? RARITY_BADGE_ICON_ELEMENTS[premium.emoji] : undefined;
     if (premium?.unlock?.kind === "categoryMastered") {
       drawIconElements(ctx, ACHIEVEMENT_ICON_ELEMENTS[premium.unlock.category], badgeCx, badgeCy, iconSize, heading);
+    } else if (rarityElements) {
+      drawIconElements(ctx, rarityElements, badgeCx, badgeCy, iconSize, heading);
     } else if (premium) {
       drawMedalIcon(ctx, badgeCx, badgeCy, iconSize, heading, LEVEL_MEDAL_COLOR[premium.emoji] ?? heading);
     } else {

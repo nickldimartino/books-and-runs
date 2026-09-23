@@ -65,18 +65,26 @@ export function defaultRarityForUnlock(rule: CosmeticUnlockRule | undefined): Co
   if (!rule) return "common";
   switch (rule.kind) {
     case "level":
-      if (rule.level <= 10) return "uncommon";
-      if (rule.level <= 50) return "rare";
+      // 🥉10→uncommon, 🥈25→uncommon, 🥇50→rare, 💎100→rare, then epic up to
+      // 150, mythic beyond — keeps every existing level-gated item's
+      // rarity exactly where Phase 1's mapping put it.
+      if (rule.level <= 25) return "uncommon";
+      if (rule.level <= 100) return "rare";
       if (rule.level <= 150) return "epic";
       return "mythic";
     case "categoryMastered":
       return "rare";
     case "categoriesMasteredCount":
-      return rule.count >= 6 ? "mythic" : "epic";
+      if (rule.count >= 6) return "mythic";
+      if (rule.count >= 3) return "epic";
+      return "uncommon";
     case "allCategoriesMastered":
       return "mythic";
     case "gamesPlayed":
-      return rule.count >= 500 ? "epic" : rule.count >= 100 ? "rare" : "uncommon";
+      if (rule.count >= 1500) return "mythic";
+      if (rule.count >= 500) return "epic";
+      if (rule.count >= 150) return "rare";
+      return "uncommon";
     case "dailyDealStreak":
       return rule.days >= 30 ? "mythic" : rule.days >= 7 ? "uncommon" : "common";
     case "weeklyChallengeStreak":
