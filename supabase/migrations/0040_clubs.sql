@@ -193,8 +193,9 @@ $$;
 
 -- The roster + each member's real multiplayer stats — the club's "shared
 -- standings, distinct from the global leaderboard" (per this file's own
--- doc). Pulls straight from leaderboard_entries (already real, server-
--- verified numbers — see migrations 0011/0035) rather than a new tally.
+-- doc). Pulls straight from leaderboard_entries's mp_* columns (server-
+-- verified as of migration 0050, which closed a gap where these three had
+-- stayed plain client-writable since 0011) rather than a new tally.
 create or replace function public.club_standings(p_club_id uuid)
 returns table (
   user_id uuid,

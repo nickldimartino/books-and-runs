@@ -625,6 +625,12 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
     });
   }
 
+  // Past the pending stage there's a real hand to redact — unlike the
+  // pending branch above (which an invited-but-not-yet-accepted
+  // participant must still be able to see, to accept/decline it),
+  // require actual acceptance here, matching handleMove/handleResign.
+  if (mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
+
   let stateRow = (
     await admin.from("mp_game_state").select("engine").eq("game_id", gameId).maybeSingle()
   ).data;
