@@ -189,6 +189,23 @@ export function highestPenaltyCard(cards: Card[]): Card {
   return [...cards].sort((a, b) => cardPenalty(b) - cardPenalty(a))[0];
 }
 
+/**
+ * Whether the hand already has a natural card that would obviously pair
+ * with (same rank) or run-extend (same suit, one rank away) `card` — the
+ * baseline "does this discard-pile pickup obviously help me" judgment
+ * every tier above Beginner applies to a natural candidate. Deliberately
+ * only considers the hand's own naturals (a wild doesn't "match" anything
+ * by rank/suit) and says nothing about whether `card` itself is wild —
+ * each tier decides that case on its own (easy/medium take a wild
+ * unconditionally, hard/expert gate it behind not tipping off an
+ * opponent).
+ */
+export function handWantsCard(hand: Card[], card: Card): boolean {
+  const rankMatch = hand.some((c) => !c.isWild && c.rank === card.rank);
+  const runAdjacent = hand.some((c) => !c.isWild && c.suit === card.suit && minRunDistance(c.rank, card.rank) === 1);
+  return rankMatch || runAdjacent;
+}
+
 /** Hand size at/below which a player reads as "closing in on going out" —
  * the single biggest tell a real player watches the table for, and (via
  * leaderPressure below) the thing every tier from medium up increasingly

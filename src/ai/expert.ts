@@ -20,6 +20,7 @@ import {
   cautiousWildLayOffPlan,
   completesOwnContract,
   deadCards,
+  handWantsCard,
   highestPenaltyCard,
   isCloseToOut,
   leaderPressure,
@@ -156,11 +157,7 @@ export const expertStrategy: AIStrategy = {
       return closeOpponentCompletionRisk(state, player, top, rng) >= SIMULATION_DENY_THRESHOLD;
     }
     const demand = opponentDemand(state, player.id, top);
-    const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
-    const runAdjacent = player.hand.some(
-      (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
-    );
-    if (rankMatch || runAdjacent || demand >= DENY_OPPONENT_THRESHOLD) return true;
+    if (handWantsCard(player.hand, top) || demand >= DENY_OPPONENT_THRESHOLD) return true;
     return closeOpponentCompletionRisk(state, player, top, rng) >= SIMULATION_DENY_THRESHOLD;
   },
   chooseDiscard(state: GameState, player: Player, rng: Rng = Math.random): Card {

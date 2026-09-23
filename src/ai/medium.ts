@@ -12,11 +12,11 @@ import { Card, GameState, Player } from "../types";
 import {
   AIStrategy,
   deadCards,
+  handWantsCard,
   highestPenaltyCard,
   isCloseToOut,
   maybeMistakeBool,
   maybeMistakeDiscard,
-  minRunDistance,
   MISTAKE_CHANCE,
   Rng,
   selfWildLayOffPlan,
@@ -24,12 +24,7 @@ import {
 
 function discardHelpsHand(top: Card, player: Player): boolean {
   if (top.isWild) return true; // wilds always help
-  const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
-  if (rankMatch) return true;
-  // simple run-adjacency: same suit, and hand already has a card one rank away
-  return player.hand.some(
-    (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
-  );
+  return handWantsCard(player.hand, top);
 }
 
 /** Whether any opponent's single most recent pickup shares this card's rank

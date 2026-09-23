@@ -16,10 +16,10 @@ import {
   completesOwnContract,
   dangerScore,
   deadCards,
+  handWantsCard,
   highestPenaltyCard,
   maybeMistakeBool,
   maybeMistakeDiscard,
-  minRunDistance,
   MISTAKE_CHANCE,
   Rng,
   WILD_DISCARD_RISK,
@@ -46,11 +46,7 @@ export const hardStrategy: AIStrategy = {
       // round before that information could matter.
       return completesOwnContract(state, player, top);
     }
-    const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
-    const runAdjacent = player.hand.some(
-      (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
-    );
-    return rankMatch || runAdjacent;
+    return handWantsCard(player.hand, top);
   },
   chooseDiscard(state: GameState, player: Player, rng: Rng = Math.random): Card {
     const mistake = maybeMistakeDiscard(player.hand, MISTAKE_CHANCE.hard, rng);

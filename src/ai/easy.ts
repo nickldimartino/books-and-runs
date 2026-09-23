@@ -9,10 +9,10 @@ import {
   AIStrategy,
   deadCards,
   greedyLayOffPlan,
+  handWantsCard,
   highestPenaltyCard,
   maybeMistakeBool,
   maybeMistakeDiscard,
-  minRunDistance,
   MISTAKE_CHANCE,
   Rng,
 } from "./strategy";
@@ -27,11 +27,7 @@ export const easyStrategy: AIStrategy = {
     // about what taking it reveals — unlike hard/expert, easy doesn't hold
     // wilds back.
     if (top.isWild) return true;
-    const rankMatch = player.hand.some((c) => !c.isWild && c.rank === top.rank);
-    const runAdjacent = player.hand.some(
-      (c) => !c.isWild && c.suit === top.suit && minRunDistance(c.rank, top.rank) === 1
-    );
-    return rankMatch || runAdjacent;
+    return handWantsCard(player.hand, top);
   },
   chooseDiscard(state: GameState, player: Player, rng: Rng = Math.random): Card {
     const mistake = maybeMistakeDiscard(player.hand, MISTAKE_CHANCE.easy, rng);
