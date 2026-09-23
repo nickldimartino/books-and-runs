@@ -38,10 +38,3 @@ export function applyCardBack(id: CardBackId, activeTheme: ThemeId): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-cardback", id === "match" ? activeTheme : id);
 }
-
-/** A human label for a card back id — used on the profile page to show
- * off what someone's equipped (see migration 0028's showcase_card_back). */
-export function cardBackLabel(id: string | null): string {
-  if (!id || id === "match") return "Match table theme";
-  return THEMES.find((t) => t.id === id)?.name ?? id;
-}

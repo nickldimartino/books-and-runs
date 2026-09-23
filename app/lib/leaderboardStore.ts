@@ -48,11 +48,6 @@ export interface LeaderboardEntry {
   /** A short earned flair shown under the display name — see
    * profileCosmetics.ts's TITLE_OPTIONS. Null means no title chosen. */
   title: string | null;
-  /** Public mirror of this account's equipped card back/face (see
-   * migration 0028's own doc for why these live here instead of a read
-   * policy on the private `settings` table). Null until they've set one. */
-  showcase_card_back: string | null;
-  showcase_card_face: string | null;
   /** A wide color strip behind the profile header — see
    * bannerPresets.ts's BANNER_OPTIONS. Null means the plain background. */
   banner: string | null;
@@ -501,32 +496,6 @@ export async function updateLeaderboardBadge(
     if (error.message?.includes("badge_locked")) throw new CosmeticLockedError("badge");
     throw error;
   }
-}
-
-/** Mirrors the signed-in user's current card back choice onto their public
- * leaderboard row (see migration 0028's own doc) — called from
- * accountSettingsSync.ts's pushCardBack, the same moment it syncs to the
- * private `settings` table. Ungated — this is already free customization
- * the account owns, just not shown publicly before. A partial upsert
- * (only this one column), same as every other single-field update in this
- * file — a card-face update elsewhere can't accidentally clobber this. */
-export async function updateShowcaseCardBack(supabase: SupabaseClient, userId: string, cardBack: string): Promise<void> {
-  const { error } = await supabase.from("leaderboard_entries").upsert({
-    user_id: userId,
-    showcase_card_back: cardBack,
-    updated_at: new Date().toISOString(),
-  });
-  if (error) throw error;
-}
-
-/** Same as updateShowcaseCardBack, for card face. */
-export async function updateShowcaseCardFace(supabase: SupabaseClient, userId: string, cardFace: string): Promise<void> {
-  const { error } = await supabase.from("leaderboard_entries").upsert({
-    user_id: userId,
-    showcase_card_face: cardFace,
-    updated_at: new Date().toISOString(),
-  });
-  if (error) throw error;
 }
 
 /**

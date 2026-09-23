@@ -69,13 +69,6 @@ export function loadLocalCardFace(): CardFaceId {
   return CARD_FACES.some((f) => f.id === raw) ? (raw as CardFaceId) : DEFAULT_CARD_FACE;
 }
 
-/** A human label for a card face id — used on the profile page to show
- * off what someone's equipped (see migration 0028's showcase_card_face). */
-export function cardFaceLabel(id: string | null): string {
-  if (!id) return "Classic";
-  return CARD_FACES.find((f) => f.id === id)?.name ?? id;
-}
-
 export function saveLocalCardFace(id: CardFaceId): void {
   writeLocalStorage(KEY, id);
   // Unconditional (even if the write above silently failed) and guarded

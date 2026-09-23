@@ -30,7 +30,6 @@ import {
   loadLocalColorblindMode,
   saveLocalColorblindMode,
 } from "./colorblindStore";
-import { updateShowcaseCardBack, updateShowcaseCardFace } from "./leaderboardStore";
 import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
 import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TEXT_SCALES, TextScale } from "./textScaleStore";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "./themeStore";
@@ -344,21 +343,12 @@ export function pushCardBack(supabase: SupabaseClient | null, userId: string | n
   upsertSettingsPatch(supabase, userId, { card_back: cardBack }).catch((err) =>
     console.error("Failed to sync card back to account:", err.message)
   );
-  // Public mirror, for showing off on the profile page (migration 0028) —
-  // see updateShowcaseCardBack's own doc for why this is a separate write
-  // from the private settings upsert above, not a read policy on it.
-  updateShowcaseCardBack(supabase, userId, cardBack).catch((err) =>
-    console.error("Failed to sync showcased card back:", err.message)
-  );
 }
 
 export function pushCardFace(supabase: SupabaseClient | null, userId: string | null, cardFace: CardFaceId): void {
   if (!supabase || !userId) return;
   upsertSettingsPatch(supabase, userId, { card_face: cardFace }).catch((err) =>
     console.error("Failed to sync card face to account:", err.message)
-  );
-  updateShowcaseCardFace(supabase, userId, cardFace).catch((err) =>
-    console.error("Failed to sync showcased card face:", err.message)
   );
 }
 

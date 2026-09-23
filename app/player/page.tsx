@@ -60,8 +60,6 @@ import {
 } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
-import { loadLocalCardBack } from "../lib/cardBackStore";
-import { loadLocalCardFace } from "../lib/cardFaceStore";
 import { cosmeticRequirementLabel, isCosmeticUnlocked, makeUnlockContext } from "../lib/cosmeticUnlocks";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
@@ -91,8 +89,6 @@ import {
   updateLeaderboardDisplayName,
   updateLeaderboardShowcase,
   updateLeaderboardTitle,
-  updateShowcaseCardBack,
-  updateShowcaseCardFace,
 } from "../lib/leaderboardStore";
 import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
 import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
@@ -311,8 +307,6 @@ function emptyEntry(userId: string): LeaderboardEntry {
     avatar_frame: null,
     badge: null,
     title: null,
-    showcase_card_back: null,
-    showcase_card_face: null,
     banner: null,
     joined_at: null,
     is_creator: false,
@@ -382,20 +376,6 @@ export default function PlayerProfilePage() {
       } else {
         const row = (data as LeaderboardEntry | null) ?? emptyEntry(profileId);
         setEntry(row);
-        // Backfill the public card-back/face mirror for an account that
-        // set these before migration 0028 existed — same bootstrap-push
-        // idea as accountSettingsSync.ts's bootstrapMissingAccountSettings.
-        // Self-view itself never needs to wait on this (see displayCardBack/
-        // Face below, which read local storage directly for isSelf) — this
-        // is purely so a *visitor* to this profile later sees it too.
-        if (profileId === user.id) {
-          if (row.showcase_card_back === null) {
-            updateShowcaseCardBack(client, profileId, loadLocalCardBack()).catch(() => {});
-          }
-          if (row.showcase_card_face === null) {
-            updateShowcaseCardFace(client, profileId, loadLocalCardFace()).catch(() => {});
-          }
-        }
       }
       setLoading(false);
     })();

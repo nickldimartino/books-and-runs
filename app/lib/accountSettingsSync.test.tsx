@@ -185,18 +185,6 @@ describe("the small per-store push helpers", () => {
     expect(settingsUpserts.map((u) => Object.keys(u).find((k) => k !== "user_id" && k !== "updated_at")))
       .toEqual(["theme", "card_back", "card_face", "colorblind_mode"]);
   });
-
-  it("pushCardBack/pushCardFace also mirror to leaderboard_entries for the profile page's cosmetics showcase", async () => {
-    const { client, upserts, tables } = fakeSupabase();
-    pushCardBack(client, "u1", "match");
-    pushCardFace(client, "u1", "classic");
-    await Promise.resolve();
-
-    const showcaseUpserts = upserts.filter((_, i) => tables[i] === "leaderboard_entries");
-    expect(showcaseUpserts).toHaveLength(2);
-    expect(showcaseUpserts[0]).toMatchObject({ user_id: "u1", showcase_card_back: "match" });
-    expect(showcaseUpserts[1]).toMatchObject({ user_id: "u1", showcase_card_face: "classic" });
-  });
 });
 
 describe("resetLocalPreferencesToDefaults", () => {
