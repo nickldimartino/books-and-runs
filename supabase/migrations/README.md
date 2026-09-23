@@ -67,6 +67,8 @@ tells you a project's real state.
 | 0045 | `settings.show_meld_hint` — syncs the "Hint: Auto-meld" button's Settings toggle (off by default) across devices, same nullable pattern as every column since 0022. |
 | 0046 | `settings.text_scale` — syncs the "Text size" accessibility control across devices; usable while signed out too, unlike Theme. |
 | 0047 | Hide testing accounts from the public leaderboard — `leaderboard_entries.is_test_account` (SQL-editor-only, same pattern as 0030's `is_creator`; never touched by any client-facing function), excluded client-side in `app/leaderboard/page.tsx` and in `refresh_achievement_rarity()`'s own denominator. See the migration's own comment for the exact SQL to flag/unflag an account. |
+| 0048 | Security hardening from a full audit — CSP fix, `mp`/`solo-verify` error-message leakage, `daily-deal-reminder`'s cron-secret check made timing-safe, an atomic `solo_verify_upsert_player_stats()` RPC closing a TOCTOU race in the solo-game pacing floor, a trigger locking `leaderboard_entries.is_creator`/`.is_test_account` to their existing value, `avatar_photo_path` ownership CHECK, bounded `client_errors` column lengths, and re-verified grants across every club/tournament RPC. |
+| 0049 | Three follow-ups deferred out of 0048: `compute_total_xp()`/`category_mastered()` can now only be asked about yourself (previously any signed-in account could read another account's derived stats/achievement progress); profile photo reports move from a direct client insert to a rate-limited `report_profile_photo()` RPC; `club_create()`/`tournament_create()` get real per-account caps (10 owned clubs, 10 active tournaments hosted at once). |
 
 ## New migrations
 

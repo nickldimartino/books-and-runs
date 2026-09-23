@@ -793,25 +793,22 @@ export const MAX_REPORT_REASON_LENGTH = 280;
 /**
  * Flags `reportedUserId`'s current profile photo for manual review (see
  * migration 0025 — there's no in-app read path for these, only the
- * Supabase dashboard/service role). `on conflict do nothing` (via
- * `ignoreDuplicates`) makes reporting the same account twice a harmless
- * no-op rather than an error, matching the DB's own one-report-per-pair
- * constraint.
+ * Supabase dashboard/service role). Goes through the `report_profile_photo`
+ * RPC (migration 0049) rather than a direct table insert, so it's
+ * rate-limited server-side (`mp_bump_rate_limit`) — a plain client insert
+ * couldn't stop one account from reporting many different targets in
+ * quick succession. The RPC itself does `on conflict do nothing`, so
+ * reporting the same account twice is still a harmless no-op.
  */
 export async function reportProfilePhoto(
   supabase: SupabaseClient,
-  reporterUserId: string,
   reportedUserId: string,
   reason: string | null
 ): Promise<void> {
   const cleanedReason = reason ? stripControlAndBidiChars(reason).trim().slice(0, MAX_REPORT_REASON_LENGTH) : null;
-  const { error } = await supabase.from("profile_photo_reports").upsert(
-    {
-      reporter_id: reporterUserId,
-      reported_user_id: reportedUserId,
-      reason: cleanedReason || null,
-    },
-    { onConflict: "reporter_id,reported_user_id", ignoreDuplicates: true }
-  );
+  const { error } = await supabase.rpc("report_profile_photo", {
+    p_reported_user_id: reportedUserId,
+    p_reason: cleanedReason || null,
+  });
   if (error) throw error;
 }

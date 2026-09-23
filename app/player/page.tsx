@@ -454,7 +454,7 @@ export default function PlayerProfilePage() {
     if (!supabase || !user || !profileId) return;
     setReportState("sending");
     try {
-      await reportProfilePhoto(supabase, user.id, profileId, reportReason.trim() || null);
+      await reportProfilePhoto(supabase, profileId, reportReason.trim() || null);
       setReportState("sent");
     } catch (err) {
       console.error("Failed to report photo:", err);
