@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { BackLink } from "../components/BackLink";
 import { PageTip } from "../components/PageTip";
 import { useGame } from "../GameContext";
 import { fetchOwnDisplayName } from "../lib/leaderboardStore";
@@ -87,12 +88,7 @@ export default function NewGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
 

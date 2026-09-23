@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { PageTip } from "../../components/PageTip";
 import { pickAiPersonas } from "../../lib/aiPersonas";
@@ -169,9 +170,7 @@ export default function NewTournamentPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-7 px-6 py-10">
-      <Link href="/tournaments" className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-        ← Tournaments
-      </Link>
+      <BackLink href="/tournaments" label="Tournaments" />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New tournament</h1>
 

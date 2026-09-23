@@ -41,6 +41,7 @@ import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { AvatarFrame } from "../components/AvatarFrame";
+import { BackLink } from "../components/BackLink";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -1085,7 +1086,8 @@ export default function PlayerProfilePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <button
+      <BackLink
+        label="Back"
         onClick={() => {
           // Return to wherever this profile was opened from (the Friends
           // list, Leaderboard, a Clubs roster, ...) instead of always
@@ -1096,10 +1098,7 @@ export default function PlayerProfilePage() {
           if (typeof window !== "undefined" && window.history.length > 1) router.back();
           else router.push("/");
         }}
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Back
-      </button>
+      />
 
       {authLoading || loading || !entry ? (
         <LoadingSpinner />

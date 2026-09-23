@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { BackLink } from "../components/BackLink";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -121,12 +122,7 @@ export default function SignInPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-8 px-6 py-10">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
       <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">Sign in</h1>
 
       {mfaPending ? (

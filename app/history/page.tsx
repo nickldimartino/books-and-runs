@@ -4,6 +4,7 @@
 // history (app/player/page.tsx) or the local device game log.
 
 import Link from "next/link";
+import { BackLink } from "../components/BackLink";
 
 // Just the page-specific portion — the root layout's title.template
 // ("%s — Books & Runs") appends the suffix automatically; writing it here
@@ -15,12 +16,7 @@ export const metadata = {
 export default function HistoryPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">History of Books &amp; Runs</h1>
 

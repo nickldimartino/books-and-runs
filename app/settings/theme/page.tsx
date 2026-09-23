@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { onAccountSettingsSynced, pushTheme } from "../../lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "../../lib/cardBackStore";
@@ -50,12 +51,7 @@ export default function ThemeSettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <Link
-        href="/settings"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Settings
-      </Link>
+      <BackLink href="/settings" label="Settings" />
       <h1 className="-mt-2 text-2xl font-bold text-[var(--heading)]">Theme</h1>
 
       {loading || authLoading ? (

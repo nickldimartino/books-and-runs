@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { BackLink } from "../../components/BackLink";
 import { PageTip } from "../../components/PageTip";
 import { useGame } from "../../GameContext";
 import { AI_PERSONAS, AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
@@ -268,12 +269,7 @@ export default function NewLocalGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <Link
-        href="/new-game"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← New Game
-      </Link>
+      <BackLink href="/new-game" label="New Game" />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">Solo &amp; pass-and-play</h1>
 

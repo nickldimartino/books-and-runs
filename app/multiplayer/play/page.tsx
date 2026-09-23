@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { usePlayerLevel } from "../../PlayerLevelContext";
+import { BackLink } from "../../components/BackLink";
 import { DraggableHand } from "../../components/DraggableHand";
 import { HandPreviewBar } from "../../components/HandPreviewBar";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
@@ -935,13 +936,3 @@ function Center({ children }: { children: ReactNode }) {
   );
 }
 
-function BackLink() {
-  return (
-    <Link
-      href="/"
-      className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-    >
-      ← Home
-    </Link>
-  );
-}

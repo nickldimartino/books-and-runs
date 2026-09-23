@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { BackLink } from "../components/BackLink";
 import { loadSupabase } from "../lib/supabaseClient";
 
 type ReportType = "bug" | "feature";
@@ -198,19 +199,9 @@ export default function SupportPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       {cameFromReviewPrompt ? (
-        <button
-          onClick={() => router.back()}
-          className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          ← Back to game
-        </button>
+        <BackLink onClick={() => router.back()} label="Back to game" />
       ) : (
-        <Link
-          href="/"
-          className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          ← Home
-        </Link>
+        <BackLink href="/" />
       )}
 
       <div>

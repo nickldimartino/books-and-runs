@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CONTRACTS, ContractRequirement, SHORT_GAME_CONTRACTS } from "@/types";
+import { BackLink } from "../components/BackLink";
 import { PageTip } from "../components/PageTip";
 import {
   clearScorecard,
@@ -120,12 +121,7 @@ export default function ScorecardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-10">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">Scorekeeper</h1>
 

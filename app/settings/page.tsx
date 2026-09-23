@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
+import { BackLink } from "../components/BackLink";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
   onAccountSettingsSynced,
@@ -434,12 +435,7 @@ export default function SettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Settings</h1>
 
       {loading ? (

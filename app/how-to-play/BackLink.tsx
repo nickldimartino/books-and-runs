@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BackLink } from "../components/BackLink";
 import { useGame } from "../GameContext";
 
 // This page's metadata export needs a Server Component, so the "where does
@@ -40,14 +41,7 @@ function useBackDestination(): { href: string; label: string } {
 
 export function HowToPlayTopBackLink() {
   const { href, label } = useBackDestination();
-  return (
-    <Link
-      href={href}
-      className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-    >
-      ← Back to {label}
-    </Link>
-  );
+  return <BackLink href={href} label={`Back to ${label}`} />;
 }
 
 export function HowToPlayBottomBackLink() {

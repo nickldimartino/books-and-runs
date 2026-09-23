@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
+import { BackLink } from "../components/BackLink";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
@@ -260,9 +261,7 @@ export default function AccountPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <Link href="/" className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]">
-        ← Home
-      </Link>
+      <BackLink href="/" />
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Account</h1>
 
       {authLoading || loading ? (

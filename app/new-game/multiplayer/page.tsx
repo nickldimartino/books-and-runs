@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { track } from "../../lib/analytics";
+import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { PageTip } from "../../components/PageTip";
 import { pickAiPersonas } from "../../lib/aiPersonas";
@@ -136,12 +137,7 @@ export default function NewMultiplayerGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-7 px-6 py-10">
-      <Link
-        href="/new-game"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← New Game
-      </Link>
+      <BackLink href="/new-game" label="New Game" />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">New multiplayer game</h1>
 

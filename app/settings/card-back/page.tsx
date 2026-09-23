@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
+import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { onAccountSettingsSynced, pushCardBack } from "../../lib/accountSettingsSync";
 import { applyCardBack, CardBackId, loadLocalCardBack, saveLocalCardBack } from "../../lib/cardBackStore";
@@ -43,12 +43,7 @@ export default function CardBackSettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <Link
-        href="/settings"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Settings
-      </Link>
+      <BackLink href="/settings" label="Settings" />
       <div className="-mt-2">
         <h1 className="text-2xl font-bold text-[var(--heading)]">Card back</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">

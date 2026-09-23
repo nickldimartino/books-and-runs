@@ -2,6 +2,7 @@
 // Linked from the Home footer and Settings.
 
 import Link from "next/link";
+import { BackLink } from "../components/BackLink";
 
 // Just the page-specific portion — see not-found.tsx's own comment on why.
 export const metadata = {
@@ -11,12 +12,7 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Privacy Policy</h1>
         <p className="mt-1 text-sm text-[var(--faint)]">Last updated September 11, 2026</p>

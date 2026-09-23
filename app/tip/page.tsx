@@ -20,6 +20,7 @@
 
 import Link from "next/link";
 import { useAuth } from "../AuthContext";
+import { BackLink } from "../components/BackLink";
 import { playerProfileHref } from "../lib/leaderboardStore";
 
 interface TipTier {
@@ -46,12 +47,7 @@ export default function TipPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
-      <Link
-        href="/"
-        className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-      >
-        ← Home
-      </Link>
+      <BackLink href="/" />
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">Support the developer</h1>
