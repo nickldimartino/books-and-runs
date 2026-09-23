@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { AVATAR_FRAME_COLOR } from "../lib/profileCosmetics";
+import { defaultRarityForUnlock, RARITY_VISUAL, rarityHasFoil } from "../lib/cosmeticRarity";
+import { AVATAR_FRAME_COLOR, findAvatarFrameOption } from "../lib/profileCosmetics";
 
 interface AvatarFrameProps {
   frame: string | null;
@@ -38,13 +39,23 @@ export function AvatarFrame({ frame, size, children }: AvatarFrameProps) {
       : isDiamond
         ? "conic-gradient(from 45deg at 50% 50%, rgba(255,255,255,0.95) 0 6%, rgba(180,205,215,0.25) 6% 19%, rgba(255,255,255,0.95) 19% 25%, rgba(180,205,215,0.25) 25% 38%, rgba(255,255,255,0.95) 38% 44%, rgba(180,205,215,0.25) 44% 57%, rgba(255,255,255,0.95) 57% 63%, rgba(180,205,215,0.25) 63% 76%, rgba(255,255,255,0.95) 76% 82%, rgba(180,205,215,0.25) 82% 95%, rgba(255,255,255,0.95) 95% 100%), radial-gradient(circle, #f3f9fc, #aebfc9 60%, #5c7c8c 100%)"
         : (AVATAR_FRAME_COLOR[frame] ?? "transparent");
+  // Every other frame that's rare enough to shimmer at all (Specialist,
+  // Iron Will, Virtuoso, Aurora Crown, Unbroken, Undefeated — epic/mythic
+  // per cosmeticRarity.ts) gets the same shared .foil-sweep treatment as
+  // Grandmaster, over its own flat color, instead of staying a plain solid
+  // ring like every common/uncommon/rare color pick.
+  const option = !isGrandmaster && !isPrismatic && !isDiamond ? findAvatarFrameOption(frame) : null;
+  const rarity = option ? (option.rarity ?? defaultRarityForUnlock(option.unlock)) : null;
+  const hasRarityFoil = !!rarity && rarityHasFoil(rarity);
   const foilClass = isGrandmaster
     ? "foil-sweep rarity-ring--mythic"
     : isPrismatic
       ? "prismatic-foil"
       : isDiamond
         ? "diamond-foil"
-        : "";
+        : hasRarityFoil
+          ? `foil-sweep ${RARITY_VISUAL[rarity!].ringClass}`
+          : "";
   return (
     <span
       className={`grid shrink-0 place-items-center rounded-full ${foilClass}`}

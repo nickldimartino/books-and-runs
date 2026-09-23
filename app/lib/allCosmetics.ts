@@ -52,12 +52,14 @@ export const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
  *
  * Only ever tracks level + achievement progress before/after a single game
  * (that's all GameOverScreen.tsx/useMpGame.ts snapshot) — a reward gated on
- * games played, a Daily Deal streak, a Weekly Challenge streak, or being
- * the creator (cosmeticUnlocks.ts's newer rule kinds) reads as its
- * "nothing yet" default on both sides of the diff, so it never fires this
- * toast. That's a real gap, not a bug: those rewards still unlock exactly
- * on schedule and show up correctly the next time any picker loads the
- * real numbers — they just don't get an in-the-moment celebration here. */
+ * games played, a Daily Deal streak, a Weekly Challenge streak, being the
+ * creator, a worst/average score threshold, a tied-game count, or a
+ * multiplayer win streak (cosmeticUnlocks.ts's non-level/progress rule
+ * kinds) reads as its "nothing yet" default on both sides of the diff, so
+ * it never fires this toast. That's a real gap, not a bug: those rewards
+ * still unlock exactly on schedule and show up correctly the next time any
+ * picker loads the real numbers — they just don't get an in-the-moment
+ * celebration here. */
 export function diffNewlyUnlockedCosmetics(
   beforeLevel: number,
   beforeProgress: AchievementProgressState,

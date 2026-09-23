@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { findBannerOption } from "../lib/bannerPresets";
+import { defaultRarityForUnlock, RARITY_VISUAL, rarityHasFoil } from "../lib/cosmeticRarity";
 
 /** One gem cabochon on the Dealer's Table banner's wood band — see
  * globals.css's .gem-stone/.gem-<color> for the actual look. */
@@ -117,9 +118,17 @@ export function ProfileBanner({ banner, children }: { banner: string | null; chi
     );
   }
 
+  // Every other banner rare enough to shimmer (Specialist/Eclipse, Iron
+  // Will/Forge, Virtuoso/Nova, Aurora Crown, Unbroken/Daily Fire,
+  // Undefeated/Victory Lap — epic/mythic per cosmeticRarity.ts) gets the
+  // same shared .foil-sweep treatment as Grandmaster, over its own 2-stop
+  // gradient, instead of staying static like every common/uncommon/rare
+  // color swatch.
+  const rarity = option ? (option.rarity ?? defaultRarityForUnlock(option.unlock)) : null;
+  const foilClass = rarity && rarityHasFoil(rarity) ? `foil-sweep ${RARITY_VISUAL[rarity].ringClass}` : "";
   return (
     <div
-      className="relative rounded-2xl px-6 py-6"
+      className={`relative overflow-hidden rounded-2xl px-6 py-6 ${foilClass}`}
       style={{
         // A dark scrim under every banner guarantees the header's own
         // white-on-banner text (see player/page.tsx's onBanner branch)

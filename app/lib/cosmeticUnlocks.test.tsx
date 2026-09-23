@@ -62,6 +62,33 @@ describe("isCosmeticUnlocked", () => {
     expect(isCosmeticUnlocked(rule, ctx({ level: 999, dailyDealBestStreak: 999 }))).toBe(false);
     expect(isCosmeticUnlocked(rule, ctx({ isCreator: true }))).toBe(true);
   });
+
+  it("gates a worstScoreUnder rule on the worst score, treating null (no game yet) as never satisfying it", () => {
+    const rule = { kind: "worstScoreUnder" as const, score: 80 };
+    expect(isCosmeticUnlocked(rule, ctx({ worstScore: null }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ worstScore: 80 }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ worstScore: 79 }))).toBe(true);
+  });
+
+  it("gates an averageScoreUnder rule on both the average AND a minimum game count", () => {
+    const rule = { kind: "averageScoreUnder" as const, score: 70, minGames: 15 };
+    expect(isCosmeticUnlocked(rule, ctx({ averageScore: 50, gamesPlayed: 3 }))).toBe(false); // too few games
+    expect(isCosmeticUnlocked(rule, ctx({ averageScore: 75, gamesPlayed: 20 }))).toBe(false); // average too high
+    expect(isCosmeticUnlocked(rule, ctx({ averageScore: null, gamesPlayed: 20 }))).toBe(false); // no games yet
+    expect(isCosmeticUnlocked(rule, ctx({ averageScore: 65, gamesPlayed: 15 }))).toBe(true);
+  });
+
+  it("gates a gamesTied rule on the tied-game count", () => {
+    const rule = { kind: "gamesTied" as const, count: 3 };
+    expect(isCosmeticUnlocked(rule, ctx({ gamesTied: 2 }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ gamesTied: 3 }))).toBe(true);
+  });
+
+  it("gates an mpWinStreak rule on the multiplayer best win streak", () => {
+    const rule = { kind: "mpWinStreak" as const, streak: 8 };
+    expect(isCosmeticUnlocked(rule, ctx({ mpBestWinStreak: 7 }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ mpBestWinStreak: 8 }))).toBe(true);
+  });
 });
 
 describe("cosmeticRequirementLabel", () => {
@@ -77,5 +104,9 @@ describe("cosmeticRequirementLabel", () => {
     expect(cosmeticRequirementLabel({ kind: "weeklyChallengeStreak", weeks: 12 })).toContain("12");
     expect(cosmeticRequirementLabel({ kind: "complete" })).toContain("250");
     expect(cosmeticRequirementLabel({ kind: "creatorOnly" })).toContain("creator");
+    expect(cosmeticRequirementLabel({ kind: "worstScoreUnder", score: 80 })).toContain("80");
+    expect(cosmeticRequirementLabel({ kind: "averageScoreUnder", score: 70, minGames: 15 })).toContain("15");
+    expect(cosmeticRequirementLabel({ kind: "gamesTied", count: 3 })).toContain("3");
+    expect(cosmeticRequirementLabel({ kind: "mpWinStreak", streak: 8 })).toContain("8");
   });
 });

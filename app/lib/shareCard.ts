@@ -23,6 +23,8 @@ import {
   ECLIPSE_ELEMENTS,
   FORGE_ELEMENTS,
   NOVA_ELEMENTS,
+  SCALES_ELEMENTS,
+  STREAK_ELEMENTS,
   VICTORY_LAP_ELEMENTS,
 } from "./rarityBadgeIconPaths";
 
@@ -39,6 +41,8 @@ const RARITY_BADGE_ICON_ELEMENTS: Partial<Record<string, IconElement[]>> = {
   "🏮": DAILY_FIRE_ELEMENTS,
   "🏆": VICTORY_LAP_ELEMENTS,
   "💫": APEX_STARBURST_ELEMENTS,
+  "⚖️": SCALES_ELEMENTS,
+  "📈": STREAK_ELEMENTS,
 };
 
 export interface ShareRow {

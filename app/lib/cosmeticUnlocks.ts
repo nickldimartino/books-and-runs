@@ -41,7 +41,28 @@ export type CosmeticUnlockRule =
   /** Earned by having ever completed a tip — see migration 0043's
    * supporter_payments (server-verified, written only by the
    * stripe-webhook Edge Function) and app/tip/page.tsx. */
-  | { kind: "supporterOnly" };
+  | { kind: "supporterOnly" }
+  /** leaderboard_entries.worst_score — server-verified via
+   * sync_leaderboard_truth() (migration 0035, extended by 0050). Lower is
+   * better in this game, so this is a consistency reward (never had a
+   * disaster game); null (no scored game finished yet) never satisfies
+   * it. */
+  | { kind: "worstScoreUnder"; score: number }
+  /** Same column family as worstScoreUnder, but the CAREER average
+   * (average_score) instead of the single worst result — genuinely harder
+   * to hold down across many games than to avoid one bad one. minGames
+   * stops a lucky 2-3 game streak from qualifying. */
+  | { kind: "averageScoreUnder"; score: number; minGames: number }
+  /** player_stats.games_tied — a rare result in this game by design (see
+   * its own "a rare result" label on the Stats page), so even a small
+   * count is a genuine, slightly playful milestone. Server-verified the
+   * same way every other player_stats field is (migration 0035/0048 —
+   * only solo-verify's service-role key writes it). */
+  | { kind: "gamesTied"; count: number }
+  /** leaderboard_entries.mp_best_win_streak — server-verified as of
+   * migration 0050. The first cosmetic gated on live multiplayer skill
+   * specifically, rather than solo play or a Daily/Weekly streak. */
+  | { kind: "mpWinStreak"; streak: number };
 
 /** Everything a rule might need to check itself against. Callers that
  * don't have every field yet (e.g. allCosmetics.ts's before/after unlock-
@@ -58,6 +79,14 @@ export interface UnlockContext {
   weeklyChallengeBestStreak: number;
   isCreator: boolean;
   isSupporter: boolean;
+  /** leaderboard_entries.worst_score — null before any scored game. */
+  worstScore: number | null;
+  /** leaderboard_entries.average_score — null before any scored game. */
+  averageScore: number | null;
+  /** player_stats.games_tied. */
+  gamesTied: number;
+  /** leaderboard_entries.mp_best_win_streak. */
+  mpBestWinStreak: number;
 }
 
 export function makeUnlockContext(
@@ -71,6 +100,10 @@ export function makeUnlockContext(
     weeklyChallengeBestStreak: partial.weeklyChallengeBestStreak ?? 0,
     isCreator: partial.isCreator ?? false,
     isSupporter: partial.isSupporter ?? false,
+    worstScore: partial.worstScore ?? null,
+    averageScore: partial.averageScore ?? null,
+    gamesTied: partial.gamesTied ?? 0,
+    mpBestWinStreak: partial.mpBestWinStreak ?? 0,
   };
 }
 
@@ -113,6 +146,14 @@ export function isCosmeticUnlocked(rule: CosmeticUnlockRule, ctx: UnlockContext)
       return ctx.isCreator;
     case "supporterOnly":
       return ctx.isSupporter;
+    case "worstScoreUnder":
+      return ctx.worstScore !== null && ctx.worstScore < rule.score;
+    case "averageScoreUnder":
+      return ctx.gamesPlayed >= rule.minGames && ctx.averageScore !== null && ctx.averageScore < rule.score;
+    case "gamesTied":
+      return ctx.gamesTied >= rule.count;
+    case "mpWinStreak":
+      return ctx.mpBestWinStreak >= rule.streak;
   }
 }
 
@@ -139,5 +180,13 @@ export function cosmeticRequirementLabel(rule: CosmeticUnlockRule): string {
       return "Exclusive to the creator of Books & Runs";
     case "supporterOnly":
       return "Unlocked by tipping — see Settings → Help → Support the developer";
+    case "worstScoreUnder":
+      return `Never finish a game above ${rule.score} points`;
+    case "averageScoreUnder":
+      return `Average under ${rule.score} points across ${rule.minGames}+ games`;
+    case "gamesTied":
+      return `Tie ${rule.count} game${rule.count === 1 ? "" : "s"}`;
+    case "mpWinStreak":
+      return `Reach a ${rule.streak}-game multiplayer win streak`;
   }
 }

@@ -62,6 +62,7 @@ import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
 import { cosmeticRequirementLabel, isCosmeticUnlocked, makeUnlockContext } from "../lib/cosmeticUnlocks";
 import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
+import { defaultRarityForUnlock, RARITY_TEXT_ACCENT } from "../lib/cosmeticRarity";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
 import {
@@ -873,8 +874,14 @@ export default function PlayerProfilePage() {
         weeklyChallengeBestStreak: entry?.weekly_challenge_best_streak ?? 0,
         isCreator: entry?.is_creator ?? false,
         isSupporter,
+        // Both already loaded on this page for the Stats section below —
+        // no new fetch needed for any of the 4 newer requirement_kinds.
+        worstScore: privateStats?.worst_score ?? null,
+        averageScore: privateStats?.average_score ?? null,
+        gamesTied: privateStats?.games_tied ?? 0,
+        mpBestWinStreak: entry?.mp_best_win_streak ?? 0,
       }),
-    [level, entry, progress, isSupporter]
+    [level, entry, progress, isSupporter, privateStats]
   );
 
   // Self-heal: an equipped cosmetic can end up over-privileged relative to
@@ -1556,6 +1563,13 @@ export default function PlayerProfilePage() {
                   </button>
                   {TITLE_OPTIONS.filter((option) => option.source !== "boutique").map((option) => {
                     const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, unlockCtx);
+                    // A title has no art to put a ring/foil on — just a
+                    // colored border/text instead once it's genuinely rare
+                    // (epic+), so browsing the list telegraphs which ones
+                    // are a bigger deal even before selecting one.
+                    const rarity = option.rarity ?? defaultRarityForUnlock(option.unlock);
+                    const accent = RARITY_TEXT_ACCENT[rarity];
+                    const selected = entry.title === option.id;
                     return (
                       <button
                         key={option.id}
@@ -1564,12 +1578,15 @@ export default function PlayerProfilePage() {
                           if (option.unlock) setTitleInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
                         }}
                         title={unlocked || !option.unlock ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        style={unlocked && accent && !selected ? { borderColor: accent, color: accent } : undefined}
                         className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                           !unlocked
                             ? `border-[var(--border)] text-[var(--faint)] ${LOCKED_ITEM_CLASS}`
-                            : entry.title === option.id
+                            : selected
                               ? "border-[var(--accent)] text-[var(--accent)]"
-                              : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                              : accent
+                                ? "hover:bg-[var(--panel-soft)]"
+                                : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                         }`}
                       >
                         {lockedCaption(option.label, unlocked)}

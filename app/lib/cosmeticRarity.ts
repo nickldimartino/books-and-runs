@@ -40,21 +40,21 @@ export const RARITY_VISUAL: Record<CosmeticRarity, RarityVisual> = {
   apex: { ringClass: "rarity-ring--apex", foilDuration: "5s", foilOpacity: "0.75" },
 };
 
-/** Whichever CSS custom properties a rarity's foil sweep needs — spread
- * onto the element's inline `style` alongside RARITY_VISUAL's className, so
- * globals.css's one shared `.foil-sweep` keyframe can serve every tier
- * instead of three near-duplicate animation blocks. */
-export function rarityFoilStyleVars(rarity: CosmeticRarity): Record<string, string> {
-  const v = RARITY_VISUAL[rarity];
-  const vars: Record<string, string> = {};
-  if (v.foilDuration) vars["--foil-duration"] = v.foilDuration;
-  if (v.foilOpacity) vars["--foil-opacity"] = v.foilOpacity;
-  return vars;
-}
-
 export function rarityHasFoil(rarity: CosmeticRarity): boolean {
   return RARITY_VISUAL[rarity].foilDuration !== null;
 }
+
+/** A title has no art to put a ring/foil on — just text — so its rarity
+ * treatment is a border + text color instead (Title tab, player/page.tsx).
+ * common/uncommon/rare stay the plain default border every free pill
+ * already uses (falsy = "render it exactly like today"); only epic and
+ * above get a color, same "motion/color is earned, not default" principle
+ * as RARITY_VISUAL's foil gating. */
+export const RARITY_TEXT_ACCENT: Partial<Record<CosmeticRarity, string>> = {
+  epic: "#a855f7",
+  mythic: "#f5c518",
+  apex: "#ec4899",
+};
 
 /** The rarity an item gets when its catalog entry doesn't set one
  * explicitly — a reasonable read of "how hard is this rule to satisfy," so
@@ -94,5 +94,13 @@ export function defaultRarityForUnlock(rule: CosmeticUnlockRule | undefined): Co
     case "creatorOnly":
     case "supporterOnly":
       return "rare";
+    case "worstScoreUnder":
+      return "rare";
+    case "averageScoreUnder":
+      return "epic";
+    case "gamesTied":
+      return "uncommon";
+    case "mpWinStreak":
+      return rule.streak >= 8 ? "epic" : "rare";
   }
 }

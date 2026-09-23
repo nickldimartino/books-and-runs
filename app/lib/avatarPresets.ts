@@ -91,6 +91,17 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "🛡️", unlock: { kind: "level", level: 150 } },
   { emoji: "🎯", unlock: { kind: "categoriesMasteredCount", count: 1 } },
   { emoji: "🕯️", unlock: { kind: "dailyDealStreak", days: 7 } },
+  // Phase 3 — the first 2 milestones on a genuinely new requirement_kind
+  // (see cosmeticUnlocks.ts's own doc for each). 🧊/🤝 are single badges,
+  // matching the existing 🥇/💎 pattern of a rare/uncommon reward with no
+  // matching frame/title/banner. ⚖️/📈 are epic, so — matching Specialist/
+  // Iron Will's own precedent — each is one named reward with a matching
+  // avatar frame, title, and banner (profileCosmetics.ts/bannerPresets.ts),
+  // not four separately-tuned cosmetics.
+  { emoji: "🧊", unlock: { kind: "worstScoreUnder", score: 80 } },
+  { emoji: "🤝", unlock: { kind: "gamesTied", count: 3 } },
+  { emoji: "⚖️", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
+  { emoji: "📈", unlock: { kind: "mpWinStreak", streak: 8 } },
   // Boutique — auto-unlocked for everyone while there's no real paywall
   // yet (see player/page.tsx's Boutique tab). No `unlock` rule at all: a
   // cosmetic_type/cosmetic_key with no cosmetic_unlocks row is already
@@ -120,6 +131,8 @@ export const LEVEL_MEDAL_COLOR: Record<string, string> = {
   "🕯️": "#fb923c",
   "🎩": "#312e81",
   "🕶️": "#1e293b",
+  "🧊": "#7dd3fc",
+  "🤝": "#d97706",
 };
 
 /** The premium option for a given emoji, or null for a free (or unknown)

@@ -93,6 +93,13 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
   // share-card PNG fallback (shareCard.ts only parses a plain 2-stop
   // gradient), so it stays a simple approximation of the felt tone alone.
   { id: "dealerstable", label: "Dealer's Table", css: "linear-gradient(135deg, #124a35, #051911)", unlock: { kind: "creatorOnly" } },
+  // Phase 3's 2 new epic-tier named rewards — matching avatarPresets.ts's
+  // ⚖️/📈 and profileCosmetics.ts's steadyhand/hotstreak frame + title.
+  { id: "steadyhand", label: "Glacier", css: "linear-gradient(135deg, #0c4a6e, #7dd3fc)", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
+  { id: "hotstreak", label: "Blaze", css: "linear-gradient(135deg, #9a3412, #fbbf24)", unlock: { kind: "mpWinStreak", streak: 8 } },
+  // Boutique.
+  { id: "velvet", label: "Velvet", css: "linear-gradient(135deg, #4c0519, #86198f)", source: "boutique" },
+  { id: "moonlight", label: "Moonlight", css: "linear-gradient(135deg, #1e1b4b, #64748b)", source: "boutique" },
 ];
 
 export function findBannerOption(id: string | null): BannerOption | null {

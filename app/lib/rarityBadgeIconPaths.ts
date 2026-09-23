@@ -66,6 +66,25 @@ export const VICTORY_LAP_ELEMENTS: IconElement[] = [
   { kind: "path", d: "M12 3.5l1 2.4 2.6.2-2 1.7.6 2.5-2.2-1.4-2.2 1.4.6-2.5-2-1.7 2.6-.2 1-2.4Z" },
 ];
 
+/** Steady Hand (averageScoreUnder, ⚖️) — a balance scale, for a career
+ * average kept consistently low. */
+export const SCALES_ELEMENTS: IconElement[] = [
+  { kind: "path", d: "M12 3v15" },
+  { kind: "path", d: "M5 8h14" },
+  { kind: "path", d: "M5 8 2.5 13a2.5 2.5 0 0 0 5 0L5 8Z" },
+  { kind: "path", d: "M19 8l-2.5 5a2.5 2.5 0 0 0 5 0L19 8Z" },
+  { kind: "path", d: "M8.5 20.5h7" },
+];
+
+/** Hot Streak (mpWinStreak, 📈) — an ascending trend line, for a real
+ * multiplayer win streak rather than a solo/streak-day reward. */
+export const STREAK_ELEMENTS: IconElement[] = [
+  { kind: "path", d: "M3 17l5-5 4 4 8-9" },
+  { kind: "path", d: "M16 6h4v4" },
+  { kind: "circle", cx: 8, cy: 12, r: 1, filled: true },
+  { kind: "circle", cx: 12, cy: 16, r: 1, filled: true },
+];
+
 /** The single apex reward (prismatic, 💫) — genuine bespoke artwork, the
  * one place this pass invests in custom art rather than a CSS-tier
  * silhouette: an 8-point star with a rotated inner star, so it reads as a

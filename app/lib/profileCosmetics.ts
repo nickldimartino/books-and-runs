@@ -69,6 +69,15 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
   // so a redundant earned-badge/title pair would just say the same thing
   // twice.
   { id: "dealerstable", label: "Dealer's Table", unlock: { kind: "creatorOnly" } },
+  // Phase 3's 2 new epic-tier named rewards (avatarPresets.ts's ⚖️/📈) —
+  // same "one reward, matching frame/title/banner" shape as Specialist/
+  // Iron Will above.
+  { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
+  { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
+  // Boutique — see avatarPresets.ts's own doc on what an absent `unlock`
+  // means here.
+  { id: "opal", label: "Opal", source: "boutique" },
+  { id: "jade", label: "Jade", source: "boutique" },
 ];
 
 /** Solid ring colors for each frame — "grandmaster" instead gets a
@@ -117,6 +126,13 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   // canvas uses, same simplification already applied to grandmaster/
   // prismatic there.
   dealerstable: "#DCEEF5",
+  // Steady Hand/Hot Streak — same "match the sibling banner's palette"
+  // reasoning as the five above.
+  steadyhand: "#7DD3FC",
+  hotstreak: "#F59E0B",
+  // Boutique.
+  opal: "#C9A0DC",
+  jade: "#00A86B",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {
@@ -199,6 +215,11 @@ export const TITLE_OPTIONS: readonly TitleOption[] = [
   { id: "unbroken", label: "Unbroken", unlock: { kind: "dailyDealStreak", days: 30 } },
   { id: "undefeated", label: "Undefeated", unlock: { kind: "weeklyChallengeStreak", weeks: 12 } },
   { id: "prismatic", label: "Complete", unlock: { kind: "complete" } },
+  { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
+  { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
+  // Boutique.
+  { id: "night_owl", label: "Night Owl", source: "boutique" },
+  { id: "the_bluffer", label: "The Bluffer", source: "boutique" },
 ];
 
 export function findTitleOption(id: string | null): TitleOption | null {
