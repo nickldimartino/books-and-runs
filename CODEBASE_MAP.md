@@ -55,10 +55,10 @@ reads and mutates in place.
 | `types.ts` | The shared vocabulary: `Card`, `Meld`, `Player`, `ContractRequirement`, `GameState`, `CONTRACTS` (the 7 standard rounds), `SHORT_GAME_CONTRACTS`. |
 | `deck.ts` | Build a deck, shuffle it, deal it. `decksForPlayerCount`, `seededRng` (for Daily Deal). Every fn takes an optional `rng`. |
 | `scorer.ts` | End-of-round hand penalty values (`cardPenalty`, `handPenalty`). Low score wins. |
-| `meld.ts` | **The hard part.** Is a group a legal book/run? Can a hand complete a contract? Wild-card placement rules. `validateManualGroup`, `solveContract`, `solveWholeHandContract`, `layOffOptions`, `RUN_ORDER`. |
+| `meld.ts` | **The hard part.** Is a group a legal book/run? Can a hand complete a contract? Wild-card placement rules. `validateManualGroup`, `solveContract`, `solveWholeHandContract`, `layOffOptions`, `RUN_ORDER`, `groupMeldsByOwner` (shared by `game/page.tsx` and `multiplayer/play/page.tsx`'s own "Table melds" sections). |
 | `gameEngine.ts` | The turn state machine. `createGame`, `drawFromPile`/`drawFromDiscard`, `meldChosenGroups`/`attemptMeldContract`, `layOffCard`, `discardAndAdvance`, `startNextRound`. Also `eligibleBuyers`/`buyDiscard` (the "buy the discard" rule — engine-complete but disabled in the app, see `BUY_DISCARD_ENABLED` in `GameContext`). |
 | `ai/index.ts` | `playAITurn(state)` — runs one full AI turn through the same engine calls a human's UI makes. `aiWantsToBuyDiscard`. |
-| `ai/strategy.ts` | The `AIStrategy` interface + shared helpers (`MISTAKE_CHANCE`, `dangerScore`, `deadCards`, lay-off planners). No strategy of its own. |
+| `ai/strategy.ts` | The `AIStrategy` interface + shared helpers (`MISTAKE_CHANCE`, `dangerScore`, `deadCards`, `handWantsCard` — the rank-match/run-adjacency "does this discard obviously help me" check every tier above Beginner applies, lay-off planners). No strategy of its own. |
 | `ai/{beginner,easy,medium,hard,expert}.ts` | One strategy object per difficulty. Beginner = fully random; each harder tier adds judgment and lowers its "human lapse" rate. Headers in each file explain the specific behaviour. |
 | `tutorial.ts` | Builds the scripted (non-random) deal the interactive tutorial runs on. Step copy + gating live in `app/lib/tutorialSteps.ts`. |
 | `leveling.ts` | Account level / XP as a pure function of progress data. `computeTotalXp`, `ACHIEVEMENT_TIER_XP`. |
@@ -162,6 +162,9 @@ AuthProvider
 | `PlayerAvatar.tsx` / `AvatarFrame.tsx` / `PremiumBadgeIcon.tsx` | profile, Leaderboard, Friends, OpponentStrip | `PlayerAvatar` renders the picture itself (photo or emoji-on-color); `AvatarFrame` wraps it in an earned ring (flat color for most, a special conic-gradient + shimmer treatment for `grandmaster`/`prismatic`/`dealerstable` — see `profileCosmetics.ts`/`globals.css`'s `.prismatic-foil`/`.diamond-foil`/`.dealers-table-*`); `PremiumBadgeIcon` draws the earned corner-badge overlay as hand-drawn line art instead of a raw emoji glyph. |
 | `ProfileBanner.tsx` | profile page | Wraps the profile header in a wide color strip (`bannerPresets.ts`). `prismatic` and `dealerstable` are real layered DOM (a diamond scatter over the rainbow gradient; a jeweled wood band around a felt table) rather than the single `background` string every other banner uses. |
 | `EmptyState.tsx` | Leaderboard, Friends, other empty lists | Shared "nothing here yet" card (icon + explanation + optional action) — one consistent tone for a brand-new account instead of each page inventing its own. |
+| `BackLink.tsx` | nearly every page | The "← X" pill in a page's top-left corner — covers a plain `href`, a custom `onClick` (router.back(), a conditional fallback), and a custom label. Replaced 25+ hand-copies of the same className. |
+| `CenteredMessage.tsx` | Clubs, Tournaments, Friends, Leaderboard, Achievements, Account, Player, Sign-in, Reset-password | The centered "this needs X" screen — heading, optional body, optional "Sign in" CTA, a way back. Covers the "Supabase isn't configured" gate, the "sign in to see this" gate (including a dynamic `?next=` redirect and a `router.replace()`-based back action), and a couple of one-off empty/error states that want the identical shell. Replaced 13+ hand-copies, three of which had independently invented their own local `Shell` wrapper for it. |
+| `HandSortButtons.tsx` | game + MP screens | The "Sort by suit / Sort by rank" button pair in the hand drawer — was pixel-identical, hand-copied in both game screens. |
 | `CardFanHero.tsx` | home | The decorative fanned-cards hero. |
 | `LoadingSpinner.tsx` | data pages | A card-flip loading state. |
 | `PageTip.tsx` | one per route — see `tipsStore.ts`'s `TipId` union for the current list | A first-visit-only dismissible banner; permanently replaced several pages' old always-visible explanatory paragraphs. |
@@ -171,16 +174,24 @@ AuthProvider
 
 **Local persistence (localStorage, `booksAndRuns:*` keys)**
 
+Every store below builds on `localStorageUtil.ts`'s `readLocalStorage`/
+`writeLocalStorage`/`removeLocalStorage` — the SSR-guard + try/catch
+boilerplate around the raw browser call, shared so it's written once
+instead of hand-copied into each store. String in/string out only; JSON
+parsing and validating a value against a store's own known-option list
+stay with each caller.
+
 | File | Key / purpose |
 |---|---|
-| `localSave.ts` | `savedGame` — the one in-progress solo game (`SavedGame`). |
+| `localSave.ts` | `savedGame` — the one in-progress solo game (`SavedGame`), plus the Daily Deal/Weekly Challenge save slots below, all three built on one internal `makeSaveSlot(key, events?)` factory (same load/save/clear shape, parametrized by storage key and which events to fire). |
 | `settingsStore.ts` | `settings` — house rules (`HouseSettings`): preferred difficulty, sound, haptics. |
 | `themeStore.ts` | `theme` — 38 themes, applied via `[data-theme]` before paint. |
 | `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme). |
 | `cardFaceStore.ts` | `cardFace` — 6 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
 | `textScaleStore.ts` | `textScale` (default/large/xlarge) — `[data-text-scale]` on `<html>`, overriding Tailwind's own `--text-*` theme tokens (see globals.css) so every `text-xs`..`text-4xl` utility scales with no per-page change. `[data-no-text-scale]` on the actual game board (`game/page.tsx`, `multiplayer/play/page.tsx`) resets it back to 1 for that subtree — gameplay is deliberately excluded; Home's own tile buttons are unaffected by construction (they size their label via `cqw`, never these classes). Usable signed out, unlike Theme. |
-| `accountSettingsSync.ts` | Mirrors the stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushTextScale`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set, and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
+| `accountSettingsSync.ts` | Mirrors the stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushTextScale`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set — validated against each store's own known-option list first, same as every local loader already does — and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
+| `useSyncedLocalPreference.ts` | The "load from local storage, re-load on `br:settings-synced`" effect + loading-state boilerplate every Theme/Card back/Card face/Ambient song settings subpage needs — one hook instead of four hand-copies. Its value type isn't limited to a single primitive: Card back and Ambient song each reload two things from the same event (their own choice plus one read-only value they need but never set). |
 | `accountScope.ts` | Detects a genuine account handoff on this device (as opposed to the same account continuing, or a guest session) — the logic `AccountSwitchGuard.tsx` calls before resetting every local cache above, so one account's leftovers can't leak into (or get pushed into the cloud row of) a different account that signs in next. |
 | `tipsStore.ts` | `seenTips` — which first-visit page tips (`PageTip.tsx`) have been dismissed; "Show again" in Settings clears it. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
@@ -202,7 +213,7 @@ client's word. See §8 for the full design.
 | File | Role |
 |---|---|
 | `recordGameResult.ts` | Just `YOU_PLAYER_ID` (re-exported from `src/types.ts`) and the shared `RoundHistoryEntry` shape now — the write itself moved server-side (see `verifySoloGame.ts` below and `mp/index.ts`'s `recordMpGameOutcome`). |
-| `verifySoloGame.ts` | Client side of the solo-verify flow: `buildSoloVerifyPayload` (seed + move log + seats + contracts from `GameState`/`GameContext`) and `verifySoloGame` (calls the Edge Function, throws `SoloVerifyError` on rejection). |
+| `verifySoloGame.ts` | Client side of the solo-verify flow: `buildSoloVerifyPayload` (seed + move log + seats + contracts from `GameState`/`GameContext`) and `verifySoloGame` (calls the Edge Function via `callEdgeFunction.ts`, throws `SoloVerifyError` on rejection). |
 | `pendingSaveQueue.ts` | Queues a `verifySoloGame` payload that couldn't reach Supabase (offline/network failure only — a genuine rejection is never queued, since replaying the same payload later would just fail identically) for `PendingSaveSync` to retry. |
 | `leaderboardStore.ts` | `syncLeaderboardStats` — self-reported upsert into `leaderboard_entries` (core stats + a best-effort separate MP-columns upsert); `level`/`total_xp`/`games_played`/`games_won`/`average_score`/`worst_score` specifically get silently overwritten server-side by a trigger (migration 0035) regardless of what's pushed here. |
 | `loadAchievementProgress.ts` | `loadAchievementProgressState` — assembles the `AchievementProgressState` the Achievements/Profile pages need (player_stats + counters + MP stats). |
@@ -211,7 +222,8 @@ client's word. See §8 for the full design.
 
 | File | Role |
 |---|---|
-| `mpStore.ts` | Client → Edge Function (`create`/`respond`/`state`/`move`/`resign`) + read-only RPC lists (`getMyMpGames`, `getMyMpHistory`, `getMyMpStats`). `MpError`. |
+| `mpStore.ts` | Client → Edge Function (`create`/`respond`/`state`/`move`/`resign`, via `callEdgeFunction.ts`) + read-only RPC lists (`getMyMpGames`, `getMyMpHistory`, `getMyMpStats`). `MpError`. |
+| `callEdgeFunction.ts` | The "get the session, POST with a bearer token, tolerantly parse JSON, throw a custom Error subclass" wrapper shared by `mpStore.ts`'s `callMp` and `verifySoloGame.ts` — deliberately not `supabase.functions.invoke`, so the function's own real error message survives instead of a generic non-2xx message. |
 | `useMpGame.ts` | The MP play-screen hook. Turn drafting (`draw` then `commit`); stats/achievement-counter crediting happen server-side now (see `mp/index.ts`) — this just diffs a progress snapshot at game-over to show what unlocked. |
 | `useNotifications.ts` | One combined Realtime hook: friend requests + game requests + your-turn count → a single badge. Replaced `useFriendActivity` + `useMpActivity`. |
 | `friendsStore.ts` | Friend RPC wrappers (`getFriends`, `sendFriendRequest`, `addFriendByCode`, …). |
@@ -236,7 +248,10 @@ below)
 | `profileShareCard.ts` | `buildProfileShareCardInput` — the one place a `leaderboard_entries` row becomes a `ProfileShareCardInput` (`shareCard.ts`), so `/player`'s own share button and `/friends`' "share to add me" button (a friend-code footer swapped in) can't drift into two differently-rendered cards. |
 
 **Small pure formatters** — `formatNames.ts` (`joinNames`), `formatScore.ts`
-(shared int/decimal/`—` rendering), `achievementFormat.ts`, `aiPersonas.ts`
+(shared int/decimal/`—` rendering), `text.ts` (`capitalize` — "medium" ->
+"Medium", including for `<select>`/`<option>` labels specifically, where
+a CSS `text-transform` instead doesn't render correctly in iOS Safari's
+native picker wheel), `achievementFormat.ts`, `aiPersonas.ts`
 (cosmetic AI name + blurb, New-Game-time only), `handSort.ts` (shared hand-
 sort comparators, used by both `GameContext.tsx` and `useMpGame.ts` so
 solo/pass-and-play and multiplayer hands sort identically).
@@ -370,6 +385,11 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
   (`recordMpGameResult`) with nothing re-verifying it against the real
   server state.
 - `_shared/cors.ts` — `corsHeaders`, `json()`.
+- `_shared/playerStats.ts` — `computePlayerStatsUpdate` + `EMPTY_WINS_BY_DIFFICULTY`,
+  shared with `solo-verify`'s own `handleVerify` below — both derive the
+  same `player_stats` row shape from a game's outcome; this is the one
+  place that math is defined, so a future scoring-formula change can't
+  land in only one of the two functions.
 - `_engine/` — **gitignored build artifact.** A copy of `src/` with explicit
   `.ts` import extensions, produced by `scripts/bundle-mp-engine.mjs` (the
   Supabase deploy bundler ignores `deno.json` / extension-less imports).
@@ -382,7 +402,9 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
   solo/pass-and-play game from the client's seed + move log through the
   real engine, rejects the whole submission if any move doesn't hold up,
   and only then writes `player_stats`/`achievement_counters`/`game_history`
-  with the service-role client. See §4's "Finishing a solo game" flow.
+  (the `player_stats` shape itself via `../_shared/playerStats.ts`, shared
+  with `mp`) with the service-role client. See §4's "Finishing a solo
+  game" flow.
 - `_engine/` — **gitignored build artifact**, produced by
   `scripts/bundle-solo-verify-engine.mjs` (a deliberate near-duplicate of
   `bundle-mp-engine.mjs`, not shared, so nothing about `mp`'s own bundle can
@@ -427,7 +449,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | Task | Command |
 |---|---|
 | Dev server | `npm run dev` |
-| Tests | `npm test` (vitest, 346 tests) |
+| Tests | `npm test` (vitest, 471 tests) |
 | E2E | `npm run test:e2e:ci` (Playwright — 5 browser projects; excludes `@visual` and self-skips the live 2-account MP test without `SUPABASE_SERVICE_ROLE_KEY`) |
 | Typecheck | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
@@ -470,26 +492,78 @@ Re-run the bundle step whenever `src/` changes.
   service-role Edge Function can touch it.
 - Engine mutations are **in-place on `GameState`**; MP adapter mutations are
   **transactional** (`structuredClone`, commit on success).
+- **Local-only stores** build on `app/lib/localStorageUtil.ts`'s
+  `readLocalStorage`/`writeLocalStorage`/`removeLocalStorage` for the
+  SSR-guard + try/catch shape, rather than each hand-rolling it — see §3d.
+  A store whose read fallback deliberately differs from "key genuinely
+  absent" (fail safe when storage is broken entirely, e.g.
+  `firstSessionStore.ts`, half of `reviewPromptStore.ts`) calls
+  `window.localStorage` directly instead, since the shared helper can't
+  tell "absent" and "read threw" apart.
 
 ---
 
-## 8. Audit — cleanup opportunities (last re-verified 2026-09-14)
+## 8. Audit — cleanup opportunities (last re-verified 2026-09-23)
 
 A full pass for dead code, redundancy, and optimization opportunities —
-originally done 2026-09-10, re-run 2026-09-11, re-run again from scratch
-2026-09-14 after another large batch (Rarity Vault cosmetics tier, the
-Creator-exclusive banner/frame redesign, Clubs + Tournaments, profile
-share-card unification, home-page nav rework). Same conclusion every time:
-the codebase is clean and unusually well-commented; findings stay modest
-even as it keeps growing (~31,600 lines across 152 `app`/`src` files as of
-this pass). Nothing was removed this pass — every finding below was either
-already true and re-confirmed, or newly checked and found to be a false
-alarm.
+originally done 2026-09-10, re-run 2026-09-11 and 2026-09-14 (both found
+the codebase clean, nothing removed), then **2026-09-23's pass actually
+acted on findings for the first time** — see that section below for what
+changed. ~32,800 lines across 164 `app`/`src` files as of this pass.
 
 This pass also extended the check beyond dead code, into documentation
 completeness specifically (every file should open with an explanation of
 its role, not just be commented well internally) — see "Documentation
 completeness" below for that part's own method and findings.
+
+### 2026-09-23 — first pass to actually act on findings (10 commits)
+
+Prior passes (09-10/09-11/09-14) kept concluding "clean, nothing to do."
+This one ran three parallel research agents (scoped by area: `src/` +
+Edge Functions, `app/lib/`, and `app/components/`/page routes) rather
+than relying on `ts-prune`/orphan-grep alone, which surfaced genuine
+redundancy and two real bugs the earlier method missed:
+
+- **Two real bugs fixed**, not just cleanup: `localSave.ts`'s
+  `loadCloudSave` silently treated a genuine Supabase read error the
+  same as "no save exists" (both call sites already had a `try/catch`
+  written to handle a thrown error — the function just never threw one);
+  `accountSettingsSync.ts`'s `applyAccountSettings` cast cloud settings
+  values without validating them against each store's own known-option
+  list, unlike every local loader.
+- **One real app bug found and fixed earlier the same day** (via the
+  live multiplayer E2E work, not this audit): `app/tournaments/page.tsx`
+  read `mp_games.seats` with `user_id` instead of the actual `userId`
+  the `mp` function writes, silently dropping every human seat and
+  breaking "Start next round" for any real tournament.
+- **One feature-parity gap closed**: multiplayer's discard pile never
+  showed the "can be laid off" badge solo's already had, despite already
+  computing the identical per-card check for the hand itself.
+- **Extractions**: `BackLink`/`CenteredMessage`/`HandSortButtons`
+  components (§3c), `localStorageUtil.ts`/`useSyncedLocalPreference.ts`/
+  `callEdgeFunction.ts`/`text.ts` (§3d), `groupMeldsByOwner`/
+  `handWantsCard` (§2), a shared `SettingsLinkRow` shell, `nameOf`
+  folded into `leaderboardStore.ts`, `_shared/playerStats.ts` (§5) —
+  see each row above for what it replaced.
+- **Dead code deleted**: `fetchOwnAvatar` (zero callers), and the whole
+  card-back/face "showcase" write pipeline (`cardBackLabel`/
+  `cardFaceLabel`, `updateShowcaseCardBack`/`Face`, player.tsx's
+  bootstrap backfill) — write-only, nothing ever read
+  `showcase_card_back`/`showcase_card_face` back out to display it. The
+  two DB columns (migration 0028) were left in place; dropping a column
+  is a schema change, not a dead-code cleanup.
+- **Investigated and deliberately declined**: unifying the round-mode
+  picker across 3 setup screens and the Badge/Frame/Title/Banner
+  cosmetic-editor tabs in `player.tsx` — both looked like clean dedups
+  on the surface but had real per-instance differences (layout, copy, a
+  silently-missing validation warning on one page; four genuinely
+  different tile/overlay types) that made a shared abstraction a
+  real-regression risk without a design QA pass, not a safe mechanical
+  change. Left as-is rather than forced.
+- Every change verified via `tsc`, `eslint`, the full `vitest` suite
+  (including the seeded AI balance test, to confirm the difficulty
+  ladder didn't shift), and live browser checks; each commit's CI run
+  confirmed green before moving to the next.
 
 ### Applied historically (verified inert, separate commits)
 
@@ -564,27 +638,23 @@ was looking). No genuinely orphaned file exists anywhere in the repo.
    (it only ever hashes a string, so the "date" in its name is just where it
    was first written, not a real constraint) rather than duplicating it.
 
-6. **The five `loadLocalX`/`saveLocalX`/`applyX` store triads**
-   (`themeStore.ts`, `cardBackStore.ts`, `cardFaceStore.ts`,
-   `colorblindStore.ts`, and `settingsStore.ts`'s own shape) repeat the
-   same small pattern five times rather than sharing a generic "local
-   store" factory. Looked at deliberately this pass, not just carried
-   over: each is a handful of lines, each has genuinely different framing
-   (a CSS attribute vs. a React-live hook vs. a plain object), and a
-   factory abstraction would need to flex for all three shapes — net
-   more code and a layer of indirection to read through, for five files
-   that are individually trivial to read as they are. Not a finding,
-   a considered "no."
+6. ~~The five `loadLocalX`/`saveLocalX`/`applyX` store triads... a
+   considered "no."~~ **Reconsidered 2026-09-23** — a broader external
+   review (not just this document's own prior pass) flagged the same
+   pattern across 16 files, not 5, and closer inspection showed the
+   shared part was narrower than assumed: only the SSR-guard + try/catch
+   around the raw `localStorage` call, not the whole load/save/apply
+   shape (which does genuinely differ per store, as this entry
+   originally argued). `app/lib/localStorageUtil.ts` now provides just
+   that narrow piece; 12 of the 16 flagged stores were migrated onto it.
+   See the 2026-09-23 pass below.
 
-### Checked and clean (all three passes)
+### Checked and clean (all four passes)
 
 - No `TODO`/`FIXME`/`HACK`/`@deprecated` markers anywhere.
 - All `console.*` calls are deliberate error logging in `.catch` handlers
   (`src/demo.ts`'s plain `console.log`s are its actual output — it's a CLI
   benchmark script, not app code).
-- All 12 `eslint-disable` lines (grew from 11) are `react-hooks/exhaustive-deps`
-  or a documented `@next/next` rule exception, each with a reason in the
-  adjacent comment.
 - No orphaned files — every non-route `.ts`/`.tsx` file has a real importer
   somewhere in `app/`, `src/`, or `supabase/functions/`. (`app/robots.ts` is
   the one new false-positive this pass — a Next.js file-convention route,
@@ -596,8 +666,11 @@ was looking). No genuinely orphaned file exists anywhere in the repo.
   load (measured directly from a real `next build`'s output, not
   estimated); the Supabase SDK stays lazy-loaded off that path, enforced
   by `scripts/check-bundle.mjs` in CI so this can't silently regress.
-- `tsc`, `eslint .`, `vitest` (464, up from 346), and `next build` all
+- `tsc`, `eslint .`, `vitest` (471, up from 346), and `next build` all
   pass clean.
+- All 13 `eslint-disable` lines (grew from 12) are `react-hooks/exhaustive-deps`
+  or a documented `@next/next` rule exception, each with a reason in the
+  adjacent comment.
 
 ### Documentation completeness (new this pass, 2026-09-14)
 
@@ -641,3 +714,12 @@ component/lib tables cross-checked against the actual file list.
   pass, including a new **Cosmetics** subsection in §3d for the avatar/
   frame/title/banner/badge catalog files, which had grown into a real
   subsystem with no documented home of its own.
+
+**2026-09-23 follow-up:** the 7 new files from that day's pass
+(`BackLink.tsx`, `CenteredMessage.tsx`, `HandSortButtons.tsx`,
+`localStorageUtil.ts`, `text.ts`, `useSyncedLocalPreference.ts`,
+`callEdgeFunction.ts`) each checked against the same convention before
+being added to this document's tables — all 7 already had a real
+explanation directly above their one real export, no gaps to fix. Not a
+full 164-file re-sweep (nothing suggested broad drift since 09-14, only
+new files), just a targeted check of what actually changed.
