@@ -734,3 +734,22 @@ export function layOffOptions(card: Card, meld: Meld): ("low" | "high")[] {
 export function canLayOff(card: Card, meld: Meld): boolean {
   return layOffOptions(card, meld).length > 0;
 }
+
+/**
+ * Groups table melds by owner for display — one heading per player with all
+ * of their melds nested under it, books before runs (a stable sort, so each
+ * type's melds keep the order they were originally confirmed/laid off in).
+ * Shared by solo/pass-and-play and multiplayer's own "Table melds" section.
+ */
+export function groupMeldsByOwner(melds: Meld[]): [string, Meld[]][] {
+  const byOwner = new Map<string, Meld[]>();
+  for (const meld of melds) {
+    const list = byOwner.get(meld.ownerId) ?? [];
+    list.push(meld);
+    byOwner.set(meld.ownerId, list);
+  }
+  for (const list of byOwner.values()) {
+    list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
+  }
+  return [...byOwner.entries()];
+}

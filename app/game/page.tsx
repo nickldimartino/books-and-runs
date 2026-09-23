@@ -22,6 +22,7 @@ import { DrawPile, DiscardPile } from "../components/Piles";
 import { OpponentStrip } from "../components/OpponentStrip";
 import { DraggableHand } from "../components/DraggableHand";
 import { HandPreviewBar } from "../components/HandPreviewBar";
+import { HandSortButtons } from "../components/HandSortButtons";
 import { SoundQuickToggle } from "../components/SoundQuickToggle";
 import { PassGate } from "../components/PassGate";
 import { BuyOfferGate } from "../components/BuyOfferGate";
@@ -40,7 +41,7 @@ import { useFocusTrap } from "../lib/useFocusTrap";
 import { playGameWin, playRoundWin } from "../lib/sound";
 import { hapticSuccess } from "../lib/haptics";
 import { supabase } from "../lib/supabaseClient";
-import { layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
+import { groupMeldsByOwner, layOffOptions, runCardRank, RUN_ORDER, validateManualGroup } from "@/meld";
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
 import { Card, ContractRequirement, Meld } from "@/types";
@@ -695,20 +696,10 @@ export default function GamePage() {
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
   const showMeldHint = savedSettings.showMeldHint;
 
-  const meldsByOwner = new Map<string, Meld[]>();
-  for (const meld of state.melds) {
-    const list = meldsByOwner.get(meld.ownerId) ?? [];
-    list.push(meld);
-    meldsByOwner.set(meld.ownerId, list);
-  }
-  // Grouping books before runs (a stable sort, so within "all books, then
-  // all runs" each type's melds keep the order they were originally
-  // confirmed/laid off in) is just how Table melds always renders now —
-  // it used to be its own toggle, but there was never a good reason to
-  // turn it off.
-  for (const list of meldsByOwner.values()) {
-    list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
-  }
+  // Grouping books before runs is just how Table melds always renders now —
+  // it used to be its own toggle, but there was never a good reason to turn
+  // it off. See groupMeldsByOwner's own doc for the exact ordering.
+  const meldsByOwner = groupMeldsByOwner(state.melds);
 
   // Shown even before you've melded your own contract (when a lay-off isn't
   // actually clickable yet) — the point is letting you plan which cards to
@@ -1099,22 +1090,7 @@ export default function GamePage() {
             <span className="ml-2 text-[var(--accent)]">— contract melded</span>
           )}
         </h2>
-        <div className="flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => sortHand("suit")}
-            title="Group same-suit cards together — good for spotting runs"
-            className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Sort by suit
-          </button>
-          <button
-            onClick={() => sortHand("rank")}
-            title="Group same-rank cards together — good for spotting books"
-            className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            Sort by rank
-          </button>
-        </div>
+        <HandSortButtons onSort={sortHand} />
       </div>
       {/* Keying on round + whose hand this is forces a full remount —
           not just a data update — exactly at the two moments a hand
@@ -1474,7 +1450,7 @@ export default function GamePage() {
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {[...meldsByOwner.entries()].map(([ownerId, melds]) => {
+                {meldsByOwner.map(([ownerId, melds]) => {
                   const owner = playersForDisplay.find((p) => p.id === ownerId);
                   return (
                     <div key={ownerId}>

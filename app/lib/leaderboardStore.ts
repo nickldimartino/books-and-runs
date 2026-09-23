@@ -106,6 +106,14 @@ export function displayNameFor(entry: Pick<LeaderboardEntry, "user_id" | "displa
   return `Player ${parseInt(hex, 16) % 10000}`;
 }
 
+/** Same as displayNameFor, just taking the two fields loose instead of a
+ * whole entry — the shape Clubs/Tournaments/Friends actually have on hand
+ * (a userId + a display name they've already fetched separately), rather
+ * than a full LeaderboardEntry row. */
+export function nameOf(userId: string, displayName: string | null): string {
+  return displayNameFor({ user_id: userId, display_name: displayName });
+}
+
 /**
  * Recomputes and upserts the signed-in user's own leaderboard row — see the
  * migration's own comment for why this is self-reported (computed here,

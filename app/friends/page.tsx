@@ -28,15 +28,11 @@ import {
   respondToFriendRequest,
   sendFriendRequest,
 } from "../lib/friendsStore";
-import { AvatarInfo, displayNameFor, fetchAvatarsFor, LeaderboardEntry, playerProfileHref } from "../lib/leaderboardStore";
+import { AvatarInfo, fetchAvatarsFor, LeaderboardEntry, nameOf, playerProfileHref } from "../lib/leaderboardStore";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { buildProfileShareCardInput } from "../lib/profileShareCard";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
-
-function nameOf(userId: string, displayName: string | null): string {
-  return displayNameFor({ user_id: userId, display_name: displayName });
-}
 
 type AddState =
   | { kind: "idle" }

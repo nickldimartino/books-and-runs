@@ -24,6 +24,7 @@ import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
+import { formatWinRate } from "../lib/profileShareCard";
 import {
   displayNameFor,
   fetchSeasonSnapshots,
@@ -67,11 +68,6 @@ function PersonCheckIcon() {
   );
 }
 
-function formatWinRate(entry: LeaderboardEntry): string {
-  if (entry.games_played < WIN_RATE_MIN_GAMES) return "—";
-  return `${Math.round((100 * entry.games_won) / entry.games_played)}%`;
-}
-
 type SortKey =
   | "level"
   | "achievements"
@@ -111,7 +107,7 @@ const COLUMNS: Column[] = [
     render: (e) => `${e.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`,
   },
   { key: "total_xp", label: "Total XP", minWidth: "80px", render: (e) => e.total_xp },
-  { key: "win_rate", label: "Win rate", minWidth: "70px", render: formatWinRate },
+  { key: "win_rate", label: "Win rate", minWidth: "70px", render: (e) => formatWinRate(e.games_played, e.games_won) },
   { key: "average_score", label: "Avg. score", minWidth: "90px", render: (e) => formatScore(e.average_score) },
   { key: "games_played", label: "Games", minWidth: "70px", render: (e) => e.games_played },
   { key: "games_won", label: "Wins", minWidth: "70px", render: (e) => e.games_won },

@@ -19,14 +19,11 @@ import { Friend, getFriends } from "../../lib/friendsStore";
 import { displayNameFor } from "../../lib/leaderboardStore";
 import { createMpGame, MpError, NewGameSeat } from "../../lib/mpStore";
 import { supabase } from "../../lib/supabaseClient";
+import { capitalize } from "../../lib/text";
 import { CONTRACTS, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 type RoundMode = "all" | "short" | "custom";
 

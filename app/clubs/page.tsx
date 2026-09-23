@@ -30,12 +30,8 @@ import {
   renameClub,
 } from "../lib/clubsStore";
 import { Friend, getFriends } from "../lib/friendsStore";
-import { displayNameFor, playerProfileHref } from "../lib/leaderboardStore";
+import { nameOf, playerProfileHref } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
-
-function nameOf(userId: string, displayName: string | null): string {
-  return displayNameFor({ user_id: userId, display_name: displayName });
-}
 
 function Shell({ children }: { children: ReactNode }) {
   return (

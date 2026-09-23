@@ -16,7 +16,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { getClub } from "../lib/clubsStore";
-import { displayNameFor, playerProfileHref } from "../lib/leaderboardStore";
+import { nameOf, playerProfileHref } from "../lib/leaderboardStore";
 import { rematchMpGame, MpError } from "../lib/mpStore";
 import { supabase } from "../lib/supabaseClient";
 import {
@@ -31,10 +31,6 @@ import {
   TournamentSummary,
 } from "../lib/tournamentsStore";
 import { Difficulty } from "@/types";
-
-function nameOf(userId: string, displayName: string | null): string {
-  return displayNameFor({ user_id: userId, display_name: displayName });
-}
 
 function Shell({ children }: { children: ReactNode }) {
   return (

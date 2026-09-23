@@ -27,6 +27,7 @@ import {
 import { playerProfileHref, pullDailyDealStreak, pullWeeklyChallengeStreak } from "./lib/leaderboardStore";
 import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame, loadWeeklyChallengeSave } from "./lib/localSave";
 import { loadSupabase, supabase } from "./lib/supabaseClient";
+import { capitalize } from "./lib/text";
 import { useNotifications } from "./lib/useNotifications";
 import { hasStartedAGame } from "./lib/firstSessionStore";
 import { MpGameSummary, respondToMpGame } from "./lib/mpStore";
@@ -34,10 +35,6 @@ import { usePlayerLevel } from "./PlayerLevelContext";
 import { formatAchievementProgress } from "./lib/achievementFormat";
 import { AchievementInstance, allAchievements, AchievementProgressState } from "@/achievements";
 import { GameState } from "@/types";
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 /** "Round 3 of 7 · vs. Medium AI" — enough context to decide whether to jump
  * back in without needing to actually load the game first. Reads straight

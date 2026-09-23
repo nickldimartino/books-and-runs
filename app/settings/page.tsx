@@ -63,19 +63,11 @@ import {
   TextScale,
 } from "../lib/textScaleStore";
 import { supabase } from "../lib/supabaseClient";
+import { capitalize } from "../lib/text";
 import { THEME_SWATCHES } from "./themeSwatches";
 import { Difficulty } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
-
-// Rendering the actual capitalized label, rather than lowercase text plus a
-// CSS text-transform, avoids a real cross-platform bug: iOS Safari's native
-// picker wheel (the opened <select> list) doesn't apply text-transform to
-// <option> text, so it showed "easy" while the closed box — rendered by the
-// page itself, which does honor the CSS — showed "Easy".
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 // Collapsed by default so a settings screen full of toggles doesn't read as
 // a wall of explanatory paragraphs — the description is still one tap away

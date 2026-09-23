@@ -25,6 +25,7 @@ import { usePlayerLevel } from "../../PlayerLevelContext";
 import { BackLink } from "../../components/BackLink";
 import { DraggableHand } from "../../components/DraggableHand";
 import { HandPreviewBar } from "../../components/HandPreviewBar";
+import { HandSortButtons } from "../../components/HandSortButtons";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
 import { PageTip } from "../../components/PageTip";
@@ -44,7 +45,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getTournamentForGame } from "../../lib/tournamentsStore";
 import { useFocusTrap } from "../../lib/useFocusTrap";
 import type { MpSeatMeta } from "../../lib/mpStore";
-import { layOffOptions } from "@/meld";
+import { groupMeldsByOwner, layOffOptions } from "@/meld";
 import { handPenalty } from "@/scorer";
 import type { Card, Meld, Player } from "@/types";
 import type { RedactedView } from "@/mp/types";
@@ -473,20 +474,7 @@ export default function MultiplayerPlayPage() {
     ? view.melds.filter((m) => layOffOptions(selectedCard, m).length > 0).map((m) => m.id)
     : [];
 
-  // Group table melds by owner — same as solo/pass-and-play (see
-  // game/page.tsx's meldsByOwner) — so a player with 2+ melds gets one name
-  // heading with all of their melds nested under it, instead of the name
-  // repeating on every individual meld.
-  const meldsByOwnerMap = new Map<string, Meld[]>();
-  for (const meld of view.melds) {
-    const list = meldsByOwnerMap.get(meld.ownerId) ?? [];
-    list.push(meld);
-    meldsByOwnerMap.set(meld.ownerId, list);
-  }
-  for (const list of meldsByOwnerMap.values()) {
-    list.sort((a, b) => (a.type === b.type ? 0 : a.type === "book" ? -1 : 1));
-  }
-  const meldsByOwner = [...meldsByOwnerMap.entries()];
+  const meldsByOwner = groupMeldsByOwner(view.melds);
 
   // Same purely-local sort/reorder as game/page.tsx's hand drawer — see
   // handOrder's own doc for why this never reaches the server.
@@ -878,22 +866,7 @@ export default function MultiplayerPlayPage() {
                     ({orderedVisibleHand.length})
                   </span>
                 </h2>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <button
-                    onClick={() => sortHand("suit")}
-                    title="Group same-suit cards together — good for spotting runs"
-                    className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                  >
-                    Sort by suit
-                  </button>
-                  <button
-                    onClick={() => sortHand("rank")}
-                    title="Group same-rank cards together — good for spotting books"
-                    className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                  >
-                    Sort by rank
-                  </button>
-                </div>
+                <HandSortButtons onSort={sortHand} />
               </div>
               {orderedVisibleHand.length === 0 ? (
                 <p className="text-sm text-[var(--faint)]">Your hand is empty — end your turn to go out.</p>

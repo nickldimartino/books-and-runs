@@ -23,15 +23,12 @@ import { displayNameFor } from "../../lib/leaderboardStore";
 import { createMpGame, MpError, NewGameSeat } from "../../lib/mpStore";
 import { supabase } from "../../lib/supabaseClient";
 import { createTournament } from "../../lib/tournamentsStore";
+import { capitalize } from "../../lib/text";
 import { CONTRACTS, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
 const ROUND_COUNTS = [2, 3, 4, 5, 6, 8, 10];
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 /** undefined until the URL's been read on mount, then the club id or null. */
 function useClubParam(): string | null | undefined {

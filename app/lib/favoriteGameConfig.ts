@@ -16,6 +16,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pickAiPersonas } from "./aiPersonas";
+import { capitalize } from "./text";
 import { PlayerConfig } from "@/gameEngine";
 import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
 
@@ -178,10 +179,6 @@ export function playerConfigsFor(
       difficulty,
     })),
   ];
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /** "You + 3 Hard AI · Short game" — the one-line summary shown on the

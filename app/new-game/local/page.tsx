@@ -17,6 +17,7 @@ import { AI_PERSONAS, AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { fetchOwnDisplayName } from "../../lib/leaderboardStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
 import { supabase } from "../../lib/supabaseClient";
+import { capitalize } from "../../lib/text";
 import {
   clearFavoriteGameConfig,
   contractsFor,
@@ -32,15 +33,6 @@ import { CONTRACTS, ContractRequirement, Difficulty } from "@/types";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
-
-// Rendering the actual capitalized label, rather than lowercase text plus a
-// CSS text-transform, avoids a real cross-platform bug: iOS Safari's native
-// picker wheel (the opened <select> list) doesn't apply text-transform to
-// <option> text, so it showed "easy" while the closed box — rendered by the
-// page itself, which does honor the CSS — showed "Easy".
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 function ChevronIcon({ className }: { className?: string }) {
   return (
