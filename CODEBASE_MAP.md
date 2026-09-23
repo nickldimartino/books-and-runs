@@ -737,3 +737,94 @@ Also added a one-line comment to `supabase/functions/_shared/cors.ts`,
 which had none — genuinely tiny/self-evident, but every other file here,
 including equally small ones, still carries at least a line explaining
 itself, so it was worth the one-line cost for consistency.
+
+---
+
+## 9. Full audit history (security, cheat-prevention, load testing, feature/UX)
+
+Distinct from §8 above, which is specifically dead-code/redundancy/
+documentation cleanup. This section logs the broader "is the whole
+product sound" passes — security hardening, anti-cheat, adversarial/
+load testing, and feature audits against modern game standards — so a
+future pass can check what's already been covered instead of redoing it.
+
+### 2026-09-23 — six-part full-product audit
+
+Requested as one large session: a bug fix, then a lettered sequence
+(2a–2f) covering redundancy, documentation, security, cheat-prevention,
+adversarial/load testing, and a feature audit against "modern video game
+standards." Each part built on the previous — 2c-2f in particular each
+independently re-verified the previous parts' fixes live against
+production rather than trusting they'd landed correctly.
+
+- **Bug fixes first, outside the lettered list** — `c3adae0` added
+  Accept/Decline directly to the pending-game screen (previously only
+  reachable from Home); `1330f70` fixed migration 0047 referencing a
+  table (`achievement_families`) that was never created, restoring
+  `refresh_achievement_rarity()`'s real single-table body from 0029.
+- **2a (redundancy/dead code) + 2b (documentation)** — see §8's own
+  "2026-09-23 — first pass to actually act on findings" entry above
+  (10 commits, `84ce009`..`6ce25ac`) — the two were done as one pass.
+- **2c (security hardening)** — `5d712e2`, `1770d8c`. Full pass found:
+  a CSP `img-src` gap breaking avatar photos, `mp`/`solo-verify` leaking
+  raw exception messages to clients, a TOCTOU race in solo-verify's
+  pacing floor (closed with an atomic `solo_verify_upsert_player_stats`
+  upsert), a privilege-escalation hole letting a client set its own
+  `is_creator`/`is_test_account`, a missing `avatar_photo_path` ownership
+  check, unbounded `client_errors` columns, and stale RPC grants across
+  every club/tournament function. A follow-up (`1770d8c`) closed 3 items
+  originally deferred for the user's own call: `compute_total_xp()`/
+  `category_mastered()` could be asked about any account, not just your
+  own; `profile_photo_reports` had no rate limit; `club_create()`/
+  `tournament_create()` had no per-account cap despite a comment implying
+  one existed. Migrations `0048`, `0049`.
+- **2d (cheat-prevention audit)** — `213e738`. Three parallel research
+  passes: multiplayer info-leakage/move-validation (clean — redaction,
+  RLS, and server-side hand validation all held up), the stats/
+  achievement write surface (found `leaderboard_entries.mp_games_played`/
+  `.mp_games_won`/`.mp_best_win_streak` were the one stat family never
+  locked down like the rest, since migration 0011 — closed via a trigger
+  extension), and solo-verify's replay coverage (clean — a full `gameOver`
+  is already required before anything is credited; the one open item,
+  grinding minimal-but-legal games against the 10s pacing floor, is a
+  documented, accepted trade-off, not an oversight). Migration `0050`.
+- **2e (adversarial/load testing)** — no code changes. Full e2e
+  regression (119 passed locally with the service-role key, matching a
+  green CI run), live adversarial UI testing with throwaway accounts
+  (XSS payloads render inert everywhere, validation/uniqueness/rapid-
+  click protections all held, mobile/tablet layouts clean, zero bugs
+  found), and a k6 load test against production (5 VUs/30s: p95 latency
+  286ms, 1.3% failure rate, both under threshold). Afterward, live-
+  reverified every 2c/2d fix directly against production with throwaway
+  accounts (10/10 checks passed) once the user had run migrations 0049/
+  0050.
+- **2f (feature audit vs. modern game standards)** — published as
+  [The Third Scorecard](https://claude.ai/artifact/EtBroWay8HEucP4tsGcsMz).
+  Reverified the prior two audits'
+  ([UX audit](https://claude.ai/artifact/MnVTCQ8sNudNibQAdgonTs),
+  [S-tier audit](https://claude.ai/artifact/GLsdYNo2YV97PZoxvY2awc)) 12
+  combined findings live rather than re-reading them — 11 of 12 were
+  already closed by earlier sessions' work (real card faces, a full
+  card-flight animation system, opponent presence on the board, an
+  image-based share card, a public Trophy Case, Android web haptics,
+  all 5 failing theme contrasts, the CTA-weight/tutorial-discoverability/
+  blank-screen UX fixes). Found: no manifest `screenshots` array (still
+  open — needs real screenshot image assets, not just code), one
+  remaining plain-text empty state, and 3 items flagged as deliberate
+  product-scope questions rather than defects (a real but unreleased
+  native iOS app with no Android counterpart, English-only with no i18n,
+  Weekly Challenge having no streak-at-risk reminder despite Daily Deal
+  having one).
+- **Follow-up** — `5f23f73`: Weekly Challenge now gets a streak-at-risk
+  reminder too (rides `daily-deal-reminder`'s existing daily cron, gated
+  to Saturday/Sunday UTC so it doesn't nag daily), and the Stats page's
+  "Past games" empty state now matches the `EmptyState` treatment used
+  everywhere else instead of one bare line of text.
+
+**Net result:** zero new defects found in security, cheat-prevention, or
+load testing. Both prior UX/feature audits are now fully closed except
+the manifest screenshots array (deferred — needs image assets) and
+language support (deferred — the user's own call, saved for after
+everything else). The user's own read of where this leaves the product:
+"flirting with S-tier," with native-app release and localization the two
+open questions, both intentionally parked rather than forgotten.
