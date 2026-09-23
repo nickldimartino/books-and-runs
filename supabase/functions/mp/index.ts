@@ -851,7 +851,14 @@ Deno.serve(async (req) => {
         return json({ error: "unknown route" }, 404);
     }
   } catch (e) {
+    // Logged in full server-side; the client only ever gets a fixed
+    // generic message. Every path that can currently reach this throws a
+    // static, hand-written Error (supabase-js query calls return
+    // { data, error } rather than throwing) — but returning e.message
+    // verbatim was a foot-gun: any future code path that lets a
+    // third-party library or DB client throw instead would leak whatever
+    // that library puts in its message straight to the caller.
     console.error("mp function error:", e);
-    return json({ error: e instanceof Error ? e.message : "something went wrong" }, 400);
+    return json({ error: "something went wrong" }, 400);
   }
 });

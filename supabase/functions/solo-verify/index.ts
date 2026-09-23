@@ -41,6 +41,34 @@ const VALID_ROUNDS = [1, 2, 3, 4, 5, 6, 7];
 // guards against.
 const MIN_MS_BETWEEN_GAMES = 10_000;
 
+/**
+ * Same MIN_MS_BETWEEN_GAMES floor as the regular-game path below, applied
+ * to Daily Deal / Weekly Challenge completions specifically. Both of those
+ * dispatch out of handleVerify *before* the regular-game rate-limit check
+ * ever runs (they don't touch player_stats), which previously meant they
+ * had no pacing at all — since each day/week's seed is public and
+ * precomputable offline (see isBelievableDailyDealDate's own tolerance
+ * window), an account could burst-submit several days'/weeks' worth of
+ * "verified" completions in under a second, inflating daily_deal_streak/
+ * weekly_challenge_best_streak far beyond real play. This closes that the
+ * same way: reject a completion that lands too soon after this account's
+ * own most recent one in the same table.
+ */
+async function tooSoonSinceLastCompletion(
+  table: "daily_deal_completions" | "weekly_challenge_completions",
+  uid: string
+): Promise<boolean> {
+  const { data } = await admin
+    .from(table)
+    .select("completed_at")
+    .eq("user_id", uid)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ completed_at: string }>();
+  if (!data) return false;
+  return Date.now() - new Date(data.completed_at).getTime() < MIN_MS_BETWEEN_GAMES;
+}
+
 /** "Ann" / "Ann & Bo" / "Ann, Bo & Cy" — for naming a tied-for-first group
  * in game_history.winner. Same tiny helper as app/lib/formatNames.ts;
  * duplicated rather than shared since it's the only piece of app/lib this
@@ -124,7 +152,10 @@ interface RoundHistoryEntry {
 }
 
 function cleanRoundHistory(raw: unknown): RoundHistoryEntry[] {
-  if (!Array.isArray(raw)) return [];
+  // A real game has at most 7 rounds (CONTRACTS.length) — same "cheap,
+  // immediate rejection of an adversarial payload" reasoning as
+  // cleanMoveLog's own 20,000-entry cap above.
+  if (!Array.isArray(raw) || raw.length > 20) return [];
   return raw.filter(
     (r): r is RoundHistoryEntry =>
       !!r && typeof r === "object" && typeof (r as RoundHistoryEntry).round === "number" && !!(r as RoundHistoryEntry).totals
@@ -158,13 +189,16 @@ const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
  * concept, and dateSeed can't be reversed to recover the date it came from
  * — just generous enough tolerance (timezone skew plus the local-vs-UTC
  * day boundary) to reject a wildly different claimed date (last month,
- * next year) while never falsely rejecting a real player's actual today. */
+ * next year) while never falsely rejecting a real player's actual today.
+ * Deliberately ±1 day, not ±2 — every extra day of tolerance is one more
+ * *future* date whose seed is public and precomputable offline today (see
+ * tooSoonSinceLastCompletion's own doc for why that matters). */
 function isBelievableDailyDealDate(dateKey: string): boolean {
   if (!DATE_KEY_RE.test(dateKey)) return false;
   const claimed = new Date(`${dateKey}T00:00:00Z`).getTime();
   if (Number.isNaN(claimed)) return false;
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  return Math.abs(Date.now() - claimed) <= 2 * ONE_DAY_MS;
+  return Math.abs(Date.now() - claimed) <= ONE_DAY_MS;
 }
 
 async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: unknown): Promise<Response> {
@@ -174,6 +208,9 @@ async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: 
   }
   if (dateSeed(dailyDealDateKey) !== seed) {
     return json({ ok: false, error: "seed doesn't match the claimed Daily Deal date" }, 400);
+  }
+  if (await tooSoonSinceLastCompletion("daily_deal_completions", uid)) {
+    return json({ ok: false, error: "too many completions recorded too quickly — try again shortly" }, 429);
   }
   const { error } = await admin
     .from("daily_deal_completions")
@@ -188,10 +225,9 @@ async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: 
 
 const WEEK_KEY_RE = /^\d{4}-W\d{2}$/;
 
-/** Same generous-tolerance reasoning as isBelievableDailyDealDate, widened
- * to a week either side — "local ISO week" is just as much a client-side
- * concept as "local calendar day," and a week is a bigger window to have
- * clock/timezone skew land near an edge of. */
+/** Same generous-tolerance reasoning as isBelievableDailyDealDate — one
+ * week either side, not two, for the same "less tolerance means fewer
+ * precomputable future weeks" reasoning. */
 function isBelievableWeeklyChallengeWeek(weekKey: string): boolean {
   if (!WEEK_KEY_RE.test(weekKey)) return false;
   const [y, w] = weekKey.split("-W").map(Number);
@@ -205,7 +241,7 @@ function isBelievableWeeklyChallengeWeek(weekKey: string): boolean {
   const claimedWeekStart = new Date(week1Monday);
   claimedWeekStart.setUTCDate(week1Monday.getUTCDate() + (w - 1) * 7);
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-  return Math.abs(Date.now() - claimedWeekStart.getTime()) <= 2 * ONE_WEEK_MS;
+  return Math.abs(Date.now() - claimedWeekStart.getTime()) <= ONE_WEEK_MS;
 }
 
 async function handleWeeklyChallengeCompletion(uid: string, seed: number, rawWeekKey: unknown): Promise<Response> {
@@ -217,6 +253,9 @@ async function handleWeeklyChallengeCompletion(uid: string, seed: number, rawWee
   // weekSeed — it only ever hashes a string, so the one copy above covers both.
   if (dateSeed(weekKey) !== seed) {
     return json({ ok: false, error: "seed doesn't match the claimed Weekly Challenge week" }, 400);
+  }
+  if (await tooSoonSinceLastCompletion("weekly_challenge_completions", uid)) {
+    return json({ ok: false, error: "too many completions recorded too quickly — try again shortly" }, 429);
   }
   const { error } = await admin
     .from("weekly_challenge_completions")
@@ -294,9 +333,12 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
   // can't tell a script that generated one offline (the engine is ordinary
   // client-side JS, replicable outside the app) from one someone actually
   // played, so this bounds how often *credited* games can land for one
-  // account at all, on top of that. Checked before any write — a
-  // rate-limited submission changes nothing, so there's nothing to queue
-  // or retry for it.
+  // account at all, on top of that. This first check is a fast-path only
+  // (saves computing the stats delta below for an obviously-too-fast
+  // resubmit) — it's a plain read, not atomic with the write, so it alone
+  // can't stop two concurrent requests from both reading the same "stale
+  // enough" updated_at and both passing. The real enforcement is the RPC
+  // call below, which folds the same check into the write itself.
   if (existingStats?.updated_at) {
     const sinceLastGameMs = Date.now() - new Date(existingStats.updated_at).getTime();
     if (sinceLastGameMs < MIN_MS_BETWEEN_GAMES) {
@@ -306,12 +348,26 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
 
   const update = computePlayerStatsUpdate(existingStats, you.cumulativeScore, won, tied, opponents);
 
-  const { error: statsUpsertError } = await admin.from("player_stats").upsert({
-    user_id: uid,
-    ...update,
-    updated_at: new Date().toISOString(),
+  // solo_verify_upsert_player_stats (migration 0048) re-checks the same
+  // MIN_MS_BETWEEN_GAMES floor atomically, inside the same statement as
+  // the write (an INSERT ... ON CONFLICT DO UPDATE ... WHERE) — closes the
+  // race the plain check above can't: a concurrent request that lost the
+  // race gets 0 rows affected here, not a silent extra credit.
+  const { data: wrote, error: statsUpsertError } = await admin.rpc("solo_verify_upsert_player_stats", {
+    p_user_id: uid,
+    p_games_played: update.games_played,
+    p_games_won: update.games_won,
+    p_games_tied: update.games_tied,
+    p_best_score: update.best_score,
+    p_worst_score: update.worst_score,
+    p_average_score: update.average_score,
+    p_wins_by_difficulty: update.wins_by_difficulty,
+    p_min_ms_between_games: MIN_MS_BETWEEN_GAMES,
   });
   if (statsUpsertError) return json({ ok: false, error: "couldn't save stats" }, 500);
+  if (!wrote) {
+    return json({ ok: false, error: "too many games recorded too quickly — try again shortly" }, 429);
+  }
 
   const { error: historyInsertError } = await admin.from("game_history").insert({
     user_id: uid,
@@ -382,7 +438,9 @@ Deno.serve(async (req) => {
   try {
     return await handleVerify(user.id, body);
   } catch (e) {
+    // Same reasoning as mp/index.ts's own catch-all — log in full
+    // server-side, never echo a caught exception's message to the client.
     console.error("solo-verify function error:", e);
-    return json({ ok: false, error: e instanceof Error ? e.message : "something went wrong" }, 400);
+    return json({ ok: false, error: "something went wrong" }, 400);
   }
 });

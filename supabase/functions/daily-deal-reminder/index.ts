@@ -38,10 +38,25 @@ function yesterdayUtc(): string {
   return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 }
 
+/** Fixed-time comparison, same reasoning/shape as stripe-webhook's own
+ * signature check — a plain `!==` on the raw strings short-circuits at
+ * the first differing byte, a timing side channel a remote attacker could
+ * in principle use to recover CRON_SECRET one byte at a time. Hashing
+ * both sides to a fixed length first also means this doesn't leak
+ * anything about the *lengths* of the compared strings either. */
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const digest = async (s: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+  const [da, db] = await Promise.all([digest(a), digest(b)]);
+  let diff = 0;
+  for (let i = 0; i < da.length; i++) diff |= da[i] ^ db[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`) {
+  const authHeader = req.headers.get("authorization") ?? "";
+  if (!CRON_SECRET || !(await timingSafeEqual(authHeader, `Bearer ${CRON_SECRET}`))) {
     return json({ error: "unauthorized" }, 401);
   }
   if (!PUSH_ENABLED) return json({ sent: 0, reason: "push not configured" });
