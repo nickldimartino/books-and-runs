@@ -1360,6 +1360,26 @@ a:active {
   mask-size: var(--cardback-tile, var(--card-back-tile)) var(--cardback-tile, var(--card-back-tile));
 }
 
+/* The 2 standalone "Signature" card backs (cardBackStore.ts's
+   SIGNATURE_CARD_BACKS) — not derived from any theme, each with its own
+   motif instead. "foilweave" uses .foil-sweep-style repeating stripes
+   (a diagonal weave, distinct from any theme's tiled-shape look);
+   "static" is a plain repeating-radial-gradient scatter, same simpler
+   technique "candycane" below already uses instead of a URL-encoded SVG
+   mask for its diagonal stripes. */
+[data-cardback="foilweave"] {
+  --cardback-shape: none;
+  --cardback-bgimage: repeating-linear-gradient(45deg, #c9a97e 0, #c9a97e 2px, transparent 2px, transparent 8px);
+  --cardback-color: #3a2f1a;
+  --cardback-opacity: 0.7;
+}
+[data-cardback="static"] {
+  --cardback-shape: none;
+  --cardback-bgimage: repeating-radial-gradient(circle, #94a3b8 0, #94a3b8 1px, transparent 1px, transparent 7px);
+  --cardback-color: #1e293b;
+  --cardback-opacity: 0.6;
+}
+
 /* One [data-cardback="X"] block per theme identity, generated from that
    theme's own --card-back-shape/--card-back-tile (see
    the theme blocks above) plus its own accent color, frozen here as a

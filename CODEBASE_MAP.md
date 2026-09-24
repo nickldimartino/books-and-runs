@@ -186,8 +186,9 @@ stay with each caller.
 | `localSave.ts` | `savedGame` — the one in-progress solo game (`SavedGame`), plus the Daily Deal/Weekly Challenge save slots below, all three built on one internal `makeSaveSlot(key, events?)` factory (same load/save/clear shape, parametrized by storage key and which events to fire). |
 | `settingsStore.ts` | `settings` — house rules (`HouseSettings`): preferred difficulty, sound, haptics. |
 | `themeStore.ts` | `theme` — 38 themes, applied via `[data-theme]` before paint. |
-| `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme). |
-| `cardFaceStore.ts` | `cardFace` — 6 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. |
+| `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme) across the 38 theme-derived backs, plus `SIGNATURE_CARD_BACKS` — 2 standalone backs not tied to any theme (one gated, one Boutique — see `cardCosmeticUnlocks.ts`), each with its own `[data-cardback="X"]` block in globals.css. |
+| `cardFaceStore.ts` | `cardFace` — 8 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. The original 6 are free; `foil`/`outline` (added alongside the cosmetic rarity overhaul) are gated/Boutique respectively — see `cardCosmeticUnlocks.ts`. |
+| `cardCosmeticUnlocks.ts` | Unlock checking for card faces/backs — reuses `cosmeticUnlocks.ts`'s pure functions directly, but deliberately client-side-only (no server enforcement at all, unlike badge/frame/title/banner): a card face/back has zero competitive stakes, so the proportionality argument for `cosmetic_unlocks`/RLS doesn't apply. `useCardUnlockLevel` fetches the one thing any current rule needs (`compute_level`) via a single RPC call. |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
 | `textScaleStore.ts` | `textScale` (default/large/xlarge) — `[data-text-scale]` on `<html>`, overriding Tailwind's own `--text-*` theme tokens (see globals.css) so every `text-xs`..`text-4xl` utility scales with no per-page change. `[data-no-text-scale]` on the actual game board (`game/page.tsx`, `multiplayer/play/page.tsx`) resets it back to 1 for that subtree — gameplay is deliberately excluded; Home's own tile buttons are unaffected by construction (they size their label via `cqw`, never these classes). Usable signed out, unlike Theme. |
 | `accountSettingsSync.ts` | Mirrors the stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushTextScale`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set — validated against each store's own known-option list first, same as every local loader already does — and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
@@ -833,3 +834,41 @@ language support (deferred — the user's own call, saved for after
 everything else). The user's own read of where this leaves the product:
 "flirting with S-tier," with native-app release and localization the two
 open questions, both intentionally parked rather than forgotten.
+
+### 2026-09-23 (same session, follow-on) — cosmetic rarity overhaul
+
+A direct follow-on from the 2f feature audit, not itself an audit: the
+user flagged that the badge/frame/title/banner cosmetic system had grown
+to ~90 items without a matching visual system — most Epic/Mythic badges
+shared one recolored medal shape, Grandmaster and Prismatic shared one
+motif, and locked frames rendered as nothing at all. Full plan at
+`plans/quiet-snacking-cloud.md`, built in 4 phases, each independently
+shippable and live-verified against production with throwaway accounts:
+
+- **Phase 1** (`81ffc53`) — `cosmeticRarity.ts` (a shared internal rarity
+  tier, common→apex, orthogonal to `CosmeticUnlockRule` and to an item's
+  own flavorful name), a consolidated `.foil-sweep` CSS system replacing
+  3 near-duplicate blocks, the 3 named defects fixed, and an empty
+  Boutique tab shell.
+- **Phase 2** (`b3e966c`) — distinct icon silhouettes for every Epic/
+  Mythic/Apex badge (`rarityBadgeIconPaths.ts`), 4 new badge milestones,
+  first Boutique badges. Migration `0051`.
+- **Phase 3** (`12f3c54`) — the rarity/foil treatment generalized to
+  every epic+ frame/banner (not just the 3 hand-special-cased ones),
+  Title's own border/text rarity signal, 4 genuinely new
+  `requirement_kind`s (each reading data already server-verified by
+  earlier work, so none needed new tamper-resistant plumbing), 2 new
+  epic-tier named rewards, more Boutique items. Migration `0052`.
+- **Phase 4** — card face/card back gated for the first time
+  (`cardCosmeticUnlocks.ts`), deliberately **client-side-only**
+  enforcement (no migration at all) since these are pure personal-taste
+  rendering with zero competitive stakes, unlike the other four
+  categories. 1 new gated + 1 new Boutique style per category (`foil`/
+  `outline` faces, `foilweave`/`static` backs); the 6 original faces and
+  38 theme-derived backs stay explicitly grandfathered-free.
+
+Boutique items across every category are `source: "boutique"` catalog
+entries with no `unlock` rule — already unconditionally free at the
+server (`cosmetic_unlocked()` treats a missing `cosmetic_unlocks` row as
+unlocked), so "auto-unlocked while there's no real paywall yet" needed
+zero new plumbing, just a flag for later re-gating.

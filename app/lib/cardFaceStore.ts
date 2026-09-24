@@ -16,14 +16,23 @@
 // markup, not just color.
 
 import { useEffect, useState } from "react";
+import { CosmeticRarity } from "./cosmeticRarity";
+import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 
-export type CardFaceId = "classic" | "realistic" | "bold" | "minimal" | "retro" | "pixel";
+export type CardFaceId = "classic" | "realistic" | "bold" | "minimal" | "retro" | "pixel" | "foil" | "outline";
 
 export interface CardFaceOption {
   id: CardFaceId;
   name: string;
   description: string;
+  /** Absent for every one of the original 6 styles — all explicitly
+   * grandfathered free, no regression for anyone. See
+   * cardCosmeticUnlocks.ts's own doc for why this is checked entirely
+   * client-side, unlike badge/frame/title/banner. */
+  unlock?: CosmeticUnlockRule;
+  rarity?: CosmeticRarity;
+  source?: "boutique";
 }
 
 export const CARD_FACES: CardFaceOption[] = [
@@ -56,6 +65,18 @@ export const CARD_FACES: CardFaceOption[] = [
     id: "pixel",
     name: "Pixel",
     description: "A chunky, blocky retro-game face.",
+  },
+  {
+    id: "foil",
+    name: "Foil",
+    description: "The Classic layout with a shimmering pass of light, like a foil trading card.",
+    unlock: { kind: "level", level: 30 },
+  },
+  {
+    id: "outline",
+    name: "Outline",
+    description: "The Classic layout drawn in a clean stroke only, nothing filled in.",
+    source: "boutique",
   },
 ];
 

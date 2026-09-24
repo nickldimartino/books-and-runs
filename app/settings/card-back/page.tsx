@@ -4,10 +4,19 @@ import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pushCardBack } from "../../lib/accountSettingsSync";
-import { applyCardBack, CardBackId, loadLocalCardBack, saveLocalCardBack } from "../../lib/cardBackStore";
+import {
+  applyCardBack,
+  CardBackId,
+  isSignatureCardBack,
+  loadLocalCardBack,
+  saveLocalCardBack,
+  SignatureCardBackId,
+} from "../../lib/cardBackStore";
+import { useCardUnlockLevel } from "../../lib/cardCosmeticUnlocks";
 import { supabase } from "../../lib/supabaseClient";
-import { loadLocalTheme } from "../../lib/themeStore";
+import { loadLocalTheme, ThemeId } from "../../lib/themeStore";
 import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
+import { SignatureCardBackPicker } from "../SignatureCardBackPicker";
 import { SwatchPicker } from "../SwatchPicker";
 
 /**
@@ -25,6 +34,7 @@ export default function CardBackSettingsPage() {
     cardBack: loadLocalCardBack(),
     theme: loadLocalTheme(),
   }));
+  const level = useCardUnlockLevel(supabase, user?.id);
 
   function handleCardBackChange(id: CardBackId) {
     setCardBackState({ cardBack: id, theme });
@@ -32,6 +42,8 @@ export default function CardBackSettingsPage() {
     applyCardBack(id, theme);
     pushCardBack(supabase, user?.id ?? null, id);
   }
+
+  const activeSignature = isSignatureCardBack(cardBack) ? cardBack : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
@@ -45,7 +57,27 @@ export default function CardBackSettingsPage() {
         </p>
       </div>
 
-      {loading ? <LoadingSpinner /> : <SwatchPicker active={cardBack} onSelect={handleCardBackChange} matchOption />}
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <SignatureCardBackPicker
+            active={activeSignature}
+            onSelect={(id: SignatureCardBackId) => handleCardBackChange(id)}
+            level={level}
+          />
+          {/* "match" whenever a Signature back is active — SwatchPicker's own
+              type is ThemeId | "match" (it's shared with /settings/theme, which
+              has no idea Signature backs exist), so a Signature selection has
+              no real theme tile to highlight; "match" is the closest
+              no-highlight state it already supports. */}
+          <SwatchPicker
+            active={activeSignature ? "match" : (cardBack as ThemeId | "match")}
+            onSelect={handleCardBackChange}
+            matchOption
+          />
+        </>
+      )}
     </main>
   );
 }

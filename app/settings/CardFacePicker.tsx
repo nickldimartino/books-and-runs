@@ -2,6 +2,8 @@
 
 import { Card } from "@/types";
 import { CardFace } from "../components/CardFace";
+import { cardCosmeticRequirementLabel, isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
+import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
 import { CARD_FACES, CardFaceId, CardFaceOption } from "../lib/cardFaceStore";
 import { CheckBadge } from "./SwatchPicker";
 
@@ -19,19 +21,22 @@ const PREVIEW_CARD: Card = { id: "preview", suit: "hearts", rank: "7", isWild: f
 function CardFaceTile({
   option,
   isActive,
+  unlocked,
   onClick,
 }: {
   option: CardFaceOption;
   isActive: boolean;
+  unlocked: boolean;
   onClick: () => void;
 }) {
+  const title = unlocked || !option.unlock ? option.description : cardCosmeticRequirementLabel(option.unlock);
   return (
     <button
-      onClick={onClick}
+      onClick={unlocked ? onClick : undefined}
       aria-current={isActive}
-      title={option.description}
+      title={title}
       className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
-        isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
+        !unlocked ? LOCKED_ITEM_CLASS : isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
       }`}
     >
       <span className="flex h-11 items-center justify-center bg-[var(--panel-soft)]" aria-hidden="true">
@@ -40,7 +45,9 @@ function CardFaceTile({
         </span>
       </span>
       <span className="bg-[var(--panel)] px-2 py-1.5">
-        <span className="block truncate text-xs font-medium text-[var(--heading)]">{option.name}</span>
+        <span className="block truncate text-xs font-medium text-[var(--heading)]">
+          {lockedCaption(option.name, unlocked)}
+        </span>
       </span>
       {isActive && (
         <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow">
@@ -51,7 +58,18 @@ function CardFaceTile({
   );
 }
 
-export function CardFacePicker({ active, onSelect }: { active: CardFaceId; onSelect: (id: CardFaceId) => void }) {
+export function CardFacePicker({
+  active,
+  onSelect,
+  level,
+}: {
+  active: CardFaceId;
+  onSelect: (id: CardFaceId) => void;
+  /** The signed-in account's live level — 0 (locks every gated style) for
+   * a signed-out or still-loading visitor. See cardCosmeticUnlocks.ts's
+   * useCardUnlockLevel. */
+  level: number;
+}) {
   const activeOption = CARD_FACES.find((f) => f.id === active);
   return (
     <div className="flex flex-col gap-2.5">
@@ -60,7 +78,13 @@ export function CardFacePicker({ active, onSelect }: { active: CardFaceId; onSel
       </p>
       <div className="grid grid-cols-2 gap-2">
         {CARD_FACES.map((f) => (
-          <CardFaceTile key={f.id} option={f} isActive={active === f.id} onClick={() => onSelect(f.id)} />
+          <CardFaceTile
+            key={f.id}
+            option={f}
+            isActive={active === f.id}
+            unlocked={isCardCosmeticUnlocked(f.unlock, level)}
+            onClick={() => onSelect(f.id)}
+          />
         ))}
       </div>
     </div>

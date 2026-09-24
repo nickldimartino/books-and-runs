@@ -195,6 +195,48 @@ function ClassicFace({ card, label, isCourt, isJoker }: StyleProps) {
   );
 }
 
+// `outline` (Boutique) — the exact Classic layout, but every fill becomes a
+// stroke: reuses Pip's own existing `outline` prop (already built for
+// Minimal's "thin outlined suit") rather than a new drawing.
+function OutlineFace({ card, label, isCourt, isJoker }: StyleProps) {
+  if (isJoker) {
+    return (
+      <g fill="none" stroke="currentColor" strokeWidth="2">
+        <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" />
+        <text
+          x="50"
+          y="108"
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="700"
+          letterSpacing="2"
+          fontFamily="ui-sans-serif, system-ui, sans-serif"
+        >
+          JOKER
+        </text>
+      </g>
+    );
+  }
+  return (
+    <g fill="none" stroke="currentColor" strokeWidth="2">
+      <text
+        x="50"
+        y="58"
+        textAnchor="middle"
+        fontSize={isCourt ? "44" : label === "10" ? "40" : "48"}
+        fontWeight="800"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+      >
+        {label}
+      </text>
+      {isCourt && (card.rank === "K" || card.rank === "Q") && (
+        <path d={CROWN_PATH} transform="translate(16 6)" />
+      )}
+      <Pip suit={card.suit} cx={50} cy={96} size={44} outline />
+    </g>
+  );
+}
+
 // `realistic` — the original full treatment: corner indices, a real pip
 // layout for number cards, a crowned monogram for courts.
 function RealisticFace({ card, label, isCourt, isJoker }: StyleProps) {
@@ -409,27 +451,40 @@ export function CardFace({ card, style }: { card: Card; style?: CardFaceId }) {
 
   const isRed = card.suit === "hearts" || card.suit === "diamonds";
   const tone: Tone = card.isWild ? "wild" : isRed ? "red" : "black";
+  const isFoil = resolved === "foil";
 
   return (
-    // viewBox carries a 5×7-unit transparent margin (same 5:7 ratio as the
-    // drawing) so nothing gets clipped by .card-face's border-radius —
-    // most visible on a large card on a wide screen.
-    <svg viewBox="-5 -7 110 154" className="h-full w-full" aria-hidden="true">
-      <g fill="currentColor" data-tone={tone}>
-        {resolved === "realistic" ? (
-          <RealisticFace {...props} />
-        ) : resolved === "bold" ? (
-          <BoldFace {...props} />
-        ) : resolved === "minimal" ? (
-          <MinimalFace {...props} />
-        ) : resolved === "retro" ? (
-          <RetroFace {...props} />
-        ) : resolved === "pixel" ? (
-          <PixelFace {...props} />
-        ) : (
-          <ClassicFace {...props} />
-        )}
-      </g>
-    </svg>
+    // `foil` is otherwise the exact Classic layout — the shimmer is an HTML
+    // ::after overlay (globals.css's shared .foil-sweep, same technique
+    // every other epic+ cosmetic uses), which needs a real HTML wrapper
+    // around the <svg> since it can't attach to an inner <g>. `contents`
+    // makes that wrapper a no-op for every other style — display:contents
+    // takes it out of layout entirely, so nothing about sizing changes.
+    <span className={isFoil ? "foil-sweep rarity-ring--epic relative block h-full w-full" : "contents"}>
+      {/* viewBox carries a 5×7-unit transparent margin (same 5:7 ratio as the
+      drawing) so nothing gets clipped by .card-face's border-radius —
+      most visible on a large card on a wide screen. */}
+      <svg viewBox="-5 -7 110 154" className="h-full w-full" aria-hidden="true">
+        <g fill="currentColor" data-tone={tone}>
+          {resolved === "realistic" ? (
+            <RealisticFace {...props} />
+          ) : resolved === "bold" ? (
+            <BoldFace {...props} />
+          ) : resolved === "minimal" ? (
+            <MinimalFace {...props} />
+          ) : resolved === "retro" ? (
+            <RetroFace {...props} />
+          ) : resolved === "pixel" ? (
+            <PixelFace {...props} />
+          ) : resolved === "outline" ? (
+            <OutlineFace {...props} />
+          ) : (
+            // `classic` (the default) and `foil` share this exact layout —
+            // foil is a shimmer overlay above, not a different drawing.
+            <ClassicFace {...props} />
+          )}
+        </g>
+      </svg>
+    </span>
   );
 }

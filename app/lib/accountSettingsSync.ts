@@ -18,6 +18,7 @@ import {
   applyCardBack,
   CardBackId,
   DEFAULT_CARD_BACK,
+  isSignatureCardBack,
   loadLocalCardBack,
   saveLocalCardBack,
 } from "./cardBackStore";
@@ -117,7 +118,10 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     applyTheme(validTheme);
   }
   const validCardBack =
-    row.card_back && (row.card_back === "match" || THEMES.some((t) => t.id === row.card_back))
+    row.card_back &&
+    (row.card_back === "match" ||
+      THEMES.some((t) => t.id === row.card_back) ||
+      isSignatureCardBack(row.card_back as CardBackId))
       ? (row.card_back as CardBackId)
       : null;
   if (validCardBack) {

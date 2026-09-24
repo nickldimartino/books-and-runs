@@ -21,6 +21,7 @@ import {
   pushTheme,
   resetLocalPreferencesToDefaults,
 } from "./accountSettingsSync";
+import { saveLocalCardBack } from "./cardBackStore";
 import { DEFAULT_THEME, saveLocalTheme } from "./themeStore";
 
 function fakeSupabase() {
@@ -101,6 +102,18 @@ describe("applyAccountSettings", () => {
       ambientMusicEnabled: true,
       ambientVolume: 0.2,
     });
+  });
+
+  it("accepts a Signature card back (not a real theme id) as valid, not just a theme id or 'match'", () => {
+    applyAccountSettings({ ...blankRow(), card_back: "static" });
+    expect(document.documentElement.getAttribute("data-cardback")).toBe("static");
+    expect(window.localStorage.getItem("booksAndRuns:cardBack")).toBe("static");
+  });
+
+  it("falls back to this device's current card back for an unrecognized value, same as a retired theme id", () => {
+    saveLocalCardBack("match");
+    applyAccountSettings({ ...blankRow(), card_back: "not-a-real-id" });
+    expect(window.localStorage.getItem("booksAndRuns:cardBack")).toBe("match");
   });
 
   it("leaves a field the account never set at its existing local value", () => {
