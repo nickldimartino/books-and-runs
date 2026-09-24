@@ -111,9 +111,10 @@ export default function MultiplayerPlayPage() {
   // reorderHand (see handSort.ts), but this never reaches the server: the
   // server's own hand order isn't meaningful here (a fresh poll can't tell
   // "you sorted it" from "nothing changed"), and there's no equivalent MP
-  // move to persist it as. Reset whenever a new turn's hand composition
-  // could genuinely change (see the effect below) so a stale order from
-  // several turns ago doesn't linger indefinitely.
+  // move to persist it as. Reset only when a new round deals a genuinely
+  // different hand of cards (see the effect below, keyed on view.round) —
+  // not on every turn, since applyHandOrder already leaves a newly drawn
+  // card in its natural slot without needing the sort thrown out.
   const [handOrder, setHandOrder] = useState<string[] | null>(null);
   // Seat id ("seat-N", matching stripPlayers' Player.id below) → that
   // opponent's bio, for OpponentStrip's popover. Fetched once the game is
@@ -203,13 +204,26 @@ export default function MultiplayerPlayPage() {
     [view]
   );
 
-  // reset the armed-layoff mode and any local hand sort/reorder whenever the
-  // turn context changes
+  // Reset the armed-layoff mode and any pending discard confirmation
+  // whenever the turn context changes — both are per-turn transient UI
+  // states that shouldn't linger into a new turn.
   useEffect(() => {
     setLayoffArmed(false);
-    setHandOrder(null);
     setConfirmingDiscard(null);
   }, [view?.currentSeat, view?.round, view?.youHaveDrawn]);
+
+  // handOrder gets its own effect, keyed on round alone — the round is the
+  // only one of the three above that actually means "this is a different
+  // hand of cards" (a fresh deal). currentSeat/youHaveDrawn change every
+  // single turn (an opponent's turn passing, or just drawing your own
+  // card), and applyHandOrder already handles a newly drawn card fine on
+  // its own — a card not yet named in `order` just keeps its existing
+  // slot rather than needing the whole sort thrown out — so resetting on
+  // those too was wiping a player's chosen sort after literally every
+  // turn, not just when their hand was genuinely new.
+  useEffect(() => {
+    setHandOrder(null);
+  }, [view?.round]);
 
   // Same guard as solo/pass-and-play's own effect (see game/page.tsx) —
   // drop a stale confirmation rather than let it reference a card that's no

@@ -57,6 +57,7 @@ import {
   isPremiumEmojiUnlocked,
   PREMIUM_EMOJI_OPTIONS,
   premiumEmojiRequirementLabel,
+  type PremiumEmojiOption,
 } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
@@ -701,7 +702,11 @@ export default function PlayerProfilePage() {
   // separate from the picture itself (see migration 0031's own doc). ──────
   const [badgeSaveState, setBadgeSaveState] = useState<SaveState>("idle");
   const [badgeSaveError, setBadgeSaveError] = useState<string | null>(null);
-  const [badgeInfo, setBadgeInfo] = useState<string | null>(null);
+  // The option itself, not a pre-formatted string — the info line below
+  // needs to render the same custom icon (PremiumBadgeIcon) the grid tile
+  // above it uses, not the raw emoji character, or the two visibly
+  // disagree about what the badge looks like.
+  const [badgeInfo, setBadgeInfo] = useState<PremiumEmojiOption | null>(null);
 
   async function chooseBadge(badge: string | null) {
     if (!supabase || !user) return;
@@ -1380,7 +1385,7 @@ export default function PlayerProfilePage() {
                           // Tapping shows how it's unlocked whether or not
                           // it's earned yet — the hover `title` below never
                           // reaches a touch device.
-                          setBadgeInfo(`${option.emoji} — ${premiumEmojiRequirementLabel(option.unlock)}`);
+                          setBadgeInfo(option);
                         }}
                         aria-label={
                           unlocked
@@ -1414,8 +1419,18 @@ export default function PlayerProfilePage() {
                   // explanation of the currently-equipped badge so this
                   // line isn't just blank the moment the tab opens.
                   const equippedOption = entry.badge ? PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === entry.badge) : undefined;
-                  const shown = badgeInfo ?? (equippedOption && `${equippedOption.emoji} — ${premiumEmojiRequirementLabel(equippedOption.unlock)}`);
-                  return shown ? <p className="text-[10px] text-[var(--faint)]">{shown}</p> : null;
+                  const shown = badgeInfo ?? equippedOption;
+                  if (!shown) return null;
+                  // The same PremiumBadgeIcon the grid tile above renders,
+                  // not the raw emoji character — otherwise this line
+                  // visibly disagrees with the icon shape it's describing
+                  // (e.g. the compass-star icon vs. a literal 🧭 glyph).
+                  return (
+                    <p className="flex items-center gap-1.5 text-[10px] text-[var(--faint)]">
+                      <PremiumBadgeIcon option={shown} className="block h-3 w-3 shrink-0" />
+                      <span>— {premiumEmojiRequirementLabel(shown.unlock)}</span>
+                    </p>
+                  );
                 })()}
                 {badgeSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
                 {badgeSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
