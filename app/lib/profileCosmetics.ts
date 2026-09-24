@@ -77,8 +77,18 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
   { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
   // Boutique — see avatarPresets.ts's own doc on the "boutique" rule kind.
+  // 10 total, every color (AVATAR_FRAME_COLOR below) unique from the 16
+  // free flat colors above and from every earned tier's own color.
   { id: "opal", label: "Opal", source: "boutique", unlock: { kind: "boutique" } },
   { id: "jade", label: "Jade", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "aurumveil", label: "Aurum Veil", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "obsidianrim", label: "Obsidian Rim", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "seaglass", label: "Sea Glass", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "copperline", label: "Copperline", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "duskgrove", label: "Dusk Grove", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "ashwood", label: "Ashwood", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "cinderglow", label: "Cinder Glow", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "winterpearl", label: "Winter Pearl", source: "boutique", unlock: { kind: "boutique" } },
 ];
 
 /** Solid ring colors for each frame — "grandmaster" instead gets a
@@ -134,6 +144,14 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   // Boutique.
   opal: "#C9A0DC",
   jade: "#00A86B",
+  aurumveil: "#B8860B",
+  obsidianrim: "#2B1B3D",
+  seaglass: "#7FCDCD",
+  copperline: "#B87333",
+  duskgrove: "#3B5249",
+  ashwood: "#8B7D6B",
+  cinderglow: "#E25822",
+  winterpearl: "#A8C0D6",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {
@@ -222,8 +240,17 @@ export const TITLE_OPTIONS: readonly TitleOption[] = [
   { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
   // Boutique — see avatarPresets.ts's own doc on the "boutique" rule kind.
+  // 10 total, every label unique from every other title in this list.
   { id: "night_owl", label: "Night Owl", source: "boutique", unlock: { kind: "boutique" } },
   { id: "the_bluffer", label: "The Bluffer", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "velvet_hand", label: "Velvet Hand", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "silk_road", label: "Silk Road", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "midnight_dealer", label: "Midnight Dealer", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "the_collector", label: "The Collector", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "gilded_tongue", label: "Gilded Tongue", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "backroom_regular", label: "Backroom Regular", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "the_fixer", label: "The Fixer", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "diamond_cut", label: "Diamond Cut", source: "boutique", unlock: { kind: "boutique" } },
 ];
 
 export function findTitleOption(id: string | null): TitleOption | null {

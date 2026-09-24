@@ -379,6 +379,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0051 | Cosmetic rarity overhaul, phase 2 (see `plans/quiet-snacking-cloud.md`) — 4 new badge milestones (🔰 Level 5, 🛡️ Level 150, 🎯 1 category mastered, 🕯️ a 7-day Daily Deal streak), each reusing an existing `requirement_kind`; widens `leaderboard_badge_ok` for 2 new auto-unlocked "Boutique" badges (🎩🕶️), which deliberately get no `cosmetic_unlocks` row at all — already unconditionally free at the server. |
 | 0052 | Cosmetic rarity overhaul, phase 3 — 4 genuinely new `requirement_kind`s (`worst_score_under`/`average_score_under`/`games_tied`/`mp_win_streak`), each reading a column already server-verified by an earlier migration, so no new tamper-resistant data source was needed; 2 new named rewards spanning badge+frame+title+banner (Steady Hand, Hot Streak) plus 2 single badges (🧊🤝); 6 more auto-unlocked "Boutique" items (frame/title/banner — badges got theirs in 0051). |
 | 0053 | Gates the Boutique track behind a real requirement instead of leaving it unconditionally free — a new `boutique` `requirement_kind` (reads `is_creator`, same data as `creator_only` but its own kind so a real purchase can replace just this one branch later) plus `cosmetic_unlocks` rows for the 8 existing badge/frame/title/banner Boutique items. Card face/card back Boutique items stay client-side-only, so they get no row here. |
+| 0054 | Expands the Boutique from 2 to 10 items per category (badge/frame/title/banner/card face/card back), every item unique from each other and from every free/earned option. Widens `leaderboard_badge_ok`/`leaderboard_banner_ok` for the 8 new badges/banners and adds `cosmetic_unlocks` rows (`boutique` kind) for the 32 new badge/frame/title/banner items; the 8 new card faces/backs stay client-side-only. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -891,3 +892,28 @@ per Phase 4's own reasoning — `useCardUnlockContext` now fetches
 `is_creator` alongside level so that path can check the new kind too — so
 migration `0053` only adds `cosmetic_unlocks` rows for the 8 badge/frame/
 title/banner items, none for card face/back.
+
+**Boutique expansion, 2 → 10 per category** — every category's Boutique
+catalog grown from 2 items to 10, every item unique from each other and
+from every free/earned option in the game. Badges: 8 new emoji (🎻🧨🔮🛸
+🧿🗝️🎆🏹). Frames: 8 new flat colors in `AVATAR_FRAME_COLOR`, distinct
+from the 16 free colors and every earned tier's own color (a gradient
+treatment was considered but dropped — `shareCard.ts`'s canvas share-card
+renderer assigns a frame's color straight to `ctx.fillStyle`, which
+silently ignores a CSS gradient string). Titles: 8 new flavor labels, no
+schema change needed (no CHECK on `title`). Banners: 8 new 2-stop
+gradients, kept to exactly 2 stops like every existing banner since
+`shareCard.ts`'s canvas renderer only parses that shape. Card face: 8 new
+`CardFace.tsx` components (Shadow, Neon, Deco, Sketch, Mono, Ribbon, Halo,
+Ledger) — each a genuinely distinct treatment built from the same shared
+`Pip`/`CornerIndex`/`STAR_PATH`/`CROWN_PATH` primitives every existing
+style already uses, confirmed by `CardFace.test.tsx`'s own
+`it.each(CARD_FACES)` render-without-throwing sweep, which covers new
+styles automatically. Card back: 8 new `[data-cardback="X"]` blocks in
+globals.css, using the same layered `--cardback-bgimage`
+repeating-gradient technique `foilweave`/`static` already established
+(multiple comma-separated gradients composited in one CSS custom
+property) rather than hand-authoring new SVG mask data URIs. Migration
+`0054` widens the badge/banner CHECKs and adds `cosmetic_unlocks` rows for
+the 32 new badge/frame/title/banner items; card face/back need none (same
+client-side-only reasoning as Phase 4).

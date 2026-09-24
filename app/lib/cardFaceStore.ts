@@ -20,7 +20,23 @@ import { CosmeticRarity } from "./cosmeticRarity";
 import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 
-export type CardFaceId = "classic" | "realistic" | "bold" | "minimal" | "retro" | "pixel" | "foil" | "outline";
+export type CardFaceId =
+  | "classic"
+  | "realistic"
+  | "bold"
+  | "minimal"
+  | "retro"
+  | "pixel"
+  | "foil"
+  | "outline"
+  | "shadow"
+  | "neon"
+  | "deco"
+  | "sketch"
+  | "mono"
+  | "ribbon"
+  | "halo"
+  | "ledger";
 
 export interface CardFaceOption {
   id: CardFaceId;
@@ -77,6 +93,62 @@ export const CARD_FACES: CardFaceOption[] = [
     id: "outline",
     name: "Outline",
     description: "The Classic layout drawn in a clean stroke only, nothing filled in.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "shadow",
+    name: "Shadow",
+    description: "A huge embossed rank, with a soft offset copy behind it for depth.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "neon",
+    name: "Neon",
+    description: "A stroke-only face with a soft glow pass behind the crisp line.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "deco",
+    name: "Deco",
+    description: "An Art Deco double border with corner ticks around a slim rank.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "sketch",
+    name: "Sketch",
+    description: "A loose hand-drawn feel — a dashed border and a slightly skewed rank.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "mono",
+    name: "Mono",
+    description: "A quiet monospace rank over a faint baseline grid.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "ribbon",
+    name: "Ribbon",
+    description: "A diagonal ribbon band carries the rank at an angle across the card.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "halo",
+    name: "Halo",
+    description: "The suit sits inside two faint concentric rings, like a target.",
+    source: "boutique",
+    unlock: { kind: "boutique" },
+  },
+  {
+    id: "ledger",
+    name: "Ledger",
+    description: "Horizontal rule lines and a right-aligned rank, like a ledger column.",
     source: "boutique",
     unlock: { kind: "boutique" },
   },

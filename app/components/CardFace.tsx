@@ -441,6 +441,312 @@ function PixelFace({ card, label, isJoker }: StyleProps) {
   );
 }
 
+// `shadow` (Boutique) — Bold's huge rank, redrawn with a duplicate offset
+// copy behind it at low opacity for a pressed/embossed look, rather than
+// Bold's own flat single pass.
+function ShadowFace({ card, label, isJoker }: StyleProps) {
+  if (isJoker) {
+    return (
+      <g>
+        <path d={STAR_PATH} transform="translate(53 65) scale(0.9) translate(-50 -50)" opacity="0.3" />
+        <path d={STAR_PATH} transform="translate(50 62) scale(0.9) translate(-50 -50)" />
+      </g>
+    );
+  }
+  return (
+    <g>
+      <text
+        x="53"
+        y={label.length > 1 ? "83" : "91"}
+        textAnchor="middle"
+        fontSize={label.length > 1 ? "56" : "92"}
+        fontWeight="900"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        fill="currentColor"
+        opacity="0.3"
+      >
+        {label}
+      </text>
+      <text
+        x="50"
+        y={label.length > 1 ? "80" : "88"}
+        textAnchor="middle"
+        fontSize={label.length > 1 ? "56" : "92"}
+        fontWeight="900"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        fill="currentColor"
+      >
+        {label}
+      </text>
+      <Pip suit={card.suit} cx={78} cy={22} size={26} />
+    </g>
+  );
+}
+
+// `neon` (Boutique) — Outline's stroke-only layout, redrawn with a second,
+// wider, low-opacity pass behind the crisp one for a glow/sign-tube look.
+function NeonFace({ card, label, isCourt, isJoker }: StyleProps) {
+  if (isJoker) {
+    return (
+      <g fill="none" stroke="currentColor">
+        <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" strokeWidth="8" opacity="0.35" />
+        <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" strokeWidth="2" />
+        <text x="50" y="108" textAnchor="middle" fontSize="14" fontWeight="700" letterSpacing="2" strokeWidth="1.5">
+          JOKER
+        </text>
+      </g>
+    );
+  }
+  return (
+    <g fill="none" stroke="currentColor">
+      <text
+        x="50"
+        y="58"
+        textAnchor="middle"
+        fontSize={isCourt ? "44" : label === "10" ? "40" : "48"}
+        fontWeight="800"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        strokeWidth="6"
+        opacity="0.35"
+      >
+        {label}
+      </text>
+      <text
+        x="50"
+        y="58"
+        textAnchor="middle"
+        fontSize={isCourt ? "44" : label === "10" ? "40" : "48"}
+        fontWeight="800"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        strokeWidth="1.5"
+      >
+        {label}
+      </text>
+      {isCourt && (card.rank === "K" || card.rank === "Q") && (
+        <path d={CROWN_PATH} transform="translate(16 6)" strokeWidth="1.5" />
+      )}
+      <Pip suit={card.suit} cx={50} cy={96} size={44} outline />
+    </g>
+  );
+}
+
+// `deco` (Boutique) — an Art Deco frame: a stepped double border with
+// corner ticks, plus a slim geometric rank — the border is the whole point
+// here, unlike Retro's plain rounded rect.
+function DecoFace({ card, label, isCourt, isJoker }: StyleProps) {
+  return (
+    <g>
+      <rect x="8" y="8" width="84" height="124" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="14" y="14" width="72" height="112" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+      {[
+        [8, 8, 18, 8], [8, 8, 8, 18], [92, 8, 82, 8], [92, 8, 92, 18],
+        [8, 132, 18, 132], [8, 132, 8, 122], [92, 132, 82, 132], [92, 132, 92, 122],
+      ].map(([x1, y1, x2, y2], i) => (
+        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="3" />
+      ))}
+      {isJoker ? (
+        <g>
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.5) translate(-50 -50)" />
+          <text x="50" y="104" textAnchor="middle" fontSize="12" fontWeight="700" letterSpacing="3" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+            JOKER
+          </text>
+        </g>
+      ) : (
+        <g>
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            fontSize={label.length > 1 ? "34" : "40"}
+            fontWeight="600"
+            letterSpacing="1"
+            fontFamily="ui-sans-serif, system-ui, sans-serif"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+          {isCourt && (card.rank === "K" || card.rank === "Q") && (
+            <path d={CROWN_PATH} transform="translate(16 10)" />
+          )}
+          <Pip suit={card.suit} cx={50} cy={96} size={30} />
+        </g>
+      )}
+    </g>
+  );
+}
+
+// `sketch` (Boutique) — a loose hand-drawn feel: a dashed border, a
+// slightly skewed rank, and a dashed-stroke pip — the one style that
+// deliberately looks a little imperfect rather than clean vector art.
+function SketchFace({ card, label, isCourt, isJoker }: StyleProps) {
+  return (
+    <g>
+      <rect x="6" y="6" width="88" height="128" rx="8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.6" />
+      {isJoker ? (
+        <g transform="skewX(-4)">
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.55) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="3 2" />
+          <text x="50" y="106" textAnchor="middle" fontSize="13" fontWeight="700" letterSpacing="2" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+            JOKER
+          </text>
+        </g>
+      ) : (
+        <g transform="skewX(-4)">
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            fontSize={isCourt ? "42" : label === "10" ? "38" : "46"}
+            fontWeight="700"
+            fontFamily="ui-sans-serif, system-ui, sans-serif"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+          {isCourt && (card.rank === "K" || card.rank === "Q") && (
+            <path d={CROWN_PATH} transform="translate(16 6)" />
+          )}
+          <path
+            d={SUIT_PATHS[card.suit]}
+            transform="translate(50 96) scale(0.42) translate(-50 -50)"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeDasharray="4 3"
+          />
+        </g>
+      )}
+    </g>
+  );
+}
+
+// `mono` (Boutique) — a quiet monospace rank over a faint baseline grid,
+// distinct from Pixel's chunky bitmap suit — this one keeps the smooth
+// vector pip, just the typography and a grid accent change.
+function MonoFace({ card, label, isJoker }: StyleProps) {
+  return (
+    <g>
+      <g opacity="0.12" stroke="currentColor" strokeWidth="0.5">
+        <line x1="10" y1="46.6" x2="90" y2="46.6" />
+        <line x1="10" y1="93.3" x2="90" y2="93.3" />
+      </g>
+      {isJoker ? (
+        <g>
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.55) translate(-50 -50)" />
+          <text x="50" y="104" textAnchor="middle" fontSize="12" fontWeight="700" letterSpacing="2" fontFamily="ui-monospace, 'Courier New', monospace" fill="currentColor">
+            JKR
+          </text>
+        </g>
+      ) : (
+        <g>
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            fontSize={label.length > 1 ? "38" : "46"}
+            fontWeight="700"
+            fontFamily="ui-monospace, 'Courier New', monospace"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+          <Pip suit={card.suit} cx={50} cy={96} size={38} />
+        </g>
+      )}
+    </g>
+  );
+}
+
+// `ribbon` (Boutique) — a diagonal ribbon band across the card, with the
+// rank set into it at the same angle — the one style whose rank isn't
+// upright.
+function RibbonFace({ card, label, isJoker }: StyleProps) {
+  return (
+    <g>
+      <g transform="rotate(-16 50 70)">
+        <rect x="-10" y="58" width="120" height="24" fill="currentColor" opacity="0.16" />
+        {isJoker ? (
+          <text x="50" y="75" textAnchor="middle" fontSize="14" fontWeight="700" letterSpacing="2" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+            JOKER
+          </text>
+        ) : (
+          <text
+            x="50"
+            y="76"
+            textAnchor="middle"
+            fontSize={label.length > 1 ? "24" : "28"}
+            fontWeight="800"
+            fontFamily="ui-sans-serif, system-ui, sans-serif"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+        )}
+      </g>
+      {isJoker ? (
+        <path d={STAR_PATH} transform="translate(50 100) scale(0.4) translate(-50 -50)" />
+      ) : (
+        <Pip suit={card.suit} cx={50} cy={112} size={30} />
+      )}
+    </g>
+  );
+}
+
+// `halo` (Boutique) — the suit pip ringed by two concentric circles, like a
+// faint halo/target, with a smaller centered rank than any other style.
+function HaloFace({ card, label, isJoker }: StyleProps) {
+  return (
+    <g>
+      <circle cx="50" cy="86" r="34" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.25" />
+      <circle cx="50" cy="86" r="24" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+      <text
+        x="50"
+        y="46"
+        textAnchor="middle"
+        fontSize={label.length > 1 ? "26" : "30"}
+        fontWeight="700"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        fill="currentColor"
+      >
+        {isJoker ? "JKR" : label}
+      </text>
+      {isJoker ? (
+        <path d={STAR_PATH} transform="translate(50 86) scale(0.36) translate(-50 -50)" />
+      ) : (
+        <Pip suit={card.suit} cx={50} cy={86} size={34} />
+      )}
+    </g>
+  );
+}
+
+// `ledger` (Boutique) — an accounting-ledger look: horizontal rule lines
+// across the whole card and a right-aligned rank, like a number in a
+// column, with just a small suit mark in the corner.
+function LedgerFace({ card, label, isJoker }: StyleProps) {
+  return (
+    <g>
+      {[38, 58, 78, 98].map((y) => (
+        <line key={y} x1="8" y1={y} x2="92" y2={y} stroke="currentColor" strokeWidth="0.75" opacity="0.2" />
+      ))}
+      <text
+        x="86"
+        y="66"
+        textAnchor="end"
+        fontSize={label.length > 1 ? "28" : "32"}
+        fontWeight="700"
+        fontFamily="ui-monospace, 'Courier New', monospace"
+        fill="currentColor"
+      >
+        {isJoker ? "JKR" : label}
+      </text>
+      {isJoker ? (
+        <path d={STAR_PATH} transform="translate(20 30) scale(0.22) translate(-50 -50)" />
+      ) : (
+        <Pip suit={card.suit} cx={20} cy={30} size={18} />
+      )}
+    </g>
+  );
+}
+
 export function CardFace({ card, style }: { card: Card; style?: CardFaceId }) {
   const liveStyle = useCardFace();
   const resolved = style ?? liveStyle;
@@ -478,6 +784,22 @@ export function CardFace({ card, style }: { card: Card; style?: CardFaceId }) {
             <PixelFace {...props} />
           ) : resolved === "outline" ? (
             <OutlineFace {...props} />
+          ) : resolved === "shadow" ? (
+            <ShadowFace {...props} />
+          ) : resolved === "neon" ? (
+            <NeonFace {...props} />
+          ) : resolved === "deco" ? (
+            <DecoFace {...props} />
+          ) : resolved === "sketch" ? (
+            <SketchFace {...props} />
+          ) : resolved === "mono" ? (
+            <MonoFace {...props} />
+          ) : resolved === "ribbon" ? (
+            <RibbonFace {...props} />
+          ) : resolved === "halo" ? (
+            <HaloFace {...props} />
+          ) : resolved === "ledger" ? (
+            <LedgerFace {...props} />
           ) : (
             // `classic` (the default) and `foil` share this exact layout —
             // foil is a shimmer overlay above, not a different drawing.

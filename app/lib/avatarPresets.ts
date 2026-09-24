@@ -107,8 +107,18 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   // Boutique — a future real purchase, simulated for now as creator-only
   // (see cosmeticUnlocks.ts's own doc on the "boutique" rule kind and
   // player/page.tsx's Boutique tab) rather than left unconditionally free.
+  // 10 total, every emoji unique from each other and from every free/
+  // earned badge and free avatar emoji above.
   { emoji: "🎩", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
   { emoji: "🕶️", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🎻", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🧨", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🔮", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🛸", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🧿", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🗝️", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🎆", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🏹", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
 ] as const;
 
 /** Ring/disc color for every badge that still renders as MedalIcon (see

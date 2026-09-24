@@ -1380,6 +1380,69 @@ a:active {
   --cardback-opacity: 0.6;
 }
 
+/* 8 more Signature backs (the Boutique expansion) — same "no mask, just a
+   layered background-image" technique as foilweave/static above, each its
+   own motif via multiple repeating-gradients composited in one property
+   (a plain CSS background-image already supports comma-separated layers). */
+[data-cardback="houndstooth"] {
+  --cardback-shape: none;
+  --cardback-bgimage:
+    repeating-linear-gradient(45deg, #44403c 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(-45deg, #44403c 0 6px, transparent 6px 12px);
+  --cardback-color: #d6d3d1;
+  --cardback-opacity: 0.55;
+}
+[data-cardback="marble"] {
+  --cardback-shape: none;
+  --cardback-bgimage: repeating-linear-gradient(120deg, transparent 0 10px, #ffffff 10px 11px, transparent 11px 24px);
+  --cardback-color: #6b7280;
+  --cardback-opacity: 0.4;
+}
+[data-cardback="tartan"] {
+  --cardback-shape: none;
+  --cardback-bgimage:
+    repeating-linear-gradient(0deg, #7f1d1d 0 3px, transparent 3px 16px),
+    repeating-linear-gradient(90deg, #7f1d1d 0 3px, transparent 3px 16px);
+  --cardback-color: #1c1917;
+  --cardback-opacity: 0.65;
+}
+[data-cardback="quilted"] {
+  --cardback-shape: none;
+  --cardback-bgimage:
+    repeating-linear-gradient(45deg, #ffffff 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(-45deg, #ffffff 0 1px, transparent 1px 14px);
+  --cardback-color: #7c2d12;
+  --cardback-opacity: 0.3;
+}
+[data-cardback="starfield"] {
+  --cardback-shape: none;
+  --cardback-bgimage:
+    repeating-radial-gradient(circle at 25% 25%, #ffffff 0 1px, transparent 1px 20px),
+    repeating-radial-gradient(circle at 70% 60%, #ffffff 0 1.5px, transparent 1.5px 26px);
+  --cardback-color: #05070d;
+  --cardback-opacity: 0.8;
+}
+[data-cardback="brushed"] {
+  --cardback-shape: none;
+  --cardback-bgimage: repeating-linear-gradient(90deg, #ffffff 0 1px, transparent 1px 3px);
+  --cardback-color: #52525b;
+  --cardback-opacity: 0.25;
+}
+[data-cardback="chevron"] {
+  --cardback-shape: none;
+  --cardback-bgimage: repeating-conic-gradient(from 45deg, #fbbf24 0deg 90deg, transparent 90deg 180deg);
+  --cardback-color: #7c2d12;
+  --cardback-opacity: 0.35;
+}
+[data-cardback="basketweave"] {
+  --cardback-shape: none;
+  --cardback-bgimage:
+    repeating-linear-gradient(0deg, #a16207 0 8px, transparent 8px 20px),
+    repeating-linear-gradient(90deg, #a16207 0 8px, transparent 8px 20px);
+  --cardback-color: #292524;
+  --cardback-opacity: 0.5;
+}
+
 /* One [data-cardback="X"] block per theme identity, generated from that
    theme's own --card-back-shape/--card-back-tile (see
    the theme blocks above) plus its own accent color, frozen here as a
