@@ -30,48 +30,65 @@
 // The unlock context here is deliberately much smaller than
 // cosmeticUnlocks.ts's full UnlockContext (level + achievement progress +
 // four different streak/stat fields) — every rule actually used by a card
-// face/back today only needs `level`, so that's the only thing fetched.
-// Extend `CardUnlockContext`/useCardUnlockLevel below if a future style
-// ever needs more.
+// face/back today only needs `level` and `isCreator` (the latter for the
+// Boutique kind — see cosmeticUnlocks.ts's own doc), so those are the only
+// two fetched. Extend CardUnlockContext/useCardUnlockContext below if a
+// future style ever needs more.
 
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked, makeUnlockContext } from "./cosmeticUnlocks";
 import { EMPTY_PROGRESS_STATE } from "@/achievements";
 
-export function isCardCosmeticUnlocked(unlock: CosmeticUnlockRule | undefined, level: number): boolean {
+export function isCardCosmeticUnlocked(
+  unlock: CosmeticUnlockRule | undefined,
+  level: number,
+  isCreator = false
+): boolean {
   if (!unlock) return true;
-  return isCosmeticUnlocked(unlock, makeUnlockContext({ level, progress: EMPTY_PROGRESS_STATE }));
+  return isCosmeticUnlocked(unlock, makeUnlockContext({ level, isCreator, progress: EMPTY_PROGRESS_STATE }));
 }
 
 export function cardCosmeticRequirementLabel(unlock: CosmeticUnlockRule): string {
   return cosmeticRequirementLabel(unlock);
 }
 
+export interface CardUnlockContext {
+  level: number;
+  isCreator: boolean;
+}
+
 /**
- * The one piece of live account data a card face/back gate needs — a
- * single `compute_level` RPC call (already self-scope-checked server-side,
- * see migration 0049) rather than the fuller fetch player/page.tsx's own
- * unlockCtx does, since level is the only rule kind any card face/back
- * currently uses. Signed-out or still-loading both read as level 0, which
- * correctly locks every gated style rather than guessing.
+ * The live account data a card face/back gate needs — a `compute_level` RPC
+ * call (already self-scope-checked server-side, see migration 0049) plus
+ * this account's own `leaderboard_entries.is_creator`, readable by any
+ * signed-in user for their own row (see leaderboardStore.ts). Signed-out or
+ * still-loading both read as level 0 / not creator, which correctly locks
+ * every gated style rather than guessing.
  */
-export function useCardUnlockLevel(supabase: SupabaseClient | null, userId: string | null | undefined): number {
-  const [level, setLevel] = useState(0);
+export function useCardUnlockContext(
+  supabase: SupabaseClient | null,
+  userId: string | null | undefined
+): CardUnlockContext {
+  const [ctx, setCtx] = useState<CardUnlockContext>({ level: 0, isCreator: false });
   useEffect(() => {
     if (!supabase || !userId) {
-      setLevel(0);
+      setCtx({ level: 0, isCreator: false });
       return;
     }
     let cancelled = false;
-    supabase
-      .rpc("compute_level", { p_user_id: userId })
-      .then(({ data }: { data: number | null }) => {
-        if (!cancelled) setLevel(typeof data === "number" ? data : 0);
-      });
+    Promise.all([
+      supabase.rpc("compute_level", { p_user_id: userId }),
+      supabase.from("leaderboard_entries").select("is_creator").eq("user_id", userId).maybeSingle(),
+    ]).then(([levelRes, entryRes]) => {
+      if (cancelled) return;
+      const level = typeof levelRes.data === "number" ? levelRes.data : 0;
+      const isCreator = (entryRes.data as { is_creator?: boolean } | null)?.is_creator ?? false;
+      setCtx({ level, isCreator });
+    });
     return () => {
       cancelled = true;
     };
   }, [supabase, userId]);
-  return level;
+  return ctx;
 }

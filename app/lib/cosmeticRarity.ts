@@ -102,5 +102,11 @@ export function defaultRarityForUnlock(rule: CosmeticUnlockRule | undefined): Co
       return "uncommon";
     case "mpWinStreak":
       return rule.streak >= 8 ? "epic" : "rare";
+    case "boutique":
+      // Matches the explicit `rarity: "rare"` the first two boutique
+      // badges (avatarPresets.ts's 🎩🕶️) already set — a sensible default
+      // for anything meant to eventually be a real purchase, without
+      // needing every future boutique item to set it explicitly.
+      return "rare";
   }
 }

@@ -62,7 +62,19 @@ export type CosmeticUnlockRule =
   /** leaderboard_entries.mp_best_win_streak — server-verified as of
    * migration 0050. The first cosmetic gated on live multiplayer skill
    * specifically, rather than solo play or a Daily/Weekly streak. */
-  | { kind: "mpWinStreak"; streak: number };
+  | { kind: "mpWinStreak"; streak: number }
+  /** A Boutique item (see boutiqueCatalog.test.tsx) — not earnable by
+   * grinding, meant to eventually be a real purchase. No purchase flow
+   * exists yet, so today this reads exactly like creatorOnly — is_creator
+   * only — but is kept as its own kind rather than reusing creatorOnly
+   * outright: creatorOnly also gates genuinely permanent creator-exclusive
+   * items (Dealer's Table) that should never become purchasable, and
+   * conflating the two would mean "flipping on" real payments later has to
+   * carefully split them back apart. With a dedicated kind, flipping it on
+   * is a single-branch change to cosmetic_unlocked() (checking a purchases
+   * table instead of is_creator) — no catalog or cosmetic_unlocks row ever
+   * has to move. */
+  | { kind: "boutique" };
 
 /** Everything a rule might need to check itself against. Callers that
  * don't have every field yet (e.g. allCosmetics.ts's before/after unlock-
@@ -154,6 +166,8 @@ export function isCosmeticUnlocked(rule: CosmeticUnlockRule, ctx: UnlockContext)
       return ctx.gamesTied >= rule.count;
     case "mpWinStreak":
       return ctx.mpBestWinStreak >= rule.streak;
+    case "boutique":
+      return ctx.isCreator;
   }
 }
 
@@ -188,5 +202,7 @@ export function cosmeticRequirementLabel(rule: CosmeticUnlockRule): string {
       return `Tie ${rule.count} game${rule.count === 1 ? "" : "s"}`;
     case "mpWinStreak":
       return `Reach a ${rule.streak}-game multiplayer win streak`;
+    case "boutique":
+      return "Boutique — not yet available for purchase";
   }
 }

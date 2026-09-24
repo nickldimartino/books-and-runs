@@ -12,7 +12,7 @@ import {
   saveLocalCardBack,
   SignatureCardBackId,
 } from "../../lib/cardBackStore";
-import { useCardUnlockLevel } from "../../lib/cardCosmeticUnlocks";
+import { useCardUnlockContext } from "../../lib/cardCosmeticUnlocks";
 import { supabase } from "../../lib/supabaseClient";
 import { loadLocalTheme, ThemeId } from "../../lib/themeStore";
 import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
@@ -34,7 +34,7 @@ export default function CardBackSettingsPage() {
     cardBack: loadLocalCardBack(),
     theme: loadLocalTheme(),
   }));
-  const level = useCardUnlockLevel(supabase, user?.id);
+  const { level, isCreator } = useCardUnlockContext(supabase, user?.id);
 
   function handleCardBackChange(id: CardBackId) {
     setCardBackState({ cardBack: id, theme });
@@ -65,6 +65,7 @@ export default function CardBackSettingsPage() {
             active={activeSignature}
             onSelect={(id: SignatureCardBackId) => handleCardBackChange(id)}
             level={level}
+            isCreator={isCreator}
           />
           {/* "match" whenever a Signature back is active — SwatchPicker's own
               type is ThemeId | "match" (it's shared with /settings/theme, which

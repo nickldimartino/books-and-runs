@@ -62,13 +62,16 @@ export function CardFacePicker({
   active,
   onSelect,
   level,
+  isCreator = false,
 }: {
   active: CardFaceId;
   onSelect: (id: CardFaceId) => void;
   /** The signed-in account's live level — 0 (locks every gated style) for
    * a signed-out or still-loading visitor. See cardCosmeticUnlocks.ts's
-   * useCardUnlockLevel. */
+   * useCardUnlockContext. */
   level: number;
+  /** Gates the Boutique style (Outline) — same source as `level`. */
+  isCreator?: boolean;
 }) {
   const activeOption = CARD_FACES.find((f) => f.id === active);
   return (
@@ -82,7 +85,7 @@ export function CardFacePicker({
             key={f.id}
             option={f}
             isActive={active === f.id}
-            unlocked={isCardCosmeticUnlocked(f.unlock, level)}
+            unlocked={isCardCosmeticUnlocked(f.unlock, level, isCreator)}
             onClick={() => onSelect(f.id)}
           />
         ))}

@@ -18,14 +18,16 @@ import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 export interface AvatarFrameOption {
   id: string;
   label: string;
-  /** Absent for a free pick — only "grandmaster" and the Epic/Mythic/
-   * Prismatic/Creator set have one. */
+  /** Absent for a free pick — only "grandmaster", the Epic/Mythic/
+   * Prismatic/Creator set, and Boutique items have one. */
   unlock?: CosmeticUnlockRule;
   /** Visual-weight tier — absent means "derive it from `unlock`" via
    * cosmeticRarity.ts's defaultRarityForUnlock. */
   rarity?: CosmeticRarity;
-  /** Set only on items that would eventually be purchasable — auto-
-   * unlocked for everyone today, surfaced together in the Boutique tab. */
+  /** Set only on items that would eventually be purchasable — gated behind
+   * `unlock: { kind: "boutique" }` (creator-only for now, a real purchase
+   * later), surfaced together in the Boutique tab instead of this
+   * category's own list. */
   source?: "boutique";
 }
 
@@ -74,10 +76,9 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
   // Iron Will above.
   { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
-  // Boutique — see avatarPresets.ts's own doc on what an absent `unlock`
-  // means here.
-  { id: "opal", label: "Opal", source: "boutique" },
-  { id: "jade", label: "Jade", source: "boutique" },
+  // Boutique — see avatarPresets.ts's own doc on the "boutique" rule kind.
+  { id: "opal", label: "Opal", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "jade", label: "Jade", source: "boutique", unlock: { kind: "boutique" } },
 ];
 
 /** Solid ring colors for each frame — "grandmaster" instead gets a
@@ -143,13 +144,16 @@ export function findAvatarFrameOption(id: string | null): AvatarFrameOption | nu
 export interface TitleOption {
   id: string;
   label: string;
-  /** Absent only for a `source: "boutique"` item. */
+  /** Absent for a free pick — every gated title, including Boutique items,
+   * carries one. */
   unlock?: CosmeticUnlockRule;
   /** Visual-weight tier — absent means "derive it from `unlock`" via
    * cosmeticRarity.ts's defaultRarityForUnlock. */
   rarity?: CosmeticRarity;
-  /** Set only on items that would eventually be purchasable — auto-
-   * unlocked for everyone today, surfaced together in the Boutique tab. */
+  /** Set only on items that would eventually be purchasable — gated behind
+   * `unlock: { kind: "boutique" }` (creator-only for now, a real purchase
+   * later), surfaced together in the Boutique tab instead of this
+   * category's own list. */
   source?: "boutique";
 }
 
@@ -217,9 +221,9 @@ export const TITLE_OPTIONS: readonly TitleOption[] = [
   { id: "prismatic", label: "Complete", unlock: { kind: "complete" } },
   { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
-  // Boutique.
-  { id: "night_owl", label: "Night Owl", source: "boutique" },
-  { id: "the_bluffer", label: "The Bluffer", source: "boutique" },
+  // Boutique — see avatarPresets.ts's own doc on the "boutique" rule kind.
+  { id: "night_owl", label: "Night Owl", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "the_bluffer", label: "The Bluffer", source: "boutique", unlock: { kind: "boutique" } },
 ];
 
 export function findTitleOption(id: string | null): TitleOption | null {

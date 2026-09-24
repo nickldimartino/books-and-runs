@@ -57,11 +57,14 @@ export function SignatureCardBackPicker({
   active,
   onSelect,
   level,
+  isCreator = false,
 }: {
   active: SignatureCardBackId | null;
   onSelect: (id: SignatureCardBackId) => void;
   /** See CardFacePicker's own doc on this same prop. */
   level: number;
+  /** Gates the Boutique style (Static) — same source as `level`. */
+  isCreator?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -72,7 +75,7 @@ export function SignatureCardBackPicker({
             key={s.id}
             option={s}
             isActive={active === s.id}
-            unlocked={isCardCosmeticUnlocked(s.unlock, level)}
+            unlocked={isCardCosmeticUnlocked(s.unlock, level, isCreator)}
             onClick={() => onSelect(s.id)}
           />
         ))}

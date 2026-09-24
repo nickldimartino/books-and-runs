@@ -4,7 +4,7 @@ import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pushCardFace } from "../../lib/accountSettingsSync";
-import { useCardUnlockLevel } from "../../lib/cardCosmeticUnlocks";
+import { useCardUnlockContext } from "../../lib/cardCosmeticUnlocks";
 import { CardFaceId, loadLocalCardFace, saveLocalCardFace } from "../../lib/cardFaceStore";
 import { supabase } from "../../lib/supabaseClient";
 import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
@@ -19,7 +19,7 @@ import { CardFacePicker } from "../CardFacePicker";
 export default function CardFaceSettingsPage() {
   const { user } = useAuth();
   const [cardFace, setCardFace, loading] = useSyncedLocalPreference(loadLocalCardFace);
-  const level = useCardUnlockLevel(supabase, user?.id);
+  const { level, isCreator } = useCardUnlockContext(supabase, user?.id);
 
   function handleChange(id: CardFaceId) {
     setCardFace(id);
@@ -38,7 +38,11 @@ export default function CardFaceSettingsPage() {
         </p>
       </div>
 
-      {loading ? <LoadingSpinner /> : <CardFacePicker active={cardFace} onSelect={handleChange} level={level} />}
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <CardFacePicker active={cardFace} onSelect={handleChange} level={level} isCreator={isCreator} />
+      )}
     </main>
   );
 }

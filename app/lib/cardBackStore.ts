@@ -18,8 +18,9 @@ export interface SignatureCardBackOption {
   id: SignatureCardBackId;
   name: string;
   description: string;
-  /** Absent for a free pick. See cardCosmeticUnlocks.ts's own doc for why
-   * this is checked entirely client-side, unlike badge/frame/title/banner. */
+  /** Absent for a free pick. Boutique items carry `{ kind: "boutique" }`.
+   * See cardCosmeticUnlocks.ts's own doc for why this is checked entirely
+   * client-side, unlike badge/frame/title/banner. */
   unlock?: CosmeticUnlockRule;
   rarity?: CosmeticRarity;
   source?: "boutique";
@@ -41,6 +42,7 @@ export const SIGNATURE_CARD_BACKS: readonly SignatureCardBackOption[] = [
     name: "Static",
     description: "A scattered dot pattern, like an old TV between channels.",
     source: "boutique",
+    unlock: { kind: "boutique" },
   },
 ];
 

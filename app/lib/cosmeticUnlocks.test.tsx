@@ -89,6 +89,12 @@ describe("isCosmeticUnlocked", () => {
     expect(isCosmeticUnlocked(rule, ctx({ mpBestWinStreak: 7 }))).toBe(false);
     expect(isCosmeticUnlocked(rule, ctx({ mpBestWinStreak: 8 }))).toBe(true);
   });
+
+  it("gates a boutique rule purely on is_creator, same as creatorOnly — simulating a future purchase for now", () => {
+    const rule = { kind: "boutique" as const };
+    expect(isCosmeticUnlocked(rule, ctx({ level: 999, dailyDealBestStreak: 999 }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ isCreator: true }))).toBe(true);
+  });
 });
 
 describe("cosmeticRequirementLabel", () => {
@@ -108,5 +114,6 @@ describe("cosmeticRequirementLabel", () => {
     expect(cosmeticRequirementLabel({ kind: "averageScoreUnder", score: 70, minGames: 15 })).toContain("15");
     expect(cosmeticRequirementLabel({ kind: "gamesTied", count: 3 })).toContain("3");
     expect(cosmeticRequirementLabel({ kind: "mpWinStreak", streak: 8 })).toContain("8");
+    expect(cosmeticRequirementLabel({ kind: "boutique" })).toContain("Boutique");
   });
 });

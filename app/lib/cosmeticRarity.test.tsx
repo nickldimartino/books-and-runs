@@ -55,4 +55,8 @@ describe("defaultRarityForUnlock", () => {
     expect(defaultRarityForUnlock({ kind: "creatorOnly" })).toBe("rare");
     expect(defaultRarityForUnlock({ kind: "supporterOnly" })).toBe("rare");
   });
+
+  it("treats boutique as rare, matching the first boutique badges' own explicit override", () => {
+    expect(defaultRarityForUnlock({ kind: "boutique" })).toBe("rare");
+  });
 });

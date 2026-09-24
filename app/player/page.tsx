@@ -1663,12 +1663,11 @@ export default function PlayerProfilePage() {
                 // every boutique item lives in its home catalog (badge/
                 // frame/title/banner) tagged `source: "boutique"`, saved
                 // through that exact same update function a pick from its
-                // own tab would use. Nothing here is gated (no `unlock`
-                // rule, by design — see cosmeticUnlocks.ts's own doc on
-                // what an absent cosmetic_unlocks row means server-side):
-                // these are auto-unlocked for everyone while there's no
-                // real paywall yet, laid out the way a future purchase flow
-                // would present them.
+                // own tab would use. Gated on the "boutique" unlock kind
+                // (cosmeticUnlocks.ts) — creator-only for now, simulating
+                // the real purchase flow it'll become — so it gets the same
+                // visible-but-locked treatment as every other gated tab
+                // instead of being unconditionally pickable.
                 const boutiqueBadges = PREMIUM_EMOJI_OPTIONS.filter((o) => o.source === "boutique");
                 const boutiqueFrames = AVATAR_FRAME_OPTIONS.filter((o) => o.source === "boutique");
                 const boutiqueTitles = TITLE_OPTIONS.filter((o) => o.source === "boutique");
@@ -1683,8 +1682,9 @@ export default function PlayerProfilePage() {
                     <div>
                       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Boutique</h2>
                       <p className="text-xs text-[var(--faint)]">
-                        A curated set, free for everyone while it&apos;s new — picked from the same
-                        badge/frame/title/banner catalogs as everything else, just gathered here in one place.
+                        {unlockCtx.isCreator
+                          ? "A preview of what'll eventually be purchasable — picked from the same badge/frame/title/banner catalogs as everything else, just gathered here in one place. You can see and use all of it as the creator; everyone else sees it locked until it's for sale."
+                          : "A preview of what'll eventually be purchasable here — picked from the same badge/frame/title/banner catalogs as everything else. Not for sale yet."}
                       </p>
                     </div>
                     {isEmpty && (
@@ -1694,20 +1694,35 @@ export default function PlayerProfilePage() {
                       <section className="flex flex-col gap-2">
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Badges</h3>
                         <div className="flex flex-wrap gap-2">
-                          {boutiqueBadges.map((option) => (
-                            <button
-                              key={option.emoji}
-                              onClick={() => chooseBadge(option.emoji)}
-                              aria-label={`Use ${option.emoji} as your badge`}
-                              className={`grid aspect-square w-11 place-items-center rounded-lg text-[var(--heading)] transition ${
-                                entry.badge === option.emoji
-                                  ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
-                                  : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
-                              }`}
-                            >
-                              <PremiumBadgeIcon option={option} className="block h-2/3 w-2/3" />
-                            </button>
-                          ))}
+                          {boutiqueBadges.map((option) => {
+                            const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
+                            const requirement = cosmeticRequirementLabel(option.unlock!);
+                            return (
+                              <button
+                                key={option.emoji}
+                                onClick={() => unlocked && chooseBadge(option.emoji)}
+                                aria-label={unlocked ? `Use ${option.emoji} as your badge` : `${option.emoji} locked — ${requirement}`}
+                                title={unlocked ? undefined : requirement}
+                                className={`relative grid aspect-square w-11 place-items-center rounded-lg text-[var(--heading)] transition ${
+                                  !unlocked
+                                    ? `bg-[var(--panel-soft)] ${LOCKED_ITEM_CLASS}`
+                                    : entry.badge === option.emoji
+                                      ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
+                                      : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                                }`}
+                              >
+                                <PremiumBadgeIcon option={option} className="block h-2/3 w-2/3" />
+                                {!unlocked && (
+                                  <span
+                                    aria-hidden="true"
+                                    className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-[var(--bg)] text-[8px] leading-none"
+                                  >
+                                    🔒
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       </section>
                     )}
@@ -1715,22 +1730,28 @@ export default function PlayerProfilePage() {
                       <section className="flex flex-col gap-2">
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Frames</h3>
                         <div className="flex flex-wrap gap-3">
-                          {boutiqueFrames.map((option) => (
-                            <button
-                              key={option.id}
-                              onClick={() => chooseFrame(option.id)}
-                              className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                                entry.avatar_frame === option.id
-                                  ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
-                                  : "hover:bg-[var(--panel-soft)]"
-                              }`}
-                            >
-                              <AvatarFrame frame={option.id} size={44}>
-                                <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
-                              </AvatarFrame>
-                              <span className="text-[10px] text-[var(--faint)]">{option.label}</span>
-                            </button>
-                          ))}
+                          {boutiqueFrames.map((option) => {
+                            const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => unlocked && chooseFrame(option.id)}
+                                title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock!)}
+                                className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                                  !unlocked
+                                    ? LOCKED_ITEM_CLASS
+                                    : entry.avatar_frame === option.id
+                                      ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                                      : "hover:bg-[var(--panel-soft)]"
+                                }`}
+                              >
+                                <AvatarFrame frame={option.id} size={44}>
+                                  <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
+                                </AvatarFrame>
+                                <span className="text-[10px] text-[var(--faint)]">{lockedCaption(option.label, unlocked)}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </section>
                     )}
@@ -1738,19 +1759,25 @@ export default function PlayerProfilePage() {
                       <section className="flex flex-col gap-2">
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Titles</h3>
                         <div className="flex flex-wrap gap-2">
-                          {boutiqueTitles.map((option) => (
-                            <button
-                              key={option.id}
-                              onClick={() => chooseTitle(option.id)}
-                              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                                entry.title === option.id
-                                  ? "border-[var(--accent)] text-[var(--accent)]"
-                                  : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
+                          {boutiqueTitles.map((option) => {
+                            const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => unlocked && chooseTitle(option.id)}
+                                title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock!)}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                                  !unlocked
+                                    ? `border-[var(--border)] text-[var(--faint)] ${LOCKED_ITEM_CLASS}`
+                                    : entry.title === option.id
+                                      ? "border-[var(--accent)] text-[var(--accent)]"
+                                      : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                                }`}
+                              >
+                                {lockedCaption(option.label, unlocked)}
+                              </button>
+                            );
+                          })}
                         </div>
                       </section>
                     )}
@@ -1758,20 +1785,26 @@ export default function PlayerProfilePage() {
                       <section className="flex flex-col gap-2">
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Banners</h3>
                         <div className="flex flex-wrap gap-3">
-                          {boutiqueBanners.map((option) => (
-                            <button
-                              key={option.id}
-                              onClick={() => chooseBanner(option.id)}
-                              className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                                entry.banner === option.id
-                                  ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
-                                  : "hover:bg-[var(--panel-soft)]"
-                              }`}
-                            >
-                              <div className="h-10 w-16 rounded-md" style={{ background: option.css }} />
-                              <span className="text-[10px] text-[var(--faint)]">{option.label}</span>
-                            </button>
-                          ))}
+                          {boutiqueBanners.map((option) => {
+                            const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => unlocked && chooseBanner(option.id)}
+                                title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock!)}
+                                className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                                  !unlocked
+                                    ? LOCKED_ITEM_CLASS
+                                    : entry.banner === option.id
+                                      ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                                      : "hover:bg-[var(--panel-soft)]"
+                                }`}
+                              >
+                                <div className="h-10 w-16 rounded-md" style={{ background: option.css }} />
+                                <span className="text-[10px] text-[var(--faint)]">{lockedCaption(option.label, unlocked)}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </section>
                     )}

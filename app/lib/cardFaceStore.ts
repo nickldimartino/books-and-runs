@@ -27,9 +27,10 @@ export interface CardFaceOption {
   name: string;
   description: string;
   /** Absent for every one of the original 6 styles — all explicitly
-   * grandfathered free, no regression for anyone. See
-   * cardCosmeticUnlocks.ts's own doc for why this is checked entirely
-   * client-side, unlike badge/frame/title/banner. */
+   * grandfathered free, no regression for anyone. Boutique items carry
+   * `{ kind: "boutique" }`. See cardCosmeticUnlocks.ts's own doc for why
+   * this is checked entirely client-side, unlike badge/frame/title/
+   * banner. */
   unlock?: CosmeticUnlockRule;
   rarity?: CosmeticRarity;
   source?: "boutique";
@@ -77,6 +78,7 @@ export const CARD_FACES: CardFaceOption[] = [
     name: "Outline",
     description: "The Classic layout drawn in a clean stroke only, nothing filled in.",
     source: "boutique",
+    unlock: { kind: "boutique" },
   },
 ];
 

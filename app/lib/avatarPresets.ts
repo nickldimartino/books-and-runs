@@ -30,16 +30,18 @@ export type PremiumEmojiUnlock = CosmeticUnlockRule;
 
 export interface PremiumEmojiOption {
   emoji: string;
-  /** Absent only for a `source: "boutique"` item — every earned badge
-   * carries one. */
+  /** Every gated badge carries one, including Boutique items — see the
+   * `"boutique"` CosmeticUnlockRule kind (cosmeticUnlocks.ts). Only the
+   * handful of genuinely free picks above have none. */
   unlock?: PremiumEmojiUnlock;
   /** Visual-weight tier — absent means "derive it from `unlock`" via
    * cosmeticRarity.ts's defaultRarityForUnlock; only items that should
    * diverge from that default set it explicitly. */
   rarity?: CosmeticRarity;
-  /** Set only on items that would eventually be purchasable — auto-
-   * unlocked for everyone today (no real paywall yet), surfaced together
-   * in the Boutique tab. Never combined with `unlock` on the same item. */
+  /** Set only on items that would eventually be purchasable — gated behind
+   * `unlock: { kind: "boutique" }` (creator-only for now, a real purchase
+   * later), surfaced together in the Boutique tab instead of this
+   * category's own list. */
   source?: "boutique";
 }
 
@@ -102,13 +104,11 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "🤝", unlock: { kind: "gamesTied", count: 3 } },
   { emoji: "⚖️", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { emoji: "📈", unlock: { kind: "mpWinStreak", streak: 8 } },
-  // Boutique — auto-unlocked for everyone while there's no real paywall
-  // yet (see player/page.tsx's Boutique tab). No `unlock` rule at all: a
-  // cosmetic_type/cosmetic_key with no cosmetic_unlocks row is already
-  // unconditionally free at the server (cosmetic_unlocked(), see
-  // migration 0043) — nothing new to enforce here.
-  { emoji: "🎩", source: "boutique", rarity: "rare" },
-  { emoji: "🕶️", source: "boutique", rarity: "rare" },
+  // Boutique — a future real purchase, simulated for now as creator-only
+  // (see cosmeticUnlocks.ts's own doc on the "boutique" rule kind and
+  // player/page.tsx's Boutique tab) rather than left unconditionally free.
+  { emoji: "🎩", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  { emoji: "🕶️", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
 ] as const;
 
 /** Ring/disc color for every badge that still renders as MedalIcon (see

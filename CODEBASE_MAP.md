@@ -188,7 +188,7 @@ stay with each caller.
 | `themeStore.ts` | `theme` — 38 themes, applied via `[data-theme]` before paint. |
 | `cardBackStore.ts` | `cardBack` — card-back identity ("match" = mirror the table theme) across the 38 theme-derived backs, plus `SIGNATURE_CARD_BACKS` — 2 standalone backs not tied to any theme (one gated, one Boutique — see `cardCosmeticUnlocks.ts`), each with its own `[data-cardback="X"]` block in globals.css. |
 | `cardFaceStore.ts` | `cardFace` — 8 card-face drawing styles (default `classic`); read live via `useCardFace()` inside `CardFace.tsx` itself, not prop-drilled. The original 6 are free; `foil`/`outline` (added alongside the cosmetic rarity overhaul) are gated/Boutique respectively — see `cardCosmeticUnlocks.ts`. |
-| `cardCosmeticUnlocks.ts` | Unlock checking for card faces/backs — reuses `cosmeticUnlocks.ts`'s pure functions directly, but deliberately client-side-only (no server enforcement at all, unlike badge/frame/title/banner): a card face/back has zero competitive stakes, so the proportionality argument for `cosmetic_unlocks`/RLS doesn't apply. `useCardUnlockLevel` fetches the one thing any current rule needs (`compute_level`) via a single RPC call. |
+| `cardCosmeticUnlocks.ts` | Unlock checking for card faces/backs — reuses `cosmeticUnlocks.ts`'s pure functions directly, but deliberately client-side-only (no server enforcement at all, unlike badge/frame/title/banner): a card face/back has zero competitive stakes, so the proportionality argument for `cosmetic_unlocks`/RLS doesn't apply. `useCardUnlockContext` fetches the two things any current rule needs — `compute_level` and this account's own `is_creator` (for the Boutique kind) — via one RPC plus one `leaderboard_entries` read. |
 | `colorblindStore.ts` | `colorblindMode` — `[data-colorblind]` override for 3 card colours. |
 | `textScaleStore.ts` | `textScale` (default/large/xlarge) — `[data-text-scale]` on `<html>`, overriding Tailwind's own `--text-*` theme tokens (see globals.css) so every `text-xs`..`text-4xl` utility scales with no per-page change. `[data-no-text-scale]` on the actual game board (`game/page.tsx`, `multiplayer/play/page.tsx`) resets it back to 1 for that subtree — gameplay is deliberately excluded; Home's own tile buttons are unaffected by construction (they size their label via `cqw`, never these classes). Usable signed out, unlike Theme. |
 | `accountSettingsSync.ts` | Mirrors the stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushTextScale`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set — validated against each store's own known-option list first, same as every local loader already does — and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
@@ -378,6 +378,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0050 | Cheat-prevention audit (2d): `leaderboard_entries.mp_games_played`/`.mp_games_won`/`.mp_best_win_streak` (added in 0011, never locked down like the rest of that table) now get overwritten on every write with `mp_stats_for()`'s honest server-computed numbers, same "server truth wins" pattern 0035/0036/0039 already use for every other stat family — closes a real "fake your public MP record/rank" hole. Also revokes `game_history`'s leftover 0001-era client-insert policy (unused — the real write already goes through `solo-verify`'s service-role key, bypassing RLS). |
 | 0051 | Cosmetic rarity overhaul, phase 2 (see `plans/quiet-snacking-cloud.md`) — 4 new badge milestones (🔰 Level 5, 🛡️ Level 150, 🎯 1 category mastered, 🕯️ a 7-day Daily Deal streak), each reusing an existing `requirement_kind`; widens `leaderboard_badge_ok` for 2 new auto-unlocked "Boutique" badges (🎩🕶️), which deliberately get no `cosmetic_unlocks` row at all — already unconditionally free at the server. |
 | 0052 | Cosmetic rarity overhaul, phase 3 — 4 genuinely new `requirement_kind`s (`worst_score_under`/`average_score_under`/`games_tied`/`mp_win_streak`), each reading a column already server-verified by an earlier migration, so no new tamper-resistant data source was needed; 2 new named rewards spanning badge+frame+title+banner (Steady Hand, Hot Streak) plus 2 single badges (🧊🤝); 6 more auto-unlocked "Boutique" items (frame/title/banner — badges got theirs in 0051). |
+| 0053 | Gates the Boutique track behind a real requirement instead of leaving it unconditionally free — a new `boutique` `requirement_kind` (reads `is_creator`, same data as `creator_only` but its own kind so a real purchase can replace just this one branch later) plus `cosmetic_unlocks` rows for the 8 existing badge/frame/title/banner Boutique items. Card face/card back Boutique items stay client-side-only, so they get no row here. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -868,7 +869,25 @@ shippable and live-verified against production with throwaway accounts:
   38 theme-derived backs stay explicitly grandfathered-free.
 
 Boutique items across every category are `source: "boutique"` catalog
-entries with no `unlock` rule — already unconditionally free at the
-server (`cosmetic_unlocked()` treats a missing `cosmetic_unlocks` row as
-unlocked), so "auto-unlocked while there's no real paywall yet" needed
-zero new plumbing, just a flag for later re-gating.
+entries — originally shipped with no `unlock` rule at all, unconditionally
+free at the server (`cosmetic_unlocked()` treats a missing
+`cosmetic_unlocks` row as unlocked). That changed in the follow-up below.
+
+**Boutique creator-only gate** (`fbd1a71`) — simulates the Boutique's
+eventual real paywall now, ahead of building it: a new `boutique`
+`CosmeticUnlockRule` kind (`cosmeticUnlocks.ts`), reading `is_creator`
+today — the exact same data `creatorOnly` already reads, but kept as its
+own kind rather than reused outright, since `creatorOnly` also gates a
+genuinely permanent creator-exclusive item (Dealer's Table) that should
+never become purchasable. With a dedicated kind, turning on a real
+purchase later is a single-branch change to `cosmetic_unlocked()`
+(migration `0053`) — no catalog entry or `cosmetic_unlocks` row ever has
+to move. Every existing Boutique item across all 6 categories now carries
+`unlock: { kind: "boutique" }`; the Boutique tab (badge/frame/title/
+banner) and the Card face/Card back Settings pickers all render them with
+the same visible-but-locked treatment as any other gated item instead of
+being unconditionally pickable. Card face/card back stay client-side-only
+per Phase 4's own reasoning — `useCardUnlockContext` now fetches
+`is_creator` alongside level so that path can check the new kind too — so
+migration `0053` only adds `cosmetic_unlocks` rows for the 8 badge/frame/
+title/banner items, none for card face/back.

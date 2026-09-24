@@ -19,8 +19,10 @@ export interface BannerOption {
   /** Visual-weight tier — absent means "derive it from `unlock`" via
    * cosmeticRarity.ts's defaultRarityForUnlock. */
   rarity?: CosmeticRarity;
-  /** Set only on items that would eventually be purchasable — auto-
-   * unlocked for everyone today, surfaced together in the Boutique tab. */
+  /** Set only on items that would eventually be purchasable — gated behind
+   * `unlock: { kind: "boutique" }` (creator-only for now, a real purchase
+   * later), surfaced together in the Boutique tab instead of this
+   * category's own list. */
   source?: "boutique";
 }
 
@@ -98,8 +100,8 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
   { id: "steadyhand", label: "Glacier", css: "linear-gradient(135deg, #0c4a6e, #7dd3fc)", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Blaze", css: "linear-gradient(135deg, #9a3412, #fbbf24)", unlock: { kind: "mpWinStreak", streak: 8 } },
   // Boutique.
-  { id: "velvet", label: "Velvet", css: "linear-gradient(135deg, #4c0519, #86198f)", source: "boutique" },
-  { id: "moonlight", label: "Moonlight", css: "linear-gradient(135deg, #1e1b4b, #64748b)", source: "boutique" },
+  { id: "velvet", label: "Velvet", css: "linear-gradient(135deg, #4c0519, #86198f)", source: "boutique", unlock: { kind: "boutique" } },
+  { id: "moonlight", label: "Moonlight", css: "linear-gradient(135deg, #1e1b4b, #64748b)", source: "boutique", unlock: { kind: "boutique" } },
 ];
 
 export function findBannerOption(id: string | null): BannerOption | null {
