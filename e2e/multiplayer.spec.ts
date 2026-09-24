@@ -114,8 +114,11 @@ test("create → accept → one full turn between two real accounts", async ({ b
   await firstCard.waitFor({ timeout: 15_000 });
   await firstCard.click();
   await expect(firstCard).toHaveAttribute("aria-pressed", "true", { timeout: 5_000 });
-  await pageA.getByRole("button", { name: /set as discard/i }).click();
-  await pageA.getByRole("button", { name: /end turn/i }).click();
+  // Same confirm-before-it's-final step as solo/pass-and-play's discard
+  // (see multiplayer/play/page.tsx's confirmingDiscard) — picking a card
+  // to discard doesn't commit the turn by itself, tapping Confirm does.
+  await pageA.getByRole("button", { name: /discard selected card/i }).click();
+  await pageA.getByRole("button", { name: /^confirm$/i }).click();
 
   // The turn genuinely passed server-side: A's own view now says it's
   // waiting on B, and B — opening the exact same game — sees it's their

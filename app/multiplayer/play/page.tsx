@@ -37,6 +37,7 @@ import { UnlockToast } from "../../components/UnlockToast";
 import { useMpGame } from "../../lib/useMpGame";
 import { AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
+import { contractNeedLabel } from "../../lib/contractDisplay";
 import { applyHandOrder, compareByMode, SortMode } from "../../lib/handSort";
 import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
 import { getMpParticipantUserIds } from "../../lib/mpStore";
@@ -97,6 +98,12 @@ export default function MultiplayerPlayPage() {
   // game/page.tsx) — a bottom-sheet modal holding the hand + meld builder,
   // reachable via HandPreviewBar, instead of a permanently-inline hand.
   const [handDrawerOpen, setHandDrawerOpen] = useState(false);
+  // Same confirm-before-you-can't-take-it-back step as solo/pass-and-play's
+  // discardSection (see game/page.tsx's confirmingDiscard) — holds the
+  // card id, not the Card itself, since MP's own redacted view is what
+  // resolves ids to cards (there's no local `player.hand` to look one up
+  // in ahead of time the way solo has).
+  const [confirmingDiscard, setConfirmingDiscard] = useState<string | null>(null);
   const handDrawerRef = useRef<HTMLDivElement | null>(null);
   const tableMeldsElRef = useRef<HTMLElement | null>(null);
   // A purely local display order for your own hand — "Sort by suit/rank"
@@ -201,7 +208,17 @@ export default function MultiplayerPlayPage() {
   useEffect(() => {
     setLayoffArmed(false);
     setHandOrder(null);
+    setConfirmingDiscard(null);
   }, [view?.currentSeat, view?.round, view?.youHaveDrawn]);
+
+  // Same guard as solo/pass-and-play's own effect (see game/page.tsx) —
+  // drop a stale confirmation rather than let it reference a card that's no
+  // longer selected.
+  useEffect(() => {
+    if (confirmingDiscard && !g.selectedIds.includes(confirmingDiscard)) {
+      setConfirmingDiscard(null);
+    }
+  }, [g.selectedIds, confirmingDiscard]);
 
   // Same modal treatment as solo/pass-and-play's hand drawer (see
   // game/page.tsx's identical effect): stop the page behind it from
@@ -466,7 +483,11 @@ export default function MultiplayerPlayPage() {
   const contractStaged =
     !alreadyMelded && g.draft.groups.length > 0 && stagedBooks === view.contract.books && stagedRuns === view.contract.runs;
   const goingOut = g.visibleHand.length === 0 && (alreadyMelded || contractStaged);
-  const canEndTurn = acting && (goingOut || !!g.draft.discardCardId) && !g.busy;
+  // The only remaining caller of this is the "Go out" button — a normal
+  // turn now ends through the discard-confirm dialog's own commitTurn call
+  // (see the drawer below), which sends its discard straight to commitTurn
+  // instead of staging it via g.setDiscard first.
+  const canEndTurn = acting && goingOut && !g.busy;
   const oneSelected = g.selectedIds.length === 1;
 
   const selectedCard = oneSelected ? view.yourHand.find((c) => c.id === g.selectedIds[0]) ?? null : null;
@@ -761,50 +782,85 @@ export default function MultiplayerPlayPage() {
                 your hand" before drawing — entirely possible, since the
                 draw buttons live outside this drawer — showed no meld/
                 discard controls at all. */}
-            {isMyTurn && (
-              <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-4">
+            {/* Same three-part shape as solo/pass-and-play's drawer (see
+                game/page.tsx's buildMeldSection/discardSection/handSection):
+                a build-meld card, a lay-off/discard row, then the hand
+                itself. The one structural difference this mode can't drop —
+                see this file's own top-of-file comment — is that nothing
+                here is real until commitTurn: "Group selected cards" only
+                stages a group (solo's matching button does too, but solo
+                also has a separate "Confirm Meld" that immediately commits
+                it — there's no atomic-turn model to wait for), and
+                "Discard selected card" 's confirm step below sends the
+                whole staged turn (groups + lay-offs + the chosen discard)
+                in the one commit that ends it, rather than solo's discard
+                alone (solo's meld/lay-offs are already real by that point). */}
+            {isMyTurn && !alreadyMelded && (
+              <section
+                data-tutorial="build-meld"
+                className="panel-elevated flex flex-col items-center gap-3 rounded-xl bg-[var(--panel-soft)] p-4 text-center"
+              >
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                  Build your meld — this round needs {contractNeedLabel(view.contract.books, view.contract.runs)}
+                </h2>
+
                 {!drawn && (
                   <p className="text-xs text-[var(--accent)]">Draw a card first to start your turn.</p>
                 )}
-                {/* staged summary */}
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {!alreadyMelded && (
-                    <span className={contractStaged ? "text-[var(--accent)]" : "text-[var(--faint)]"}>
-                      Contract: {stagedBooks}/{view.contract.books} books · {stagedRuns}/{view.contract.runs} runs
-                      {contractStaged ? " ✓" : ""}
-                    </span>
-                  )}
-                  {g.draft.layoffs.length > 0 && (
-                    <span className="text-[var(--muted)]">
-                      · {g.draft.layoffs.length} lay-off{g.draft.layoffs.length > 1 ? "s" : ""}
-                    </span>
-                  )}
-                  {g.draft.discardCardId && (
-                    <span className="text-[var(--muted)]">
-                      · discard {label(view.yourHand.find((c) => c.id === g.draft.discardCardId)!)}
-                    </span>
-                  )}
-                </div>
 
                 {g.draft.groups.length > 0 && (
-                  <ul className="flex flex-col gap-2">
+                  <div className="flex w-full flex-col gap-2 text-left">
                     {g.draft.groups.map((grp) => (
-                      <li key={grp.id} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--panel)] px-3 py-2">
-                        <span className="flex items-end gap-1">
+                      <div
+                        key={grp.id}
+                        className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] p-2"
+                      >
+                        <span className="w-12 shrink-0 text-xs font-semibold capitalize text-[var(--accent)]">
+                          {grp.type}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
                           {grp.cardIds
                             .map((id) => view.yourHand.find((c) => c.id === id))
                             .filter((c): c is Card => !!c)
                             .map((c) => <PlayingCard key={c.id} card={c} small />)}
-                        </span>
-                        <button onClick={() => g.unstageGroup(grp.id)} className="shrink-0 text-xs text-[var(--danger)]">
-                          Undo
+                        </div>
+                        <button
+                          onClick={() => g.unstageGroup(grp.id)}
+                          className="ml-auto text-xs text-[var(--danger)] hover:opacity-80"
+                        >
+                          Remove
                         </button>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+                )}
+
+                {g.groupError && <p className="text-xs text-[var(--danger)]">{g.groupError}</p>}
+
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={() => g.stageGroup()}
+                    disabled={!drawn || g.selectedIds.length === 0}
+                    className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Group selected cards
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {isMyTurn && (
+              <section data-tutorial="discard-btn" className="flex flex-col items-center gap-3">
+                {!alreadyMelded && g.draft.groups.length > 0 && (
+                  <p className="text-xs text-[var(--faint)]">
+                    <span className={contractStaged ? "text-[var(--accent)]" : undefined}>
+                      Contract: {stagedBooks}/{view.contract.books} books · {stagedRuns}/{view.contract.runs} runs
+                      {contractStaged ? " ✓" : ""}
+                    </span>
+                  </p>
                 )}
                 {g.draft.layoffs.length > 0 && (
-                  <ul className="flex flex-wrap gap-2">
+                  <ul className="flex flex-wrap justify-center gap-2">
                     {g.draft.layoffs.map((lo) => {
                       const c = view.yourHand.find((x) => x.id === lo.cardId);
                       return (
@@ -821,55 +877,74 @@ export default function MultiplayerPlayPage() {
                   </ul>
                 )}
 
-                {g.groupError && <p className="text-xs text-[var(--danger)]">{g.groupError}</p>}
-
-                <div className="flex flex-wrap gap-2">
-                  {!alreadyMelded && (
+                {confirmingDiscard ? (
+                  <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
+                    <span className="text-sm text-[var(--muted)]">
+                      Discard the {label(view.yourHand.find((c) => c.id === confirmingDiscard)!)} and end your
+                      turn?
+                    </span>
                     <button
-                      onClick={() => g.stageGroup()}
-                      disabled={!drawn || g.selectedIds.length === 0}
-                      className="rounded-md bg-[var(--elevated)] px-3 py-1.5 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
+                      onClick={async () => {
+                        const cardId = confirmingDiscard;
+                        if (!cardId) return;
+                        await g.commitTurn({ discardCardId: cardId });
+                        setConfirmingDiscard(null);
+                        g.clearSelection();
+                      }}
+                      disabled={g.busy}
+                      className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-40"
                     >
-                      Group selected
+                      {g.busy ? "…" : "Confirm"}
                     </button>
-                  )}
-                  {canLayOff && (
                     <button
-                      onClick={armLayoffFromDrawer}
-                      disabled={!drawn || !oneSelected || layoffTargets.length === 0}
-                      className="rounded-md bg-[var(--elevated)] px-3 py-1.5 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
+                      onClick={() => setConfirmingDiscard(null)}
+                      className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
                     >
-                      Lay off selected
+                      Cancel
                     </button>
-                  )}
-                  {!goingOut && (
-                    <button
-                      onClick={() => oneSelected && g.setDiscard(g.selectedIds[0])}
-                      disabled={!drawn || !oneSelected}
-                      className="rounded-md bg-[var(--elevated)] px-3 py-1.5 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
-                    >
-                      Set as discard
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  onClick={g.commitTurn}
-                  disabled={!canEndTurn}
-                  className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow disabled:opacity-40"
-                >
-                  {g.busy ? "…" : goingOut ? "Go out" : "End turn"}
-                </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    {canLayOff && (
+                      <button
+                        onClick={armLayoffFromDrawer}
+                        disabled={!drawn || !oneSelected || layoffTargets.length === 0}
+                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Lay off card
+                      </button>
+                    )}
+                    {!goingOut && (
+                      <button
+                        onClick={() => oneSelected && setConfirmingDiscard(g.selectedIds[0])}
+                        disabled={!drawn || !oneSelected}
+                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Discard selected card
+                      </button>
+                    )}
+                    {goingOut && (
+                      <button
+                        onClick={() => g.commitTurn()}
+                        disabled={!canEndTurn}
+                        className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {g.busy ? "…" : "Go out"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </section>
             )}
 
-            <section>
+            <section data-tutorial="hand">
               <div className="mb-2 flex flex-col items-center gap-2 text-center">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
                   Your hand
                   <span className="ml-2 font-normal normal-case text-[var(--muted)]">
-                    ({orderedVisibleHand.length})
+                    ({handPenalty(orderedVisibleHand)} pts)
                   </span>
+                  {alreadyMelded && <span className="ml-2 text-[var(--accent)]">— contract melded</span>}
                 </h2>
                 <HandSortButtons onSort={sortHand} />
               </div>
@@ -891,12 +966,6 @@ export default function MultiplayerPlayPage() {
                 />
               )}
               <p className="mt-1 text-center text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
-              {isMyTurn && drawn && (
-                <p className="mt-2 text-center text-xs text-[var(--faint)]">
-                  Tap cards to select. {alreadyMelded ? "" : "“Group selected” lays a book or run toward the contract. "}
-                  Pick one card and “Set as discard” to end your turn.
-                </p>
-              )}
             </section>
           </div>
         </>

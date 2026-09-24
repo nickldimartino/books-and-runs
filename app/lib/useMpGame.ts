@@ -93,7 +93,12 @@ export interface UseMpGame {
   stageLayoff: (cardId: string, meldId: string, position?: "low" | "high") => void;
   unstageLayoff: (cardId: string) => void;
   setDiscard: (cardId: string | null) => void;
-  commitTurn: () => Promise<void>;
+  /** `discardCardId` lets a caller commit with a discard chosen in the same
+   * tap as the confirmation, without waiting for a prior `setDiscard` to
+   * flush through a re-render first (this reads `draft` from a closure, so
+   * a `setDiscard` immediately followed by `commitTurn()` in one handler
+   * would still see the pre-update draft). */
+  commitTurn: (overrides?: { discardCardId?: string | null }) => Promise<void>;
   resign: () => Promise<void>;
   /** Withdraws a game you're hosting that's still waiting on invitees —
    * only meaningful while `status === "pending"` and you're the host.
@@ -380,9 +385,12 @@ export function useMpGame(gameId: string | null): UseMpGame {
     setDraft((prev) => ({ ...prev, discardCardId: cardId }));
   }, []);
 
-  const commitTurn = useCallback(async () => {
+  const commitTurn = useCallback(async (overrides?: { discardCardId?: string | null }) => {
     if (!supabase || !gameId || !view || !contract) return;
-    const preDraft = draft;
+    const preDraft =
+      overrides && "discardCardId" in overrides
+        ? { ...draft, discardCardId: overrides.discardCardId ?? null }
+        : draft;
 
     const res = await run(() =>
       submitMpMove(supabase!, gameId, {

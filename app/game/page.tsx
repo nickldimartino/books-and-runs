@@ -31,6 +31,7 @@ import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { UndoRing } from "../components/UndoRing";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { contractNeedLabel } from "../lib/contractDisplay";
 import { markGameStarted } from "../lib/firstSessionStore";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
@@ -104,13 +105,6 @@ function wildStandInLabel(cards: Card[], contract: ContractRequirement, start: n
 
 function meldLabel(meld: Meld): string {
   return meld.type === "book" ? "Book" : "Run";
-}
-
-function contractNeedLabel(books: number, runs: number): string {
-  const parts: string[] = [];
-  if (books > 0) parts.push(`${books} book${books > 1 ? "s" : ""}`);
-  if (runs > 0) parts.push(`${runs} run${runs > 1 ? "s" : ""}`);
-  return parts.join(" + ");
 }
 
 /** contract.label split into one line per part for a compound contract
