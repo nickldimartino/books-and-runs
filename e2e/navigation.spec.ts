@@ -52,5 +52,5 @@ test("an unknown route shows the themed 404, not the framework default", async (
 test("How to Play renders the round contract table", async ({ page }) => {
   await page.goto("/how-to-play");
   await expect(page.getByRole("heading", { name: "How to Play" })).toBeVisible();
-  await expect(page.getByText("2 Books", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("2 books", { exact: true }).first()).toBeVisible();
 });

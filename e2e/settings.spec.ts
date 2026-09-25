@@ -54,7 +54,7 @@ test("a signed-out theme choice previews live but resets on reload", async ({ pa
 });
 
 test("the 'Whose turn is it?' setting is spelled correctly", async ({ page }) => {
-  await page.goto("/settings");
+  await page.goto("/settings#gameplay");
   await expect(page.getByText(/whose turn is it\?/i)).toBeVisible();
   await expect(page.getByText(/who's turn is it\?/i)).toHaveCount(0);
 });
