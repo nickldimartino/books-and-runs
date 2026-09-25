@@ -95,7 +95,8 @@ reads and mutates in place.
 ### 3a. Providers & sync (mounted once, in `app/layout.tsx`)
 
 ```
-AuthProvider
+LocaleProvider              loads the active language's dictionary; exposes t()/tPlural()
+  └ AuthProvider
   └ AccountSettingsSync     pulls synced Settings/Theme/Card back/Card face → localStorage on sign-in
   └ PlayerLevelProvider     current level/XP, refetched after each game
       └ PendingSaveSync     retries game saves that failed offline
@@ -194,6 +195,7 @@ stay with each caller.
 | `accountSettingsSync.ts` | Mirrors the stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushTextScale`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set — validated against each store's own known-option list first, same as every local loader already does — and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
 | `useSyncedLocalPreference.ts` | The "load from local storage, re-load on `br:settings-synced`" effect + loading-state boilerplate every Theme/Card back/Card face/Ambient song settings subpage needs — one hook instead of four hand-copies. Its value type isn't limited to a single primitive: Card back and Ambient song each reload two things from the same event (their own choice plus one read-only value they need but never set). |
 | `accountScope.ts` | Detects a genuine account handoff on this device (as opposed to the same account continuing, or a guest session) — the logic `AccountSwitchGuard.tsx` calls before resetting every local cache above, so one account's leftovers can't leak into (or get pushed into the cloud row of) a different account that signs in next. |
+| `achievementUnlockDiff.ts` | Pure before/after `AchievementProgressState` diff -> `{newlyUnlocked, leveledUpTo, newCosmetics}` plus `estimateProgress` (wraps `pendingProgress.withSessionCounters`); shared by RoundSummary, GameOverScreen, `useMpGame`. |
 | `tipsStore.ts` | `seenTips` — which first-visit page tips (`PageTip.tsx`) have been dismissed; "Show again" in Settings clears it. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
@@ -274,6 +276,31 @@ everything this account owns from the same owner-RLS tables/RPCs the rest
 of the app already reads, client-side, into one JSON file).
 
 ---
+
+### 3e. Language / i18n (`app/lib/i18n/`, `app/lib/localeStore.ts`)
+
+Ten languages (en, zh, ja, ko, de, fr, es, pt-BR, ru, it), hand-rolled with
+no i18n library — same "small store file + `[data-*]` attribute" shape as
+theme/colorblind/text-scale, plus `Intl.PluralRules` for CLDR plurals.
+
+| File | Role |
+|---|---|
+| `app/lib/localeStore.ts` | `LOCALES` (id, English name, native name, flag), `loadLocalLocale`/`saveLocalLocale`/`applyLocale` (`<html lang>` + `data-lang`). |
+| `public/init.js` | Re-applies the saved locale before first paint (its locale-id list is hand-duplicated from `localeStore.ts`, like every other pref there). |
+| `app/lib/i18n/LocaleProvider.tsx` | Mounted outermost in `layout.tsx`. English ships eagerly (it's the fallback for any missing key); the other 9 dictionaries are dynamic `import()`s, so only the active language downloads. Exposes `useT()` → `{ locale, setLocale, t, tPlural }`. Outside a provider (component tests) `useT()` returns a plain-English `FALLBACK_CONTEXT`. |
+| `app/lib/i18n/dictionaries/en.ts` | **Source of truth** — flat dot-path keys (`settings.language.title`). `keys.ts` derives the compile-time `TranslationKey` union from it alone, so a typo'd `t()` call fails `tsc`. Every other locale file must carry the same keys and the same `{placeholder}` tokens (verify with a diff script — see below). |
+| `app/lib/i18n/dictionaries/<id>.ts` | One flat object per language. Russian additionally carries `.few`/`.many` siblings for every plural pair. |
+| `app/lib/accountSettingsSync.ts` | `language` column round-trips like the other synced prefs (`pushLocale`, validated branch in `applyAccountSettings`). |
+| `app/components/WelcomeOnboarding.tsx` + `app/lib/onboardingStore.ts` | One-time post-sign-up dialog (language picker + "soft-ask" push opt-in). `markJustSignedUp()` is set by `sign-in/page.tsx` on a successful sign-up; Home shows the dialog while `hasJustSignedUp()` and clears the flag only on dismiss — the read is deliberately non-destructive because the sign-in → Home redirect can mount Home more than once. |
+
+**Conventions**
+- `t(key, vars)` interpolates `{name}`; `tPlural(key, count, vars)` picks `<key>.<category>` (falling back to `.other`) via `Intl.PluralRules` — never hand-write `count === 1 ? "" : "s"`.
+- Plain (non-component) helpers take `t`/`tPlural` as parameters (`contractNeedLabel`, `cardLabel`, `personaBlurbFor`, `formatAchievementProgress`, `buildProfileShareCardInput`, …).
+- Static catalogs hold **keys, not text**: `TUTORIAL_STEPS`, `AI_PERSONAS[].blurbKey`, and `src/achievements.ts`'s `titleKey`/`unitKey` (kept as plain `string` so `src/` stays framework-free; the app casts `as TranslationKey` at render). The canvas share card is fed pre-translated strings (`creatorLabel`, `trophyCaseLabel`, `levelLabel`, `stats[].label`).
+- **Deliberately untranslated proper nouns:** "Books & Runs", AI opponent names, cosmetic item names (badges/frames/titles/banners/themes/card faces/backs), song names.
+- Server components (`terms`, `privacy`, `history`, `how-to-play`) keep `page.tsx` as a thin shell (for `metadata`) and put the prose in a sibling `*Content.tsx` client component.
+- Never bake a translated string into `useState` at mount — the dictionary can still be loading on a hard page load (see `new-game/local`'s `defaultYouRef` re-sync).
+- Adding a string: add the key to `en.ts`, use it, then add it to the other 9 files. `node` diff of `^  "([^"]+)":` keys per file (plus a `{token}` set comparison per key) is the completeness check.
 
 ## 4. Data flows
 
@@ -380,6 +407,7 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0052 | Cosmetic rarity overhaul, phase 3 — 4 genuinely new `requirement_kind`s (`worst_score_under`/`average_score_under`/`games_tied`/`mp_win_streak`), each reading a column already server-verified by an earlier migration, so no new tamper-resistant data source was needed; 2 new named rewards spanning badge+frame+title+banner (Steady Hand, Hot Streak) plus 2 single badges (🧊🤝); 6 more auto-unlocked "Boutique" items (frame/title/banner — badges got theirs in 0051). |
 | 0053 | Gates the Boutique track behind a real requirement instead of leaving it unconditionally free — a new `boutique` `requirement_kind` (reads `is_creator`, same data as `creator_only` but its own kind so a real purchase can replace just this one branch later) plus `cosmetic_unlocks` rows for the 8 existing badge/frame/title/banner Boutique items. Card face/card back Boutique items stay client-side-only, so they get no row here. |
 | 0054 | Expands the Boutique from 2 to 10 items per category (badge/frame/title/banner/card face/card back), every item unique from each other and from every free/earned option. Widens `leaderboard_badge_ok`/`leaderboard_banner_ok` for the 8 new badges/banners and adds `cosmetic_unlocks` rows (`boutique` kind) for the 32 new badge/frame/title/banner items; the 8 new card faces/backs stay client-side-only. |
+| 0055 | Adds the nullable `settings.language` column (same nullable-column-means-"use local default" pattern as every synced setting since 0022) so the chosen display language follows the account across devices. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -491,6 +519,7 @@ Re-run the bundle step whenever `src/` changes.
 
 - **React imports:** `import { ReactNode, FormEvent } from "react"` — not
   `React.ReactNode`. (`layout.tsx` is the lone `React.*` holdout.)
+- **Language:** never hardcode user-facing English — route it through `t()`/`tPlural()` (§3e). Dev-only `console.*` strings and server-controlled error passthroughs stay English.
 - **Redirect "pages":** static export has no `redirects` config for client
   routes — a redirect is a `"use client"` page that calls `router.replace()`
   in an effect (see `app/multiplayer/page.tsx`).
@@ -612,18 +641,14 @@ was looking). No genuinely orphaned file exists anywhere in the repo.
 
 ### Report-only — real but not worth the risk right now
 
-1. **Triplicated "snapshot progress → diff → show unlock" logic**, in
-   `components/GameOverScreen.tsx`, `components/RoundSummary.tsx`, and
-   `lib/useMpGame.ts`. Each differs deliberately (localStorage key, timing,
-   which counters). A shared `useAchievementUnlockDiff` hook could unify it,
-   but it sits on the game-over UX critical path and all three are covered
-   only by manual testing. Refactor only with a dedicated test pass.
+1. ~~**Triplicated "snapshot progress -> diff -> show unlock" logic**~~ —
+   DONE: the pure diff now lives in `lib/achievementUnlockDiff.ts`
+   (`diffAchievementProgress`, `estimateProgress`); callers keep their own
+   timing/storage/sounds.
 
-2. **Per-turn achievement counter derivation exists twice** —
-   `GameContext.tsx` (`bump()` from local play) and `useMpGame.ts`
-   (`bumpC()` from a committed MP move) compute the same counter categories
-   from different inputs. Consolidating means a shared "describe this turn"
-   function over both the local and the redacted-MP shapes.
+2. ~~**Per-turn achievement counter derivation exists twice**~~ — DONE: the
+   MP client-side `bumpC()` is gone (the server credits counters in
+   `mp/index.ts`); `GameContext.tsx` uses only `src/replayStats.ts` deltas.
 
 3. **~35 type aliases (plus a few small helper functions) are `export`ed
    but only used in their own file** — `ts-prune` now flags around this
@@ -917,3 +942,48 @@ property) rather than hand-authoring new SVG mask data URIs. Migration
 `0054` widens the badge/banner CHECKs and adds `cosmetic_unlocks` rows for
 the 32 new badge/frame/title/banner items; card face/back need none (same
 client-side-only reasoning as Phase 4).
+
+### 2026-09-24/25 — language support (10 languages) and post-audit fixes
+
+The "language support" item deferred by the 2f feature audit, built as a
+dedicated task. Full architecture in §3e; migration `0055`.
+
+- **Scope, in order:** infrastructure + Settings picker + account sync →
+  core experience (Home, New Game, both game screens, How to Play, Sign in,
+  shared components) → everything else (player profile, leaderboard,
+  friends, achievements incl. all 44 family names/units, clubs,
+  tournaments, terms/privacy/history, account, scorekeeper, password reset,
+  support, tip, review prompt, AI persona blurbs, canvas share-card text).
+  ~1,220 keys × 10 languages. Terms/Privacy are translated faithfully
+  clause-for-clause but have **not had a human/legal review** — worth one
+  before relying on them.
+- **Bugs found and fixed along the way:** untranslated round-header contract
+  label (raw `CONTRACTS[].label`) in solo and MP; a mutate-ref-before-deferred-
+  updater race that left the default player name stuck in English on a hard
+  page load; the welcome dialog's destructive flag-read racing Home's double
+  mount (see §3e).
+- **Related product fixes:** Home's and the profile page's "closest
+  achievement" now add this device's unverified in-progress-game counters
+  (`app/lib/pendingProgress.ts`) — display-only, never written; unlock
+  contexts still use real persisted progress only.
+- **Still open from earlier audits:** manifest `screenshots` array (needs
+  real image assets); native iOS/Android (parked by the user's decision).
+- **Multiplayer meld + smoothness pass** (`useMpGame.ts`, `multiplayer/play/page.tsx`,
+  `lib/structuralShare.ts`, `lib/handSort.ts`). The reported "couldn't meld"
+  hand commits fine server-side (regression-tested in `adapter.test.ts`);
+  the real problems were UX and client races: staging only drafts groups and
+  the atomic commit needs a discard + confirm with no hint saying so; a
+  failed move's error rendered behind the drawer backdrop and was cleared by
+  the reconciling refresh; ambiguous run-wild placement had no picker in MP.
+  Now: a "contract staged — pick a discard" hint, a primary "Meld & discard"
+  button, in-drawer persistent errors, and the solo-style wild-position
+  picker. Smoothness: refreshes are ordered/coalesced so a stale response can
+  never roll the board back over your own move's response; `shareStructure`
+  keeps object identity for unchanged view parts (no re-animating cards);
+  a failed background refresh is a soft notice, not a remount; a ref-based
+  double-tap guard replaces a stale-closure `busy`; hand sort/reorder operate
+  on the whole hand (`mergeVisibleOrder`) so unstaged cards return to their
+  slot; MP gained the drawn-card highlight and card-flight animations. The
+  `mp` Edge Function needs a redeploy for the `preferredRunStarts` null
+  normalisation in `src/mp/adapter.ts` (defensive only). Flight timing and
+  realtime bursts still need a live two-player check.
