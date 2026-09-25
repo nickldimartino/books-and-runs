@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { loadSupabase } from "../lib/supabaseClient";
 
 type ReportType = "bug" | "feature";
@@ -50,6 +51,7 @@ function fileToBase64(file: File): Promise<string> {
 export default function SupportPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useT();
   const [type, setType] = useState<ReportType>("bug");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -87,16 +89,16 @@ export default function SupportPage() {
     const next = [...files];
     for (const file of Array.from(picked)) {
       if (next.length >= MAX_ATTACHMENTS) {
-        setFileError(`You can attach up to ${MAX_ATTACHMENTS} files.`);
+        setFileError(t("support.maxAttachmentsReached", { max: MAX_ATTACHMENTS }));
         break;
       }
       if (ALLOWED_TYPES.length > 0 && !ALLOWED_TYPES.includes(file.type)) {
-        setFileError(`${file.name} isn't a supported file type (images, PDF, or text).`);
+        setFileError(t("support.unsupportedFileType", { name: file.name }));
         continue;
       }
       const wouldBeTotal = next.reduce((sum, f) => sum + f.file.size, 0) + file.size;
       if (wouldBeTotal > MAX_ATTACHMENT_BYTES) {
-        setFileError(`Attachments can't add up to more than ${formatBytes(MAX_ATTACHMENT_BYTES)} total.`);
+        setFileError(t("support.attachmentsTooLarge", { max: formatBytes(MAX_ATTACHMENT_BYTES) }));
         continue;
       }
       next.push({ file });
@@ -114,7 +116,7 @@ export default function SupportPage() {
     const trimmedSubject = subject.trim();
     const trimmedDescription = description.trim();
     if (!trimmedSubject || !trimmedDescription) {
-      setErrorMessage("A subject and description are both required.");
+      setErrorMessage(t("support.subjectAndDescriptionRequired"));
       setStatus("error");
       return;
     }
@@ -153,7 +155,7 @@ export default function SupportPage() {
       setFiles([]);
     } catch {
       setStatus("error");
-      setErrorMessage("Couldn't send that — check your connection and try again.");
+      setErrorMessage(t("support.sendFailedGeneric"));
     }
   }
 
@@ -163,32 +165,30 @@ export default function SupportPage() {
         <p className="text-4xl" aria-hidden="true">
           ✅
         </p>
-        <h1 className="text-xl font-bold text-[var(--heading)]">Thanks — we got it.</h1>
+        <h1 className="text-xl font-bold text-[var(--heading)]">{t("support.thanksHeading")}</h1>
         <p className="text-sm text-[var(--muted)]">
-          {replyTo.trim()
-            ? "We'll reply to the email address you gave if we need more details."
-            : "If you'd like a reply, send another message and leave an email address this time."}
+          {replyTo.trim() ? t("support.replyIfProvided") : t("support.replyIfNotProvided")}
         </p>
         <div className="mt-2 flex gap-3">
           <button
             onClick={() => setStatus("idle")}
             className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
-            Send another
+            {t("support.sendAnother")}
           </button>
           {cameFromReviewPrompt ? (
             <button
               onClick={() => router.back()}
               className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
             >
-              Back to game
+              {t("howToPlay.backToGame")}
             </button>
           ) : (
             <Link
               href="/"
               className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
             >
-              Home
+              {t("common.home")}
             </Link>
           )}
         </div>
@@ -199,22 +199,20 @@ export default function SupportPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       {cameFromReviewPrompt ? (
-        <BackLink onClick={() => router.back()} label="Back to game" />
+        <BackLink onClick={() => router.back()} label={t("howToPlay.backToGame")} />
       ) : (
         <BackLink href="/" />
       )}
 
       <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Contact &amp; support</h1>
-        <p className="mt-1 text-sm text-[var(--faint)]">
-          Found a bug, or have an idea? Tell us about it below.
-        </p>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("support.title")}</h1>
+        <p className="mt-1 text-sm text-[var(--faint)]">{t("support.subheading")}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="report-type" className="text-sm font-medium text-[var(--heading)]">
-            What&apos;s this about?
+            {t("support.whatIsThisAbout")}
           </label>
           <select
             id="report-type"
@@ -222,21 +220,21 @@ export default function SupportPage() {
             onChange={(e) => setType(e.target.value as ReportType)}
             className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
           >
-            <option value="bug">Bug</option>
-            <option value="feature">Feature request</option>
+            <option value="bug">{t("support.bug")}</option>
+            <option value="feature">{t("support.featureRequest")}</option>
           </select>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="report-subject" className="text-sm font-medium text-[var(--heading)]">
-            Subject
+            {t("support.subject")}
           </label>
           <input
             id="report-subject"
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder={type === "bug" ? "e.g. Cards overlap on my phone" : "e.g. Add a dark green theme"}
+            placeholder={type === "bug" ? t("support.subjectPlaceholderBug") : t("support.subjectPlaceholderFeature")}
             maxLength={MAX_SUBJECT}
             required
             className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
@@ -245,16 +243,14 @@ export default function SupportPage() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="report-description" className="text-sm font-medium text-[var(--heading)]">
-            Description
+            {t("support.description")}
           </label>
           <textarea
             id="report-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={
-              type === "bug"
-                ? "What happened, and what did you expect instead? Steps to reproduce help a lot."
-                : "What would you like to see, and why would it help?"
+              type === "bug" ? t("support.descriptionPlaceholderBug") : t("support.descriptionPlaceholderFeature")
             }
             maxLength={MAX_DESCRIPTION}
             required
@@ -268,7 +264,7 @@ export default function SupportPage() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="report-email" className="text-sm font-medium text-[var(--heading)]">
-            Your email <span className="font-normal text-[var(--faint)]">(optional — so we can reply)</span>
+            {t("support.yourEmail")} <span className="font-normal text-[var(--faint)]">{t("support.emailOptionalNote")}</span>
           </label>
           <input
             id="report-email"
@@ -282,7 +278,7 @@ export default function SupportPage() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="report-files" className="text-sm font-medium text-[var(--heading)]">
-            Attachments <span className="font-normal text-[var(--faint)]">(optional — screenshots help)</span>
+            {t("support.attachments")} <span className="font-normal text-[var(--faint)]">{t("support.attachmentsOptionalNote")}</span>
           </label>
           <input
             id="report-files"
@@ -308,7 +304,7 @@ export default function SupportPage() {
                   <button
                     type="button"
                     onClick={() => removeFile(i)}
-                    aria-label={`Remove ${f.file.name}`}
+                    aria-label={t("support.removeFile", { name: f.file.name })}
                     className="shrink-0 text-[var(--faint)] hover:text-[var(--danger)]"
                   >
                     ✕
@@ -332,7 +328,7 @@ export default function SupportPage() {
           disabled={status === "sending"}
           className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
-          {status === "sending" ? "Sending…" : "Send"}
+          {status === "sending" ? t("support.sending") : t("support.send")}
         </button>
       </form>
     </main>

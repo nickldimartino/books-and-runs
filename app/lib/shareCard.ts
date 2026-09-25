@@ -175,6 +175,14 @@ export interface ProfileShareCardInput {
    * here, not by the caller, since it needs the same lookup ProfileBanner
    * and player/page.tsx's onBanner text-color branch both use. */
   banner: string | null;
+  /** Pre-translated chrome text — this renderer stays i18n-agnostic itself
+   * (a plain canvas drawer), same reasoning as `stats`' own labels below:
+   * the caller (profileShareCard.ts's buildProfileShareCardInput, which
+   * already has `t`) resolves these once, rather than threading a
+   * translation function into canvas-drawing code. */
+  creatorLabel: string;
+  trophyCaseLabel: string;
+  levelLabel: string;
   stats: { label: string; value: string }[];
   /** Up to 6 pinned trophies, in Trophy Case order — same shape as the real
    * page's ShowcaseItem, just without the `key`/`familyId` this renderer
@@ -506,7 +514,7 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     ctx.restore();
     ctx.fillStyle = onBanner ? "#fef08a" : accent;
     ctx.font = `700 10px ${sans}`;
-    ctx.fillText("CREATOR", pillX + 20, pillY + 1);
+    ctx.fillText(input.creatorLabel.toUpperCase(), pillX + 20, pillY + 1);
   }
 
   if (input.titleLabel) {
@@ -517,7 +525,7 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
 
   ctx.fillStyle = onBanner ? "rgba(255,255,255,0.85)" : faint;
   ctx.font = `600 13px ${sans}`;
-  ctx.fillText(`Level ${input.level}`, textX, avatarY + (input.titleLabel ? 68 : 46));
+  ctx.fillText(input.levelLabel, textX, avatarY + (input.titleLabel ? 68 : 46));
 
   let y = headerH - 20;
   ctx.strokeStyle = hexWithAlpha(text, 0.14);
@@ -547,7 +555,7 @@ export async function renderProfileShareCard(input: ProfileShareCardInput): Prom
     ctx.textAlign = "left";
     ctx.fillStyle = faint;
     ctx.font = `600 11px ${sans}`;
-    ctx.fillText("TROPHY CASE", 32, y + 6);
+    ctx.fillText(input.trophyCaseLabel.toUpperCase(), 32, y + 6);
     // Same medal shape as the real Trophy Case's TrophyBadge: a tier-
     // colored ring, a panel-colored disc, the category's own icon at half
     // size, and the family name underneath — not a bare color dot.

@@ -7,7 +7,7 @@
 // button (the standard person-plus icon) when signed in.
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
@@ -24,6 +24,9 @@ import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
+import type { TranslationKey } from "../lib/i18n/keys";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { Vars } from "../lib/i18n/LocaleProvider";
 import { formatWinRate } from "../lib/profileShareCard";
 import {
   displayNameFor,
@@ -83,6 +86,8 @@ type SortKey =
   | "mp_win_rate"
   | "mp_best_win_streak";
 
+type T = (key: TranslationKey, vars?: Vars) => string;
+
 interface Column {
   key: SortKey;
   label: string;
@@ -97,40 +102,74 @@ interface Column {
 // Single source of truth for both the "Sort by" dropdown and the table's
 // header/body cells — the season view (below) is just a filtered subset of
 // this same list, reusing the exact same render logic against
-// season-adjusted entries (see seasonAdjustedEntry).
-const COLUMNS: Column[] = [
-  { key: "level", label: "Level", minWidth: "60px", render: (e) => e.level },
-  {
-    key: "achievements",
-    label: "Achievements",
-    minWidth: "80px",
-    render: (e) => `${e.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`,
-  },
-  { key: "total_xp", label: "Total XP", minWidth: "80px", render: (e) => e.total_xp },
-  { key: "win_rate", label: "Win rate", minWidth: "70px", render: (e) => formatWinRate(e.games_played, e.games_won) },
-  { key: "average_score", label: "Avg. score", minWidth: "90px", render: (e) => formatScore(e.average_score) },
-  { key: "games_played", label: "Games", minWidth: "70px", render: (e) => e.games_played },
-  { key: "games_won", label: "Wins", minWidth: "70px", render: (e) => e.games_won },
-  { key: "worst_score", label: "Worst score", minWidth: "90px", render: (e) => formatScore(e.worst_score) },
-  { key: "daily_deal_streak", label: "Daily streak", minWidth: "90px", render: (e) => e.daily_deal_streak },
-  {
-    key: "daily_deal_best_streak",
-    label: "Best streak",
-    minWidth: "90px",
-    render: (e) => e.daily_deal_best_streak,
-  },
-  { key: "mp_games_won", label: "MP wins", minWidth: "70px", render: (e) => e.mp_games_won ?? 0 },
-  {
-    key: "mp_win_rate",
-    label: "MP win rate",
-    minWidth: "90px",
-    render: (e) =>
-      (e.mp_games_played ?? 0) >= MP_WIN_RATE_MIN_GAMES
-        ? `${Math.round((100 * (e.mp_games_won ?? 0)) / (e.mp_games_played ?? 1))}%`
-        : "—",
-  },
-  { key: "mp_best_win_streak", label: "MP streak", minWidth: "80px", render: (e) => e.mp_best_win_streak ?? 0 },
-];
+// season-adjusted entries (see seasonAdjustedEntry). A function (rather than
+// a module-level constant) because the labels need to be reactive to the
+// current locale.
+function buildColumns(t: T): Column[] {
+  return [
+    { key: "level", label: t("leaderboard.column.level"), minWidth: "60px", render: (e) => e.level },
+    {
+      key: "achievements",
+      label: t("leaderboard.column.achievements"),
+      minWidth: "80px",
+      render: (e) => `${e.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}`,
+    },
+    { key: "total_xp", label: t("leaderboard.column.totalXp"), minWidth: "80px", render: (e) => e.total_xp },
+    {
+      key: "win_rate",
+      label: t("leaderboard.column.winRate"),
+      minWidth: "70px",
+      render: (e) => formatWinRate(e.games_played, e.games_won),
+    },
+    {
+      key: "average_score",
+      label: t("leaderboard.column.avgScore"),
+      minWidth: "90px",
+      render: (e) => formatScore(e.average_score),
+    },
+    { key: "games_played", label: t("leaderboard.column.games"), minWidth: "70px", render: (e) => e.games_played },
+    { key: "games_won", label: t("leaderboard.column.wins"), minWidth: "70px", render: (e) => e.games_won },
+    {
+      key: "worst_score",
+      label: t("leaderboard.column.worstScore"),
+      minWidth: "90px",
+      render: (e) => formatScore(e.worst_score),
+    },
+    {
+      key: "daily_deal_streak",
+      label: t("leaderboard.column.dailyStreak"),
+      minWidth: "90px",
+      render: (e) => e.daily_deal_streak,
+    },
+    {
+      key: "daily_deal_best_streak",
+      label: t("leaderboard.column.bestStreak"),
+      minWidth: "90px",
+      render: (e) => e.daily_deal_best_streak,
+    },
+    {
+      key: "mp_games_won",
+      label: t("leaderboard.column.mpWins"),
+      minWidth: "70px",
+      render: (e) => e.mp_games_won ?? 0,
+    },
+    {
+      key: "mp_win_rate",
+      label: t("leaderboard.column.mpWinRate"),
+      minWidth: "90px",
+      render: (e) =>
+        (e.mp_games_played ?? 0) >= MP_WIN_RATE_MIN_GAMES
+          ? `${Math.round((100 * (e.mp_games_won ?? 0)) / (e.mp_games_played ?? 1))}%`
+          : "—",
+    },
+    {
+      key: "mp_best_win_streak",
+      label: t("leaderboard.column.mpStreak"),
+      minWidth: "80px",
+      render: (e) => e.mp_best_win_streak ?? 0,
+    },
+  ];
+}
 
 // The season (this-month) board only ranks stats that actually reset —
 // level/XP/achievements/daily-streaks/MP stats stay all-time-only by
@@ -138,7 +177,6 @@ const COLUMNS: Column[] = [
 // games_played/games_won, nothing else is diffable from a single monthly
 // snapshot).
 const SEASON_COLUMN_KEYS: SortKey[] = ["games_played", "games_won", "win_rate"];
-const SEASON_COLUMNS: Column[] = COLUMNS.filter((c) => SEASON_COLUMN_KEYS.includes(c.key));
 
 /**
  * A single number per sort key where *higher always means "ranks first"*.
@@ -203,7 +241,7 @@ function sortEntries(entries: LeaderboardEntry[], key: SortKey): LeaderboardEntr
  * Rewrites games_played/games_won as this-season deltas (current cumulative
  * minus the last monthly snapshot — see migration 0044) — every other field
  * is passed through unchanged, so this same entry can go straight into
- * formatWinRate/SEASON_COLUMNS' render functions with no special-casing.
+ * formatWinRate/seasonColumns' render functions with no special-casing.
  * An account with no snapshot yet (newer than the last one taken) gets a
  * baseline of 0, so its whole cumulative total counts for this season —
  * correct, since all of it happened within the season. Clamped at 0 as a
@@ -227,6 +265,9 @@ function seasonLabel(): string {
 
 export default function LeaderboardPage() {
   const { configured, loading: authLoading, user } = useAuth();
+  const { t } = useT();
+  const columns = useMemo(() => buildColumns(t), [t]);
+  const seasonColumns = useMemo(() => columns.filter((c) => SEASON_COLUMN_KEYS.includes(c.key)), [columns]);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -353,16 +394,14 @@ export default function LeaderboardPage() {
   }
 
   if (!authLoading && !configured) {
-    return (
-      <CenteredMessage title="The leaderboard isn't set up yet" body="This app doesn't have a Supabase project connected yet." />
-    );
+    return <CenteredMessage title={t("leaderboard.notSetUp.title")} body={t("leaderboard.notSetUp.body")} />;
   }
 
   if (!authLoading && configured && !user) {
     return (
       <CenteredMessage
-        title="Sign in to see the leaderboard"
-        body="It's only visible to accounts that are signed in — not the general public."
+        title={t("leaderboard.signInGate.title")}
+        body={t("leaderboard.signInGate.body")}
         signIn
       />
     );
@@ -372,22 +411,20 @@ export default function LeaderboardPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
       <BackLink href="/" />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">Leaderboard</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("home.progressTile.leaderboard")}</h1>
 
-      <PageTip id="leaderboard" title="Finding your friends">
-        Every signed-in account, ranked by whichever stat you sort by below — or tap the
-        &quot;Friends&quot; toggle to rank against just the people you&apos;ve added. Tap any
-        name to open their profile. Set your own name on the{" "}
+      <PageTip id="leaderboard" title={t("leaderboard.tip.title")}>
+        {t("leaderboard.tip.bodyBeforeAccount")}{" "}
         <Link href="/account" className="underline hover:text-[var(--heading)]">
-          Account
+          {t("home.account")}
         </Link>{" "}
-        page.
+        {t("leaderboard.tip.bodyAfterAccount")}
       </PageTip>
 
       {authLoading || loading ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load the leaderboard — check your connection and try again.</p>
+        <p className="text-sm text-[var(--danger)]">{t("leaderboard.loadError")}</p>
       ) : entries.length === 0 ? (
         <EmptyState
           icon="🏆"
@@ -396,11 +433,11 @@ export default function LeaderboardPage() {
               href="/new-game"
               className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
             >
-              New Game
+              {t("home.newGame")}
             </Link>
           }
         >
-          Nobody&apos;s finished a tracked game or a Daily Deal yet — play one to be the first.
+          {t("leaderboard.emptyAll")}
         </EmptyState>
       ) : (
         <>
@@ -409,33 +446,31 @@ export default function LeaderboardPage() {
               onClick={() => setView("allTime")}
               className={`px-3 py-1.5 font-medium transition ${view === "allTime" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
             >
-              All-time
+              {t("leaderboard.view.allTime")}
             </button>
             <button
               onClick={() => setView("season")}
               className={`px-3 py-1.5 font-medium transition ${view === "season" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
             >
-              This month
+              {t("leaderboard.view.thisMonth")}
             </button>
           </div>
 
           {view === "season" && (
-            <PageTip id="leaderboard-season" title="This month">
-              Games played and won since {seasonLabel()} began — resets on the 1st of every
-              month, so there&apos;s always a fresh race even if you&apos;re behind on the
-              all-time board.
+            <PageTip id="leaderboard-season" title={t("leaderboard.view.thisMonth")}>
+              {t("leaderboard.seasonTip.body", { season: seasonLabel() })}
             </PageTip>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
-              Sort by
+              {t("leaderboard.sortBy")}
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
                 className="rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               >
-                {(view === "season" ? SEASON_COLUMNS : COLUMNS).map((col) => (
+                {(view === "season" ? seasonColumns : columns).map((col) => (
                   <option key={col.key} value={col.key}>
                     {col.label}
                   </option>
@@ -447,13 +482,13 @@ export default function LeaderboardPage() {
                 onClick={() => setScope("all")}
                 className={`px-3 py-1.5 font-medium transition ${scope === "all" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
               >
-                All players
+                {t("leaderboard.scope.allPlayers")}
               </button>
               <button
                 onClick={() => setScope("friends")}
                 className={`px-3 py-1.5 font-medium transition ${scope === "friends" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
               >
-                Friends
+                {t("home.progressTile.friends")}
               </button>
             </div>
           </div>
@@ -462,30 +497,24 @@ export default function LeaderboardPage() {
             const scopedEntries =
               scope === "friends" ? entries.filter((e) => friendIds.has(e.user_id) || e.user_id === user?.id) : entries;
             if (scope === "friends" && scopedEntries.length === 0) {
-              return (
-                <EmptyState icon="🤝">
-                  None of your friends have finished a tracked game or a Daily Deal yet.
-                </EmptyState>
-              );
+              return <EmptyState icon="🤝">{t("leaderboard.emptyFriends")}</EmptyState>;
             }
             const visibleEntries =
               view === "season"
                 ? scopedEntries.map((e) => seasonAdjustedEntry(e, seasonSnapshots)).filter((e) => e.games_played > 0)
                 : scopedEntries;
             if (view === "season" && visibleEntries.length === 0) {
-              return (
-                <EmptyState icon="🗓️">
-                  Nobody&apos;s finished a tracked game this month yet — play one to be the first.
-                </EmptyState>
-              );
+              return <EmptyState icon="🗓️">{t("leaderboard.emptySeason")}</EmptyState>;
             }
-            const activeColumns = view === "season" ? SEASON_COLUMNS : COLUMNS;
+            const activeColumns = view === "season" ? seasonColumns : columns;
             return (
           <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="bg-[var(--panel)] text-xs text-[var(--faint)]">
-                  <th className="sticky left-0 bg-[var(--panel)] px-3 py-2 font-medium">Player</th>
+                  <th className="sticky left-0 bg-[var(--panel)] px-3 py-2 font-medium">
+                    {t("leaderboard.column.player")}
+                  </th>
                   {activeColumns.map((col) => (
                     <th
                       key={col.key}
@@ -533,10 +562,10 @@ export default function LeaderboardPage() {
                             disabled={requestedIds.has(entry.user_id)}
                             aria-label={
                               requestedIds.has(entry.user_id)
-                                ? `Friend request sent to ${displayNameFor(entry)}`
-                                : `Add ${displayNameFor(entry)} as a friend`
+                                ? t("leaderboard.friendRequestSentAria", { name: displayNameFor(entry) })
+                                : t("leaderboard.addFriendAria", { name: displayNameFor(entry) })
                             }
-                            title={requestedIds.has(entry.user_id) ? "Request sent" : "Add friend"}
+                            title={requestedIds.has(entry.user_id) ? t("leaderboard.requestSent") : t("leaderboard.addFriend")}
                             className="ml-2 inline-flex shrink-0 items-center rounded p-1 align-middle text-[var(--accent)] transition hover:bg-[var(--accent)]/15 disabled:text-[var(--faint)] disabled:hover:bg-transparent"
                           >
                             {requestedIds.has(entry.user_id) ? <PersonCheckIcon /> : <PersonAddIcon />}
@@ -566,13 +595,11 @@ export default function LeaderboardPage() {
           this already says the same thing ("play one to be the first") —
           showing both would just repeat it. */}
       {!authLoading && !loading && !loadError && user && entries.length > 0 && !entries.some((e) => e.user_id === user.id) && (
-        <p className="text-center text-xs text-[var(--faint)]">
-          You haven&apos;t finished a tracked game or a Daily Deal yet — play one to show up here.
-        </p>
+        <p className="text-center text-xs text-[var(--faint)]">{t("leaderboard.notOnBoardYet")}</p>
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );

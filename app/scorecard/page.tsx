@@ -10,6 +10,10 @@ import { useEffect, useState } from "react";
 import { CONTRACTS, ContractRequirement, SHORT_GAME_CONTRACTS } from "@/types";
 import { BackLink } from "../components/BackLink";
 import { PageTip } from "../components/PageTip";
+import { contractNeedLabel } from "../lib/contractDisplay";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { Vars } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
 import {
   clearScorecard,
   loadScorecard,
@@ -19,16 +23,19 @@ import {
   ScorecardPlayer,
 } from "../lib/scorecardStore";
 
-function defaultPlayers(): ScorecardPlayer[] {
+type T = (key: TranslationKey, vars?: Vars) => string;
+
+function defaultPlayers(t: T): ScorecardPlayer[] {
   return [
-    { id: newPlayerId(), name: "Player 1" },
-    { id: newPlayerId(), name: "Player 2" },
+    { id: newPlayerId(), name: t("newGameLocal.playerPlaceholder", { n: 1 }) },
+    { id: newPlayerId(), name: t("newGameLocal.playerPlaceholder", { n: 2 }) },
   ];
 }
 
 export default function ScorecardPage() {
+  const { t, tPlural } = useT();
   const [phase, setPhase] = useState<"setup" | "scoring">("setup");
-  const [players, setPlayers] = useState<ScorecardPlayer[]>(defaultPlayers);
+  const [players, setPlayers] = useState<ScorecardPlayer[]>(() => defaultPlayers(t));
   const [roundMode, setRoundMode] = useState<RoundMode>("all");
   const [customRounds, setCustomRounds] = useState<Set<number>>(
     () => new Set(CONTRACTS.map((c) => c.round))
@@ -81,7 +88,10 @@ export default function ScorecardPage() {
   }
 
   function addPlayer() {
-    setPlayers((prev) => [...prev, { id: newPlayerId(), name: `Player ${prev.length + 1}` }]);
+    setPlayers((prev) => [
+      ...prev,
+      { id: newPlayerId(), name: t("newGameLocal.playerPlaceholder", { n: prev.length + 1 }) },
+    ]);
   }
 
   function removePlayer(id: string) {
@@ -109,7 +119,7 @@ export default function ScorecardPage() {
   function confirmNewScorecard() {
     clearScorecard();
     setPhase("setup");
-    setPlayers(defaultPlayers());
+    setPlayers(defaultPlayers(t));
     setRoundMode("all");
     setCustomRounds(new Set(CONTRACTS.map((c) => c.round)));
     setScores({});
@@ -123,10 +133,10 @@ export default function ScorecardPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-10">
       <BackLink href="/" />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">Scorekeeper</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("scorecard.title")}</h1>
 
-      <PageTip id="scorecard" title="Just a score sheet">
-        For scoring the physical card game at the table — just addition, nothing fancy.
+      <PageTip id="scorecard" title={t("scorecard.tip.title")}>
+        {t("scorecard.tip.body")}
       </PageTip>
 
       {phase === "setup" ? (
@@ -134,13 +144,13 @@ export default function ScorecardPage() {
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Players
+                {t("scorecard.players")}
               </h2>
               <button
                 onClick={addPlayer}
                 className="rounded-md bg-[var(--elevated)] px-3 py-1 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)]"
               >
-                + Add player
+                {t("scorecard.addPlayer")}
               </button>
             </div>
             <div className="flex flex-col gap-2">
@@ -150,17 +160,19 @@ export default function ScorecardPage() {
                     type="text"
                     value={p.name}
                     onChange={(e) => renamePlayer(p.id, e.target.value)}
-                    placeholder={`Player ${i + 1}`}
+                    placeholder={t("newGameLocal.playerPlaceholder", { n: i + 1 })}
                     maxLength={20}
                     className="flex-1 rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text)] outline-none ring-1 ring-transparent focus:ring-[var(--accent)]"
                   />
                   <button
                     onClick={() => removePlayer(p.id)}
                     disabled={players.length <= 1}
-                    aria-label={`Remove ${p.name || `Player ${i + 1}`}`}
+                    aria-label={t("scorecard.removePlayer", {
+                      name: p.name || t("newGameLocal.playerPlaceholder", { n: i + 1 }),
+                    })}
                     className="text-sm text-[var(--danger)] hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
                   >
-                    Remove
+                    {t("common.remove")}
                   </button>
                 </div>
               ))}
@@ -169,14 +181,14 @@ export default function ScorecardPage() {
 
           <section className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Rounds
+              {t("scorecard.rounds")}
             </h2>
             <div className="flex gap-2">
               {(
                 [
-                  ["all", "All 7"],
-                  ["short", "Short"],
-                  ["custom", "Custom"],
+                  ["all", t("newGameLocal.all7")],
+                  ["short", t("newGameLocal.short")],
+                  ["custom", t("newGameLocal.custom")],
                 ] as [RoundMode, string][]
               ).map(([mode, label]) => (
                 <button
@@ -194,7 +206,10 @@ export default function ScorecardPage() {
             </div>
             {roundMode === "short" && (
               <p className="text-xs text-[var(--faint)]">
-                Drops the two hardest mixed rounds — 2 Books + 1 Run, and 1 Book + 2 Runs.
+                {t("newGameLocal.shortNote", {
+                  first: contractNeedLabel(2, 1, tPlural),
+                  second: contractNeedLabel(1, 2, tPlural),
+                })}
               </p>
             )}
             {roundMode === "custom" && (
@@ -231,12 +246,15 @@ export default function ScorecardPage() {
                           </svg>
                         )}
                       </span>
-                      Round {c.round}: {c.label}
+                      {t("newGameLocal.roundLabel", {
+                        round: c.round,
+                        label: contractNeedLabel(c.books, c.runs, tPlural),
+                      })}
                     </button>
                   );
                 })}
                 {selectedContracts.length === 0 && (
-                  <p className="text-xs text-[var(--accent)]">Pick at least one round.</p>
+                  <p className="text-xs text-[var(--accent)]">{t("newGameLocal.pickAtLeastOneRound")}</p>
                 )}
               </div>
             )}
@@ -245,8 +263,8 @@ export default function ScorecardPage() {
           {!canStart && (
             <p className="text-sm text-[var(--accent)]">
               {selectedContracts.length === 0
-                ? "Pick at least one round to start."
-                : "Add at least 2 players to start."}
+                ? t("newGameLocal.pickOneRoundToStart")
+                : t("scorecard.needTwoPlayers")}
             </p>
           )}
 
@@ -255,7 +273,7 @@ export default function ScorecardPage() {
             disabled={!canStart}
             className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Start Scorecard
+            {t("scorecard.start")}
           </button>
         </>
       ) : (
@@ -265,17 +283,19 @@ export default function ScorecardPage() {
               <thead>
                 <tr className="bg-[var(--panel)] text-[var(--faint)]">
                   <th className="sticky left-0 bg-[var(--panel)] px-3 py-2 text-left font-medium">
-                    Player
+                    {t("roundSummary.player")}
                   </th>
                   {selectedContracts.map((c) => (
                     <th key={c.round} className="min-w-[76px] px-2 py-2 text-center font-medium">
-                      <div>R{c.round}</div>
+                      <div>{t("scorecard.roundAbbr", { round: c.round })}</div>
                       <div className="text-[10px] font-normal normal-case text-[var(--faint)]">
-                        {c.label}
+                        {contractNeedLabel(c.books, c.runs, tPlural)}
                       </div>
                     </th>
                   ))}
-                  <th className="min-w-[70px] px-3 py-2 text-center font-semibold">Total</th>
+                  <th className="min-w-[70px] px-3 py-2 text-center font-semibold">
+                    {t("roundSummary.total")}
+                  </th>
                   <th className="w-8" />
                 </tr>
               </thead>
@@ -298,7 +318,7 @@ export default function ScorecardPage() {
                           type="text"
                           value={p.name}
                           onChange={(e) => renamePlayer(p.id, e.target.value)}
-                          placeholder={`Player ${i + 1}`}
+                          placeholder={t("newGameLocal.playerPlaceholder", { n: i + 1 })}
                           maxLength={20}
                           className="w-full min-w-[6rem] rounded-md bg-transparent px-1.5 py-1 text-sm font-medium text-[var(--heading)] outline-none ring-1 ring-transparent focus:bg-[var(--panel-soft)] focus:ring-[var(--accent)]"
                         />
@@ -326,7 +346,9 @@ export default function ScorecardPage() {
                         <button
                           onClick={() => removePlayer(p.id)}
                           disabled={players.length <= 1}
-                          aria-label={`Remove ${p.name || `Player ${i + 1}`}`}
+                          aria-label={t("scorecard.removePlayer", {
+                            name: p.name || t("newGameLocal.playerPlaceholder", { n: i + 1 }),
+                          })}
                           className="text-xs text-[var(--danger)] hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           ✕
@@ -339,28 +361,23 @@ export default function ScorecardPage() {
             </table>
           </div>
 
-          <p className="text-xs text-[var(--faint)]">
-            Lowest total wins. Leave a cell blank for a round not yet scored — it counts as 0
-            until you fill it in.
-          </p>
+          <p className="text-xs text-[var(--faint)]">{t("scorecard.lowestWinsNote")}</p>
 
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
-              <p className="text-sm text-[var(--muted)]">
-                Clear this scorecard? This removes every player and score — it can&apos;t be undone.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("scorecard.confirmReset")}</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmingReset(false)}
                   className="flex-1 rounded-lg border border-[var(--border)] min-h-11 px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={confirmNewScorecard}
                   className="flex-1 rounded-lg border border-[var(--danger)] min-h-11 px-4 py-2.5 text-sm font-semibold text-[var(--danger)] hover:bg-[var(--panel-soft)]"
                 >
-                  Yes, start over
+                  {t("scorecard.yesStartOver")}
                 </button>
               </div>
             </div>
@@ -370,13 +387,13 @@ export default function ScorecardPage() {
                 onClick={addPlayer}
                 className="flex-1 rounded-lg border border-[var(--border)] min-h-11 px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
               >
-                + Add player
+                {t("scorecard.addPlayer")}
               </button>
               <button
                 onClick={() => setConfirmingReset(true)}
                 className="flex-1 rounded-lg border border-[var(--border)] min-h-11 px-4 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[var(--panel-soft)]"
               >
-                New scorecard
+                {t("scorecard.newScorecard")}
               </button>
             </div>
           )}
@@ -384,7 +401,7 @@ export default function ScorecardPage() {
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );

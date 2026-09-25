@@ -33,6 +33,7 @@ import { usePlayerLevel } from "../PlayerLevelContext";
 import { buildProfileShareCardInput } from "../lib/profileShareCard";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 type AddState =
   | { kind: "idle" }
@@ -54,6 +55,7 @@ type InviteLink =
 export default function FriendsPage() {
   const { configured, loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
+  const { t } = useT();
 
   const [code, setCode] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -189,16 +191,19 @@ export default function FriendsPage() {
     try {
       const match = await lookupFriendCode(supabase, raw);
       if (!match) {
-        setAddState({ kind: "error", message: "No account has that code." });
+        setAddState({ kind: "error", message: t("friends.errors.noSuchCode") });
         return;
       }
       if (match.userId === user?.id) {
-        setAddState({ kind: "error", message: "That's your own code." });
+        setAddState({ kind: "error", message: t("friends.errors.ownCode") });
         return;
       }
       const alreadyFriend = friends.some((f) => f.userId === match.userId);
       if (alreadyFriend) {
-        setAddState({ kind: "error", message: `You're already friends with ${nameOf(match.userId, match.displayName)}.` });
+        setAddState({
+          kind: "error",
+          message: t("friends.errors.alreadyFriends", { name: nameOf(match.userId, match.displayName) }),
+        });
         return;
       }
       const incoming = requests.find((r) => r.direction === "incoming" && r.otherUserId === match.userId);
@@ -212,7 +217,7 @@ export default function FriendsPage() {
       load();
     } catch (err) {
       console.error("Friend request failed:", err);
-      setAddState({ kind: "error", message: "Couldn't send that request — try again." });
+      setAddState({ kind: "error", message: t("friends.errors.sendFailed") });
     }
   }
 
@@ -264,7 +269,7 @@ export default function FriendsPage() {
     // paste the link twice — once appended to the text, once as the
     // attached URL. Keeping it all in `text` means exactly one link, and
     // messaging apps still linkify it.
-    const message = `Add me as a friend on Books & Runs 🃏  My code: ${code}\n${url}`;
+    const message = t("friends.shareMessage", { code, url });
     if (navigator.share) {
       try {
         await navigator.share({ text: message });
@@ -310,7 +315,13 @@ export default function FriendsPage() {
         if (data) freshEntry = data as LeaderboardEntry;
       }
       const blob = await renderProfileShareCard(
-        buildProfileShareCardInput(supabase, freshEntry, level?.level ?? freshEntry.level ?? 0, `Add me: ${code}`)
+        buildProfileShareCardInput(
+          supabase,
+          freshEntry,
+          level?.level ?? freshEntry.level ?? 0,
+          t,
+          t("friends.shareCard.footer", { code })
+        )
       );
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-add-me.png", { type: "image/png" });
@@ -330,7 +341,7 @@ export default function FriendsPage() {
         // No native share sheet here to hand the link to alongside the
         // picture — copying it is the closest one-action equivalent.
         try {
-          await navigator.clipboard?.writeText(`Add me as a friend on Books & Runs 🃏  My code: ${code}\n${url}`);
+          await navigator.clipboard?.writeText(t("friends.shareMessage", { code, url }));
         } catch {
           // Best-effort — the picture still opened either way.
         }
@@ -345,7 +356,7 @@ export default function FriendsPage() {
   }
 
   if (!authLoading && !configured) {
-    return <CenteredMessage title="Friends aren't set up yet" body="This app doesn't have a Supabase project connected yet." />;
+    return <CenteredMessage title={t("friends.notConfigured.title")} body={t("friends.notConfigured.body")} />;
   }
 
   if (!authLoading && configured && !user) {
@@ -354,11 +365,11 @@ export default function FriendsPage() {
       : "/sign-in";
     return (
       <CenteredMessage
-        title={linkCode ? "Sign in to add this friend" : "Sign in to add friends"}
+        title={linkCode ? t("friends.signInGate.linkTitle") : t("friends.signInGate.title")}
         body={
           linkCode
-            ? "Someone shared a friend link with you. Sign in and you'll come right back here to accept it."
-            : "Friends let you start multiplayer games together. Your friend list is tied to your account."
+            ? t("friends.signInGate.linkBody")
+            : t("friends.signInGate.body")
         }
         signIn={signInHref}
       />
@@ -372,67 +383,69 @@ export default function FriendsPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
       <BackLink href="/" />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">Friends</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("home.progressTile.friends")}</h1>
 
-      <PageTip id="friends" title="More than a list">
-        Add friends to start multiplayer games with them — share your code, or paste theirs. Tap a
-        friend&apos;s name to open their profile: level, achievements, Trophy Case, and (once
-        you&apos;ve played some multiplayer games together) your head-to-head record against them.
+      <PageTip id="friends" title={t("friends.tip.title")}>
+        {t("friends.tip.body")}
       </PageTip>
 
       {authLoading || loading ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load your friends — check your connection and try again.</p>
+        <p className="text-sm text-[var(--danger)]">{t("friends.loadError")}</p>
       ) : (
         <>
           {/* Shared friend link (?add=CODE) */}
           {linkInvite.kind === "prompt" && (
             <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
               <p className="text-sm text-[var(--heading)]">
-                Add <strong className="font-semibold">{linkInvite.name}</strong> as a friend?
+                {t("friends.link.addPrompt.prefix")}{" "}
+                <strong className="font-semibold">{linkInvite.name}</strong>{" "}
+                {t("friends.link.addPrompt.suffix")}
               </p>
               <button
                 onClick={acceptLink}
                 className="mt-3 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
               >
-                Add friend
+                {t("friends.link.addFriend")}
               </button>
             </section>
           )}
           {linkInvite.kind === "adding" && (
             <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
-              Adding…
+              {t("friends.link.adding")}
             </section>
           )}
           {linkInvite.kind === "done" && (
             <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4 text-sm text-[var(--accent)]">
-              You and <strong className="font-semibold">{linkInvite.name}</strong> are now friends.
+              {t("friends.link.done.prefix")}{" "}
+              <strong className="font-semibold">{linkInvite.name}</strong>{" "}
+              {t("friends.link.done.suffix")}
             </section>
           )}
           {linkInvite.kind === "already" && (
             <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
-              You&apos;re already friends with <strong className="font-semibold">{linkInvite.name}</strong>.
+              {t("friends.link.already.prefix")}{" "}
+              <strong className="font-semibold">{linkInvite.name}</strong>
+              {t("friends.link.already.suffix")}
             </section>
           )}
           {linkInvite.kind === "self" && (
             <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
-              That link has your own code — share it with a friend instead.
+              {t("friends.link.self")}
             </section>
           )}
           {linkInvite.kind === "invalid" && (
             <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--danger)]">
-              That friend link didn&apos;t work — the code may be wrong.
+              {t("friends.link.invalid")}
             </section>
           )}
 
           {/* Your code */}
           <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your friend code</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("friends.yourCode.heading")}</h2>
             <p className="mt-1 text-xs text-[var(--faint)]">
-              {myEntry
-                ? "Share shares your profile card — the same picture you'd share from your profile. Whoever opens it can add you in one tap; the raw code below still works if you're just reading it out loud."
-                : "The raw code works for reading it out loud or typing it in manually; Share sends a link that adds you in one tap."}
+              {myEntry ? t("friends.yourCode.descriptionWithCard") : t("friends.yourCode.description")}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="select-all font-mono text-2xl font-bold tracking-widest text-[var(--heading)]">
@@ -443,23 +456,23 @@ export default function FriendsPage() {
                 className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
               >
                 {shareState === "shared" || shareState === "copied"
-                  ? "Shared ✓"
+                  ? t("friends.yourCode.shared")
                   : shareState === "error"
-                    ? "Couldn't share"
-                    : "Share"}
+                    ? t("friends.yourCode.shareFailed")
+                    : t("friends.yourCode.share")}
               </button>
               <button
                 onClick={copyCode}
                 className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
               >
-                {copied ? "Copied" : "Copy code"}
+                {copied ? t("friends.yourCode.copied") : t("friends.yourCode.copyCode")}
               </button>
             </div>
           </section>
 
           {/* Add a friend */}
           <section className="rounded-xl border border-[var(--border)] p-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Add a friend</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("friends.addFriend.heading")}</h2>
             <form onSubmit={handleAdd} className="mt-2 flex flex-wrap gap-2">
               <input
                 value={codeInput}
@@ -477,18 +490,18 @@ export default function FriendsPage() {
                 disabled={addState.kind === "working" || !codeInput.trim()}
                 className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)] disabled:opacity-50"
               >
-                {addState.kind === "working" ? "Sending…" : "Send request"}
+                {addState.kind === "working" ? t("friends.addFriend.sending") : t("friends.addFriend.sendRequest")}
               </button>
             </form>
             {addState.kind === "error" && (
               <p className="mt-2 text-xs text-[var(--danger)]">{addState.message}</p>
             )}
             {addState.kind === "sent" && (
-              <p className="mt-2 text-xs text-[var(--accent)]">Request sent to {addState.name}.</p>
+              <p className="mt-2 text-xs text-[var(--accent)]">{t("friends.addFriend.requestSent", { name: addState.name })}</p>
             )}
             {addState.kind === "accepted" && (
               <p className="mt-2 text-xs text-[var(--accent)]">
-                {addState.name} had already requested you — you&apos;re now friends.
+                {t("friends.addFriend.alreadyRequestedYou", { name: addState.name })}
               </p>
             )}
           </section>
@@ -497,7 +510,7 @@ export default function FriendsPage() {
           {incoming.length > 0 && (
             <section>
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Requests ({incoming.length})
+                {t("friends.requests.heading", { count: incoming.length })}
               </h2>
               <ul className="flex flex-col gap-2">
                 {incoming.map((r) => (
@@ -518,14 +531,14 @@ export default function FriendsPage() {
                         disabled={busyId === r.id}
                         className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
                       >
-                        Accept
+                        {t("multiplayer.accept")}
                       </button>
                       <button
                         onClick={() => respond(r.id, false)}
                         disabled={busyId === r.id}
                         className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
                       >
-                        Decline
+                        {t("multiplayer.decline")}
                       </button>
                     </span>
                   </li>
@@ -537,10 +550,10 @@ export default function FriendsPage() {
           {/* Friends list */}
           <section>
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Your friends ({friends.length})
+              {t("friends.yourFriends.heading", { count: friends.length })}
             </h2>
             {friends.length === 0 ? (
-              <EmptyState icon="🃏">No friends yet. Send someone your code above to get started.</EmptyState>
+              <EmptyState icon="🃏">{t("friends.yourFriends.empty")}</EmptyState>
             ) : (
               <ul className="flex flex-col gap-2">
                 {friends.map((f) => (
@@ -560,7 +573,7 @@ export default function FriendsPage() {
                       disabled={busyId === f.userId}
                       className="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--faint)] hover:bg-[var(--panel-soft)] hover:text-[var(--danger)] disabled:opacity-50"
                     >
-                      Remove
+                      {t("common.remove")}
                     </button>
                   </li>
                 ))}
@@ -572,7 +585,7 @@ export default function FriendsPage() {
           {outgoing.length > 0 && (
             <section>
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Sent, awaiting a reply
+                {t("friends.outgoing.heading")}
               </h2>
               <ul className="flex flex-col gap-2">
                 {outgoing.map((r) => (
@@ -592,7 +605,7 @@ export default function FriendsPage() {
                       disabled={busyId === r.otherUserId}
                       className="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--faint)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </li>
                 ))}
@@ -603,7 +616,7 @@ export default function FriendsPage() {
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );

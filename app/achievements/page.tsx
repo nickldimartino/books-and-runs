@@ -16,6 +16,10 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { formatAchievementProgress } from "../lib/achievementFormat";
 import { EMPTY_MP_STATS, getMyMpStats } from "../lib/mpStore";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
+import type { Vars } from "../lib/i18n/LocaleProvider";
+import { capitalize } from "../lib/text";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
@@ -41,15 +45,14 @@ type StatusFilter = "all" | "unlocked" | "locked";
 type SortMode = "default" | "closest";
 type TierFilter = "all" | AchievementTier;
 
-const TIER_LABEL: Record<AchievementTier, string> = {
-  beginner: "Beginner",
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  expert: "Expert",
-};
+type T = (key: TranslationKey, vars?: Vars) => string;
+
+function tierLabel(tier: AchievementTier, t: T): string {
+  return capitalize(t(`common.difficulty.${tier}` as TranslationKey));
+}
 
 export default function AchievementsPage() {
+  const { t } = useT();
   const { configured, loading: authLoading, user } = useAuth();
   const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
   const [loading, setLoading] = useState(true);
@@ -122,8 +125,8 @@ export default function AchievementsPage() {
   if (!authLoading && !configured) {
     return (
       <CenteredMessage
-        title="Achievements aren't set up yet"
-        body="This app doesn't have a Supabase project connected yet."
+        title={t("achievementsPage.notConfigured.title")}
+        body={t("achievementsPage.notConfigured.body")}
       />
     );
   }
@@ -133,12 +136,15 @@ export default function AchievementsPage() {
       <BackLink href="/" />
 
       <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Achievements</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("home.progressTile.achievements")}</h1>
         {!authLoading && !loading && (
           <p className="mt-1 text-sm text-[var(--muted)]">
-            {unlockedCount} / {achievements.length} unlocked
+            {t("achievementsPage.summary.unlocked", { count: unlockedCount, total: achievements.length })}
             {masteredFamilyCount > 0 &&
-              ` · ${masteredFamilyCount} of ${ACHIEVEMENT_FAMILIES.length} families mastered`}
+              ` · ${t("achievementsPage.summary.familiesMastered", {
+                count: masteredFamilyCount,
+                total: ACHIEVEMENT_FAMILIES.length,
+              })}`}
           </p>
         )}
       </div>
@@ -154,28 +160,27 @@ export default function AchievementsPage() {
           {configured && !user && (
             <section className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
               <p className="text-xs text-[var(--muted)]">
-                Sign in to start tracking your own progress toward these.
+                {t("achievementsPage.guestPrompt")}
               </p>
               <Link
                 href="/sign-in"
                 className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
               >
-                Sign in
+                {t("signIn.title")}
               </Link>
             </section>
           )}
 
-          <PageTip id="achievements" title="Tracked automatically">
-            Progress updates as you play — solo, pass-and-play, and multiplayer games all count, no
-            separate action needed. Check back after a few games to see what&apos;s close.
+          <PageTip id="achievements" title={t("achievementsPage.tip.title")}>
+            {t("achievementsPage.tip.body")}
           </PageTip>
 
           <section className="flex flex-col gap-3 rounded-xl bg-[var(--panel-soft)] p-3">
             <div className="flex flex-wrap gap-2">
               {([
-                ["all", "All"],
-                ["unlocked", "Completed"],
-                ["locked", "Not completed"],
+                ["all", t("achievementsPage.filter.all")],
+                ["unlocked", t("achievementsPage.filter.completed")],
+                ["locked", t("achievementsPage.filter.notCompleted")],
               ] as [StatusFilter, string][]).map(([value, label]) => (
                 <button
                   key={value}
@@ -200,7 +205,7 @@ export default function AchievementsPage() {
                     : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--elevated)]"
                 }`}
               >
-                All tiers
+                {t("achievementsPage.filter.allTiers")}
               </button>
               {ACHIEVEMENT_TIERS.map((tier) => (
                 <button
@@ -212,26 +217,26 @@ export default function AchievementsPage() {
                       : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--elevated)]"
                   }`}
                 >
-                  {TIER_LABEL[tier]}
+                  {tierLabel(tier, t)}
                 </button>
               ))}
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-[var(--muted)]">Sort</label>
+              <label className="text-xs font-medium text-[var(--muted)]">{t("achievementsPage.sort.label")}</label>
               <select
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as SortMode)}
                 className="rounded-md bg-[var(--panel)] px-2 py-1.5 text-xs text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               >
-                <option value="default">Default order</option>
-                <option value="closest">Closest to completion</option>
+                <option value="default">{t("achievementsPage.sort.default")}</option>
+                <option value="closest">{t("achievementsPage.sort.closest")}</option>
               </select>
             </div>
           </section>
 
           {visible.length === 0 ? (
-            <p className="text-sm text-[var(--faint)]">No achievements match these filters.</p>
+            <p className="text-sm text-[var(--faint)]">{t("achievementsPage.emptyFiltered")}</p>
           ) : sortMode === "closest" ? (
             // "Closest to completion" is inherently a flat ranking across
             // every family at once — grouping by family here would scatter
@@ -254,7 +259,7 @@ export default function AchievementsPage() {
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );
@@ -270,8 +275,8 @@ export default function AchievementsPage() {
  * shared into achievementFormat.ts itself — Home's "closest achievement"
  * tile and AchievementUnlock.tsx's just-unlocked toast both have their own
  * reasons to keep showing the real number even for an unlocked instance.) */
-function progressLine(achievement: AchievementInstance): string {
-  return achievement.unlocked ? "Unlocked" : formatAchievementProgress(achievement);
+function progressLine(achievement: AchievementInstance, t: T): string {
+  return achievement.unlocked ? t("achievementsPage.tierUnlocked") : formatAchievementProgress(achievement, t);
 }
 
 function cardClassName(unlocked: boolean): string {
@@ -287,6 +292,7 @@ function cardClassName(unlocked: boolean): string {
  * <ul>). `compact` drops the family title/icon row (already shown once, on
  * the group's own header) down to just the tier badge, for those nested rows. */
 function AchievementCardContent({ achievement, compact }: { achievement: AchievementInstance; compact?: boolean }) {
+  const { t } = useT();
   const pct = Math.round(achievement.progressFraction * 100);
   return (
     <>
@@ -294,7 +300,7 @@ function AchievementCardContent({ achievement, compact }: { achievement: Achieve
         {compact ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
             {achievement.unlocked ? "✓ " : ""}
-            {TIER_LABEL[achievement.tier]}
+            {tierLabel(achievement.tier, t)}
           </span>
         ) : (
           <>
@@ -305,16 +311,16 @@ function AchievementCardContent({ achievement, compact }: { achievement: Achieve
               />
               <span className="truncate">
                 {achievement.unlocked ? "✓ " : ""}
-                {achievement.familyTitle}
+                {t(achievement.familyTitleKey as TranslationKey)}
               </span>
             </span>
             <span className="shrink-0 rounded-full bg-[var(--panel-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-              {TIER_LABEL[achievement.tier]}
+              {tierLabel(achievement.tier, t)}
             </span>
           </>
         )}
       </div>
-      <p className="mt-1 text-xs text-[var(--faint)]">{progressLine(achievement)}</p>
+      <p className="mt-1 text-xs text-[var(--faint)]">{progressLine(achievement, t)}</p>
       {!achievement.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
           <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
@@ -365,6 +371,7 @@ function pickHeadlineTier(tiers: AchievementInstance[]): AchievementInstance {
  * to collapse — and renders as a plain AchievementCard instead.
  */
 function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   if (tiers.length === 0) return null;
   if (tiers.length === 1) return <AchievementCard achievement={tiers[0]} />;
@@ -397,7 +404,7 @@ function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
           {isMastered ? (
             <span
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]"
-              title="Mastered — every tier unlocked"
+              title={t("achievementsPage.masteredTooltip")}
             >
               <AchievementIcon category={headline.category} className="h-4 w-4 text-[var(--on-accent)]" />
             </span>
@@ -407,7 +414,7 @@ function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
               className={`h-5 w-5 shrink-0 ${headline.unlocked ? "text-[var(--accent)]" : "text-[var(--faint)]"}`}
             />
           )}
-          <span className="truncate">{headline.familyTitle}</span>
+          <span className="truncate">{t(headline.familyTitleKey as TranslationKey)}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <span
@@ -415,17 +422,22 @@ function FamilyAchievementGroup({ tiers }: { tiers: AchievementInstance[] }) {
               isMastered ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)]"
             }`}
           >
-            {isMastered ? "★ Mastered" : `${unlockedCount}/${tiers.length} tiers`}
+            {isMastered
+              ? `★ ${t("achievementsPage.masteredBadge")}`
+              : t("achievementsPage.tiersCount", { count: unlockedCount, total: tiers.length })}
           </span>
           <span className="text-xs text-[var(--faint)]">{open ? "▲" : "▼"}</span>
         </span>
       </button>
       <p className="mt-1 text-xs text-[var(--faint)]">
         {isMastered
-          ? "All 5 tiers unlocked"
+          ? t("achievementsPage.allTiersUnlocked", { count: ACHIEVEMENT_TIERS.length })
           : headline.unlocked
-            ? `${TIER_LABEL[headline.tier]} unlocked`
-            : `${TIER_LABEL[headline.tier]} — ${formatAchievementProgress(headline)}`}
+            ? t("achievementsPage.tierUnlockedLine", { tier: tierLabel(headline.tier, t) })
+            : t("achievementsPage.tierProgressLine", {
+                tier: tierLabel(headline.tier, t),
+                progress: formatAchievementProgress(headline, t),
+              })}
       </p>
       {!headline.unlocked && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">

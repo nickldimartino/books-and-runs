@@ -66,6 +66,8 @@ import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
 import { defaultRarityForUnlock, RARITY_TEXT_ACCENT } from "../lib/cosmeticRarity";
 import { formatScore } from "../lib/formatScore";
 import { getFriendRequests, getFriends, sendFriendRequest } from "../lib/friendsStore";
+import type { TranslationKey } from "../lib/i18n/keys";
+import { useT } from "../lib/i18n/LocaleProvider";
 import {
   AvatarInfo,
   avatarPhotoUrlFor,
@@ -105,14 +107,8 @@ import {
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
+import { capitalize } from "../lib/text";
 
-const TIER_LABEL: Record<AchievementTier, string> = {
-  beginner: "Beginner",
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  expert: "Expert",
-};
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
 const PAST_GAMES_LIMIT = 10;
 
@@ -260,10 +256,12 @@ function Highlight({ label, children }: { label: string; children: React.ReactNo
  * earned at (bronze beginner → diamond expert). Expert-tier medals get an
  * animated foil sweep — the rarest tier is the one worth a little shine. */
 function TrophyBadge({ item, size = 56, rarityLabel }: { item: ShowcaseItem; size?: number; rarityLabel?: string | null }) {
+  const { t } = useT();
+  const tierLabel = capitalize(t(`common.difficulty.${item.tier}` as TranslationKey));
   return (
     <div
       className="flex flex-col items-center gap-1"
-      title={`${item.familyTitle} · ${TIER_LABEL[item.tier]}${rarityLabel ? ` · ${rarityLabel}` : ""}`}
+      title={`${item.familyTitle} · ${tierLabel}${rarityLabel ? ` · ${rarityLabel}` : ""}`}
     >
       <div
         className={`grid place-items-center rounded-full p-[3px] ${item.tier === "expert" ? "trophy-foil" : ""}`}
@@ -335,6 +333,7 @@ export default function PlayerProfilePage() {
   const { configured, loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
   const router = useRouter();
+  const { t, tPlural } = useT();
   const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -519,7 +518,7 @@ export default function PlayerProfilePage() {
     setNameError(null);
     const trimmed = nameInput.trim();
     if (trimmed.length === 0) {
-      setNameError("Enter a name — leave it blank and pick one later if you're not sure yet.");
+      setNameError(t("player.nameEditor.emptyError"));
       return;
     }
     setNameSaveState("saving");
@@ -619,7 +618,7 @@ export default function PlayerProfilePage() {
       );
       setPhotoState("idle");
     } catch (err) {
-      setPhotoError(err instanceof InvalidAvatarFileError ? err.message : "Couldn't upload that photo — try again.");
+      setPhotoError(err instanceof InvalidAvatarFileError ? err.message : t("player.photo.uploadError"));
       setPhotoState("error");
     }
   }
@@ -740,7 +739,7 @@ export default function PlayerProfilePage() {
         if (data) freshEntry = data as LeaderboardEntry;
       }
       const url = `${window.location.origin}${playerProfileHref(entry.user_id)}`;
-      const blob = await renderProfileShareCard(buildProfileShareCardInput(supabase, freshEntry, displayLevel));
+      const blob = await renderProfileShareCard(buildProfileShareCardInput(supabase, freshEntry, displayLevel, t));
       if (!blob) throw new Error("Canvas unavailable");
       const file = new File([blob], "books-and-runs-profile.png", { type: "image/png" });
       // One share action carries both the picture and the link — no
@@ -962,7 +961,7 @@ export default function PlayerProfilePage() {
     return null;
   }, [privateStats]);
   const unlockedByTier = useMemo(() => {
-    const m = Object.fromEntries(ACHIEVEMENT_TIERS.map((t) => [t, 0])) as Record<AchievementTier, number>;
+    const m = Object.fromEntries(ACHIEVEMENT_TIERS.map((tier) => [tier, 0])) as Record<AchievementTier, number>;
     for (const a of unlocked) m[a.tier] += 1;
     return m;
   }, [unlocked]);
@@ -1010,22 +1009,22 @@ export default function PlayerProfilePage() {
 
   if (!authLoading && !configured) {
     return (
-      <CenteredMessage title="Profiles aren't set up yet" body="This app doesn't have a Supabase project connected yet." />
+      <CenteredMessage title={t("player.notConfigured.title")} body={t("player.notConfigured.body")} />
     );
   }
 
   if (!authLoading && configured && !user) {
     return (
       <CenteredMessage
-        title="Sign in to see this profile"
-        body="Profiles are only visible to signed-in accounts — not the general public."
+        title={t("player.signInGate.title")}
+        body={t("player.signInGate.body")}
         signIn
       />
     );
   }
 
   if (profileId === null) {
-    return <CenteredMessage title="No profile to show" body="This link is missing whose profile to open." />;
+    return <CenteredMessage title={t("player.noProfile.title")} body={t("player.noProfile.body")} />;
   }
 
   const avatarInfo: AvatarInfo | undefined = entry
@@ -1054,13 +1053,15 @@ export default function PlayerProfilePage() {
   // preset is picked.
   const onBanner = !!findBannerOption(entry?.banner ?? null);
   const joinedLabel = entry?.joined_at
-    ? `Joined ${new Date(entry.joined_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
+    ? t("player.joined", {
+        date: new Date(entry.joined_at).toLocaleDateString(undefined, { month: "short", year: "numeric" }),
+      })
     : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       <BackLink
-        label="Back"
+        label={t("common.back")}
         onClick={() => {
           // Return to wherever this profile was opened from (the Friends
           // list, Leaderboard, a Clubs roster, ...) instead of always
@@ -1076,13 +1077,11 @@ export default function PlayerProfilePage() {
       {authLoading || loading || !entry ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load this profile — check your connection.</p>
+        <p className="text-sm text-[var(--danger)]">{t("player.loadError")}</p>
       ) : (
         <>
-          <PageTip id="player-profile" title={isSelf ? "Your profile" : "Player profiles"}>
-            {isSelf
-              ? "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, badge, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive badges, frames, and titles. Everything under \"Your activity\" further down is only ever visible to you."
-              : "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here."}
+          <PageTip id="player-profile" title={isSelf ? t("player.tip.selfTitle") : t("player.tip.otherTitle")}>
+            {isSelf ? t("player.tip.selfBody") : t("player.tip.otherBody")}
           </PageTip>
 
           {/* ── Public — same for everyone, including your own view ── */}
@@ -1090,8 +1089,8 @@ export default function PlayerProfilePage() {
             {isSelf ? (
               <button
                 onClick={() => setEditingProfile((v) => !v)}
-                aria-label={editingProfile ? "Done editing profile" : "Edit profile"}
-                title={editingProfile ? "Done editing profile" : "Edit profile"}
+                aria-label={editingProfile ? t("player.editProfile.done") : t("player.editProfile.edit")}
+                title={editingProfile ? t("player.editProfile.done") : t("player.editProfile.edit")}
                 className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/30"
               >
                 <EditIcon />
@@ -1101,8 +1100,8 @@ export default function PlayerProfilePage() {
                 <button
                   onClick={addFriend}
                   disabled={related === "requested"}
-                  aria-label={related === "requested" ? "Friend request sent" : "Add friend"}
-                  title={related === "requested" ? "Friend request sent" : "Add friend"}
+                  aria-label={related === "requested" ? t("player.friend.requestSent") : t("player.friend.add")}
+                  title={related === "requested" ? t("player.friend.requestSent") : t("player.friend.add")}
                   className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/30 disabled:opacity-60"
                 >
                   {related === "requested" ? <PersonCheckIcon /> : <PersonAddIcon />}
@@ -1112,8 +1111,8 @@ export default function PlayerProfilePage() {
             <button
               onClick={shareProfileCard}
               disabled={shareState === "working"}
-              aria-label="Share profile card"
-              title="Share profile card"
+              aria-label={t("player.share.button")}
+              title={t("player.share.button")}
               className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/30 disabled:opacity-60"
             >
               <ShareIcon />
@@ -1125,7 +1124,7 @@ export default function PlayerProfilePage() {
                 </AvatarFrame>
                 {entry.badge && (
                   <span
-                    title="Earned badge"
+                    title={t("player.badge.earned")}
                     className="absolute bottom-0 right-0 grid h-7 w-7 place-items-center rounded-full border-2 border-[var(--bg)] bg-[var(--panel)] p-1 shadow"
                   >
                     <EmojiOrBadge emoji={entry.badge} className="h-full w-full text-[var(--heading)]" />
@@ -1140,12 +1139,12 @@ export default function PlayerProfilePage() {
                 {displayNameFor(entry)}
                 {entry.is_creator && (
                   <span
-                    title="Creator of Books & Runs"
-                    aria-label="Creator of Books & Runs"
+                    title={t("player.creator.title")}
+                    aria-label={t("player.creator.title")}
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${onBanner ? "bg-white/20 text-yellow-200" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`}
                   >
                     <CreatorBadgeIcon />
-                    Creator
+                    {t("player.creator.label")}
                   </span>
                 )}
               </h1>
@@ -1158,7 +1157,7 @@ export default function PlayerProfilePage() {
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${onBanner ? "bg-white/20 text-white" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`}
                 >
-                  Level {displayLevel}
+                  {t("home.levelN", { level: displayLevel })}
                 </span>
                 {joinedLabel && (
                   <span className={`rounded-full px-3 py-1 text-xs font-medium ${onBanner ? "bg-white/10 text-white/80" : "bg-[var(--panel-soft)] text-[var(--faint)]"}`}>
@@ -1180,21 +1179,21 @@ export default function PlayerProfilePage() {
                     onClick={() => setReportState("open")}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
                   >
-                    Report photo
+                    {t("player.report.button")}
                   </button>
                 )}
               </div>
               {shareState === "shared" && (
-                <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>Shared.</p>
+                <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>{t("player.share.shared")}</p>
               )}
               {shareState === "error" && (
-                <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare that image — try again.</p>
+                <p className="text-xs text-[var(--danger)]">{t("player.share.error")}</p>
               )}
 
               {(reportState === "open" || reportState === "sending") && (
                 <form onSubmit={submitReport} className="mt-2 flex w-full flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-3 text-left">
                   <label className="text-xs font-medium text-[var(--muted)]">
-                    What&apos;s wrong with this photo? (optional)
+                    {t("player.report.prompt")}
                   </label>
                   <textarea
                     value={reportReason}
@@ -1210,20 +1209,20 @@ export default function PlayerProfilePage() {
                       disabled={reportState === "sending"}
                       className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-60"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                     <button
                       type="submit"
                       disabled={reportState === "sending"}
                       className="flex-1 rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
                     >
-                      {reportState === "sending" ? "Reporting…" : "Report"}
+                      {reportState === "sending" ? t("player.report.sending") : t("player.report.submit")}
                     </button>
                   </div>
                 </form>
               )}
-              {reportState === "sent" && <p className="text-xs text-[var(--muted)]">Thanks — we&apos;ll take a look.</p>}
-              {reportState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t send that report — try again.</p>}
+              {reportState === "sent" && <p className="text-xs text-[var(--muted)]">{t("player.report.sent")}</p>}
+              {reportState === "error" && <p className="text-xs text-[var(--danger)]">{t("player.report.error")}</p>}
             </div>
           </ProfileBanner>
 
@@ -1236,14 +1235,14 @@ export default function PlayerProfilePage() {
               <div className="flex flex-wrap gap-1.5">
                 {(
                   [
-                    ["picture", "Picture"],
-                    ["badge", "Badge"],
-                    ["trophies", "Trophies"],
-                    ["frame", "Frame"],
-                    ["title", "Title"],
-                    ["banner", "Banner"],
-                    ["boutique", "Boutique"],
-                    ["name", "Name & Bio"],
+                    ["picture", t("player.tab.picture")],
+                    ["badge", t("player.tab.badge")],
+                    ["trophies", t("player.tab.trophies")],
+                    ["frame", t("player.tab.frame")],
+                    ["title", t("player.tab.title")],
+                    ["banner", t("player.tab.banner")],
+                    ["boutique", t("player.tab.boutique")],
+                    ["name", t("player.tab.nameAndBio")],
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -1262,19 +1261,19 @@ export default function PlayerProfilePage() {
 
               {editTab === "picture" && (
               <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Profile picture</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.picture.heading")}</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setAvatarTab("emoji")}
                     className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${avatarTab === "emoji" ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)]"}`}
                   >
-                    Emoji
+                    {t("player.picture.emojiTab")}
                   </button>
                   <button
                     onClick={() => setAvatarTab("photo")}
                     className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${avatarTab === "photo" ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)]"}`}
                   >
-                    Photo
+                    {t("player.picture.photoTab")}
                   </button>
                 </div>
 
@@ -1285,7 +1284,7 @@ export default function PlayerProfilePage() {
                         <button
                           key={emoji}
                           onClick={() => chooseEmoji(emoji)}
-                          aria-label={`Use ${emoji} as your avatar`}
+                          aria-label={t("player.picture.useEmoji", { emoji })}
                           className={`grid aspect-square place-items-center rounded-lg text-lg transition ${
                             pendingEmoji === emoji ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
                           }`}
@@ -1300,17 +1299,17 @@ export default function PlayerProfilePage() {
                         <button
                           key={color.hex}
                           onClick={() => chooseColor(color.hex)}
-                          aria-label={`Background color ${color.label}`}
+                          aria-label={t("player.picture.backgroundColor", { label: color.label })}
                           title={color.label}
                           className={`h-7 w-7 rounded-full transition ${pendingColor === color.hex ? "ring-2 ring-offset-2 ring-offset-[var(--bg)] ring-[var(--accent)]" : ""}`}
                           style={{ backgroundColor: color.hex }}
                         />
                       ))}
                     </div>
-                    {avatarSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                    {avatarSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                    {avatarSaveState === "saving" && <p className="text-xs text-[var(--faint)]">{t("common.saving")}</p>}
+                    {avatarSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
                     {avatarSaveState === "error" && (
-                      <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — try again.</p>
+                      <p className="text-xs text-[var(--danger)]">{t("player.saveError")}</p>
                     )}
                   </div>
                 ) : (
@@ -1323,11 +1322,11 @@ export default function PlayerProfilePage() {
                           className="grid shrink-0 place-items-center rounded-full border border-dashed border-[var(--border)] text-[10px] text-[var(--faint)]"
                           style={{ width: 96, height: 96 }}
                         >
-                          No photo yet
+                          {t("player.photo.none")}
                         </div>
                       )}
                       <p className="text-xs text-[var(--faint)]">
-                        JPEG, PNG, or WebP. It&apos;s cropped to a square automatically.
+                        {t("player.photo.formatHint")}
                       </p>
                     </div>
                     <input
@@ -1342,11 +1341,11 @@ export default function PlayerProfilePage() {
                       disabled={photoState === "uploading"}
                       className="self-start rounded-lg border border-[var(--accent)]/60 px-4 py-2.5 text-sm font-semibold text-[var(--heading)] disabled:opacity-50"
                     >
-                      {photoState === "uploading" ? "Uploading…" : entry.avatar_photo_path ? "Replace photo" : "Upload a photo"}
+                      {photoState === "uploading" ? t("player.photo.uploading") : entry.avatar_photo_path ? t("player.photo.replace") : t("player.photo.upload")}
                     </button>
                     {entry.avatar_photo_path && entry.avatar_kind === "photo" && (
                       <button onClick={handleUseEmojiInstead} className="self-start text-xs text-[var(--faint)] underline hover:text-[var(--text)]">
-                        Use my emoji avatar instead
+                        {t("player.photo.useEmojiInstead")}
                       </button>
                     )}
                     {photoError && <p className="text-xs text-[var(--danger)]">{photoError}</p>}
@@ -1357,10 +1356,9 @@ export default function PlayerProfilePage() {
 
               {editTab === "badge" && (
               <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Badge</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.tab.badge")}</h2>
                 <p className="text-xs text-[var(--faint)]">
-                  A small earned overlay on the corner of your avatar — shown alongside your picture,
-                  not instead of it. Leveling up and mastering achievement categories unlock more.
+                  {t("player.badge.description")}
                 </p>
                 <div className="grid grid-cols-8 gap-1.5">
                   <button
@@ -1368,12 +1366,12 @@ export default function PlayerProfilePage() {
                       chooseBadge(null);
                       setBadgeInfo(null);
                     }}
-                    aria-label="No badge"
+                    aria-label={t("player.badge.none")}
                     className={`grid aspect-square place-items-center rounded-lg text-[10px] text-[var(--faint)] transition ${
                       !entry.badge ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
                     }`}
                   >
-                    None
+                    {t("common.none")}
                   </button>
                   {PREMIUM_EMOJI_OPTIONS.filter((option) => option.source !== "boutique").map((option) => {
                     const unlocked = isPremiumEmojiUnlocked(option, unlockCtx);
@@ -1389,8 +1387,8 @@ export default function PlayerProfilePage() {
                         }}
                         aria-label={
                           unlocked
-                            ? `Use ${option.emoji} as your badge`
-                            : `${option.emoji} locked — ${premiumEmojiRequirementLabel(option.unlock)}`
+                            ? t("player.badge.useEmoji", { emoji: option.emoji })
+                            : t("player.badge.lockedAriaLabel", { emoji: option.emoji, requirement: premiumEmojiRequirementLabel(option.unlock) })
                         }
                         title={unlocked ? undefined : premiumEmojiRequirementLabel(option.unlock)}
                         className={`relative grid aspect-square place-items-center rounded-lg text-[var(--heading)] transition ${
@@ -1432,10 +1430,10 @@ export default function PlayerProfilePage() {
                     </p>
                   );
                 })()}
-                {badgeSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                {badgeSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {badgeSaveState === "saving" && <p className="text-xs text-[var(--faint)]">{t("common.saving")}</p>}
+                {badgeSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
                 {badgeSaveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">{badgeSaveError ?? "Couldn't save — try again."}</p>
+                  <p className="text-xs text-[var(--danger)]">{badgeSaveError ?? t("player.saveError")}</p>
                 )}
               </div>
               )}
@@ -1443,19 +1441,19 @@ export default function PlayerProfilePage() {
               {editTab === "trophies" && (
               <div className="flex flex-col gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-                  Trophy case
+                  {t("player.trophies.heading")}
                   <span className="ml-2 font-normal normal-case text-[var(--faint)]">
                     {showcaseSelection.length} / {MAX_SHOWCASE_ITEMS}
                   </span>
                 </h2>
                 <p className="text-xs text-[var(--faint)]">
-                  Pick up to {MAX_SHOWCASE_ITEMS} achievements to feature at the top of your profile.
+                  {t("player.trophies.description", { max: MAX_SHOWCASE_ITEMS })}
                 </p>
                 {privateLoading ? (
-                  <p className="text-xs text-[var(--faint)]">Loading your achievements…</p>
+                  <p className="text-xs text-[var(--faint)]">{t("player.trophies.loading")}</p>
                 ) : pickableTrophies.length === 0 ? (
                   <p className="text-xs text-[var(--faint)]">
-                    Nothing unlocked yet — play a game or two, then come back to pick your favorites.
+                    {t("player.trophies.empty")}
                   </p>
                 ) : (
                   <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
@@ -1477,8 +1475,8 @@ export default function PlayerProfilePage() {
                           >
                             <AchievementIcon category={a.category} className="h-3.5 w-3.5 text-[var(--bg)]" />
                           </span>
-                          <span className="min-w-0 flex-1 truncate text-[var(--heading)]">{a.familyTitle}</span>
-                          <span className="shrink-0 text-xs text-[var(--faint)]">{TIER_LABEL[a.tier]}</span>
+                          <span className="min-w-0 flex-1 truncate text-[var(--heading)]">{t(a.familyTitleKey as TranslationKey)}</span>
+                          <span className="shrink-0 text-xs text-[var(--faint)]">{capitalize(t(`common.difficulty.${a.tier}` as TranslationKey))}</span>
                         </button>
                       );
                     })}
@@ -1489,19 +1487,18 @@ export default function PlayerProfilePage() {
                   disabled={showcaseSaveState === "saving"}
                   className="self-start rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
                 >
-                  {showcaseSaveState === "saving" ? "Saving…" : "Save trophy case"}
+                  {showcaseSaveState === "saving" ? t("common.saving") : t("player.trophies.save")}
                 </button>
-                {showcaseSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {showcaseSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
+                {showcaseSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
+                {showcaseSaveState === "error" && <p className="text-xs text-[var(--danger)]">{t("common.error")}</p>}
               </div>
               )}
 
               {editTab === "frame" && (
               <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Avatar frame</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.frame.heading")}</h2>
                 <p className="text-xs text-[var(--faint)]">
-                  A ring around your whole avatar, separate from the picture inside it — pick any color free.
-                  &quot;Grandmaster&quot; is the one exception, earned by mastering every achievement category.
+                  {t("player.frame.description")}
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -1516,7 +1513,7 @@ export default function PlayerProfilePage() {
                     <AvatarFrame frame={null} size={44}>
                       <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
                     </AvatarFrame>
-                    <span className="text-[10px] text-[var(--faint)]">None</span>
+                    <span className="text-[10px] text-[var(--faint)]">{t("common.none")}</span>
                   </button>
                   {AVATAR_FRAME_OPTIONS.filter(
                     (option) => (option.unlock?.kind !== "creatorOnly" || unlockCtx.isCreator) && option.source !== "boutique"
@@ -1552,18 +1549,18 @@ export default function PlayerProfilePage() {
                   })}
                 </div>
                 {frameInfo && <p className="text-[11px] text-[var(--faint)]">{frameInfo}</p>}
-                {frameSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                {frameSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {frameSaveState === "saving" && <p className="text-xs text-[var(--faint)]">{t("common.saving")}</p>}
+                {frameSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
                 {frameSaveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">{frameSaveError ?? "Couldn't save — try again."}</p>
+                  <p className="text-xs text-[var(--danger)]">{frameSaveError ?? t("player.saveError")}</p>
                 )}
               </div>
               )}
 
               {editTab === "title" && (
               <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Title</h2>
-                <p className="text-xs text-[var(--faint)]">Shown under your name — earned the same way your badge is.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.tab.title")}</h2>
+                <p className="text-xs text-[var(--faint)]">{t("player.title.description")}</p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => {
@@ -1574,7 +1571,7 @@ export default function PlayerProfilePage() {
                       !entry.title ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                     }`}
                   >
-                    None
+                    {t("common.none")}
                   </button>
                   {TITLE_OPTIONS.filter((option) => option.source !== "boutique").map((option) => {
                     const unlocked = !option.unlock || isCosmeticUnlocked(option.unlock, unlockCtx);
@@ -1610,20 +1607,19 @@ export default function PlayerProfilePage() {
                   })}
                 </div>
                 {titleInfo && <p className="text-[11px] text-[var(--faint)]">{titleInfo}</p>}
-                {titleSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                {titleSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {titleSaveState === "saving" && <p className="text-xs text-[var(--faint)]">{t("common.saving")}</p>}
+                {titleSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
                 {titleSaveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">{titleSaveError ?? "Couldn't save — try again."}</p>
+                  <p className="text-xs text-[var(--danger)]">{titleSaveError ?? t("player.saveError")}</p>
                 )}
               </div>
               )}
 
               {editTab === "banner" && (
               <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Profile banner</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.banner.heading")}</h2>
                 <p className="text-xs text-[var(--faint)]">
-                  A wide strip of color behind your name and picture — most are free to pick; one is a prestige
-                  reward for mastering every achievement category.
+                  {t("player.banner.description")}
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -1636,7 +1632,7 @@ export default function PlayerProfilePage() {
                     }`}
                   >
                     <div className="h-10 w-16 rounded-md border border-[var(--border)] bg-[var(--panel)]" />
-                    <span className="text-[10px] text-[var(--faint)]">None</span>
+                    <span className="text-[10px] text-[var(--faint)]">{t("common.none")}</span>
                   </button>
                   {BANNER_OPTIONS.filter(
                     (option) => (option.unlock?.kind !== "creatorOnly" || unlockCtx.isCreator) && option.source !== "boutique"
@@ -1665,10 +1661,10 @@ export default function PlayerProfilePage() {
                   })}
                 </div>
                 {bannerInfo && <p className="text-[11px] text-[var(--faint)]">{bannerInfo}</p>}
-                {bannerSaveState === "saving" && <p className="text-xs text-[var(--faint)]">Saving…</p>}
-                {bannerSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
+                {bannerSaveState === "saving" && <p className="text-xs text-[var(--faint)]">{t("common.saving")}</p>}
+                {bannerSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
                 {bannerSaveState === "error" && (
-                  <p className="text-xs text-[var(--danger)]">{bannerSaveError ?? "Couldn't save — try again."}</p>
+                  <p className="text-xs text-[var(--danger)]">{bannerSaveError ?? t("player.saveError")}</p>
                 )}
               </div>
               )}
@@ -1695,19 +1691,19 @@ export default function PlayerProfilePage() {
                 return (
                   <div className="flex flex-col gap-5">
                     <div>
-                      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Boutique</h2>
+                      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.tab.boutique")}</h2>
                       <p className="text-xs text-[var(--faint)]">
                         {unlockCtx.isCreator
-                          ? "A preview of what'll eventually be purchasable — picked from the same badge/frame/title/banner catalogs as everything else, just gathered here in one place. You can see and use all of it as the creator; everyone else sees it locked until it's for sale."
-                          : "A preview of what'll eventually be purchasable here — picked from the same badge/frame/title/banner catalogs as everything else. Not for sale yet."}
+                          ? t("player.boutique.descriptionCreator")
+                          : t("player.boutique.description")}
                       </p>
                     </div>
                     {isEmpty && (
-                      <EmptyState icon="🛍️">Nothing in the Boutique yet — check back soon.</EmptyState>
+                      <EmptyState icon="🛍️">{t("player.boutique.empty")}</EmptyState>
                     )}
                     {boutiqueBadges.length > 0 && (
                       <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Badges</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.boutique.badges")}</h3>
                         <div className="flex flex-wrap gap-2">
                           {boutiqueBadges.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
@@ -1716,7 +1712,7 @@ export default function PlayerProfilePage() {
                               <button
                                 key={option.emoji}
                                 onClick={() => unlocked && chooseBadge(option.emoji)}
-                                aria-label={unlocked ? `Use ${option.emoji} as your badge` : `${option.emoji} locked — ${requirement}`}
+                                aria-label={unlocked ? t("player.badge.useEmoji", { emoji: option.emoji }) : t("player.badge.lockedAriaLabel", { emoji: option.emoji, requirement })}
                                 title={unlocked ? undefined : requirement}
                                 className={`relative grid aspect-square w-11 place-items-center rounded-lg text-[var(--heading)] transition ${
                                   !unlocked
@@ -1743,7 +1739,7 @@ export default function PlayerProfilePage() {
                     )}
                     {boutiqueFrames.length > 0 && (
                       <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Frames</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.boutique.frames")}</h3>
                         <div className="flex flex-wrap gap-3">
                           {boutiqueFrames.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
@@ -1772,7 +1768,7 @@ export default function PlayerProfilePage() {
                     )}
                     {boutiqueTitles.length > 0 && (
                       <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Titles</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.boutique.titles")}</h3>
                         <div className="flex flex-wrap gap-2">
                           {boutiqueTitles.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
@@ -1798,7 +1794,7 @@ export default function PlayerProfilePage() {
                     )}
                     {boutiqueBanners.length > 0 && (
                       <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Banners</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.boutique.banners")}</h3>
                         <div className="flex flex-wrap gap-3">
                           {boutiqueBanners.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
@@ -1830,9 +1826,9 @@ export default function PlayerProfilePage() {
               {editTab === "name" && (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Display name</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.nameEditor.heading")}</h2>
                 <p className="text-xs text-[var(--faint)]">
-                  Shown here and on the Leaderboard — unique across every player, so it may already be taken.
+                  {t("player.nameEditor.description")}
                 </p>
                 <form onSubmit={handleSaveName} className="flex flex-col gap-1.5">
                   <div className="flex gap-2">
@@ -1840,7 +1836,7 @@ export default function PlayerProfilePage() {
                       type="text"
                       value={nameInput}
                       onChange={(e) => setNameInput(e.target.value)}
-                      placeholder="Your name"
+                      placeholder={t("player.nameEditor.placeholder")}
                       maxLength={MAX_DISPLAY_NAME_LENGTH}
                       className="flex-1 rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                     />
@@ -1849,26 +1845,26 @@ export default function PlayerProfilePage() {
                       disabled={nameSaveState === "saving"}
                       className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
                     >
-                      Save
+                      {t("common.save")}
                     </button>
                   </div>
-                  {nameAvailability === "checking" && <p className="text-xs text-[var(--faint)]">Checking…</p>}
-                  {nameAvailability === "available" && <p className="text-xs text-[var(--accent)]">Available.</p>}
-                  {nameAvailability === "taken" && <p className="text-xs text-[var(--danger)]">Already taken.</p>}
+                  {nameAvailability === "checking" && <p className="text-xs text-[var(--faint)]">{t("player.nameEditor.checking")}</p>}
+                  {nameAvailability === "available" && <p className="text-xs text-[var(--accent)]">{t("player.nameEditor.available")}</p>}
+                  {nameAvailability === "taken" && <p className="text-xs text-[var(--danger)]">{t("player.nameEditor.taken")}</p>}
                 </form>
                 {nameError && <p className="text-xs text-[var(--danger)]">{nameError}</p>}
-                {nameSaveState === "saved" && !nameError && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {nameSaveState === "error" && !nameError && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
+                {nameSaveState === "saved" && !nameError && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
+                {nameSaveState === "error" && !nameError && <p className="text-xs text-[var(--danger)]">{t("common.error")}</p>}
                 </div>
 
                 <div className="flex flex-col gap-2 border-t border-[var(--border)] pt-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Bio</h2>
-                <p className="text-xs text-[var(--faint)]">A short line other players see on your profile. Optional.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.bioEditor.heading")}</h2>
+                <p className="text-xs text-[var(--faint)]">{t("player.bioEditor.description")}</p>
                 <form onSubmit={handleSaveBio} className="flex flex-col gap-2">
                   <textarea
                     value={bioInput}
                     onChange={(e) => setBioInput(e.target.value)}
-                    placeholder="Say something about yourself…"
+                    placeholder={t("player.bioEditor.placeholder")}
                     maxLength={MAX_BIO_LENGTH}
                     rows={2}
                     className="resize-none rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
@@ -1876,12 +1872,12 @@ export default function PlayerProfilePage() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs text-[var(--faint)]">{bioInput.length} / {MAX_BIO_LENGTH}</span>
                     <button type="submit" disabled={bioSaveState === "saving"} className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50">
-                      Save
+                      {t("common.save")}
                     </button>
                   </div>
                 </form>
-                {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">Saved.</p>}
-                {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">Couldn&apos;t save — check your connection.</p>}
+                {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
+                {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">{t("common.error")}</p>}
                 </div>
               </div>
               )}
@@ -1891,15 +1887,15 @@ export default function PlayerProfilePage() {
           {!isSelf && headToHead && (
             <section>
               <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Head-to-head
+                {t("player.headToHead.heading")}
               </h2>
               <div className="grid grid-cols-3 gap-2">
-                <StatTile label="Wins" value={headToHead.wins} />
-                <StatTile label="Losses" value={headToHead.losses} />
-                <StatTile label="Ties" value={headToHead.ties} />
+                <StatTile label={t("player.headToHead.wins")} value={headToHead.wins} />
+                <StatTile label={t("player.headToHead.losses")} value={headToHead.losses} />
+                <StatTile label={t("player.headToHead.ties")} value={headToHead.ties} />
               </div>
               <p className="mt-1.5 text-center text-[10px] text-[var(--faint)]">
-                Across {headToHead.gamesTogether} multiplayer game{headToHead.gamesTogether === 1 ? "" : "s"} together
+                {tPlural("player.headToHead.games", headToHead.gamesTogether, { count: headToHead.gamesTogether })}
               </p>
             </section>
           )}
@@ -1909,19 +1905,19 @@ export default function PlayerProfilePage() {
               2 — centers instead of hugging the grid's left edge. */}
           <section className="flex flex-wrap justify-center gap-2">
             {[
-              { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
-              { label: "Total XP", value: entry.total_xp },
-              { label: "Games", value: entry.games_played },
-              { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
-              { label: "Avg. score", value: formatScore(entry.average_score) },
-              { label: "Worst score", value: formatScore(entry.worst_score) },
-              { label: "Daily streak", value: entry.daily_deal_streak },
-              { label: "Best streak", value: entry.daily_deal_best_streak },
-              { label: "MP wins", value: entry.mp_games_won ?? 0 },
-              { label: "MP win rate", value: formatMpWinRate(entry.mp_games_played ?? 0, entry.mp_games_won ?? 0) },
-              { label: "MP streak", value: entry.mp_best_win_streak ?? 0 },
+              { id: "achievements", label: t("player.stats.achievements"), value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
+              { id: "totalXp", label: t("player.stats.totalXp"), value: entry.total_xp },
+              { id: "games", label: t("player.stats.games"), value: entry.games_played },
+              { id: "winRate", label: t("player.stats.winRate"), value: formatWinRate(entry.games_played, entry.games_won) },
+              { id: "avgScore", label: t("player.stats.avgScore"), value: formatScore(entry.average_score) },
+              { id: "worstScore", label: t("player.stats.worstScore"), value: formatScore(entry.worst_score) },
+              { id: "dailyStreak", label: t("player.stats.dailyStreak"), value: entry.daily_deal_streak },
+              { id: "bestStreak", label: t("player.stats.bestStreak"), value: entry.daily_deal_best_streak },
+              { id: "mpWins", label: t("player.stats.mpWins"), value: entry.mp_games_won ?? 0 },
+              { id: "mpWinRate", label: t("player.stats.mpWinRate"), value: formatMpWinRate(entry.mp_games_played ?? 0, entry.mp_games_won ?? 0) },
+              { id: "mpStreak", label: t("player.stats.mpStreak"), value: entry.mp_best_win_streak ?? 0 },
             ].map((tile) => (
-              <StatTile key={tile.label} label={tile.label} value={tile.value} className="w-[calc((100%-1rem)/3)]" />
+              <StatTile key={tile.id} label={tile.label} value={tile.value} className="w-[calc((100%-1rem)/3)]" />
             ))}
           </section>
 
@@ -1929,10 +1925,10 @@ export default function PlayerProfilePage() {
           {(entry.showcase.length > 0 || isSelf) && (
             <section>
               <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                Trophy Case
+                {t("player.trophyCase.heading")}
               </h2>
               <div className="flex flex-wrap justify-center gap-3">
-                {entry.showcase.map(resolveShowcaseItem).map((item, i) =>
+                {entry.showcase.map((key) => resolveShowcaseItem(key, t)).map((item, i) =>
                   item ? (
                     <TrophyBadge key={item.key} item={item} rarityLabel={formatRarity(rarity?.[item.key])} />
                   ) : (
@@ -1952,14 +1948,14 @@ export default function PlayerProfilePage() {
           {isSelf && (
             <>
               <div className="flex items-center gap-3 border-t border-[var(--border)] pt-6">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your activity</h2>
-                <span className="text-[10px] text-[var(--faint)]">Only you can see what&apos;s below here</span>
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.activity.heading")}</h2>
+                <span className="text-[10px] text-[var(--faint)]">{t("player.activity.privacyNote")}</span>
               </div>
 
               {privateLoading ? (
                 <LoadingSpinner />
               ) : privateStatsError ? (
-                <p className="text-sm text-[var(--danger)]">Couldn&apos;t load your stats — check your connection and try again.</p>
+                <p className="text-sm text-[var(--danger)]">{t("player.stats.loadError")}</p>
               ) : privateStats ? (
                 <>
                   {/* Level */}
@@ -1982,10 +1978,15 @@ export default function PlayerProfilePage() {
                       <span className="text-2xl font-extrabold text-[var(--heading)]">{level?.level ?? 0}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Level progress</p>
+                      <p className="text-xs uppercase tracking-wide text-[var(--faint)]">{t("player.level.progress")}</p>
                       {level && (
                         <p className="text-xs text-[var(--faint)]">
-                          {level.xpIntoLevel} / {level.xpSpanForLevel} XP to level {level.level + 1} · {level.totalXp} total
+                          {t("player.level.xpProgress", {
+                            into: level.xpIntoLevel,
+                            span: level.xpSpanForLevel,
+                            next: level.level + 1,
+                            total: level.totalXp,
+                          })}
                         </p>
                       )}
                     </div>
@@ -2003,8 +2004,11 @@ export default function PlayerProfilePage() {
                         />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-[var(--heading)]">
-                            {Math.round(closestAchievement.progressFraction * 100)}% of the way to{" "}
-                            {TIER_LABEL[closestAchievement.tier]} · {closestAchievement.familyTitle}
+                            {t("player.closestGoal.progress", {
+                              pct: Math.round(closestAchievement.progressFraction * 100),
+                              tier: capitalize(t(`common.difficulty.${closestAchievement.tier}` as TranslationKey)),
+                              family: t(closestAchievement.familyTitleKey as TranslationKey),
+                            })}
                           </p>
                           <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
                             <div
@@ -2014,7 +2018,7 @@ export default function PlayerProfilePage() {
                           </div>
                         </div>
                         <Link href="/achievements" className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline">
-                          View →
+                          {t("player.closestGoal.view")}
                         </Link>
                       </div>
                     </section>
@@ -2022,58 +2026,60 @@ export default function PlayerProfilePage() {
 
                   {/* Highlights */}
                   <section className="grid grid-cols-2 gap-3">
-                    <Highlight label="Rarest unlock">
+                    <Highlight label={t("player.highlights.rarestUnlock")}>
                       {rarest ? (
                         <span className="flex items-center gap-1.5">
                           <AchievementIcon category={rarest.category} className="h-4 w-4 shrink-0 text-[var(--accent)]" />
                           <span className="truncate">
-                            {rarest.familyTitle} {tierNumber(rarest.tier)}
+                            {t(rarest.familyTitleKey as TranslationKey)} {tierNumber(rarest.tier)}
                           </span>
                         </span>
                       ) : (
                         "—"
                       )}
                       <span className="mt-0.5 block text-[10px] text-[var(--faint)]">
-                        {rarest ? `${TIER_LABEL[rarest.tier]} tier` : "nothing unlocked yet"}
+                        {rarest
+                          ? t("player.highlights.tierSuffix", { tier: capitalize(t(`common.difficulty.${rarest.tier}` as TranslationKey)) })
+                          : t("player.highlights.nothingUnlocked")}
                       </span>
                     </Highlight>
-                    <Highlight label="Toughest AI beaten">
-                      <span className="capitalize">{toughestBeaten ?? "—"}</span>
+                    <Highlight label={t("player.highlights.toughestAiBeaten")}>
+                      <span className="capitalize">{toughestBeaten ? t(`common.difficulty.${toughestBeaten}` as TranslationKey) : "—"}</span>
                       <span className="mt-0.5 block text-[10px] text-[var(--faint)]">
                         {toughestBeaten
-                          ? `${privateStats.wins_by_difficulty?.[toughestBeaten] ?? 0} win${
-                              (privateStats.wins_by_difficulty?.[toughestBeaten] ?? 0) === 1 ? "" : "s"
-                            }`
-                          : "no wins recorded"}
+                          ? tPlural("player.highlights.wins", privateStats.wins_by_difficulty?.[toughestBeaten] ?? 0, {
+                              count: privateStats.wins_by_difficulty?.[toughestBeaten] ?? 0,
+                            })
+                          : t("player.highlights.noWinsRecorded")}
                       </span>
                     </Highlight>
-                    <Highlight label="Best Daily Deal streak">
+                    <Highlight label={t("player.highlights.bestDailyStreak")}>
                       {(dailyDealBestStreak ?? 0) > 0 ? `🔥 ${dailyDealBestStreak}` : "—"}
-                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">days in a row</span>
+                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">{t("player.highlights.daysInARow")}</span>
                     </Highlight>
-                    <Highlight label="Best game">
+                    <Highlight label={t("player.highlights.bestGame")}>
                       {formatScore(privateStats.best_score)}
-                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">lowest final score</span>
+                      <span className="mt-0.5 block text-[10px] text-[var(--faint)]">{t("player.highlights.lowestFinalScore")}</span>
                     </Highlight>
                   </section>
 
                   {/* The two figures not already shown in the public tiles above
                       (which cover games played/win rate/avg/worst already). */}
                   <section className="grid grid-cols-2 gap-3">
-                    <StatTile label="Games won" value={privateStats.games_won} />
-                    <StatTile label="Games tied" value={privateStats.games_tied} sub="a rare result" />
+                    <StatTile label={t("player.stats.gamesWon")} value={privateStats.games_won} />
+                    <StatTile label={t("player.stats.gamesTied")} value={privateStats.games_tied} sub={t("player.stats.rareResult")} />
                   </section>
 
                   {/* Wins by difficulty */}
                   <section>
                     <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                      Wins by AI difficulty faced
+                      {t("player.winsByDifficulty.heading")}
                     </h2>
                     <div className="flex flex-wrap gap-2">
                       {DIFFICULTIES.map((d) => (
                         <div key={d} className="rounded-lg bg-[var(--panel)] px-3 py-2 text-center text-sm capitalize">
                           <div className="font-semibold text-[var(--heading)]">{privateStats.wins_by_difficulty[d] ?? 0}</div>
-                          <div className="text-xs text-[var(--faint)]">{d}</div>
+                          <div className="text-xs text-[var(--faint)]">{t(`common.difficulty.${d}` as TranslationKey)}</div>
                         </div>
                       ))}
                     </div>
@@ -2084,18 +2090,21 @@ export default function PlayerProfilePage() {
                   {mpStats && mpStats.played > 0 && (
                     <section>
                       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                        Multiplayer (vs. people)
+                        {t("player.multiplayerStats.heading")}
                       </h2>
                       <div className="grid grid-cols-3 gap-3">
-                        <StatTile label="Played" value={mpStats.played} />
+                        <StatTile label={t("player.stats.played")} value={mpStats.played} />
                         <StatTile
-                          label="Win streak"
+                          label={t("player.stats.winStreak")}
                           value={mpStats.currentWinStreak}
-                          sub={mpStats.bestWinStreak > 0 ? `best ${mpStats.bestWinStreak}` : undefined}
+                          sub={mpStats.bestWinStreak > 0 ? t("player.stats.bestStreakSub", { count: mpStats.bestWinStreak }) : undefined}
                         />
-                        <StatTile label="Podium finishes" value={mpStats.podiums} sub="top half of the table" />
+                        <StatTile label={t("player.stats.podiumFinishes")} value={mpStats.podiums} sub={t("player.stats.topHalfOfTable")} />
                         {mpStats.biggestTableBeaten > 0 && (
-                          <StatTile label="Biggest table won" value={`${mpStats.biggestTableBeaten}p`} />
+                          <StatTile
+                            label={t("player.stats.biggestTableWon")}
+                            value={t("player.stats.tableSizeAbbr", { count: mpStats.biggestTableBeaten })}
+                          />
                         )}
                       </div>
                     </section>
@@ -2104,9 +2113,9 @@ export default function PlayerProfilePage() {
                   {/* Achievement showcase */}
                   <section className="rounded-2xl bg-[var(--panel)] p-5">
                     <div className="flex items-baseline justify-between">
-                      <h2 className="text-sm font-semibold text-[var(--heading)]">Achievements</h2>
+                      <h2 className="text-sm font-semibold text-[var(--heading)]">{t("player.stats.achievements")}</h2>
                       <Link href="/achievements" className="text-xs font-medium text-[var(--accent)] hover:underline">
-                        View all →
+                        {t("player.achievements.viewAll")}
                       </Link>
                     </div>
                     <p className="mt-1 text-2xl font-extrabold text-[var(--heading)]">
@@ -2114,18 +2123,18 @@ export default function PlayerProfilePage() {
                       <span className="text-base font-medium text-[var(--faint)]"> / {TOTAL_ACHIEVEMENTS}</span>
                     </p>
                     <p className="text-xs text-[var(--faint)]">
-                      {masteredFamilies} of {ACHIEVEMENT_FAMILIES.length} families mastered
+                      {t("player.achievements.familiesMastered", { count: masteredFamilies, total: ACHIEVEMENT_FAMILIES.length })}
                     </p>
                     <div className="mt-3 flex gap-1.5">
-                      {ACHIEVEMENT_TIERS.map((t) => {
-                        const n = unlockedByTier[t];
+                      {ACHIEVEMENT_TIERS.map((tier) => {
+                        const n = unlockedByTier[tier];
                         const max = ACHIEVEMENT_FAMILIES.length;
                         return (
-                          <div key={t} className="flex-1 text-center">
+                          <div key={tier} className="flex-1 text-center">
                             <div className="flex h-16 w-full items-end overflow-hidden rounded-md bg-[var(--panel-soft)]">
                               <div className="w-full rounded-t-[3px] bg-[var(--accent)]" style={{ height: `${(n / max) * 100}%` }} />
                             </div>
-                            <p className="mt-1 text-[10px] text-[var(--faint)]">{TIER_LABEL[t]}</p>
+                            <p className="mt-1 text-[10px] text-[var(--faint)]">{capitalize(t(`common.difficulty.${tier}` as TranslationKey))}</p>
                             <p className="text-[10px] font-semibold text-[var(--muted)]">{n}</p>
                           </div>
                         );
@@ -2137,9 +2146,9 @@ export default function PlayerProfilePage() {
                   <details className="group rounded-lg border border-[var(--border)]">
                     <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--faint)] [&::-webkit-details-marker]:hidden">
                       <span>
-                        Past games
+                        {t("player.pastGames.heading")}
                         <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">
-                          last {Math.min(history.length, PAST_GAMES_LIMIT)}
+                          {t("player.pastGames.lastN", { count: Math.min(history.length, PAST_GAMES_LIMIT) })}
                         </span>
                       </span>
                       <span aria-hidden="true" className="text-[var(--faint)] transition group-open:rotate-180">
@@ -2148,7 +2157,7 @@ export default function PlayerProfilePage() {
                     </summary>
                     {history.length === 0 ? (
                       <div className="border-t border-[var(--border)] p-3">
-                        <EmptyState icon="🎲">No solo or pass-and-play games recorded yet.</EmptyState>
+                        <EmptyState icon="🎲">{t("player.pastGames.empty")}</EmptyState>
                       </div>
                     ) : (
                       <ul className="flex flex-col gap-2 border-t border-[var(--border)] p-3">
@@ -2159,9 +2168,9 @@ export default function PlayerProfilePage() {
                             <li key={g.id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
                               <div className="flex items-center justify-between">
                                 <span className={`font-medium ${wonOrTied ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}>
-                                  Winner: {g.winner}
+                                  {t("player.pastGames.winner", { name: g.winner })}
                                   {g.winner_score != null && (
-                                    <span className={`font-normal ${wonOrTied ? "" : "text-[var(--faint)]"}`}> ({g.winner_score} pts)</span>
+                                    <span className={`font-normal ${wonOrTied ? "" : "text-[var(--faint)]"}`}> ({t("game.hand.pts", { count: g.winner_score })})</span>
                                   )}
                                 </span>
                                 <span className="text-xs text-[var(--faint)]">
@@ -2169,9 +2178,9 @@ export default function PlayerProfilePage() {
                                 </span>
                               </div>
                               {yourScore !== null && !wonOrTied && (
-                                <p className="mt-0.5 text-xs text-[var(--muted)]">Your score: {yourScore} pts</p>
+                                <p className="mt-0.5 text-xs text-[var(--muted)]">{t("player.pastGames.yourScore", { score: yourScore })}</p>
                               )}
-                              <p className="mt-1 text-xs text-[var(--faint)]">vs. {g.opponents.map((o) => o.name).join(", ")}</p>
+                              <p className="mt-1 text-xs text-[var(--faint)]">{t("player.pastGames.vs", { names: g.opponents.map((o) => o.name).join(", ") })}</p>
                             </li>
                           );
                         })}
@@ -2183,8 +2192,8 @@ export default function PlayerProfilePage() {
                     <details className="group rounded-lg border border-[var(--border)]">
                       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--faint)] [&::-webkit-details-marker]:hidden">
                         <span>
-                          Past multiplayer games
-                          <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">last {mpHistory.length}</span>
+                          {t("player.pastGames.mpHeading")}
+                          <span className="ml-2 font-normal normal-case tracking-normal text-[var(--faint)]">{t("player.pastGames.lastN", { count: mpHistory.length })}</span>
                         </span>
                         <span aria-hidden="true" className="text-[var(--faint)] transition group-open:rotate-180">
                           ▼
@@ -2195,22 +2204,26 @@ export default function PlayerProfilePage() {
                           const mySeat = mg.seats.find((s) => s.userId === user?.id)?.seat;
                           const myScore = mySeat != null ? mg.cumulative_scores[String(mySeat)] : undefined;
                           const winnerName = mg.winner_user_id
-                            ? mg.seats.find((s) => s.userId === mg.winner_user_id)?.name ?? "Someone"
-                            : "an AI";
+                            ? mg.seats.find((s) => s.userId === mg.winner_user_id)?.name ?? t("multiplayer.someone")
+                            : t("player.pastGames.anAi");
                           const won = mg.your_outcome === "won";
                           return (
                             <li key={mg.game_id} className="rounded-lg bg-[var(--panel)] px-4 py-3 text-sm">
                               <div className="flex items-center justify-between">
                                 <span className={`font-medium ${won ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}>
-                                  {won ? "You won" : mg.your_outcome === "resigned" ? "You left" : `Lost — ${winnerName} won`}
+                                  {won
+                                    ? t("player.pastGames.youWon")
+                                    : mg.your_outcome === "resigned"
+                                      ? t("player.pastGames.youLeft")
+                                      : t("player.pastGames.lostTo", { winner: winnerName })}
                                 </span>
                                 <span className="text-xs text-[var(--faint)]">
                                   {mg.completed_at ? new Date(mg.completed_at).toLocaleDateString(undefined, { dateStyle: "medium" }) : ""}
                                 </span>
                               </div>
-                              {myScore != null && <p className="mt-0.5 text-xs text-[var(--muted)]">Your score: {myScore} pts</p>}
+                              {myScore != null && <p className="mt-0.5 text-xs text-[var(--muted)]">{t("player.pastGames.yourScore", { score: myScore })}</p>}
                               <p className="mt-1 text-xs text-[var(--faint)]">
-                                vs. {mg.seats.filter((s) => s.userId !== user?.id).map((s) => s.name).join(", ")}
+                                {t("player.pastGames.vs", { names: mg.seats.filter((s) => s.userId !== user?.id).map((s) => s.name).join(", ") })}
                               </p>
                             </li>
                           );
@@ -2224,12 +2237,11 @@ export default function PlayerProfilePage() {
                   icon="📊"
                   action={
                     <Link href="/new-game" className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
-                      New Game
+                      {t("home.newGame")}
                     </Link>
                   }
                 >
-                  No games recorded yet — play one to see your stats here. Your level still counts every
-                  achievement you unlock along the way.
+                  {t("player.noGames.body")}
                 </EmptyState>
               )}
             </>
@@ -2238,7 +2250,7 @@ export default function PlayerProfilePage() {
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );

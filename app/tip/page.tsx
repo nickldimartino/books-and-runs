@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { playerProfileHref } from "../lib/leaderboardStore";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 interface TipTier {
   label: string;
@@ -31,44 +32,53 @@ interface TipTier {
   paymentLinkUrl: string;
 }
 
-const PAYMENT_LINKS: TipTier[] = [
-  { label: "Coffee", blurb: "☕ A small thank-you", paymentLinkUrl: "https://buy.stripe.com/test_cNi00i5Ul2LB9692VPfEk06" },
-  {
-    label: "Round of cards",
-    blurb: "🃏 Appreciated more than you'd think",
-    paymentLinkUrl: "https://buy.stripe.com/test_28EfZg4Qh3PFaadcwpfEk05",
-  },
-  { label: "Full table", blurb: "🎉 Goes a genuinely long way", paymentLinkUrl: "https://buy.stripe.com/test_5kQ28qeqRfynaad9kdfEk04" },
-];
+function buildTipTiers(t: ReturnType<typeof useT>["t"]): TipTier[] {
+  return [
+    {
+      label: t("tip.tier.coffee.label"),
+      blurb: t("tip.tier.coffee.blurb"),
+      paymentLinkUrl: "https://buy.stripe.com/test_cNi00i5Ul2LB9692VPfEk06",
+    },
+    {
+      label: t("tip.tier.roundOfCards.label"),
+      blurb: t("tip.tier.roundOfCards.blurb"),
+      paymentLinkUrl: "https://buy.stripe.com/test_28EfZg4Qh3PFaadcwpfEk05",
+    },
+    {
+      label: t("tip.tier.fullTable.label"),
+      blurb: t("tip.tier.fullTable.blurb"),
+      paymentLinkUrl: "https://buy.stripe.com/test_5kQ28qeqRfynaad9kdfEk04",
+    },
+  ];
+}
 
 export default function TipPage() {
   const { configured, user } = useAuth();
-  const anyLinksConfigured = PAYMENT_LINKS.some((t) => t.paymentLinkUrl);
+  const { t } = useT();
+  const PAYMENT_LINKS = buildTipTiers(t);
+  const anyLinksConfigured = PAYMENT_LINKS.some((tier) => tier.paymentLinkUrl);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
       <BackLink href="/" />
 
       <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Support the developer</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("settings.supportDeveloper")}</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Books &amp; Runs is free, ad-free, and built by one person (and the family who actually
-          plays it — see its{" "}
+          {t("tip.intro.prefix")}{" "}
           <Link href="/history" className="underline hover:text-[var(--heading)]">
-            history
+            {t("tip.intro.historyLink")}
           </Link>
-          ). A tip is completely optional and never changes anything about the game — no ads, no
-          pay-to-win, nothing gated behind it except a small thank-you badge.
+          {t("tip.intro.suffix")}
         </p>
       </div>
 
       {!configured || !user ? (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
           <Link href="/sign-in" className="font-semibold text-[var(--accent)] hover:underline">
-            Sign in
+            {t("signIn.title")}
           </Link>{" "}
-          first so a tip can be credited to your account — that&apos;s the only way the ☕ Supporter
-          badge below knows who to unlock for.
+          {t("tip.signInPromptSuffix")}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -110,20 +120,18 @@ export default function TipPage() {
             );
           })}
           {!anyLinksConfigured && (
-            <p className="text-xs text-[var(--faint)]">
-              Not set up yet — add your Stripe Payment Links to PAYMENT_LINKS in app/tip/page.tsx.
-            </p>
+            <p className="text-xs text-[var(--faint)]">{t("tip.notConfigured")}</p>
           )}
         </div>
       )}
 
       {configured && user && (
         <p className="text-xs text-[var(--faint)]">
-          After a tip goes through, the ☕ Supporter badge shows up on your{" "}
+          {t("tip.afterTip.prefix")}{" "}
           <Link href={playerProfileHref(user.id)} className="underline hover:text-[var(--heading)]">
-            profile
+            {t("tip.afterTip.profileLink")}
           </Link>{" "}
-          within a few minutes — equip it from the Badge tab on Edit profile.
+          {t("tip.afterTip.suffix")}
         </p>
       )}
     </main>

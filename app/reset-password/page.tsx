@@ -10,9 +10,11 @@ import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { loadSupabase } from "../lib/supabaseClient";
 
 export default function ResetPasswordPage() {
+  const { t } = useT();
   const router = useRouter();
   const { configured, updatePassword } = useAuth();
   const [ready, setReady] = useState(false);
@@ -48,8 +50,8 @@ export default function ResetPasswordPage() {
   if (!configured) {
     return (
       <CenteredMessage
-        title="Sign in isn't set up yet"
-        body="This app doesn't have a Supabase project connected. Local pass-and-play games work fine without one — accounts and stats just aren't available yet."
+        title={t("signIn.notSetUp.title")}
+        body={t("signIn.notSetUp.body")}
         backOnClick={() => router.replace("/")}
       />
     );
@@ -71,16 +73,16 @@ export default function ResetPasswordPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-8 px-6 py-10">
       <BackLink href="/" />
-      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">Set a new password</h1>
+      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">{t("resetPassword.title")}</h1>
 
       {done ? (
         <>
-          <p className="text-center text-sm text-[var(--muted)]">Your password has been updated.</p>
+          <p className="text-center text-sm text-[var(--muted)]">{t("resetPassword.updated")}</p>
           <Link
             href="/sign-in"
             className="rounded-lg bg-[var(--accent)] px-6 py-3 text-center text-sm font-semibold text-[var(--on-accent)] shadow"
           >
-            Sign in
+            {t("signIn.title")}
           </Link>
         </>
       ) : ready ? (
@@ -89,7 +91,7 @@ export default function ResetPasswordPage() {
             type="password"
             required
             minLength={6}
-            placeholder="New password"
+            placeholder={t("resetPassword.newPasswordPlaceholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
@@ -100,14 +102,14 @@ export default function ResetPasswordPage() {
             disabled={pending}
             className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
           >
-            Update password
+            {t("resetPassword.updateButton")}
           </button>
         </form>
       ) : (
         <p className="text-center text-sm text-[var(--muted)]">
-          This link is invalid or has expired.{" "}
+          {t("resetPassword.linkInvalid")}{" "}
           <Link href="/sign-in" className="underline hover:text-[var(--heading)]">
-            Request a new one
+            {t("resetPassword.requestNewOne")}
           </Link>
           .
         </p>

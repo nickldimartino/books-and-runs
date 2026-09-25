@@ -16,6 +16,8 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { getClub } from "../lib/clubsStore";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
 import { nameOf, playerProfileHref } from "../lib/leaderboardStore";
 import { rematchMpGame, MpError } from "../lib/mpStore";
 import { supabase } from "../lib/supabaseClient";
@@ -48,28 +50,30 @@ function useTournamentId(): string | null | undefined {
   return id;
 }
 
-const STATUS_LABEL: Record<TournamentRound["status"], string> = {
-  pending: "Waiting for invites",
-  active: "In progress",
-  complete: "Finished",
-  cancelled: "Cancelled",
+// Which key to translate a round's status with, resolved via
+// t(STATUS_LABEL_KEYS[status]) inside the component — the actual English
+// strings live only in the dictionary, not duplicated here.
+const STATUS_LABEL_KEYS: Record<TournamentRound["status"], TranslationKey> = {
+  pending: "tournaments.status.pending",
+  active: "tournaments.status.active",
+  complete: "tournaments.status.complete",
+  cancelled: "tournaments.status.cancelled",
 };
 
 export default function TournamentsPage() {
+  const { t } = useT();
   const { configured, loading: authLoading, user } = useAuth();
   const tournamentId = useTournamentId();
 
   if (!authLoading && !configured) {
-    return (
-      <CenteredMessage title="Tournaments aren't set up yet" body="This app doesn't have a Supabase project connected yet." />
-    );
+    return <CenteredMessage title={t("tournaments.notSetUp.title")} body={t("tournaments.notSetUp.body")} />;
   }
 
   if (!authLoading && configured && !user) {
     return (
       <CenteredMessage
-        title="Sign in for tournaments"
-        body="A tournament series is tied to your account, like any multiplayer game."
+        title={t("tournaments.signInTitle")}
+        body={t("tournaments.signInBody")}
         signIn
       />
     );
@@ -87,6 +91,7 @@ export default function TournamentsPage() {
 }
 
 function TournamentList() {
+  const { t } = useT();
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -106,43 +111,47 @@ function TournamentList() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
       <BackLink href="/" />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">Tournaments</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("tournaments.title")}</h1>
 
-      <PageTip id="tournaments" title="A round-robin series">
-        The same roster plays a fixed number of games back-to-back — no elimination, nobody sits
-        out. Lowest total score across the whole series wins.
+      <PageTip id="tournaments" title={t("tournaments.tip.title")}>
+        {t("tournaments.tip.body")}
       </PageTip>
 
       <Link
         href="/tournaments/new"
         className="rounded-lg bg-[var(--accent)] px-6 py-3.5 text-center text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
       >
-        Start a tournament
+        {t("tournaments.startATournament")}
       </Link>
 
       {loading ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load your tournaments — check your connection and try again.</p>
+        <p className="text-sm text-[var(--danger)]">{t("tournaments.loadError")}</p>
       ) : tournaments.length === 0 ? (
-        <EmptyState icon="🏆">No tournaments yet — start one above with a few friends.</EmptyState>
+        <EmptyState icon="🏆">{t("tournaments.emptyState")}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
-          {tournaments.map((t) => (
-            <li key={t.tournamentId}>
+          {tournaments.map((tr) => (
+            <li key={tr.tournamentId}>
               <Link
-                href={`/tournaments?id=${t.tournamentId}`}
+                href={`/tournaments?id=${tr.tournamentId}`}
                 className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 transition hover:bg-[var(--panel-soft)]"
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold text-[var(--heading)]">{t.name}</span>
+                  <span className="block truncate font-semibold text-[var(--heading)]">{tr.name}</span>
                   <span className="block text-xs text-[var(--faint)]">
-                    {t.cancelled ? "Cancelled" : `Round ${Math.min(t.roundsPlayed + 1, t.totalRounds)} of ${t.totalRounds}`}
+                    {tr.cancelled
+                      ? t("tournaments.status.cancelled")
+                      : t("game.roundOf", {
+                          round: Math.min(tr.roundsPlayed + 1, tr.totalRounds),
+                          total: tr.totalRounds,
+                        })}
                   </span>
                 </span>
-                {!t.cancelled && t.roundsPlayed >= t.totalRounds && (
+                {!tr.cancelled && tr.roundsPlayed >= tr.totalRounds && (
                   <span className="shrink-0 rounded-full bg-[var(--accent)]/15 px-2.5 py-1 text-xs font-semibold text-[var(--accent)]">
-                    Complete
+                    {t("tournaments.complete")}
                   </span>
                 )}
               </Link>
@@ -175,6 +184,7 @@ interface MpGameSeatRow {
 
 function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const router = useRouter();
+  const { t } = useT();
   const { user } = useAuth();
   const [tournament, setTournament] = useState<
     { id: string; name: string; hostId: string; clubId: string | null; totalRounds: number; cancelled: boolean } | null | undefined
@@ -217,10 +227,10 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   if (loadError) {
     return (
       <CenteredMessage
-        title="Tournament not found"
-        body="Couldn't load it — check your connection and try again."
+        title={t("tournaments.notFound.title")}
+        body={t("tournaments.notFound.loadErrorBody")}
         backHref="/tournaments"
-        backLabel="← Tournaments"
+        backLabel={t("tournaments.backToTournaments")}
       />
     );
   }
@@ -236,10 +246,10 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   if (tournament === null) {
     return (
       <CenteredMessage
-        title="Tournament not found"
-        body="It may have been deleted, or you're not a participant."
+        title={t("tournaments.notFound.title")}
+        body={t("tournaments.notFound.body")}
         backHref="/tournaments"
-        backLabel="← Tournaments"
+        backLabel={t("tournaments.backToTournaments")}
       />
     );
   }
@@ -276,20 +286,24 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
       router.push(`/multiplayer/play?g=${game_id}`);
     } catch (err) {
       console.error("Failed to start the next round:", err);
-      setActionError(err instanceof MpError ? err.message : "Couldn't start the next round — try again.");
+      setActionError(err instanceof MpError ? err.message : t("tournaments.startNextRoundError"));
       setBusy(false);
     }
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
-      <BackLink href="/tournaments" label="Tournaments" />
+      <BackLink href="/tournaments" label={t("tournaments.title")} />
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">{tournament.name}</h1>
         <p className="mt-1 text-xs text-[var(--faint)]">
-          {tournament.cancelled ? "Cancelled" : seriesComplete ? "Complete" : `Round ${rounds.length} of ${tournament.totalRounds}`}
-          {clubName && ` · from ${clubName}`}
+          {tournament.cancelled
+            ? t("tournaments.status.cancelled")
+            : seriesComplete
+              ? t("tournaments.complete")
+              : t("game.roundOf", { round: rounds.length, total: tournament.totalRounds })}
+          {clubName && t("tournaments.fromClub", { club: clubName })}
         </p>
       </div>
 
@@ -301,7 +315,11 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
             🏆
           </p>
           <p className="mt-1 text-lg font-bold text-[var(--heading)]">
-            {standings[0] ? (standings[0].userId === user?.id ? "You won the series!" : `${nameOf(standings[0].userId, standings[0].displayName)} won the series!`) : "Series complete"}
+            {standings[0]
+              ? t("tournaments.wonTheSeries", {
+                  name: standings[0].userId === user?.id ? t("newGame.you") : nameOf(standings[0].userId, standings[0].displayName),
+                })
+              : t("tournaments.seriesComplete")}
           </p>
         </section>
       )}
@@ -312,23 +330,23 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
           disabled={busy}
           className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
-          {busy ? "Setting up…" : `Start round ${rounds.length + 1} of ${tournament.totalRounds}`}
+          {busy ? t("multiplayer.settingUp") : t("tournaments.startRoundOf", { round: rounds.length + 1, total: tournament.totalRounds })}
         </button>
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Standings</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("tournaments.standings")}</h2>
         <ol className="flex flex-col gap-2">
           {standings.map((s, i) => (
             <li key={s.userId} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
               <Link href={playerProfileHref(s.userId)} className="flex min-w-0 items-center gap-2">
                 <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--faint)]">{i + 1}.</span>
                 <span className="truncate font-medium text-[var(--heading)]">
-                  {s.userId === user?.id ? "You" : nameOf(s.userId, s.displayName)}
+                  {s.userId === user?.id ? t("newGame.you") : nameOf(s.userId, s.displayName)}
                 </span>
               </Link>
               <span className="shrink-0 text-right text-xs text-[var(--muted)]">
-                {s.totalScore} pts <span className="text-[var(--faint)]">· {s.gamesWon}W</span>
+                {t("game.hand.pts", { count: s.totalScore })} <span className="text-[var(--faint)]">· {t("tournaments.gamesWon", { count: s.gamesWon })}</span>
               </span>
             </li>
           ))}
@@ -336,7 +354,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Rounds</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("tournaments.rounds")}</h2>
         <ul className="flex flex-col gap-2">
           {rounds.map((r) => (
             <li key={r.roundNumber}>
@@ -344,8 +362,8 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                 href={`/multiplayer/play?g=${r.gameId}`}
                 className="flex items-center justify-between gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2.5 text-sm transition hover:bg-[var(--panel)]"
               >
-                <span className="text-[var(--text)]">Round {r.roundNumber}</span>
-                <span className="text-xs text-[var(--faint)]">{STATUS_LABEL[r.status]}</span>
+                <span className="text-[var(--text)]">{t("tournaments.roundN", { round: r.roundNumber })}</span>
+                <span className="text-xs text-[var(--faint)]">{t(STATUS_LABEL_KEYS[r.status])}</span>
               </Link>
             </li>
           ))}
@@ -355,7 +373,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
       {isHost && !tournament.cancelled && (
         <button
           onClick={async () => {
-            if (!confirm("Cancel this tournament? Games already played keep their results.")) return;
+            if (!confirm(t("tournaments.confirmCancel"))) return;
             if (!supabase) return;
             setBusy(true);
             try {
@@ -363,7 +381,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
               await load();
             } catch (err) {
               console.error("Failed to cancel tournament:", err);
-              setActionError("Couldn't cancel it — try again.");
+              setActionError(t("tournaments.cancelError"));
             } finally {
               setBusy(false);
             }
@@ -371,7 +389,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
           disabled={busy}
           className="self-start text-xs text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50"
         >
-          Cancel tournament
+          {t("tournaments.cancelTournament")}
         </button>
       )}
     </main>

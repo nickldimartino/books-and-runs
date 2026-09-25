@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { markReviewPromptResponded } from "../lib/reviewPromptStore";
 
 // Fill this in once Books & Runs actually has an App Store/Play Store
@@ -23,6 +24,7 @@ const STORE_REVIEW_URL = "";
  */
 export function ReviewPrompt({ onDismiss }: { onDismiss: () => void }) {
   const router = useRouter();
+  const { t } = useT();
 
   function respond(enjoyed: boolean) {
     markReviewPromptResponded();
@@ -41,7 +43,7 @@ export function ReviewPrompt({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div
       role="dialog"
-      aria-label="Enjoying the game?"
+      aria-label={t("reviewPrompt.title")}
       className="confirm-pop flex flex-col gap-3 rounded-xl border border-[var(--accent)]/50 bg-[var(--panel)] p-4"
     >
       <div className="flex items-start gap-3">
@@ -49,14 +51,14 @@ export function ReviewPrompt({ onDismiss }: { onDismiss: () => void }) {
           🃏
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-[var(--heading)]">Enjoying Books &amp; Runs?</p>
+          <p className="text-sm font-semibold text-[var(--heading)]">{t("reviewPrompt.title")}</p>
           <p className="mt-0.5 text-xs text-[var(--muted)]">
-            {STORE_REVIEW_URL ? "A quick rating helps a lot." : "Nice win! A few seconds of feedback helps a lot."}
+            {STORE_REVIEW_URL ? t("reviewPrompt.rateBody") : t("reviewPrompt.feedbackBody")}
           </p>
         </div>
         <button
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={t("common.dismiss")}
           className="shrink-0 rounded p-0.5 text-[var(--faint)] hover:text-[var(--muted)]"
         >
           ✕
@@ -67,13 +69,13 @@ export function ReviewPrompt({ onDismiss }: { onDismiss: () => void }) {
           onClick={() => respond(false)}
           className="flex-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
-          Not really
+          {t("reviewPrompt.notReally")}
         </button>
         <button
           onClick={() => respond(true)}
           className="flex-1 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)]"
         >
-          {STORE_REVIEW_URL ? "Rate us" : "Yes!"}
+          {STORE_REVIEW_URL ? t("reviewPrompt.rateUs") : t("reviewPrompt.yes")}
         </button>
       </div>
     </div>

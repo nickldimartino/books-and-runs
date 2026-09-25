@@ -12,10 +12,14 @@ import { CenteredMessage } from "../components/CenteredMessage";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
+import type { TranslationKey } from "../lib/i18n/keys";
+import { useT, Vars } from "../lib/i18n/LocaleProvider";
 import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+type T = (key: TranslationKey, vars?: Vars) => string;
 
 /**
  * Re-establishes the current session with the account's own email + the
@@ -26,10 +30,10 @@ type SaveState = "idle" | "saving" | "saved" | "error";
  * the user's own call on this: an already-unlocked, signed-in device is
  * exactly the scenario this exists to guard against.
  */
-async function reauthenticate(email: string, currentPassword: string): Promise<string | null> {
-  if (!supabase) return "Not configured.";
+async function reauthenticate(email: string, currentPassword: string, t: T): Promise<string | null> {
+  if (!supabase) return t("account.error.notConfigured");
   const { error } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
-  if (error) return "Current password is incorrect.";
+  if (error) return t("account.error.wrongPassword");
   // On an account with two-factor enabled, re-authenticating with just a
   // password only re-proves aal1 — if that left the session needing aal2
   // again (rather than Supabase preserving the grant it already had),
@@ -39,7 +43,7 @@ async function reauthenticate(email: string, currentPassword: string): Promise<s
   // required as not really signed in (see its own mfaPending doc).
   const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (data?.currentLevel === "aal1" && data?.nextLevel === "aal2") {
-    return "Your session needs a fresh sign-in with your authenticator code — sign out and back in, then try again.";
+    return t("account.error.needsFreshSignIn");
   }
   return null;
 }
@@ -54,6 +58,7 @@ export default function AccountPage() {
     verifyMfaEnrollment,
     unenrollMfaFactor,
   } = useAuth();
+  const { t } = useT();
 
   const [loading, setLoading] = useState(true);
 
@@ -112,12 +117,12 @@ export default function AccountPage() {
 
   if (!authLoading && !configured) {
     return (
-      <CenteredMessage title="Accounts aren't set up yet" body="This app doesn't have a Supabase project connected yet." />
+      <CenteredMessage title={t("account.notConfigured.title")} body={t("account.notConfigured.body")} />
     );
   }
 
   if (!authLoading && configured && !user) {
-    return <CenteredMessage title="Sign in to manage your account" signIn />;
+    return <CenteredMessage title={t("account.signInGate.title")} signIn />;
   }
 
   async function handleChangeEmail(e: FormEvent) {
@@ -125,7 +130,7 @@ export default function AccountPage() {
     if (!supabase || !user?.email) return;
     setEmailError(null);
     setEmailSaveState("saving");
-    const reauthError = await reauthenticate(user.email, emailPassword);
+    const reauthError = await reauthenticate(user.email, emailPassword, t);
     if (reauthError) {
       setEmailError(reauthError);
       setEmailSaveState("error");
@@ -146,7 +151,7 @@ export default function AccountPage() {
     if (!supabase || !user?.email) return;
     setPasswordError(null);
     setPasswordSaveState("saving");
-    const reauthError = await reauthenticate(user.email, currentPassword);
+    const reauthError = await reauthenticate(user.email, currentPassword, t);
     if (reauthError) {
       setPasswordError(reauthError);
       setPasswordSaveState("error");
@@ -180,7 +185,7 @@ export default function AccountPage() {
     setEnrollError(null);
     const result = await enrollMfaFactor();
     if (result.error || !result.factorId || !result.qrCodeSvg || !result.secret) {
-      setEnrollError(result.error ?? "Couldn't start setup — try again.");
+      setEnrollError(result.error ?? t("account.mfa.startError"));
       return;
     }
     setEnrolling({ factorId: result.factorId, qrCodeSvg: result.qrCodeSvg, secret: result.secret });
@@ -218,7 +223,7 @@ export default function AccountPage() {
     if (!removingFactorId || !user?.email) return;
     setRemoveError(null);
     setRemoveSubmitting(true);
-    const reauthError = await reauthenticate(user.email, removePassword);
+    const reauthError = await reauthenticate(user.email, removePassword, t);
     if (reauthError) {
       setRemoveError(reauthError);
       setRemoveSubmitting(false);
@@ -238,31 +243,34 @@ export default function AccountPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
       <BackLink href="/" />
-      <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Account</h1>
+      <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">{t("account.title")}</h1>
 
       {authLoading || loading ? (
         <LoadingSpinner />
       ) : (
         <>
-          <PageTip id="account" title="Sign-in and security">
-            This is separate from your profile — display name, avatar, and bio live on your{" "}
+          <PageTip id="account" title={t("account.tip.title")}>
+            {t("account.tip.bodyPrefix")}{" "}
             <Link href="/player" className="underline hover:text-[var(--heading)]">
-              profile
+              {t("account.tip.profileLink")}
             </Link>{" "}
-            page instead. Here it&apos;s just email, password, two-factor authentication, and a way
-            to export or delete everything tied to this account.
+            {t("account.tip.bodySuffix")}
           </PageTip>
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Email</h2>
-            <p className="text-xs text-[var(--muted)]">Signed in as {user?.email}.</p>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+              {t("account.email.heading")}
+            </h2>
+            <p className="text-xs text-[var(--muted)]">
+              {t("account.email.signedInAs", { email: user?.email ?? "" })}
+            </p>
             <form onSubmit={handleChangeEmail} className="flex flex-col gap-2">
               <input
                 type="email"
                 required
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="New email address"
+                placeholder={t("account.email.newEmailPlaceholder")}
                 className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               />
               <input
@@ -270,14 +278,15 @@ export default function AccountPage() {
                 required
                 value={emailPassword}
                 onChange={(e) => setEmailPassword(e.target.value)}
-                placeholder="Current password, to confirm it's you"
+                placeholder={t("account.email.confirmPasswordPlaceholder")}
                 className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               />
               {emailError && <p className="text-xs text-[var(--danger)]">{emailError}</p>}
               {emailSaveState === "saved" && (
                 <p className="text-xs text-[var(--muted)]">
-                  Check {newEmail || "your new email address"} to confirm the change — it won&apos;t take
-                  effect until then.
+                  {t("account.email.checkToConfirm", {
+                    email: newEmail || t("account.email.yourNewEmailAddress"),
+                  })}
                 </p>
               )}
               <button
@@ -285,20 +294,22 @@ export default function AccountPage() {
                 disabled={emailSaveState === "saving"}
                 className="rounded-lg border border-[var(--accent)]/60 px-4 py-2.5 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {emailSaveState === "saving" ? "Saving…" : "Change email"}
+                {emailSaveState === "saving" ? t("common.saving") : t("account.email.submit")}
               </button>
             </form>
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Password</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+              {t("account.password.heading")}
+            </h2>
             <form onSubmit={handleChangePassword} className="flex flex-col gap-2">
               <input
                 type="password"
                 required
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Current password"
+                placeholder={t("account.currentPasswordPlaceholder")}
                 className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               />
               <input
@@ -307,42 +318,39 @@ export default function AccountPage() {
                 minLength={6}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password"
+                placeholder={t("account.password.newPasswordPlaceholder")}
                 className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
               />
               {passwordError && <p className="text-xs text-[var(--danger)]">{passwordError}</p>}
               {passwordSaveState === "saved" && (
-                <p className="text-xs text-[var(--muted)]">Password updated.</p>
+                <p className="text-xs text-[var(--muted)]">{t("account.password.updated")}</p>
               )}
               <button
                 type="submit"
                 disabled={passwordSaveState === "saving"}
                 className="rounded-lg border border-[var(--accent)]/60 px-4 py-2.5 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {passwordSaveState === "saving" ? "Saving…" : "Change password"}
+                {passwordSaveState === "saving" ? t("common.saving") : t("account.password.submit")}
               </button>
             </form>
           </section>
 
           <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Two-factor authentication
+              {t("account.mfa.heading")}
             </h2>
             {mfaLoading ? (
-              <p className="text-xs text-[var(--faint)]">Checking…</p>
+              <p className="text-xs text-[var(--faint)]">{t("account.mfa.checking")}</p>
             ) : enrolling ? (
               <div className="flex flex-col gap-3">
-                <p className="text-xs text-[var(--muted)]">
-                  Scan this with an authenticator app (Google Authenticator, 1Password, Authy, …), or
-                  enter the code below manually.
-                </p>
+                <p className="text-xs text-[var(--muted)]">{t("account.mfa.scanInstructions")}</p>
                 {/* eslint-disable-next-line @next/next/no-img-element -- a
                     one-off data: URI from Supabase at request time, not a
                     static asset next/image's optimizer has anything to do
                     with */}
                 <img
                   src={enrolling.qrCodeSvg}
-                  alt="QR code — scan with your authenticator app"
+                  alt={t("account.mfa.qrAlt")}
                   className="h-40 w-40 self-center rounded-lg bg-white p-2"
                 />
                 <p className="break-all rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-center font-mono text-xs text-[var(--muted)]">
@@ -355,7 +363,7 @@ export default function AccountPage() {
                     autoComplete="one-time-code"
                     required
                     autoFocus
-                    placeholder="123456"
+                    placeholder={t("account.mfa.codePlaceholder")}
                     maxLength={6}
                     value={enrollCode}
                     onChange={(e) => setEnrollCode(e.target.value.replace(/[^0-9]/g, ""))}
@@ -368,35 +376,33 @@ export default function AccountPage() {
                       onClick={handleCancelEnroll}
                       className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                     <button
                       type="submit"
                       disabled={enrollSubmitting || enrollCode.length !== 6}
                       className="flex-1 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {enrollSubmitting ? "Verifying…" : "Turn on"}
+                      {enrollSubmitting ? t("signIn.verifying") : t("account.mfa.turnOn")}
                     </button>
                   </div>
                 </form>
               </div>
             ) : mfaFactors.length > 0 ? (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-[var(--muted)]">
-                  On — signing in also asks for a code from your authenticator app.
-                </p>
+                <p className="text-xs text-[var(--muted)]">{t("account.mfa.onDescription")}</p>
                 {removingFactorId ? (
                   <form
                     onSubmit={handleRemoveFactor}
                     className="flex flex-col gap-2 rounded-lg border border-[var(--danger)]/40 p-3"
                   >
-                    <p className="text-xs text-[var(--muted)]">Enter your password to turn this off.</p>
+                    <p className="text-xs text-[var(--muted)]">{t("account.mfa.removePrompt")}</p>
                     <input
                       type="password"
                       required
                       value={removePassword}
                       onChange={(e) => setRemovePassword(e.target.value)}
-                      placeholder="Current password"
+                      placeholder={t("account.currentPasswordPlaceholder")}
                       className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                     />
                     {removeError && <p className="text-xs text-[var(--danger)]">{removeError}</p>}
@@ -410,14 +416,14 @@ export default function AccountPage() {
                         }}
                         className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                       <button
                         type="submit"
                         disabled={removeSubmitting}
                         className="flex-1 rounded-lg border border-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {removeSubmitting ? "Turning off…" : "Turn off"}
+                        {removeSubmitting ? t("account.mfa.turningOff") : t("account.mfa.turnOff")}
                       </button>
                     </div>
                   </form>
@@ -426,21 +432,19 @@ export default function AccountPage() {
                     onClick={() => setRemovingFactorId(mfaFactors[0].id)}
                     className="self-start rounded-lg border border-[var(--danger)]/50 px-4 py-2 text-xs font-medium text-[var(--danger)] hover:bg-[var(--panel-soft)]"
                   >
-                    Turn off two-factor authentication
+                    {t("account.mfa.turnOffButton")}
                   </button>
                 )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-[var(--muted)]">
-                  Off. Add an authenticator app for a second code at sign-in, on top of your password.
-                </p>
+                <p className="text-xs text-[var(--muted)]">{t("account.mfa.offDescription")}</p>
                 {enrollError && <p className="text-xs text-[var(--danger)]">{enrollError}</p>}
                 <button
                   onClick={handleStartEnroll}
                   className="self-start rounded-lg border border-[var(--accent)]/60 px-4 py-2.5 text-sm font-semibold text-[var(--heading)]"
                 >
-                  Set up two-factor authentication
+                  {t("account.mfa.setUpButton")}
                 </button>
               </div>
             )}
@@ -448,46 +452,41 @@ export default function AccountPage() {
 
           <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Your data
+              {t("account.data.heading")}
             </h2>
-            <p className="text-xs text-[var(--muted)]">
-              Download everything tied to this account — stats, game history, achievements,
-              friends, and multiplayer record — as one JSON file.
-            </p>
+            <p className="text-xs text-[var(--muted)]">{t("account.data.description")}</p>
             <button
               onClick={handleExportData}
               disabled={exportState === "working"}
               className="self-start rounded-lg border border-[var(--accent)]/60 px-4 py-2.5 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {exportState === "working" ? "Preparing your download…" : "Download my data"}
+              {exportState === "working" ? t("account.data.preparing") : t("account.data.downloadButton")}
             </button>
             {exportState === "error" && (
-              <p className="text-xs text-[var(--danger)]">Couldn&apos;t prepare the download — try again.</p>
+              <p className="text-xs text-[var(--danger)]">{t("account.data.exportError")}</p>
             )}
           </section>
 
           <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Delete your account
+              {t("account.delete.heading")}
             </h2>
             <p className="text-xs text-[var(--muted)]">
-              There&apos;s no self-serve delete yet. To remove your account and everything tied to
-              it — stats, game history, achievements, display name, friends, and multiplayer games
-              — email{" "}
+              {t("account.delete.bodyPrefix")}{" "}
               <a
                 href="mailto:nick.l.dimartino@icloud.com?subject=Delete%20my%20Books%20%26%20Runs%20account"
                 className="text-[var(--heading)] underline hover:text-[var(--accent)]"
               >
                 nick.l.dimartino@icloud.com
               </a>{" "}
-              from the address on your account.
+              {t("account.delete.bodySuffix")}
             </p>
           </section>
         </>
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );

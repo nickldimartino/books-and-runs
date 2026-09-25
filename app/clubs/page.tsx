@@ -16,6 +16,7 @@ import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
+import { useT } from "../lib/i18n/LocaleProvider";
 import {
   addClubMember,
   ClubStanding,
@@ -52,13 +53,14 @@ function useClubId(): string | null | undefined {
 export default function ClubsPage() {
   const { configured, loading: authLoading, user } = useAuth();
   const clubId = useClubId();
+  const { t } = useT();
 
   if (!authLoading && !configured) {
-    return <CenteredMessage title="Clubs aren't set up yet" body="This app doesn't have a Supabase project connected yet." />;
+    return <CenteredMessage title={t("clubs.notSetUp.title")} body={t("clubs.notSetUp.body")} />;
   }
 
   if (!authLoading && configured && !user) {
-    return <CenteredMessage title="Sign in for clubs" body="A club is a standing group tied to your account." signIn />;
+    return <CenteredMessage title={t("clubs.signInTitle")} body={t("clubs.signInBody")} signIn />;
   }
 
   if (authLoading || clubId === undefined) {
@@ -73,6 +75,7 @@ export default function ClubsPage() {
 }
 
 function ClubList() {
+  const { t, tPlural } = useT();
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -108,7 +111,7 @@ function ClubList() {
       window.location.href = `/clubs?id=${id}`;
     } catch (err) {
       console.error("Failed to create club:", err);
-      setCreateError("Couldn't create that club — try again.");
+      setCreateError(t("clubs.createError"));
     } finally {
       setCreating(false);
     }
@@ -118,12 +121,10 @@ function ClubList() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
       <BackLink href="/" />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">Clubs</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("clubs.title")}</h1>
 
-      <PageTip id="clubs" title="A regular table">
-        A club is a standing group of friends — your recurring crew. It has its own scoreboard,
-        scoped to just that roster, separate from the global leaderboard. You can start a
-        tournament from a club&apos;s roster any time from the club page.
+      <PageTip id="clubs" title={t("clubs.tip.title")}>
+        {t("clubs.tip.body")}
       </PageTip>
 
       <form onSubmit={handleCreate} className="flex gap-2">
@@ -131,7 +132,7 @@ function ClubList() {
           type="text"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Club name"
+          placeholder={t("clubs.namePlaceholder")}
           maxLength={40}
           className="flex-1 rounded-lg bg-[var(--panel)] px-4 py-2.5 text-sm text-[var(--text)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
         />
@@ -140,7 +141,7 @@ function ClubList() {
           disabled={creating || !newName.trim()}
           className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
-          {creating ? "Creating…" : "Create"}
+          {creating ? t("clubs.creating") : t("clubs.create")}
         </button>
       </form>
       {createError && <p className="text-xs text-[var(--danger)]">{createError}</p>}
@@ -148,9 +149,9 @@ function ClubList() {
       {loading ? (
         <LoadingSpinner />
       ) : loadError ? (
-        <p className="text-sm text-[var(--danger)]">Couldn&apos;t load your clubs — check your connection and try again.</p>
+        <p className="text-sm text-[var(--danger)]">{t("clubs.loadError")}</p>
       ) : clubs.length === 0 ? (
-        <EmptyState icon="♣">No clubs yet — create one above to start a standing group with your friends.</EmptyState>
+        <EmptyState icon="♣">{t("clubs.empty")}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
           {clubs.map((c) => (
@@ -161,7 +162,7 @@ function ClubList() {
               >
                 <span className="font-semibold text-[var(--heading)]">{c.name}</span>
                 <span className="shrink-0 text-xs text-[var(--faint)]">
-                  {c.memberCount} member{c.memberCount === 1 ? "" : "s"}
+                  {tPlural("clubs.memberCount", c.memberCount)}
                 </span>
               </Link>
             </li>
@@ -174,6 +175,7 @@ function ClubList() {
 
 function ClubDetail({ clubId }: { clubId: string }) {
   const { user } = useAuth();
+  const { t } = useT();
   const [club, setClub] = useState<{ id: string; name: string; ownerId: string } | null | undefined>(undefined);
   const [standings, setStandings] = useState<ClubStanding[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -211,10 +213,10 @@ function ClubDetail({ clubId }: { clubId: string }) {
   if (loadError) {
     return (
       <CenteredMessage
-        title="Club not found"
-        body="Couldn't load it — check your connection and try again."
+        title={t("clubs.notFound.title")}
+        body={t("clubs.notFound.loadErrorBody")}
         backHref="/clubs"
-        backLabel="← Clubs"
+        backLabel={t("clubs.backToClubs")}
       />
     );
   }
@@ -230,10 +232,10 @@ function ClubDetail({ clubId }: { clubId: string }) {
   if (club === null) {
     return (
       <CenteredMessage
-        title="Club not found"
-        body="It may have been deleted, or you're not a member."
+        title={t("clubs.notFound.title")}
+        body={t("clubs.notFound.deletedBody")}
         backHref="/clubs"
-        backLabel="← Clubs"
+        backLabel={t("clubs.backToClubs")}
       />
     );
   }
@@ -250,7 +252,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
       await load();
     } catch (err) {
       console.error("Failed to add club member:", err);
-      setActionError("Couldn't add them — try again.");
+      setActionError(t("clubs.addMemberError"));
     } finally {
       setBusy(null);
     }
@@ -269,7 +271,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
       await load();
     } catch (err) {
       console.error("Failed to remove club member:", err);
-      setActionError("Couldn't remove them — try again.");
+      setActionError(t("clubs.removeMemberError"));
     } finally {
       setBusy(null);
     }
@@ -286,7 +288,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
       await load();
     } catch (err) {
       console.error("Failed to rename club:", err);
-      setActionError("Couldn't rename it — try again.");
+      setActionError(t("clubs.renameError"));
     } finally {
       setBusy(null);
     }
@@ -294,7 +296,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
   async function handleDelete() {
     if (!supabase) return;
-    if (!confirm(`Delete "${club!.name}"? This removes it for everyone.`)) return;
+    if (!confirm(t("clubs.confirmDelete", { name: club!.name }))) return;
     setBusy("delete");
     setActionError(null);
     try {
@@ -302,14 +304,14 @@ function ClubDetail({ clubId }: { clubId: string }) {
       window.location.href = "/clubs";
     } catch (err) {
       console.error("Failed to delete club:", err);
-      setActionError("Couldn't delete it — try again.");
+      setActionError(t("clubs.deleteError"));
       setBusy(null);
     }
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
-      <BackLink href="/clubs" label="Clubs" />
+      <BackLink href="/clubs" label={t("clubs.title")} />
 
       {renaming ? (
         <form onSubmit={handleRename} className="flex gap-2">
@@ -322,10 +324,10 @@ function ClubDetail({ clubId }: { clubId: string }) {
             className="flex-1 rounded-lg bg-[var(--panel)] px-4 py-2 text-xl font-bold text-[var(--heading)] outline-none ring-1 ring-[var(--accent)]"
           />
           <button type="submit" disabled={busy === "rename"} className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]">
-            Save
+            {t("common.save")}
           </button>
           <button type="button" onClick={() => setRenaming(false)} className="shrink-0 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)]">
-            Cancel
+            {t("common.cancel")}
           </button>
         </form>
       ) : (
@@ -339,7 +341,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
               }}
               className="shrink-0 text-xs text-[var(--faint)] underline hover:text-[var(--muted)]"
             >
-              Rename
+              {t("clubs.rename")}
             </button>
           )}
         </div>
@@ -349,14 +351,14 @@ function ClubDetail({ clubId }: { clubId: string }) {
         href={`/tournaments/new?club=${clubId}`}
         className="rounded-lg bg-[var(--accent)] px-6 py-3 text-center text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
       >
-        Start a tournament with this club
+        {t("clubs.startTournament")}
       </Link>
 
       {actionError && <p className="text-xs text-[var(--danger)]">{actionError}</p>}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-          Standings — multiplayer record
+          {t("clubs.standingsHeading")}
         </h2>
         <ol className="flex flex-col gap-2">
           {standings.map((s, i) => (
@@ -364,15 +366,17 @@ function ClubDetail({ clubId }: { clubId: string }) {
               <Link href={playerProfileHref(s.userId)} className="flex min-w-0 items-center gap-2">
                 <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--faint)]">{i + 1}.</span>
                 <span className="truncate font-medium text-[var(--heading)]">
-                  {s.userId === user?.id ? "You" : nameOf(s.userId, s.displayName)}
+                  {s.userId === user?.id ? t("gameOver.you") : nameOf(s.userId, s.displayName)}
                 </span>
                 {s.userId === club.ownerId && (
-                  <span className="shrink-0 rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] text-[var(--faint)]">owner</span>
+                  <span className="shrink-0 rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] text-[var(--faint)]">{t("clubs.ownerBadge")}</span>
                 )}
               </Link>
               <span className="shrink-0 text-right text-xs text-[var(--muted)]">
-                {s.gamesWon}W / {s.gamesPlayed}
-                {s.bestWinStreak > 0 && <span className="ml-1 text-[var(--faint)]">· best streak {s.bestWinStreak}</span>}
+                {t("clubs.record", { won: s.gamesWon, played: s.gamesPlayed })}
+                {s.bestWinStreak > 0 && (
+                  <span className="ml-1 text-[var(--faint)]">· {t("clubs.bestStreak", { count: s.bestWinStreak })}</span>
+                )}
               </span>
             </li>
           ))}
@@ -381,19 +385,19 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Members</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">{t("clubs.membersHeading")}</h2>
         </div>
         <ul className="flex flex-col gap-2">
           {standings.map((s) => (
             <li key={s.userId} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2.5 text-sm">
-              <span className="truncate text-[var(--text)]">{s.userId === user?.id ? "You" : nameOf(s.userId, s.displayName)}</span>
+              <span className="truncate text-[var(--text)]">{s.userId === user?.id ? t("gameOver.you") : nameOf(s.userId, s.displayName)}</span>
               {(isOwner && s.userId !== club.ownerId) || (!isOwner && s.userId === user?.id) ? (
                 <button
                   onClick={() => handleRemove(s.userId)}
                   disabled={busy === s.userId}
                   className="shrink-0 text-xs text-[var(--danger)] hover:opacity-80 disabled:opacity-50"
                 >
-                  {s.userId === user?.id ? "Leave" : "Remove"}
+                  {s.userId === user?.id ? t("clubs.leave") : t("common.remove")}
                 </button>
               ) : null}
             </li>
@@ -402,11 +406,11 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
         {isOwner && (
           <div className="mt-2 flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Add a friend</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("clubs.addFriendHeading")}</h3>
             {addableFriends.length === 0 ? (
               <p className="text-xs text-[var(--faint)]">
-                Every friend of yours is already in this club, or you have none yet —{" "}
-                <Link href="/friends" className="underline">add some</Link>.
+                {t("clubs.noAddableFriendsPrefix")}{" "}
+                <Link href="/friends" className="underline">{t("clubs.addSome")}</Link>.
               </p>
             ) : (
               <ul className="flex flex-col gap-2">
@@ -418,7 +422,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
                       disabled={busy === f.userId}
                       className="shrink-0 rounded-md bg-[var(--elevated)] px-3 py-1 text-xs font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-50"
                     >
-                      Add
+                      {t("clubs.add")}
                     </button>
                   </li>
                 ))}
@@ -430,7 +434,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
       {isOwner && (
         <button onClick={handleDelete} disabled={busy === "delete"} className="self-start text-xs text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50">
-          Delete this club
+          {t("clubs.deleteClub")}
         </button>
       )}
     </main>

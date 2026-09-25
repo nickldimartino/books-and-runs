@@ -7,9 +7,13 @@
 
 import { AchievementCategory, AchievementTier, ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, WIN_RATE_MIN_GAMES } from "@/achievements";
 import { AVATAR_FRAME_COLOR, findAvatarFrameOption, findTitleOption } from "./profileCosmetics";
+import type { TranslationKey } from "./i18n/keys";
+import type { Vars } from "./i18n/LocaleProvider";
 import { avatarPhotoUrlFor, displayNameFor, LeaderboardEntry } from "./leaderboardStore";
 import { ProfileShareCardInput } from "./shareCard";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+type T = (key: TranslationKey, vars?: Vars) => string;
 
 export const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
 
@@ -25,15 +29,18 @@ export interface ShowcaseItem {
 
 /** Parses a "familyId:tier" showcase entry against the live family list —
  * returns null for anything that no longer resolves (a family renamed or
- * removed since the account pinned it). */
-export function resolveShowcaseItem(key: string): ShowcaseItem | null {
+ * removed since the account pinned it). Resolves the family's title through
+ * `t` right here (rather than carrying a key downstream) since ShowcaseItem
+ * flows into the canvas share-card renderer, which draws plain text and has
+ * no locale context of its own. */
+export function resolveShowcaseItem(key: string, t: T): ShowcaseItem | null {
   const sep = key.lastIndexOf(":");
   if (sep === -1) return null;
   const familyId = key.slice(0, sep);
   const tier = key.slice(sep + 1) as AchievementTier;
   const family = FAMILY_BY_ID.get(familyId);
   if (!family || !ACHIEVEMENT_TIERS.includes(tier)) return null;
-  return { key, familyId, familyTitle: family.title, category: family.category, tier };
+  return { key, familyId, familyTitle: t(family.titleKey as TranslationKey), category: family.category, tier };
 }
 
 export function formatWinRate(gamesPlayed: number, gamesWon: number): string {
@@ -49,6 +56,7 @@ export function buildProfileShareCardInput(
   supabase: SupabaseClient | null,
   entry: LeaderboardEntry,
   displayLevel: number,
+  t: T,
   footerText?: string
 ): ProfileShareCardInput {
   const frameOption = findAvatarFrameOption(entry.avatar_frame);
@@ -73,13 +81,16 @@ export function buildProfileShareCardInput(
     frameColor: frameOption ? (frameOption.id === "grandmaster" ? "#a855f7" : AVATAR_FRAME_COLOR[frameOption.id]) : null,
     badge: entry.badge,
     banner: entry.banner,
+    creatorLabel: t("player.creator.label"),
+    trophyCaseLabel: t("player.trophyCase.heading"),
+    levelLabel: t("home.levelN", { level: displayLevel }),
     stats: [
-      { label: "Games", value: String(entry.games_played) },
-      { label: "Achievements", value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
-      { label: "Win rate", value: formatWinRate(entry.games_played, entry.games_won) },
+      { label: t("leaderboard.column.games"), value: String(entry.games_played) },
+      { label: t("leaderboard.column.achievements"), value: `${entry.achievements_unlocked}/${TOTAL_ACHIEVEMENTS}` },
+      { label: t("leaderboard.column.winRate"), value: formatWinRate(entry.games_played, entry.games_won) },
     ],
     trophies: entry.showcase
-      .map(resolveShowcaseItem)
+      .map((key) => resolveShowcaseItem(key, t))
       .filter((i): i is ShowcaseItem => !!i)
       .map((i) => ({ category: i.category, tier: i.tier, familyTitle: i.familyTitle })),
     footerText,
