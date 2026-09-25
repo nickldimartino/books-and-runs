@@ -31,8 +31,8 @@ function CardFaceTile({
   unlocked: boolean;
   onClick: () => void;
 }) {
-  const { t } = useT();
-  const title = unlocked || !option.unlock ? t(cardFaceDescKey(option.id)) : cardUnlockText(t, option.unlock);
+  const { t, tPlural } = useT();
+  const title = unlocked || !option.unlock ? t(cardFaceDescKey(option.id)) : cardUnlockText(t, tPlural, option.unlock);
   return (
     <button
       onClick={unlocked ? onClick : undefined}

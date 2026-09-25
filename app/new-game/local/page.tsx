@@ -18,6 +18,7 @@ import { contractNeedLabel } from "../../lib/contractDisplay";
 import { useT } from "../../lib/i18n/LocaleProvider";
 import type { TranslationKey } from "../../lib/i18n/keys";
 import { fetchOwnDisplayName } from "../../lib/leaderboardStore";
+import { hasStartedAGame } from "../../lib/firstSessionStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
 import { supabase } from "../../lib/supabaseClient";
 import { capitalize } from "../../lib/text";
@@ -145,7 +146,16 @@ export default function NewLocalGamePage() {
   // doc). Signed-in only: fetch the account's own display name too, so
   // seat 0 can be locked to it rather than a freely-typed "You".
   useEffect(() => {
-    const preferred = loadLocalSettings().preferredAiDifficulty;
+    let preferred = loadLocalSettings().preferredAiDifficulty;
+    // A device that has never started a game gets a gentler first table —
+    // a short game against an Easy AI — instead of the full 7-round Medium
+    // default (15-25 minutes for someone still learning the rules). Only
+    // when the player hasn't chosen a different preferred difficulty in
+    // Settings, and only until the first game starts (firstSessionStore).
+    if (!hasStartedAGame()) {
+      if (preferred === "medium") preferred = "easy";
+      setRoundMode("short");
+    }
     setDefaultDifficulty(preferred);
     setAiDifficulties([preferred]);
     loadFavoriteGameConfigWithCloud(supabase, user?.id ?? null).then(setFavorite);

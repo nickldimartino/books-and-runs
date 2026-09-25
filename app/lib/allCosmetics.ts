@@ -21,6 +21,10 @@ export interface AnyCosmeticOption {
   kind: "badge" | "avatar_frame" | "title" | "banner";
   id: string;
   label: string;
+  /** The bare display name — the emoji for a badge, else the option's own
+   * label — for callers that compose their own (translated) sentence
+   * around it instead of using the English `label`. */
+  name: string;
   unlock: CosmeticUnlockRule;
 }
 
@@ -29,24 +33,28 @@ const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
     kind: "badge" as const,
     id: o.emoji,
     label: `${o.emoji} badge`,
+    name: o.emoji,
     unlock: o.unlock as CosmeticUnlockRule,
   })),
   ...AVATAR_FRAME_OPTIONS.filter((o) => o.unlock && o.source !== "boutique").map((o) => ({
     kind: "avatar_frame" as const,
     id: o.id,
     label: `${o.label} frame`,
+    name: o.label,
     unlock: o.unlock as CosmeticUnlockRule,
   })),
   ...TITLE_OPTIONS.filter((o) => o.unlock && o.source !== "boutique").map((o) => ({
     kind: "title" as const,
     id: o.id,
     label: `"${o.label}" title`,
+    name: o.label,
     unlock: o.unlock as CosmeticUnlockRule,
   })),
   ...BANNER_OPTIONS.filter((o) => o.unlock && o.source !== "boutique").map((o) => ({
     kind: "banner" as const,
     id: o.id,
     label: `${o.label} banner`,
+    name: o.label,
     unlock: o.unlock as CosmeticUnlockRule,
   })),
 ];
@@ -77,4 +85,21 @@ export function diffNewlyUnlockedCosmetics(
     const nowUnlocked = isCosmeticUnlocked(c.unlock, after);
     return nowUnlocked && !wasUnlocked;
   });
+}
+
+/** The nearest level above `currentLevel` that unlocks a cosmetic, with
+ * everything that unlocks at exactly that level — Home's "next reward"
+ * line. Null once every level-gated reward is unlocked. Only pure
+ * level-gated items count (an achievement- or streak-gated one has no
+ * single "at level N" to point at). */
+export function nextLevelUnlocks(currentLevel: number): { level: number; items: AnyCosmeticOption[] } | null {
+  let next = Infinity;
+  for (const c of ALL_GATED_COSMETICS) {
+    if (c.unlock.kind === "level" && c.unlock.level > currentLevel && c.unlock.level < next) next = c.unlock.level;
+  }
+  if (!Number.isFinite(next)) return null;
+  return {
+    level: next,
+    items: ALL_GATED_COSMETICS.filter((c) => c.unlock.kind === "level" && c.unlock.level === next),
+  };
 }

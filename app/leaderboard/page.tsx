@@ -7,7 +7,7 @@
 // button (the standard person-plus icon) when signed in.
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ACHIEVEMENT_FAMILIES,
   ACHIEVEMENT_TIERS,
@@ -30,14 +30,16 @@ import type { Vars } from "../lib/i18n/LocaleProvider";
 import { formatWinRate } from "../lib/profileShareCard";
 import {
   displayNameFor,
-  fetchSeasonSnapshots,
+  fetchLeaderboardPage,
+  fetchMyLeaderboardRow,
   LeaderboardEntry,
+  LeaderboardRow,
   playerProfileHref,
-  SeasonSnapshot,
   syncLeaderboardStats,
 } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
 
+const PAGE_SIZE = 50;
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENT_FAMILIES.length * ACHIEVEMENT_TIERS.length;
 
 const ICON_PROPS = {
@@ -178,84 +180,6 @@ function buildColumns(t: T): Column[] {
 // snapshot).
 const SEASON_COLUMN_KEYS: SortKey[] = ["games_played", "games_won", "win_rate"];
 
-/**
- * A single number per sort key where *higher always means "ranks first"*.
- * Average score is negated — a lower average is the better result in
- * Contract Rummy (lowest cumulative score wins), so this ranks the best
- * performers first rather than needing its own separate ascending case in
- * the comparator below. Worst score is deliberately the opposite: sorting
- * by it ranks the literal highest (i.e. worst) number first, the way
- * sorting a spreadsheet column by its own value would — showing "how bad
- * can it get" rather than re-explaining "best" for a column that's already
- * named for someone's low point. Win rate below the games-played threshold
- * (shown as "—", not a real rate to rank by) and a missing score both sort
- * to the very bottom regardless of direction, the same way "—" already
- * reads as "not enough data" rather than as an actual value of zero.
- */
-function sortValue(entry: LeaderboardEntry, key: SortKey): number {
-  switch (key) {
-    case "level":
-      return entry.level;
-    case "achievements":
-      return entry.achievements_unlocked;
-    case "total_xp":
-      return entry.total_xp;
-    case "games_played":
-      return entry.games_played;
-    case "games_won":
-      return entry.games_won;
-    case "win_rate":
-      return entry.games_played < WIN_RATE_MIN_GAMES ? -Infinity : entry.games_won / entry.games_played;
-    case "average_score":
-      return entry.average_score == null ? -Infinity : -entry.average_score;
-    case "worst_score":
-      return entry.worst_score == null ? -Infinity : entry.worst_score;
-    case "daily_deal_streak":
-      return entry.daily_deal_streak;
-    case "daily_deal_best_streak":
-      return entry.daily_deal_best_streak;
-    case "mp_games_won":
-      return entry.mp_games_won ?? 0;
-    case "mp_best_win_streak":
-      return entry.mp_best_win_streak ?? 0;
-    case "mp_win_rate":
-      return (entry.mp_games_played ?? 0) < MP_WIN_RATE_MIN_GAMES
-        ? -Infinity
-        : (entry.mp_games_won ?? 0) / (entry.mp_games_played ?? 1);
-  }
-}
-
-/** Sorts by the chosen stat (best first); ties fall back to the board's
- * original default order (level, then total XP) rather than an arbitrary
- * one, so picking a different sort doesn't scramble equal-ranked players. */
-function sortEntries(entries: LeaderboardEntry[], key: SortKey): LeaderboardEntry[] {
-  return [...entries].sort((a, b) => {
-    const primary = sortValue(b, key) - sortValue(a, key);
-    if (primary !== 0) return primary;
-    if (key !== "level" && b.level !== a.level) return b.level - a.level;
-    return b.total_xp - a.total_xp;
-  });
-}
-
-/**
- * Rewrites games_played/games_won as this-season deltas (current cumulative
- * minus the last monthly snapshot — see migration 0044) — every other field
- * is passed through unchanged, so this same entry can go straight into
- * formatWinRate/seasonColumns' render functions with no special-casing.
- * An account with no snapshot yet (newer than the last one taken) gets a
- * baseline of 0, so its whole cumulative total counts for this season —
- * correct, since all of it happened within the season. Clamped at 0 as a
- * defensive floor only — cumulative totals never actually decrease.
- */
-function seasonAdjustedEntry(entry: LeaderboardEntry, snapshots: Record<string, SeasonSnapshot>): LeaderboardEntry {
-  const base = snapshots[entry.user_id];
-  return {
-    ...entry,
-    games_played: Math.max(0, entry.games_played - (base?.games_played ?? 0)),
-    games_won: Math.max(0, entry.games_won - (base?.games_won ?? 0)),
-  };
-}
-
 /** "September 2026" — matches leaderboardStore.ts's currentSeasonStart, in
  * the visitor's own locale but the same UTC month boundary the snapshot
  * itself uses, so this label always names the season actually being shown. */
@@ -268,13 +192,17 @@ export default function LeaderboardPage() {
   const { t, locale } = useT();
   const columns = useMemo(() => buildColumns(t), [t]);
   const seasonColumns = useMemo(() => columns.filter((c) => SEASON_COLUMN_KEYS.includes(c.key)), [columns]);
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  // Server-paged (migration 0063): rows arrive already ranked/filtered, a page
+  // at a time — no whole-table download and no silent 1000-row cap.
+  const [rows, setRows] = useState<LeaderboardRow[]>([]);
+  const [myRow, setMyRow] = useState<LeaderboardRow | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sortKeyAllTime, setSortKeyAllTime] = useState<SortKey>("level");
   const [sortKeySeason, setSortKeySeason] = useState<SortKey>("games_played");
   const [view, setView] = useState<"allTime" | "season">("allTime");
-  const [seasonSnapshots, setSeasonSnapshots] = useState<Record<string, SeasonSnapshot>>({});
   const sortKey = view === "season" ? sortKeySeason : sortKeyAllTime;
   const setSortKey = view === "season" ? setSortKeySeason : setSortKeyAllTime;
   // Accounts you already friended or have a request pending with (either
@@ -282,67 +210,73 @@ export default function LeaderboardPage() {
   // covers the optimistic state right after a click, before the reload.
   const [relatedIds, setRelatedIds] = useState<Set<string>>(new Set());
   const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
-  // Actual friends only (not pending requests, unlike relatedIds above) —
-  // just for the "Friends" view toggle below.
-  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [scope, setScope] = useState<"all" | "friends">("all");
+  const [everLoaded, setEverLoaded] = useState(false);
 
+  const query = useMemo(
+    () => ({
+      sort: sortKey,
+      season: view === "season",
+      friendsOnly: scope === "friends",
+      minGames: WIN_RATE_MIN_GAMES,
+      mpMinGames: MP_WIN_RATE_MIN_GAMES,
+    }),
+    [sortKey, view, scope]
+  );
+
+  // Self-heal this account's own row once per visit, then rank.
+  const syncedRef = useRef(false);
   useEffect(() => {
     if (!supabase || !user) {
       setLoading(false);
       return;
     }
+    const client = supabase;
     let cancelled = false;
-    // Sync this account's own row first — a self-heal for a past failed
-    // sync, or an account whose stats simply haven't changed since the
-    // leaderboard table was added — so nobody visits this page and finds
-    // themselves missing or stale on their own board.
-    syncLeaderboardStats(supabase, user.id)
-      .catch((err) => console.error("Failed to sync leaderboard entry:", err))
-      .then(() => {
-        if (cancelled || !supabase) return;
-        return supabase
-          .from("leaderboard_entries")
-          // select("*") rather than an explicit list: leaderboard_entries is
-          // all-public by design (see migration 0006), and a "*" means a
-          // project that hasn't run a stats-column migration yet still loads
-          // — the missing columns just read as undefined, handled below.
-          .select("*")
-          // Every signed-in visit to Account/Leaderboard self-heals a row for
-          // that account (see the sync above) — without this filter, an
-          // account that only ever opened one of those pages once, and never
-          // actually finished a tracked game, would sit on the board
-          // permanently at 0/0/0. A leaderboard should only ever rank real
-          // activity — which now includes a Daily Deal streak on its own:
-          // someone who's only ever played Daily Deal (never a full tracked
-          // game) still has a real streak worth ranking, so the "real
-          // activity" bar here is either kind of activity, not just games_played.
-          // MP games also bump games_played (mp/index.ts's recordMpGameOutcome,
-          // server-side), so an MP-only player already passes this filter.
-          .or("games_played.gt.0,daily_deal_best_streak.gt.0")
-          .order("level", { ascending: false })
-          .order("total_xp", { ascending: false })
-          .then(({ data, error }) => {
-            if (cancelled) return;
-            if (error) {
-              setLoadError(true);
-            } else {
-              // Filtered client-side, not in the query itself — a project
-              // that hasn't run migration 0047 yet has no is_test_account
-              // column at all, and PostgREST errors on filtering by a
-              // column select("*") would otherwise tolerate as simply
-              // undefined (see the select's own comment above). !undefined
-              // reads as "not a test account," so this is a no-op until
-              // 0047 runs and something actually gets flagged.
-              setEntries(((data as LeaderboardEntry[]) ?? []).filter((e) => !e.is_test_account));
-            }
-            setLoading(false);
-          });
-      });
+    setLoading(true);
+    (async () => {
+      if (!syncedRef.current) {
+        syncedRef.current = true;
+        await syncLeaderboardStats(client, user.id).catch((err) =>
+          console.error("Failed to sync leaderboard entry:", err)
+        );
+      }
+      try {
+        const [page, mine] = await Promise.all([
+          fetchLeaderboardPage(client, query, 0, PAGE_SIZE),
+          fetchMyLeaderboardRow(client, query).catch(() => null),
+        ]);
+        if (cancelled) return;
+        setRows(page);
+        setHasMore(page.length === PAGE_SIZE);
+        setMyRow(mine);
+        setLoadError(false);
+        setEverLoaded(true);
+      } catch (err) {
+        console.error("Failed to load leaderboard:", err);
+        if (!cancelled) setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, query]);
+
+  async function loadMore() {
+    if (!supabase || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await fetchLeaderboardPage(supabase, query, rows.length, PAGE_SIZE);
+      setRows((prev) => [...prev, ...page]);
+      setHasMore(page.length === PAGE_SIZE);
+    } catch (err) {
+      console.error("Failed to load more:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     if (!supabase || !user) return;
@@ -354,29 +288,12 @@ export default function LeaderboardPage() {
         friends.forEach((f) => s.add(f.userId));
         requests.forEach((r) => s.add(r.otherUserId));
         setRelatedIds(s);
-        setFriendIds(new Set(friends.map((f) => f.userId)));
       })
       .catch((err) => console.error("Failed to load friend state:", err));
     return () => {
       cancelled = true;
     };
   }, [user]);
-
-  useEffect(() => {
-    if (!supabase || entries.length === 0) return;
-    let cancelled = false;
-    fetchSeasonSnapshots(
-      supabase,
-      entries.map((e) => e.user_id)
-    )
-      .then((snapshots) => {
-        if (!cancelled) setSeasonSnapshots(snapshots);
-      })
-      .catch((err) => console.error("Failed to load season snapshots:", err));
-    return () => {
-      cancelled = true;
-    };
-  }, [entries]);
 
   async function addFriend(targetId: string) {
     if (!supabase) return;
@@ -425,7 +342,7 @@ export default function LeaderboardPage() {
         <LoadingSpinner />
       ) : loadError ? (
         <p className="text-sm text-[var(--danger)]">{t("leaderboard.loadError")}</p>
-      ) : entries.length === 0 ? (
+      ) : !everLoaded || (rows.length === 0 && view === "allTime" && scope === "all") ? (
         <EmptyState
           icon="🏆"
           action={
@@ -494,17 +411,12 @@ export default function LeaderboardPage() {
           </div>
 
           {(() => {
-            const scopedEntries =
-              scope === "friends" ? entries.filter((e) => friendIds.has(e.user_id) || e.user_id === user?.id) : entries;
-            if (scope === "friends" && scopedEntries.length === 0) {
-              return <EmptyState icon="🤝">{t("leaderboard.emptyFriends")}</EmptyState>;
-            }
-            const visibleEntries =
-              view === "season"
-                ? scopedEntries.map((e) => seasonAdjustedEntry(e, seasonSnapshots)).filter((e) => e.games_played > 0)
-                : scopedEntries;
-            if (view === "season" && visibleEntries.length === 0) {
-              return <EmptyState icon="🗓️">{t("leaderboard.emptySeason")}</EmptyState>;
+            if (rows.length === 0) {
+              return scope === "friends" ? (
+                <EmptyState icon="🤝">{t("leaderboard.emptyFriends")}</EmptyState>
+              ) : (
+                <EmptyState icon="🗓️">{t("leaderboard.emptySeason")}</EmptyState>
+              );
             }
             const activeColumns = view === "season" ? seasonColumns : columns;
             return (
@@ -527,7 +439,7 @@ export default function LeaderboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortEntries(visibleEntries, sortKey).map((entry, i) => {
+                {rows.map(({ rank, entry }) => {
                   const isYou = entry.user_id === user?.id;
                   return (
                     <tr
@@ -541,7 +453,7 @@ export default function LeaderboardPage() {
                           href={playerProfileHref(entry.user_id)}
                           className="inline-flex items-center gap-1.5 whitespace-nowrap hover:underline"
                         >
-                          <span className="text-[var(--faint)]">{i + 1}.</span>
+                          <span className="text-[var(--faint)]">{rank}.</span>
                           <AvatarFrame frame={entry.avatar_frame} size={22}>
                             <PlayerAvatar
                               avatar={{
@@ -588,13 +500,27 @@ export default function LeaderboardPage() {
           </div>
             );
           })()}
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="self-center rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
+            >
+              {loadingMore ? t("common.loading") : t("leaderboard.loadMore")}
+            </button>
+          )}
+          {myRow && (
+            <p className="sticky bottom-3 self-center rounded-full border border-[var(--accent)]/40 bg-[var(--panel)] px-4 py-1.5 text-xs font-semibold text-[var(--accent)] shadow">
+              {t("leaderboard.yourRank", { rank: myRow.rank, total: myRow.total })}
+            </p>
+          )}
         </>
       )}
 
       {/* entries.length > 0 guard: with an empty board, the message above
           this already says the same thing ("play one to be the first") —
           showing both would just repeat it. */}
-      {!authLoading && !loading && !loadError && user && entries.length > 0 && !entries.some((e) => e.user_id === user.id) && (
+      {!authLoading && !loading && !loadError && user && everLoaded && !myRow && view === "allTime" && scope === "all" && (
         <p className="text-center text-xs text-[var(--faint)]">{t("leaderboard.notOnBoardYet")}</p>
       )}
 

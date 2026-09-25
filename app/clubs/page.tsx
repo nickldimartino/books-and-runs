@@ -13,6 +13,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -33,6 +34,7 @@ import {
 import { Friend, getFriends } from "../lib/friendsStore";
 import { nameOf, playerProfileHref } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
+import { SafetyMenu } from "../components/SafetyMenu";
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -184,6 +186,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
   const load = useCallback(async () => {
@@ -296,7 +299,7 @@ function ClubDetail({ clubId }: { clubId: string }) {
 
   async function handleDelete() {
     if (!supabase) return;
-    if (!confirm(t("clubs.confirmDelete", { name: club!.name }))) return;
+    setConfirmingDelete(false);
     setBusy("delete");
     setActionError(null);
     try {
@@ -391,15 +394,25 @@ function ClubDetail({ clubId }: { clubId: string }) {
           {standings.map((s) => (
             <li key={s.userId} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2.5 text-sm">
               <span className="truncate text-[var(--text)]">{s.userId === user?.id ? t("gameOver.you") : nameOf(s.userId, s.displayName)}</span>
-              {(isOwner && s.userId !== club.ownerId) || (!isOwner && s.userId === user?.id) ? (
-                <button
-                  onClick={() => handleRemove(s.userId)}
-                  disabled={busy === s.userId}
-                  className="shrink-0 text-xs text-[var(--danger)] hover:opacity-80 disabled:opacity-50"
-                >
-                  {s.userId === user?.id ? t("clubs.leave") : t("common.remove")}
-                </button>
-              ) : null}
+              <span className="flex shrink-0 items-center gap-1">
+                {(isOwner && s.userId !== club.ownerId) || (!isOwner && s.userId === user?.id) ? (
+                  <button
+                    onClick={() => handleRemove(s.userId)}
+                    disabled={busy === s.userId}
+                    className="shrink-0 text-xs text-[var(--danger)] hover:opacity-80 disabled:opacity-50"
+                  >
+                    {s.userId === user?.id ? t("clubs.leave") : t("common.remove")}
+                  </button>
+                ) : null}
+                {s.userId !== user?.id && (
+                  <SafetyMenu
+                    targetUserId={s.userId}
+                    targetName={nameOf(s.userId, s.displayName)}
+                    context="club"
+                    onBlocked={() => load()}
+                  />
+                )}
+              </span>
             </li>
           ))}
         </ul>
@@ -433,10 +446,19 @@ function ClubDetail({ clubId }: { clubId: string }) {
       </section>
 
       {isOwner && (
-        <button onClick={handleDelete} disabled={busy === "delete"} className="self-start text-xs text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50">
+        <button onClick={() => setConfirmingDelete(true)} disabled={busy === "delete"} className="self-start text-xs text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50">
           {t("clubs.deleteClub")}
         </button>
       )}
+      <ConfirmDialog
+        open={confirmingDelete}
+        title={t("clubs.confirmDelete.title", { name: club?.name ?? "" })}
+        body={t("clubs.confirmDelete.body")}
+        confirmLabel={t("clubs.confirmDelete.confirm")}
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </main>
   );
 }

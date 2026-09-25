@@ -26,6 +26,16 @@ export type AmbientTrackChoice =
   | "settle"
   | "home";
 
+// Scales the AI's pacing, card-flight and deal animation durations, and score
+// tallies (see motion.ts). "instant" skips waits and flights entirely.
+export type GameSpeed = "relaxed" | "normal" | "fast" | "instant";
+export const GAME_SPEEDS: GameSpeed[] = ["relaxed", "normal", "fast", "instant"];
+// "system" follows the OS prefers-reduced-motion setting; "on" reduces motion
+// regardless of it (kiosk / shared machines where the OS setting isn't ours to
+// change). Applied as a [data-reduce-motion] attribute on <html> — see motion.ts.
+export type ReduceMotionPref = "system" | "on";
+export const REDUCE_MOTION_PREFS: ReduceMotionPref[] = ["system", "on"];
+
 export interface HouseSettings {
   preferredAiDifficulty: Difficulty;
   // Local-only, like theme — not synced to the account (see settings/page.tsx's
@@ -61,6 +71,28 @@ export interface HouseSettings {
   // Which song(s) ambience.ts plays. "rotate" (default) cycles through all
   // three, crossfading; any other value pins it to just that one.
   ambientTrack: AmbientTrackChoice;
+  // Game speed — AI turn delay, card flights, tallies. See GameSpeed.
+  gameSpeed: GameSpeed;
+  // In-app reduce-motion. See ReduceMotionPref.
+  reduceMotion: ReduceMotionPref;
+  // Assist: mark which piles can be drawn, which cards can lay off / discard,
+  // and how close the hand is to the contract. Default on (unlike the auto-meld
+  // hint, this only highlights information — it never plays a move for you).
+  showLegalMoves: boolean;
+  // Ask "Discard the X and end your turn?" before every discard. On by
+  // default to preserve the existing behaviour; experienced players can turn
+  // it off and rely on the one-tap flow.
+  confirmDiscard: boolean;
+  // Push notification preferences (migration 0062) — one switch per kind,
+  // plus quiet hours (local hours; window may wrap midnight). Enforced
+  // server-side (supabase/functions/_shared/push.ts).
+  notifyTurns: boolean;
+  notifyInvites: boolean;
+  notifyNudges: boolean;
+  notifyStreaks: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: number;
+  quietHoursEnd: number;
   // "Player activity", "Group melds by type", and "Expandable hand drawer"
   // used to live here as toggles. All three are gone now: the always-on
   // opponent strip (OpponentStrip.tsx) replaced Player activity, grouping
@@ -80,6 +112,17 @@ export const DEFAULT_SETTINGS: HouseSettings = {
   ambientMusicEnabled: false,
   ambientVolume: 0.4,
   ambientTrack: "rotate",
+  gameSpeed: "normal",
+  reduceMotion: "system",
+  showLegalMoves: true,
+  confirmDiscard: true,
+  notifyTurns: true,
+  notifyInvites: true,
+  notifyNudges: true,
+  notifyStreaks: true,
+  quietHoursEnabled: false,
+  quietHoursStart: 22,
+  quietHoursEnd: 8,
 };
 
 export function loadLocalSettings(): HouseSettings {

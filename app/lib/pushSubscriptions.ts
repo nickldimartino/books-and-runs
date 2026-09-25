@@ -1,7 +1,7 @@
 // Web Push opt-in — "notify me when it's my turn" (Settings page). The
 // actual send happens server-side, from the `mp` Edge Function's addEvent()
 // whenever it records a your_turn/game_request/nudge event; this file is
-// just the browser half: register the service worker (public/sw.js, which
+// just the browser half: register the service worker (/sw.js, generated from sw/sw.template.js, which
 // also handles offline shell caching), ask for permission, subscribe with
 // PushManager, and keep the subscription row in `push_subscriptions`
 // (migration 0020) in step with what the browser actually holds.

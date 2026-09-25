@@ -105,8 +105,8 @@ test("create a series → round 1 is a real linked MP game → visible to both �
   // on their next visit. Back to the detail page first — "Cancel
   // tournament" only exists there, not on the list pageA was just on.
   await pageA.goto(tournamentUrl);
-  pageA.once("dialog", (dialog) => dialog.accept());
   await pageA.getByRole("button", { name: /cancel tournament/i }).click();
+  await pageA.getByRole("alertdialog").getByRole("button", { name: /^cancel tournament$/i }).click();
   await expect(pageA.getByText(/^cancelled$/i)).toBeVisible({ timeout: 15_000 });
   await expect(pageA.getByRole("button", { name: /cancel tournament/i })).not.toBeVisible();
 

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { callEdgeFunction } from "./callEdgeFunction";
 import type { MpAction, RedactedView } from "@/mp/types";
+import { EmoteId, isEmoteId } from "@/mp/emotes";
 
 /**
  * Client side of multiplayer. The Edge Function (`mp`) is the authority — it
@@ -27,7 +28,7 @@ export class MpError extends Error {
 
 async function callMp<T>(
   supabase: SupabaseClient,
-  path: "create" | "respond" | "cancel" | "state" | "move" | "resign",
+  path: "create" | "respond" | "cancel" | "state" | "move" | "resign" | "nudge" | "emote" | "friend_push",
   payload: Record<string, unknown>
 ): Promise<T> {
   return callEdgeFunction<T>(supabase, `${FN_BASE}/${path}`, payload, MpError);
@@ -42,6 +43,9 @@ export type NewGameSeat =
 export interface CreateMpGameInput {
   contractRounds: number[];
   seats: NewGameSeat[]; // everyone except the host — the function seats the host at 0
+  /** Per-turn limit in hours (0 = no limit, 24/48/72). Omit for the server
+   * default (72); older servers ignore it. See src/mp/turnTimer.ts. */
+  turnLimitHours?: number;
 }
 
 export async function createMpGame(
@@ -51,6 +55,7 @@ export async function createMpGame(
   return callMp(supabase, "create", {
     contract_rounds: input.contractRounds,
     seats: input.seats,
+    ...(input.turnLimitHours !== undefined ? { turn_limit_hours: input.turnLimitHours } : {}),
   });
 }
 
@@ -76,6 +81,12 @@ export interface MpStateResponse {
   /** mp_games.updated_at — present for a dealt game, so the UI can flag one
    * that's had no moves in a long time as possibly abandoned. */
   updated_at?: string;
+  /** Turn clock (migration 0061) — 0/absent means no limit. */
+  turn_limit_hours?: number;
+  /** When the current turn started (ISO), for the countdown badge. */
+  turn_started_at?: string | null;
+  /** Consecutive turns the viewer has let expire (1 → the next miss forfeits). */
+  your_missed_turns?: number;
   // present only when status === "pending"
   seats?: unknown[];
   host_id?: string;
@@ -130,11 +141,56 @@ export async function resignMpGame(
   return callMp(supabase, "resign", { game_id: gameId });
 }
 
-/** Bumps the current-turn player's badge with a fresh notification (RPC
- * mp_nudge, migration 0017). Rate-limited; throws if not allowed. */
+/** Nudges the current-turn player: a badge bump AND a push ("Zara is waiting
+ * on your move", in their language — honouring their notification settings).
+ * Rate-limited; throws if not allowed. Falls back to the original
+ * badge-only RPC (mp_nudge, migration 0017) against a server that predates
+ * the `nudge` route. */
 export async function nudgeMpGame(supabase: SupabaseClient, gameId: string): Promise<void> {
-  const { error } = await supabase.rpc("mp_nudge", { p_game_id: gameId });
+  try {
+    await callMp(supabase, "nudge", { game_id: gameId });
+  } catch (err) {
+    if (err instanceof MpError && err.status === 404 && /unknown route/i.test(err.message)) {
+      const { error } = await supabase.rpc("mp_nudge", { p_game_id: gameId });
+      if (error) throw error;
+      return;
+    }
+    throw err;
+  }
+}
+
+// ── emotes (migration 0061) ──────────────────────────────────────────────
+
+export interface MpEmote {
+  id: string;
+  game_id: string;
+  sender_id: string;
+  emote: EmoteId;
+  created_at: string;
+}
+
+/** Sends one of the fixed quick reactions (src/mp/emotes.ts). Throws MpError
+ * — status 429 when rate-limited. */
+export async function sendMpEmote(supabase: SupabaseClient, gameId: string, emote: EmoteId): Promise<void> {
+  await callMp(supabase, "emote", { game_id: gameId, emote });
+}
+
+/** The newest emotes in a game (RLS hides ones from accounts you've blocked). */
+export async function getMpEmotes(supabase: SupabaseClient, gameId: string, limit = 30): Promise<MpEmote[]> {
+  const { data, error } = await supabase
+    .from("mp_emotes")
+    .select("id, game_id, sender_id, emote, created_at")
+    .eq("game_id", gameId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
   if (error) throw error;
+  return ((data as MpEmote[]) ?? []).filter((e) => isEmoteId(e.emote));
+}
+
+/** Asks the server to push about a friend request / acceptance you just made
+ * (those are written by SQL, which can't push). Fire-and-forget. */
+export function pushFriendEvent(supabase: SupabaseClient, targetUserId: string): void {
+  callMp(supabase, "friend_push", { target_id: targetUserId }).catch(() => {});
 }
 
 /** Starts a fresh game with the same line-up as a finished one. `seats` is
@@ -143,7 +199,8 @@ export async function rematchMpGame(
   supabase: SupabaseClient,
   players: { seat: number; isAI: boolean; difficulty?: string; name: string; userId?: string }[],
   myUserId: string,
-  contractRounds: number[]
+  contractRounds: number[],
+  turnLimitHours?: number
 ): Promise<{ game_id: string }> {
   const seats: NewGameSeat[] = players
     .filter((p) => !(p.userId && p.userId === myUserId))
@@ -153,7 +210,7 @@ export async function rematchMpGame(
         : { kind: "human" as const, user_id: p.userId! }
     )
     .filter((s) => s.kind === "ai" || !!s.user_id);
-  return createMpGame(supabase, { contractRounds, seats });
+  return createMpGame(supabase, { contractRounds, seats, turnLimitHours });
 }
 
 // ── read-only lists (plain RPCs) ─────────────────────────────────────────
@@ -172,6 +229,9 @@ export interface MpGameSummary {
   cumulative_scores: Record<string, number>;
   host_id: string;
   updated_at: string;
+  /** Turn clock (migration 0061); absent on an older database. */
+  turn_limit_hours?: number;
+  turn_started_at?: string | null;
 }
 
 export interface MpSeatMeta {

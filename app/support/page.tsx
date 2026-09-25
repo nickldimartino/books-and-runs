@@ -15,7 +15,7 @@ import { BackLink } from "../components/BackLink";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { loadSupabase } from "../lib/supabaseClient";
 
-type ReportType = "bug" | "feature";
+type ReportType = "bug" | "feature" | "privacy";
 
 const MAX_SUBJECT = 150;
 const MAX_DESCRIPTION = 5000;
@@ -78,6 +78,9 @@ export default function SupportPage() {
     if (requested === "bug" || requested === "feature") {
       setType(requested);
       setCameFromReviewPrompt(true);
+    } else if (requested === "privacy") {
+      // From Account → "Delete your account" fallback: no review-prompt back-nav.
+      setType("privacy");
     }
   }, []);
 
@@ -222,6 +225,7 @@ export default function SupportPage() {
           >
             <option value="bug">{t("support.bug")}</option>
             <option value="feature">{t("support.featureRequest")}</option>
+            <option value="privacy">{t("support.privacyRequest")}</option>
           </select>
         </div>
 
@@ -234,7 +238,13 @@ export default function SupportPage() {
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder={type === "bug" ? t("support.subjectPlaceholderBug") : t("support.subjectPlaceholderFeature")}
+            placeholder={
+              type === "bug"
+                ? t("support.subjectPlaceholderBug")
+                : type === "privacy"
+                  ? t("support.subjectPlaceholderPrivacy")
+                  : t("support.subjectPlaceholderFeature")
+            }
             maxLength={MAX_SUBJECT}
             required
             className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
@@ -250,7 +260,11 @@ export default function SupportPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={
-              type === "bug" ? t("support.descriptionPlaceholderBug") : t("support.descriptionPlaceholderFeature")
+              type === "bug"
+                ? t("support.descriptionPlaceholderBug")
+                : type === "privacy"
+                  ? t("support.descriptionPlaceholderPrivacy")
+                  : t("support.descriptionPlaceholderFeature")
             }
             maxLength={MAX_DESCRIPTION}
             required

@@ -16,6 +16,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
+import { SafetyMenu } from "../components/SafetyMenu";
 import {
   addFriendByCode,
   Friend,
@@ -33,6 +34,7 @@ import { usePlayerLevel } from "../PlayerLevelContext";
 import { buildProfileShareCardInput } from "../lib/profileShareCard";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
+import { translateError } from "../lib/i18n/serverErrors";
 import { useT } from "../lib/i18n/LocaleProvider";
 
 type AddState =
@@ -217,7 +219,11 @@ export default function FriendsPage() {
       load();
     } catch (err) {
       console.error("Friend request failed:", err);
-      setAddState({ kind: "error", message: t("friends.errors.sendFailed") });
+      // A blocked/blocking pair surfaces the server's own (mapped) message;
+      // any other failure stays the generic line. (PostgrestError isn't an
+      // Error instance, hence the structural read.)
+      const raw = (err as { message?: string } | null)?.message ?? "";
+      setAddState({ kind: "error", message: /connect with this player/i.test(raw) ? translateError(raw, t) : t("friends.errors.sendFailed") });
     }
   }
 
@@ -540,6 +546,12 @@ export default function FriendsPage() {
                       >
                         {t("multiplayer.decline")}
                       </button>
+                      <SafetyMenu
+                        targetUserId={r.otherUserId}
+                        targetName={nameOf(r.otherUserId, r.displayName)}
+                        context="friends"
+                        onBlocked={() => load()}
+                      />
                     </span>
                   </li>
                 ))}
@@ -568,13 +580,21 @@ export default function FriendsPage() {
                       <PlayerAvatar avatar={avatars[f.userId]} size={28} />
                       <span className="truncate">{nameOf(f.userId, f.displayName)}</span>
                     </Link>
-                    <button
-                      onClick={() => cancelOrRemove(f.userId)}
-                      disabled={busyId === f.userId}
-                      className="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--faint)] hover:bg-[var(--panel-soft)] hover:text-[var(--danger)] disabled:opacity-50"
-                    >
-                      {t("common.remove")}
-                    </button>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => cancelOrRemove(f.userId)}
+                        disabled={busyId === f.userId}
+                        className="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--faint)] hover:bg-[var(--panel-soft)] hover:text-[var(--danger)] disabled:opacity-50"
+                      >
+                        {t("common.remove")}
+                      </button>
+                      <SafetyMenu
+                        targetUserId={f.userId}
+                        targetName={nameOf(f.userId, f.displayName)}
+                        context="friends"
+                        onBlocked={() => load()}
+                      />
+                    </span>
                   </li>
                 ))}
               </ul>

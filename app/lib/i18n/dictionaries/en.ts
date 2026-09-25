@@ -48,6 +48,31 @@ const en = {
   "settingsPicker.signature": "Signature",
   "settingsPicker.unlocksAtLevel": "Unlocks at Level {level}",
   "settingsPicker.boutiqueLocked": "Boutique — not yet available for purchase",
+  "player.badge.free": "Free",
+  "cosmeticReq.categoryMastered": "Master every {category} achievement",
+  "cosmeticReq.categoriesMasteredCount": "Master {count} of {total} achievement categories",
+  "cosmeticReq.allCategoriesMastered": "Master every achievement category",
+  "cosmeticReq.gamesPlayed": "Play {count} solo/pass-and-play games",
+  "cosmeticReq.dailyDealStreak": "Reach a {days}-day Daily Deal streak",
+  "cosmeticReq.weeklyChallengeStreak": "Reach a {weeks}-week Weekly Challenge streak",
+  "cosmeticReq.complete": "Master every category, reach Level 250, and a 30-day Daily Deal streak",
+  "cosmeticReq.creatorOnly": "Exclusive to the creator of Books & Runs",
+  "cosmeticReq.supporterOnly": "Unlocked by tipping — see Settings → Help → Support the developer",
+  "cosmeticReq.worstScoreUnder": "Never finish a game above {score} points",
+  "cosmeticReq.averageScoreUnder": "Average under {score} points across {games}+ games",
+  "cosmeticReq.gamesTied.one": "Tie {count} game",
+  "cosmeticReq.gamesTied.other": "Tie {count} games",
+  "cosmeticReq.mpWinStreak": "Reach a {streak}-game multiplayer win streak",
+  "cosmeticReq.cat.accountStats": "Account Stats",
+  "cosmeticReq.cat.aiRivals": "AI Rivals",
+  "cosmeticReq.cat.melding": "Melding",
+  "cosmeticReq.cat.layingOff": "Laying Off",
+  "cosmeticReq.cat.drawDiscard": "Draw & Discard",
+  "cosmeticReq.cat.goingOut": "Going Out",
+  "cosmeticReq.cat.contracts": "Contracts",
+  "cosmeticReq.cat.tableComposition": "Table Composition",
+  "cosmeticReq.cat.multiplayer": "Multiplayer",
+  "cosmeticReq.cat.challenges": "Challenges",
   "settingsTheme.signInPrompt": "Sign in to pick a theme — signed-out play always uses the default table so there's nothing to lose track of between devices.",
   "settingsCardBack.description": "The pattern and color on the back of your cards — the draw pile, and another player's hand while it's face down. Separate from Theme, so any table look can be paired with any card back.",
   "settingsCardFace.description": "How a card's rank and suit are drawn. Separate from Theme and Card back, so any table look can be paired with any card face.",
@@ -190,6 +215,24 @@ const en = {
   "settings.showMeldHint": "“Hint: Auto-meld” button",
   "settings.showMeldHintDescription":
     "Show a button that lays your contract for you in one tap whenever your hand can complete it. Off by default — unlike the other assists above, this plays part of your turn for you.",
+  "settings.showLegalMoves": "Show legal moves",
+  "settings.showLegalMovesDescription":
+    "Highlights what you can do: which piles you can draw from, where a selected card can be laid off, and how close your hand is to this round's contract. It also says, in words, why a button is greyed out.",
+  "settings.confirmDiscard": "Confirm before discarding",
+  "settings.confirmDiscardDescription":
+    "Asks \"Discard the … and end your turn?\" before every discard. Turn it off to discard with a single tap — but a discard ends your turn and can't be undone.",
+  "settings.gameSpeed": "Game speed",
+  "settings.gameSpeedDescription":
+    "How fast opponents play and cards move. Relaxed slows everything down, Fast shortens the pauses, and Instant skips the waiting and card animations. You can also tap during an opponent's turn to skip its pause.",
+  "settings.gameSpeed.relaxed": "Relaxed",
+  "settings.gameSpeed.normal": "Normal",
+  "settings.gameSpeed.fast": "Fast",
+  "settings.gameSpeed.instant": "Instant",
+  "settings.reduceMotion": "Reduce motion",
+  "settings.reduceMotionDescription":
+    "Turns off card flights, confetti, pulsing highlights and most transitions across the app. \"Follow device\" respects your system's reduced-motion setting; \"Always reduce\" applies it no matter what your device says.",
+  "settings.reduceMotion.system": "Follow device",
+  "settings.reduceMotion.on": "Always reduce",
 
   "settings.turnNotifications": "Turn notifications",
   "settings.turnNotificationsDescription":
@@ -315,6 +358,27 @@ const en = {
   "game.layOff.errorMultiple":
     "Those cards can't all be laid off there together — try selecting them again, or lay them off one at a time.",
   "game.layOff.errorSingle": "That card can't be laid off there anymore — try selecting it again.",
+  "game.skipWait": "Skip wait",
+  "game.discardToPile": "Discard the selected card onto the pile",
+  "game.turnHint.drawn": "Build your meld, or select a card and discard to end your turn.",
+  "game.turnHint.melded": "Lay off cards onto melds, then discard to end your turn.",
+  "game.progress.books": "Books {ready} of {need} ready",
+  "game.progress.runs": "Runs {ready} of {need} ready",
+  "game.progress.closestBook": "closest: {rank} ({have}/{need})",
+  "game.progress.closestRun": "closest: {suit} ({have}/{need})",
+  "game.progress.ready": "Your hand can meld this round's contract now.",
+  "game.why.drawFirst": "Draw a card first.",
+  "game.why.finishWildChoice": "Choose what the wild card stands in for first.",
+  "game.why.tooManyGroups": "You've grouped more than this round needs — remove a group.",
+  "game.why.groupMore": "Group {need} to confirm your meld.",
+  "game.why.groupAll": "Every card must be melded this round — {count} still ungrouped.",
+  "game.why.selectToDiscard": "Select a card to discard.",
+  "game.why.selectOneToDiscard": "Select just one card to discard.",
+  "game.why.selectToLayOff": "Select a card to lay off.",
+  "game.why.noLayOffTarget": "No meld on the table accepts that card.",
+  "game.why.pickMeld": "Several melds fit — choose one on the table.",
+  "game.hand.ptsExplain":
+    "Penalty points you'd score if someone else went out now — lower is better.",
 
   "signIn.title": "Sign in",
   "signIn.notSetUp.title": "Sign in isn't set up yet",
@@ -325,6 +389,14 @@ const en = {
   "signIn.mfaPrompt": "Enter the 6-digit code from your authenticator app.",
   "signIn.verifying": "Verifying…",
   "signIn.verify": "Verify",
+  "signIn.or": "or",
+  "signIn.magic.button": "Email me a sign-in link",
+  "signIn.magic.sent":
+    "We sent a sign-in link to {email}. Open it on this device to finish signing in. If the email includes a 6-digit code, you can enter it below instead.",
+  "signIn.magic.codeLabel": "6-digit code from the email",
+  "signIn.magic.codePlaceholder": "123456",
+  "signIn.magic.needEmail": "Enter your email address first.",
+  "signIn.oauth.continueWith": "Continue with {provider}",
   "signIn.checkEmail": "Check your email (including spam) to confirm your account, then come back and sign in.",
   "signIn.backToSignIn": "Back to sign in",
   "signIn.resetEmailSent": "If an account exists for {email}, we've sent a link to reset your password.",
@@ -370,6 +442,10 @@ const en = {
   "multiplayer.rematch": "Rematch — same players",
   "multiplayer.leaveConfirm": "Leave this game? You forfeit it.",
   "multiplayer.leave": "Leave",
+  "multiplayer.resignTitle": "Leave this game?",
+  "multiplayer.resignBody":
+    "You'll forfeit: your hand is cleared, you take a flat penalty and finish last, and the game carries on without you. This can't be undone.",
+  "multiplayer.resignConfirm": "Leave and forfeit",
   "multiplayer.playingAsync": "Playing async",
   "multiplayer.playingAsyncBody":
     "You don't need to be online at the same time. Take your turn, then it's the next player's — check back from Home, or turn on notifications in Settings to know when it's yours again.",
@@ -394,6 +470,37 @@ const en = {
   "multiplayer.handEmpty": "Your hand is empty — end your turn to go out.",
 
   "common.close": "Close",
+  "shortcuts.title": "Keyboard & gamepad shortcuts",
+  "shortcuts.openHelp": "Keyboard shortcuts",
+  "shortcuts.keyboardHeading": "Keyboard",
+  "shortcuts.moveFocus": "Move between cards and buttons",
+  "shortcuts.selectCard": "Select / deselect the focused card",
+  "shortcuts.draw": "Draw from the pile",
+  "shortcuts.drawDiscard": "Take the top discard",
+  "shortcuts.focusHand": "Jump to your hand",
+  "shortcuts.group": "Group selected / confirm meld / lay off",
+  "shortcuts.discard": "Discard the selected card",
+  "shortcuts.sortRank": "Sort hand by rank",
+  "shortcuts.sortSuit": "Sort hand by suit",
+  "shortcuts.undo": "Undo last meld or lay-off",
+  "shortcuts.help": "Show this help",
+  "shortcuts.close": "Close dialogs and menus",
+  "shortcuts.typingNote": "Shortcuts pause while you're typing in a text field.",
+  "shortcuts.gamepadHeading": "Gamepad",
+  "shortcuts.gamepad.move": "D-pad / left stick — move focus",
+  "shortcuts.gamepad.select": "A — select / confirm",
+  "shortcuts.gamepad.back": "B — back / cancel",
+  "shortcuts.gamepad.draw": "X — draw from the pile",
+  "shortcuts.gamepad.sort": "Y — sort hand",
+  "shortcuts.gamepad.zones":
+    "LB / RB — jump between hand, piles and table; LT group / meld, RT discard",
+  "shortcuts.gamepad.help": "Start — this help",
+  "gamepad.select": "Select",
+  "gamepad.back": "Back",
+  "gamepad.draw": "Draw",
+  "gamepad.sort": "Sort",
+  "gamepad.zones": "Areas",
+  "gamepad.help": "Help",
 
   "opponentStrip.thinking": "{name} is thinking…",
   "opponentStrip.cardsInHand.one": "{count} card",
@@ -412,6 +519,8 @@ const en = {
   "roundSummary.achievementsUnlocked.other": "Achievements unlocked this round",
   "roundSummary.player": "Player",
   "roundSummary.thisRound": "This round",
+  "roundSummary.penaltyNote":
+    "\"This round\" is penalty points for the cards still left in each hand — the lowest total wins.",
   "roundSummary.total": "Total",
   "roundSummary.leading": "Leading",
   "roundSummary.startNextRound": "Start next round",
@@ -465,6 +574,11 @@ const en = {
   "gameOver.saved": "Saved to your stats.",
   "gameOver.saveError": "Couldn't save to your stats — check your connection.",
   "gameOver.xpLine": "+{amount} XP — {label}",
+  "gameOver.dailyXp": "+{xp} XP for today's deal",
+  "gameOver.weeklyXp": "+{xp} XP for this week's challenge",
+  "gameOver.streakBonus": "+{xp} XP streak bonus · {days} days",
+  "gameOver.levelUp": "Level up! Now level {level}",
+  "gameOver.xp.quest": "Quest: {quest}",
   "gameOver.playRealGame": "Play a real game",
   "gameOver.playAgain": "Play again",
 
@@ -572,6 +686,41 @@ const en = {
   "home.progressTile.friends": "Friends",
 
   "home.closestAchievement": "Closest achievement",
+  "home.reward.badge": "{name} badge",
+  "home.reward.avatar_frame": "{name} frame",
+  "home.reward.title": "\"{name}\" title",
+  "home.reward.banner": "{name} banner",
+  "home.nextReward": "Next reward at level {level}: {reward}",
+  "home.nextRewardMore": "Next reward at level {level}: {reward} + {count} more",
+  "quests.title": "Quests",
+  "quests.daily": "Today",
+  "quests.weekly": "This week",
+  "quests.resets": "New quests in {time}",
+  "quests.time.dh": "{d}d {h}h",
+  "quests.time.hm": "{h}h {m}m",
+  "quests.time.m": "{m}m",
+  "quests.progress": "{progress} / {target}",
+  "quests.xp": "+{xp} XP",
+  "quests.signInHint": "Sign in to earn XP from quests.",
+  "quests.toast.title": "Quest complete!",
+  "quests.toast.line": "{quest} · +{xp} XP",
+  "quests.metric.gamesPlayed": "Finish games",
+  "quests.metric.gamesWon": "Win games",
+  "quests.metric.booksMelded": "Meld books",
+  "quests.metric.runsMelded": "Meld runs",
+  "quests.metric.cardsLaidOff": "Lay off cards",
+  "quests.metric.roundsWon": "Go out to win rounds",
+  "quests.metric.roundsWonNoDiscard": "Go out without discarding",
+  "quests.metric.meldsWithZeroWilds": "Meld without using wilds",
+  "quests.metric.cardsDrawnFromDiscard": "Draw from the discard pile",
+  "quests.metric.oversizedRunsMelded": "Meld runs longer than required",
+  "quests.metric.wildsUsedInMelds": "Use wilds in your melds",
+  "welcomeBack.title": "Welcome back!",
+  "welcomeBack.gamesWaiting.one": "{count} game is waiting for your move",
+  "welcomeBack.gamesWaiting.other": "{count} games are waiting for your move",
+  "welcomeBack.streak": "Your {count}-day Daily Deal streak is still going — today's deal is ready.",
+  "welcomeBack.dailyReady": "Today's Daily Deal is ready whenever you are.",
+  "welcomeBack.quests": "Fresh quests are ready.",
 
   "home.more": "More",
   "home.playWithFriends": "Play with friends",
@@ -593,6 +742,8 @@ const en = {
   "home.multiplayerGame": "Multiplayer game",
   "home.noMovesInDays": "{days}d no moves",
   "home.daysAbbr": "{days}d",
+  "home.turnEndsIn": "turn ends in {time}",
+  "home.turnOverdue": "overdue",
 
   "home.yourGames": "Your games",
   "home.respondError": "Couldn't respond — check your connection.",
@@ -805,6 +956,9 @@ const en = {
   "howToPlay.organizing.body1": "Your hand order is just for your own convenience — it has no effect on the game. Use",
   "howToPlay.organizing.body2":
     "to group cards automatically, or press and drag any card to a new spot to arrange your hand exactly how you like.",
+  "howToPlay.shortcuts.title": "Keyboard & gamepad",
+  "howToPlay.shortcuts.body":
+    "You can play without touching the screen: D draws, the arrow keys move between cards, Enter selects one, Delete discards, and ? lists every shortcut. A gamepad works too — D-pad to move, A to select, B to go back.",
 
   "howToPlay.settings.body1":
     "Settings lets you pick a color theme for the app and table, pick a card back independently of that theme, set a default AI difficulty for new AI opponents you add on the New Game screen, turn sound effects on or off, turn the possible-lay-off badges on or off, toggle the “Whose turn is it?” button, and switch on colorblind-friendly card colors. None of that changes any of the rules above — it's all just look-and-feel and optional assistance.",
@@ -1004,7 +1158,10 @@ const en = {
   "clubs.removeMemberError": "Couldn't remove them — try again.",
   "clubs.renameError": "Couldn't rename it — try again.",
   "clubs.deleteError": "Couldn't delete it — try again.",
-  "clubs.confirmDelete": "Delete \"{name}\"? This removes it for everyone.",
+  "clubs.confirmDelete.title": "Delete “{name}”?",
+  "clubs.confirmDelete.body":
+    "The club, its standings and its member list are removed for everyone. This can't be undone.",
+  "clubs.confirmDelete.confirm": "Delete club",
   "clubs.rename": "Rename",
   "clubs.startTournament": "Start a tournament with this club",
   "clubs.standingsHeading": "Standings — multiplayer record",
@@ -1062,10 +1219,201 @@ const en = {
   "account.data.preparing": "Preparing your download…",
   "account.data.downloadButton": "Download my data",
   "account.data.exportError": "Couldn't prepare the download — try again.",
+  "safety.menu.aria":
+    "More actions for {name}",
+  "safety.menu.title":
+    "Report or block",
+  "safety.menu.report":
+    "Report",
+  "safety.menu.block":
+    "Block",
+  "safety.block.confirmTitle":
+    "Block {name}?",
+  "safety.block.confirmBody":
+    "You'll be unfriended and hidden from each other — no friend requests, game invites, reactions or leaderboard rows either way. They won't be told. You can unblock them any time on your Account page.",
+  "safety.block.error":
+    "Couldn't block — try again.",
+  "safety.block.done":
+    "You blocked {name}.",
+  "safety.report.title":
+    "Report {name}",
+  "safety.report.intro":
+    "Reports go to the developer for review. The player isn't told who reported them.",
+  "safety.report.reasonLabel":
+    "Reason",
+  "safety.report.noteLabel":
+    "Anything else we should know? (optional)",
+  "safety.report.submit":
+    "Send report",
+  "safety.report.sending":
+    "Sending…",
+  "safety.report.error":
+    "Couldn't send the report — try again.",
+  "safety.report.sentTitle":
+    "Thanks for the report",
+  "safety.report.sentBody":
+    "We'll take a look. If you don't want to see or hear from {name} any more, you can block them too.",
+  "safety.report.alsoBlock":
+    "Block {name} too",
+  "safety.reason.offensive":
+    "Offensive name, bio or photo",
+  "safety.reason.harassment":
+    "Harassment or abuse",
+  "safety.reason.impersonation":
+    "Pretending to be someone else",
+  "safety.reason.cheating":
+    "Cheating",
+  "safety.reason.spam":
+    "Spam or advertising",
+  "safety.reason.inappropriate_photo":
+    "Inappropriate profile photo",
+  "safety.reason.other":
+    "Something else",
+  "safety.content.name":
+    "That name isn't allowed here — please pick another.",
+  "safety.content.bio":
+    "That bio contains words that aren't allowed — please reword it.",
+  "safety.content.link":
+    "Links and email addresses aren't allowed here.",
+  "safety.content.reserved":
+    "That name is reserved — please pick another.",
+  "safety.content.empty":
+    "Please enter a name.",
+  "safety.blocked.heading":
+    "Blocked players",
+  "safety.blocked.empty":
+    "You haven't blocked anyone.",
+  "safety.blocked.description":
+    "Blocked players can't send you friend requests or game invites, and you don't appear on each other's leaderboards.",
+  "safety.blocked.unblock":
+    "Unblock",
+  "safety.players.heading":
+    "Players — report or block",
+  "safety.err.connect":
+    "You can't connect with this player.",
+  "safety.err.tooMany":
+    "Too many attempts — try again later.",
+  "err.mp.alreadyNudged":
+    "Someone already nudged recently.",
+  "err.mp.nothingToNudge":
+    "There's nobody to nudge right now.",
+  "account.delete.description":
+    "Permanently delete your account and everything tied to it.",
+  "account.delete.item.data":
+    "Your profile, photo, stats, history, achievements, settings, friends and leaderboard entry are deleted.",
+  "account.delete.item.games":
+    "Games in progress are forfeited for you. Finished games stay for the other players, with your name replaced by “Deleted player”.",
+  "account.delete.item.clubs":
+    "Clubs and tournaments you own are deleted too.",
+  "account.delete.item.irreversible":
+    "This can't be undone.",
+  "account.delete.button":
+    "Delete my account…",
+  "account.delete.typePrompt":
+    "Type {word} to confirm",
+  "account.delete.confirmWord":
+    "DELETE",
+  "account.delete.continue":
+    "Continue",
+  "account.delete.fallbackPrefix":
+    "Can't sign in or prefer to ask us?",
+  "account.delete.fallbackLink":
+    "Contact us",
+  "account.delete.confirmTitle":
+    "Delete your account?",
+  "account.delete.confirmBody":
+    "Everything tied to this account will be permanently deleted. This can't be undone.",
+  "account.delete.confirmButton":
+    "Delete forever",
+  "account.delete.done":
+    "Your account was deleted.",
+  "account.delete.error":
+    "Couldn't delete the account — try again in a moment.",
+  "account.delete.errLeave":
+    "Couldn't leave your games — try again in a moment.",
+  "support.privacyRequest":
+    "Privacy or account request",
+  "support.subjectPlaceholderPrivacy":
+    "e.g. Please delete my account",
+  "support.descriptionPlaceholderPrivacy":
+    "Tell us what you need. We'll reply to the email address below — and may ask you to confirm it's really you.",
+  "newGameMultiplayer.turnLimit.heading":
+    "Turn time limit",
+  "newGameMultiplayer.turnLimit.off":
+    "No limit",
+  "newGameMultiplayer.turnLimit.hours":
+    "{hours}h",
+  "newGameMultiplayer.turnLimit.note":
+    "Each turn has {hours} hours. If someone runs out of time, a safe move is played for them; miss a second turn in a row and they forfeit.",
+  "newGameMultiplayer.turnLimit.offNote":
+    "No clock: the game waits as long as it takes. A stalled game can still be left with Leave.",
+  "turnTimer.expired":
+    "Time's up",
+  "turnTimer.yourEnds":
+    "Your turn ends in {time}",
+  "turnTimer.theirEnds":
+    "Their turn ends in {time}",
+  "turnTimer.lastChance":
+    "You missed your last turn — miss this one and you forfeit.",
+  "turnTimer.unit.minutes":
+    "{n} min",
+  "turnTimer.unit.hours":
+    "{n}h",
+  "turnTimer.unit.days":
+    "{n}d",
+  "emotes.heading":
+    "Quick reactions",
+  "emotes.error":
+    "Couldn't send that — try again in a moment.",
+  "emotes.bubble":
+    "{name}: {emoji} {text}",
+  "emote.hello":
+    "Hello!",
+  "emote.nice_meld":
+    "Nice meld!",
+  "emote.your_turn":
+    "Your turn!",
+  "emote.oops":
+    "Oops!",
+  "emote.thanks":
+    "Thanks!",
+  "emote.wow":
+    "Wow!",
+  "emote.lucky":
+    "Lucky draw!",
+  "emote.good_game":
+    "Good game",
+  "settings.notify.heading":
+    "Which notifications",
+  "settings.notify.turns":
+    "Your turn",
+  "settings.notify.turnsHint":
+    "It's your move, or your time is running out.",
+  "settings.notify.invites":
+    "Invites & friend requests",
+  "settings.notify.invitesHint":
+    "Game invites and new friend requests.",
+  "settings.notify.nudges":
+    "Nudges & reactions",
+  "settings.notify.nudgesHint":
+    "When someone nudges you or reacts in a game.",
+  "settings.notify.streaks":
+    "Streak reminders",
+  "settings.notify.streaksHint":
+    "When your Daily Deal or Weekly Challenge streak is about to lapse.",
+  "settings.notify.quietHours":
+    "Quiet hours",
+  "settings.notify.quietHoursHint":
+    "No push notifications during this window, in your local time. Your inbox still updates.",
+  "settings.notify.from":
+    "From",
+  "settings.notify.to":
+    "to",
+  "leaderboard.loadMore":
+    "Show more",
+  "leaderboard.yourRank":
+    "You are #{rank} of {total}",
   "account.delete.heading": "Delete your account",
-  "account.delete.bodyPrefix":
-    "There's no self-serve delete yet. To remove your account and everything tied to it — stats, game history, achievements, display name, friends, and multiplayer games — email",
-  "account.delete.bodySuffix": "from the address on your account.",
   "account.error.notConfigured": "Not configured.",
   "account.error.wrongPassword": "Current password is incorrect.",
   "account.error.needsFreshSignIn":
@@ -1102,7 +1450,7 @@ const en = {
     "The app is a hobby project run by an individual developer. We may add, change, or remove features, reset or rebalance stats and leaderboards, or stop offering the app or parts of it (including online features) at any time. We'll try to give reasonable notice of significant changes where we can, but we can't promise the online features will always be available.",
   "terms.termination.title": "Termination",
   "terms.termination.body":
-    "You can stop using the app or delete your account at any time (see the Privacy Policy for how). The developer may suspend, restrict, or delete an account, or remove content, if it breaks these terms — for example cheating, harassment, offensive names or photos, or attempts to attack or overload the service — and may do so without notice where needed to protect the service or other players. If you think this was a mistake, contact us.",
+    "You can stop using the app or delete your account at any time from the Account page (see the Privacy Policy for details). The developer may suspend, restrict, or delete an account, or remove content, if it breaks these terms — for example cheating, harassment, offensive names or photos, or attempts to attack or overload the service — and may do so without notice where needed to protect the service or other players. Players can report and block each other, and reports are reviewed by the developer. If you think a decision was a mistake, contact us.",
   "terms.law.title": "Governing law",
   "terms.law.body":
     "Nothing in these terms takes away the mandatory legal rights you have under the law of the country where you live, and those rules continue to apply to you.",
@@ -1124,6 +1472,8 @@ const en = {
     "If you never sign in, your games and settings stay with you. Your in-progress game, house-rule settings, and preferences are stored only in your browser or device's local storage, are never transmitted anywhere, and are never seen by us.",
   "privacy.localPlay.diagnostics":
     "Two small things are sent even without an account, so problems can be found and fixed: crash and error reports (the error message, the page you were on, your browser and device type, and the app version), and anonymous usage counts such as “a game was started” with coarse details like game mode and difficulty. Usage counts carry no account, name, or device identifier. Your IP address is inevitably visible to our hosting provider when any request is made, but we don't store it in these records. If you use the Support page, the message and any files or contact address you choose to include are emailed to the developer.",
+  "privacy.localPlay.speed":
+    "To keep the app fast, a small share of visits also send a page-speed measurement: how long the page took to load and respond, rounded, along with the page name and connection type (for example “4g”). Like usage counts, it carries no account, name, or device identifier.",
   "privacy.account.title": "If you create an account",
   "privacy.account.intro":
     "Signing in is optional and unlocks Stats, Achievements, your account level, the Leaderboard, Friends, Clubs, Tournaments, and turn-based multiplayer games. If you sign in with email, we store:",
@@ -1144,7 +1494,11 @@ const en = {
   "privacy.account.item.clubs":
     "Clubs and tournaments you create or join: the club or tournament name (visible to its members and participants), who owns or hosts it, and who its members and participants are.",
   "privacy.account.item.push":
-    "If you turn on notifications, your browser's push subscription (an address and encryption keys supplied by your browser's push service) so we can send you “your turn”, friend, and Daily Deal reminder notifications. This is off unless you opt in, and you can turn it off at any time in the app or in your browser or device settings.",
+    "If you turn on notifications, your browser's push subscription (an address and encryption keys supplied by your browser's push service) so we can send you “your turn”, game invite, friend request, nudge, reaction and streak reminder notifications, worded in your chosen language. You choose which kinds you get and can set quiet hours; to respect them we store those choices and your device's UTC time offset. This is off unless you opt in, and you can turn it off at any time in the app or in your browser or device settings.",
+  "privacy.account.item.safety":
+    "Safety records: the players you block (so you're hidden from each other), and reports you file about other players (who reported whom, the reason, an optional short note, where it was filed, and the reported player's name and bio at that moment). Reports are visible only to the developer and kept for as long as needed to review them; the reported player is not told who reported them. Display names, bios and club names are also checked automatically against a list of blocked words and impersonation rules.",
+  "privacy.account.item.emotes":
+    "Quick reactions you send during a multiplayer game (one of a fixed set of presets — never free text), shown to the other players in that game and kept only for the most recent ones per game.",
   "privacy.account.item.support":
     "If you send a tip through the Support the developer page, payment is handled entirely by Stripe, and we never see your card details. We store only that a payment happened (the Stripe session reference, amount, and currency) so we can give you the supporter badge.",
   "privacy.account.item.security":
@@ -1176,18 +1530,18 @@ const en = {
   "privacy.export.bodyPrefix": "The Account page has a",
   "privacy.export.downloadLabel": "Download my data",
   "privacy.export.bodyMiddle":
-    "button that gives you the data tied to your account (profile, stats, history, achievements, settings, saves, friends, and multiplayer record) as one file, any time, with no need to ask. There is no self-serve delete button yet. To delete your account and everything tied to it — stats, game history, achievement progress, profile, friends, clubs, and multiplayer games — email",
+    "button that gives you the data tied to your account (profile, stats, history, achievements, settings, saves, friends, blocked players, and multiplayer record) as one file, any time, with no need to ask. It also has a Delete my account button: after you confirm with your password, your account and everything tied to it — stats, game history, achievement progress, profile and profile photo, friends, clubs and tournaments you own, notification subscriptions — is deleted straight away. Games you played with other people stay for them with your name replaced by “Deleted player”, and any game still in progress is forfeited for you. If you can't use the button (for example, you've lost your password), email",
   "privacy.export.bodySuffix":
-    "from the address on the account and we'll delete it. Deleting your account also removes you from other players' friends lists.",
+    "from the address on the account and we'll delete it for you. Deleting your account also removes you from other players' friends lists.",
   "privacy.retention.title": "How long we keep data",
   "privacy.retention.body":
-    "We keep your account data for as long as your account exists. After you ask us to delete your account we aim to remove it promptly and in any case within a reasonable time. Crash reports are automatically deleted after about 30 days and short-lived notification and abuse-prevention records after a few weeks at most. Anonymous usage counts contain no personal identifiers and are kept for up to about 13 months. Copies may remain in provider backups for a limited time before they are overwritten.",
+    "We keep your account data for as long as your account exists. When you delete your account (in the app, or by asking us) it is removed straight away — or, for a request made by email, promptly and in any case within a reasonable time. Reports you file about other players are kept for as long as needed to review them. Crash reports are automatically deleted after about 30 days and short-lived notification and abuse-prevention records after a few weeks at most. Anonymous usage counts contain no personal identifiers and are kept for up to about 13 months. Copies may remain in provider backups for a limited time before they are overwritten.",
   "privacy.transfers.title": "International transfers",
   "privacy.transfers.body":
     "Our hosting provider may store and process data on servers outside the country where you live. Where that happens, we rely on the provider's safeguards for international transfers. By using an account, you understand your data may be processed in other countries.",
   "privacy.rights.title": "Your rights",
   "privacy.rights.body":
-    "Depending on where you live, you may have the right to access your personal data, correct it, delete it, receive a copy in a portable format, object to or ask us to restrict certain processing, and withdraw consent you gave. Much of this you can do yourself: edit your profile and settings in the app, and download your data from the Account page. For anything else, or to delete your account, email the address below. You also have the right to lodge a complaint with your local data-protection authority. We may need to confirm it's really you before acting on a request.",
+    "Depending on where you live, you may have the right to access your personal data, correct it, delete it, receive a copy in a portable format, object to or ask us to restrict certain processing, and withdraw consent you gave. Much of this you can do yourself: edit your profile and settings in the app, download your data and delete your account from the Account page. For anything else, email the address below. You also have the right to lodge a complaint with your local data-protection authority. We may need to confirm it's really you before acting on a request.",
   "privacy.children.title": "Children's privacy",
   "privacy.children.body":
     "This app is not directed at children under 13, and we do not knowingly collect personal data from them. Where local law sets a higher minimum age for a person to consent to the processing of their personal data (for example 14 in South Korea, or 16 in parts of the European Union), the app is not directed at people under that age either, and you should not create an account if you are. If you believe a child has given us personal data, contact us and we will delete it.",
@@ -1300,7 +1654,11 @@ const en = {
   "tournaments.gamesWon": "{count}W",
   "tournaments.rounds": "Rounds",
   "tournaments.roundN": "Round {round}",
-  "tournaments.confirmCancel": "Cancel this tournament? Games already played keep their results.",
+  "tournaments.confirmCancel.title": "Cancel this tournament?",
+  "tournaments.confirmCancel.body":
+    "The tournament ends for everyone. Games already played keep their results; rounds that haven't been played won't happen.",
+  "tournaments.confirmCancel.confirm": "Cancel tournament",
+  "tournaments.confirmCancel.keep": "Keep it",
   "tournaments.cancelError": "Couldn't cancel it — try again.",
   "tournaments.cancelTournament": "Cancel tournament",
 
@@ -1378,7 +1736,8 @@ const en = {
   "player.creator.title": "Creator of Books & Runs",
   "player.creator.label": "Creator",
   "player.joined": "Joined {date}",
-  "player.report.button": "Report photo",
+  "player.report.button":
+    "Report",
   "player.share.shared": "Shared.",
   "player.share.error": "Couldn't prepare that image — try again.",
   "player.report.prompt": "What's wrong with this photo? (optional)",
@@ -1620,6 +1979,14 @@ const en = {
   "achievementFamily.largeTableGames.unit": "games with 6 or more players",
   "achievementFamily.turnsTaken.title": "Marathoner",
   "achievementFamily.turnsTaken.unit": "turns taken",
+  "achievementFamily.dailyDealsCompleted.title": "Daily Regular",
+  "achievementFamily.dailyDealsCompleted.unit": "Daily Deals completed",
+  "achievementFamily.dailyDealBestStreak.title": "Streak Keeper",
+  "achievementFamily.dailyDealBestStreak.unit": "days in a row (best Daily Deal streak)",
+  "achievementFamily.weeklyChallengesCompleted.title": "Challenger",
+  "achievementFamily.weeklyChallengesCompleted.unit": "Weekly Challenges completed",
+  "achievementFamily.weeklyChallengeBestStreak.title": "Week After Week",
+  "achievementFamily.weeklyChallengeBestStreak.unit": "weeks in a row (best Weekly Challenge streak)",
 
   // reviewPrompt.*
   "reviewPrompt.title": "Enjoying Books & Runs?",
@@ -1630,6 +1997,20 @@ const en = {
   "reviewPrompt.yes": "Yes!",
   "update.newVersion": "A new version of Books & Runs is ready.",
   "update.refresh": "Refresh",
+  "toast.offline":
+    "You're offline — games still work, and your progress will sync when you're back.",
+  "toast.backOnline": "Back online.",
+  "toast.saved": "Saved",
+  "toast.copied": "Copied to clipboard",
+  "toast.syncFailed": "Couldn't sync — we'll try again shortly.",
+  "install.title": "Install Books & Runs",
+  "install.body":
+    "Add it to your home screen for full-screen play, instant launch, and your-turn notifications.",
+  "install.button": "Install",
+  "install.notNow": "Not now",
+  "install.ios.title": "Add Books & Runs to your Home Screen",
+  "install.ios.body":
+    "Tap the Share icon, then “Add to Home Screen”. On iPhone and iPad, your-turn notifications only work once the app is on your Home Screen.",
   "error.eyebrow": "Something broke",
   "error.title": "This screen hit an error",
   "error.body": "Try again — if it keeps happening, starting a fresh game usually clears it.",

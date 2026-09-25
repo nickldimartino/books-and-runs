@@ -11,7 +11,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
 import { levelProgress } from "@/leveling";
 import { isValidBadge, isValidColor, isValidEmoji } from "./avatarPresets";
+import { loadBonusXp } from "./loadAchievementProgress";
 import { EMPTY_MP_STATS, getMyMpStats } from "./mpStore";
+import { checkContent } from "@/safety/contentFilter";
+import { ContentRejectedError, contentRejectionFromServer } from "./safetyStore";
 
 interface PlayerStatsRow {
   games_played: number;
@@ -129,7 +132,7 @@ export async function syncLeaderboardStats(
    * time never changes); omit it and this column is left untouched. */
   joinedAt?: string
 ): Promise<void> {
-  const [statsRes, countersRes, mpStats] = await Promise.all([
+  const [statsRes, countersRes, mpStats, bonusXp] = await Promise.all([
     supabase
       .from("player_stats")
       .select("games_played, games_won, best_score, worst_score, average_score, wins_by_difficulty")
@@ -142,6 +145,7 @@ export async function syncLeaderboardStats(
       .maybeSingle<AchievementCountersRow>(),
     // Best-effort (migration 0011) — a missing RPC just leaves MP stats at 0.
     getMyMpStats(supabase).catch(() => ({ ...EMPTY_MP_STATS })),
+    loadBonusXp(supabase),
   ]);
   if (statsRes.error) throw statsRes.error;
   if (countersRes.error) throw countersRes.error;
@@ -156,6 +160,7 @@ export async function syncLeaderboardStats(
     mpGamesPlayed: mpStats.played,
     mpGamesWon: mpStats.won,
     mpBestWinStreak: mpStats.bestWinStreak,
+    bonusXp,
   };
   const level = levelProgress(progress);
   const achievementsUnlocked = allAchievements(progress).filter((a) => a.unlocked).length;
@@ -291,13 +296,22 @@ export async function updateLeaderboardDisplayName(
   userId: string,
   displayName: string | null
 ): Promise<void> {
+  const cleaned = sanitizeDisplayName(displayName);
+  // Friendly early rejection (profanity / staff impersonation / links); the
+  // database trigger from migration 0060 enforces the same rules.
+  if (cleaned) {
+    const check = checkContent(cleaned, "name");
+    if (!check.ok && check.issue) throw new ContentRejectedError(check.issue, "name");
+  }
   const { error } = await supabase.from("leaderboard_entries").upsert({
     user_id: userId,
-    display_name: sanitizeDisplayName(displayName),
+    display_name: cleaned,
     updated_at: new Date().toISOString(),
   });
   if (error) {
     if (error.code === "23505") throw new DisplayNameTakenError();
+    const rejected = contentRejectionFromServer(error.message, "name");
+    if (rejected) throw rejected;
     throw error;
   }
 }
@@ -332,12 +346,21 @@ export async function fetchOwnBio(supabase: SupabaseClient, userId: string): Pro
 /** Sets (or clears, with null) just the signed-in user's own bio — never
  * touches the stat columns, same as updateLeaderboardDisplayName above. */
 export async function updateLeaderboardBio(supabase: SupabaseClient, userId: string, bio: string | null): Promise<void> {
+  const cleaned = sanitizeBio(bio);
+  if (cleaned) {
+    const check = checkContent(cleaned, "bio");
+    if (!check.ok && check.issue) throw new ContentRejectedError(check.issue, "bio");
+  }
   const { error } = await supabase.from("leaderboard_entries").upsert({
     user_id: userId,
-    bio: sanitizeBio(bio),
+    bio: cleaned,
     updated_at: new Date().toISOString(),
   });
-  if (error) throw error;
+  if (error) {
+    const rejected = contentRejectionFromServer(error.message, "bio");
+    if (rejected) throw rejected;
+    throw error;
+  }
 }
 
 export interface AvatarInfo {
@@ -791,6 +814,9 @@ export async function pullWeeklyChallengeStreak(
 export const MAX_REPORT_REASON_LENGTH = 280;
 
 /**
+ * @deprecated Use safetyStore.reportUser (migration 0060) — this still works
+ * (the RPC now files into the same `user_reports` queue).
+ *
  * Flags `reportedUserId`'s current profile photo for manual review (see
  * migration 0025 — there's no in-app read path for these, only the
  * Supabase dashboard/service role). Goes through the `report_profile_photo`
@@ -811,4 +837,67 @@ export async function reportProfilePhoto(
     p_reason: cleanedReason || null,
   });
   if (error) throw error;
+}
+
+// ── server-side leaderboard paging (migration 0063) ──────────────────────
+
+export interface LeaderboardRow {
+  rank: number;
+  total: number;
+  entry: LeaderboardEntry;
+}
+
+export interface LeaderboardQuery {
+  sort: string;
+  season: boolean;
+  friendsOnly: boolean;
+  minGames: number;
+  mpMinGames: number;
+}
+
+interface RankedRow {
+  rank: number | string;
+  total: number | string;
+  entry: LeaderboardEntry;
+}
+
+const toRow = (r: RankedRow): LeaderboardRow => ({ rank: Number(r.rank), total: Number(r.total), entry: r.entry });
+
+/** One page of the ranking, ordered/filtered on the server (blocks, test
+ * accounts, friends scope and the season delta all applied there). */
+export async function fetchLeaderboardPage(
+  supabase: SupabaseClient,
+  q: LeaderboardQuery,
+  offset: number,
+  limit = 50
+): Promise<LeaderboardRow[]> {
+  const { data, error } = await supabase.rpc("leaderboard_page", {
+    p_sort: q.sort,
+    p_season: q.season,
+    p_friends_only: q.friendsOnly,
+    p_offset: offset,
+    p_limit: limit,
+    p_min_games: q.minGames,
+    p_mp_min_games: q.mpMinGames,
+  });
+  if (error) throw error;
+  return ((data as RankedRow[]) ?? []).map(toRow);
+}
+
+/** The signed-in account's own row + true rank under the same query (null if
+ * it isn't on that board) — powers the "You are #N of M" strip. */
+export async function fetchMyLeaderboardRow(
+  supabase: SupabaseClient,
+  q: LeaderboardQuery
+): Promise<LeaderboardRow | null> {
+  const { data, error } = await supabase.rpc("leaderboard_my_row", {
+    p_sort: q.sort,
+    p_season: q.season,
+    p_friends_only: q.friendsOnly,
+    p_min_games: q.minGames,
+    p_mp_min_games: q.mpMinGames,
+  });
+  if (error) throw error;
+  const row = ((data as RankedRow[]) ?? [])[0];
+  return row ? toRow(row) : null;
 }

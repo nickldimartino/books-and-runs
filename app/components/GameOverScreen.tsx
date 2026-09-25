@@ -68,8 +68,10 @@ import {
   buildSoloVerifyPayload,
   buildWeeklyChallengeVerifyPayload,
   SoloVerifyError,
+  SoloVerifyPayload,
   verifySoloGame,
 } from "../lib/verifySoloGame";
+import { questLabel } from "./home/QuestToast";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
 
@@ -82,6 +84,35 @@ interface XpLineItem {
 // visual label) — a plain "books-and-runs.vercel.app" isn't reliably
 // auto-linkified as tappable by every share target, "https://…" is.
 const SITE_URL = "https://books-and-runs.vercel.app";
+
+/** The "+25 XP" (and streak-bonus / level-up) lines on the Daily Deal and
+ * Weekly Challenge result cards. Renders nothing until the server reports a
+ * credit — a replay of an already-recorded day pays 0 and shows nothing. */
+function ChallengeRewardLines({
+  reward,
+  label,
+}: {
+  reward: { xp: number; streakBonuses: { days: number; xp: number }[]; leveledUpTo: number | null } | null;
+  label: string;
+}) {
+  const { t } = useT();
+  if (!reward) return null;
+  return (
+    <div className="mt-3 border-t border-[var(--border)] pt-3">
+      {reward.xp > 0 && <p className="text-sm font-semibold text-[var(--accent)]">{label}</p>}
+      {reward.streakBonuses.map((b) => (
+        <p key={b.days} className="mt-0.5 text-xs font-semibold text-[var(--accent)]">
+          {t("gameOver.streakBonus", { xp: b.xp, days: b.days })}
+        </p>
+      ))}
+      {reward.leveledUpTo !== null && (
+        <p className="level-up-pulse mt-1 text-sm font-bold text-[var(--accent)]">
+          {t("gameOver.levelUp", { level: reward.leveledUpTo })}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
@@ -225,8 +256,10 @@ export function GameOverScreen({ state }: { state: GameState }) {
       return;
     }
 
+    let claimedQuests: { id: string; xp: number }[] = [];
     try {
-      await verifySoloGame(supabase, payload);
+      const verified = await verifySoloGame(supabase, payload);
+      claimedQuests = verified.quests ?? [];
     } catch (err) {
       console.error("Failed to verify and save this game:", err);
       // A verification rejection (malformed payload, or a replay that
@@ -247,6 +280,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
     removePendingSave(gameId);
     setSaved("saved");
     clearSessionCounters();
+    // Quests this game just completed were credited server-side in the same
+    // request — list them with their XP so the total below is fully
+    // accounted for (otherwise it would read as unexplained "achievement" XP).
+    for (const q of claimedQuests) {
+      breakdown.push({ label: t("gameOver.xp.quest", { quest: questLabel(q.id, t) }), amount: q.xp });
+    }
     // Best-effort — the leaderboard just shows slightly stale numbers until
     // the next successful sync (a later game, or visiting the Leaderboard/
     // Account page, both of which sync again on their own) rather than
@@ -333,6 +372,69 @@ export function GameOverScreen({ state }: { state: GameState }) {
     attemptSave();
   }, [user, isTutorial, isDailyDeal, isWeeklyChallenge, trackStats, getSeed, attemptSave]);
 
+  // Daily Deal / Weekly Challenge completion: verified server-side (which
+  // also credits the fixed completion XP + any streak-milestone bonus, once
+  // per day/week — see supabase/functions/solo-verify and src/dailyRewards.ts),
+  // then the XP, any level-up and any newly unlocked achievements/cosmetics
+  // are shown on the streak card. A transient failure (offline, 5xx) queues
+  // the payload for PendingSaveSync to retry — the server side is idempotent,
+  // so a retry can never double-pay; a genuine rejection is not retried.
+  const [challengeReward, setChallengeReward] = useState<{
+    xp: number;
+    streakBonuses: { days: number; xp: number }[];
+    leveledUpTo: number | null;
+  } | null>(null);
+  const [challengeUnlocked, setChallengeUnlocked] = useState<AchievementUnlockItem[]>([]);
+  const recordChallenge = useCallback(
+    async (client: NonNullable<typeof supabase>, uid: string, payload: SoloVerifyPayload) => {
+      const beforeLevel = level?.level ?? 0;
+      let before: Awaited<ReturnType<typeof loadAchievementProgressState>> | null = null;
+      try {
+        before = await loadAchievementProgressState(client, uid);
+      } catch (err) {
+        console.error("Failed to snapshot pre-completion achievement progress:", err);
+      }
+      let result: Awaited<ReturnType<typeof verifySoloGame>>;
+      try {
+        result = await verifySoloGame(client, payload);
+      } catch (err) {
+        console.error("Failed to record a verified Daily Deal/Weekly Challenge completion:", err);
+        const status = err instanceof SoloVerifyError ? err.status : undefined;
+        if (!(typeof status === "number" && status >= 400 && status < 500)) {
+          upsertPendingSave({ id: gameId, userId: uid, payload });
+        }
+        return;
+      }
+      removePendingSave(gameId);
+      clearSessionCounters();
+      syncLeaderboardStats(client, uid).catch((err) => {
+        console.error("Failed to sync leaderboard entry:", err);
+      });
+      const after = await refreshLevel();
+      const xp = result.xp ?? 0;
+      const streakBonuses = result.streakBonuses ?? [];
+      const didLevelUp = !!after && after.level > beforeLevel;
+      if (xp > 0 || streakBonuses.length > 0) {
+        setChallengeReward({ xp, streakBonuses, leveledUpTo: didLevelUp ? after!.level : null });
+      }
+      if (before) {
+        try {
+          const afterProgress = await loadAchievementProgressState(client, uid);
+          const diff = diffAchievementProgress(before, afterProgress, after ? { before: beforeLevel, after: after.level } : undefined);
+          setChallengeUnlocked(diff.newlyUnlocked);
+          setNewlyUnlockedCosmetics(diff.newCosmetics);
+          if (didLevelUp) playLevelUp();
+          else if (diff.newlyUnlocked.length > 0 || xp > 0) playAchievementUnlock();
+        } catch (err) {
+          console.error("Failed to determine which achievements this completion unlocked:", err);
+        }
+      }
+    },
+    // `level` is only read for the before/after diff — must not retrigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gameId, clearSessionCounters, refreshLevel]
+  );
+
   // Deliberately separate from the Supabase save above — see
   // dailyDealStore.ts's own doc for why the streak computation itself needs
   // no sign-in and never touches real stats. recordDailyDealResult is
@@ -386,11 +488,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
         // and idempotent (a replay of an already-recorded day just no-ops
         // server-side) — never blocks the local streak shown above.
         const payload = buildDailyDealVerifyPayload(state, getSeed(), getMoveLog(), localDateKey());
-        if (payload) {
-          verifySoloGame(client, payload).catch((err) => {
-            console.error("Failed to record a verified Daily Deal completion:", err);
-          });
-        }
+        if (payload) void recordChallenge(client, uid, payload);
         // Record this account's score for today's deal, then pull the
         // friend leaderboard for it. Best-effort: a project without
         // migration 0018 just won't show the panel. `history[0]` is the
@@ -409,7 +507,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
         }
       }
     })();
-  }, [isDailyDeal, state, user, getSeed, getMoveLog]);
+  }, [isDailyDeal, state, user, getSeed, getMoveLog, recordChallenge]);
 
   // Same shape as the Daily Deal effect above, weeks in place of days — see
   // weeklyChallengeStore.ts's own doc. No per-challenge friend leaderboard
@@ -445,14 +543,10 @@ export function GameOverScreen({ state }: { state: GameState }) {
         // trigger silently overwrites them with whatever
         // weekly_challenge_completions actually has on file.
         const payload = buildWeeklyChallengeVerifyPayload(state, getSeed(), getMoveLog(), isoWeekKey());
-        if (payload) {
-          verifySoloGame(client, payload).catch((err) => {
-            console.error("Failed to record a verified Weekly Challenge completion:", err);
-          });
-        }
+        if (payload) void recordChallenge(client, uid, payload);
       }
     })();
-  }, [isWeeklyChallenge, state, user, getSeed, getMoveLog]);
+  }, [isWeeklyChallenge, state, user, getSeed, getMoveLog, recordChallenge]);
 
   // Without live multiplayer, a shared result is this game's only social
   // loop — the sole way one player's game becomes someone else's reason to
@@ -655,6 +749,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="mt-1 text-xs text-[var(--faint)]">
             {t("gameOver.bestStreakDaily", { best: dailyDealState.bestStreak })}
           </p>
+          <ChallengeRewardLines reward={challengeReward} label={t("gameOver.dailyXp", { xp: challengeReward?.xp ?? 0 })} />
         </div>
       )}
 
@@ -679,6 +774,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="mt-1 text-xs text-[var(--faint)]">
             {t("gameOver.bestStreakWeekly", { best: weeklyChallengeState.bestStreak })}
           </p>
+          <ChallengeRewardLines reward={challengeReward} label={t("gameOver.weeklyXp", { xp: challengeReward?.xp ?? 0 })} />
         </div>
       )}
 
@@ -782,6 +878,13 @@ export function GameOverScreen({ state }: { state: GameState }) {
             </div>
           )}
         </div>
+      )}
+
+      {(isDailyDeal || isWeeklyChallenge) && challengeUnlocked.length > 0 && (
+        <AchievementUnlockCard
+          items={challengeUnlocked}
+          heading={tPlural("multiplayer.achievementUnlocked", challengeUnlocked.length)}
+        />
       )}
 
       {saved === "saved" && (

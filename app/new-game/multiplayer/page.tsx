@@ -23,6 +23,7 @@ import { displayNameFor } from "../../lib/leaderboardStore";
 import { createMpGame, MpError, NewGameSeat } from "../../lib/mpStore";
 import { supabase } from "../../lib/supabaseClient";
 import { capitalize } from "../../lib/text";
+import { DEFAULT_TURN_LIMIT_HOURS, TURN_LIMIT_OPTIONS, TurnLimitHours } from "@/mp/turnTimer";
 import { CONTRACTS, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
 import { translateError } from "../../lib/i18n/serverErrors";
 
@@ -42,6 +43,7 @@ export default function NewMultiplayerGamePage() {
   const [ais, setAis] = useState<Difficulty[]>([]);
   const [roundMode, setRoundMode] = useState<RoundMode>("all");
   const [customRounds, setCustomRounds] = useState<Set<number>>(() => new Set(CONTRACTS.map((c) => c.round)));
+  const [turnLimit, setTurnLimit] = useState<TurnLimitHours>(DEFAULT_TURN_LIMIT_HOURS);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,12 +108,13 @@ export default function NewMultiplayerGamePage() {
           name: personas[i].displayName,
         })),
       ];
-      await createMpGame(supabase, { contractRounds: rounds, seats });
+      await createMpGame(supabase, { contractRounds: rounds, seats, turnLimitHours: turnLimit });
       track("mp_game_created", {
         players: 1 + picked.size + ais.length,
         humans: 1 + picked.size,
         ais: ais.length,
         rounds: rounds.length,
+        turn_limit_hours: turnLimit,
       });
       router.push("/");
     } catch (err) {
@@ -306,6 +309,35 @@ export default function NewMultiplayerGamePage() {
                 })}
               </div>
             )}
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+              {t("newGameMultiplayer.turnLimit.heading")}
+            </h2>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("newGameMultiplayer.turnLimit.heading")}>
+              {TURN_LIMIT_OPTIONS.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  role="radio"
+                  aria-checked={turnLimit === h}
+                  onClick={() => setTurnLimit(h)}
+                  className={`min-w-[4.5rem] flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+                    turnLimit === h
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {h === 0 ? t("newGameMultiplayer.turnLimit.off") : t("newGameMultiplayer.turnLimit.hours", { hours: h })}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--faint)]">
+              {turnLimit === 0
+                ? t("newGameMultiplayer.turnLimit.offNote")
+                : t("newGameMultiplayer.turnLimit.note", { hours: turnLimit })}
+            </p>
           </section>
 
           {error && <p className="text-sm text-[var(--danger)]">{error}</p>}

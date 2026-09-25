@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openHand, waitForMyTurn } from "./helpers/hand";
 
 // Deliberate failure-mode coverage — what the rest of this suite assumes
 // works (a live network) is exactly what's turned off or broken here.
@@ -46,15 +47,12 @@ test("a full solo turn works with every cross-origin request blocked", async ({ 
   await page.getByRole("textbox").first().fill("Tester");
   await page.getByRole("button", { name: /add ai/i }).click();
   await page.getByRole("button", { name: /start game/i }).click();
-  await page.getByRole("button", { name: /show my hand/i }).click();
-  await expect(page.getByText(/round 1 of 7/i)).toBeVisible();
+  await expect(page.getByText(/round 1 of \d+/i)).toBeVisible();
 
   await page.locator('[data-tutorial="draw-piles"] button').first().click();
   await expect(page.getByText(/draw a card/i)).toHaveCount(0); // prompt gone → drawn
 
-  await page.locator('[data-tutorial="hand-bar"]').click();
-  const dialog = page.getByRole("dialog", { name: /manage your hand/i });
-  await expect(dialog).toBeVisible();
+  const dialog = await openHand(page);
   await dialog.getByRole("button").filter({ has: page.locator("svg") }).first().click();
   await dialog.getByRole("button", { name: /discard selected card/i }).click();
   await page.getByRole("button", { name: /^confirm$/i }).click();
@@ -62,7 +60,7 @@ test("a full solo turn works with every cross-origin request blocked", async ({ 
   // The AI plays its turn and control comes back — same "not stuck" bar
   // the ordinary solo-game spec checks, just with the network truly gone
   // rather than merely unconfigured.
-  await expect(page.getByText(/pass the device to/i)).toBeVisible({ timeout: 10_000 });
+  await waitForMyTurn(page);
 });
 
 test("sign-in surfaces a clean error when the auth request is unreachable", async ({ page }) => {

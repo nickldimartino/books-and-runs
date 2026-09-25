@@ -5,6 +5,7 @@
 // DURATION_MS, then stops and clears. Respects `prefers-reduced-motion`.
 
 import { useEffect, useRef } from "react";
+import { prefersReducedMotion } from "../lib/motion";
 
 interface Particle {
   x: number;
@@ -51,7 +52,7 @@ export function Confetti() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion()) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

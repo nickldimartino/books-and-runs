@@ -100,8 +100,8 @@ test("create → add member → both see it → rename → leave → delete", as
   await pageA.goto(clubUrl);
   await expect(standingsRows).toHaveCount(1, { timeout: 15_000 });
 
-  pageA.once("dialog", (dialog) => dialog.accept());
   await pageA.getByRole("button", { name: /delete this club/i }).click();
+  await pageA.getByRole("alertdialog").getByRole("button", { name: /^delete club$/i }).click();
   await pageA.waitForURL("/clubs", { timeout: 15_000 });
   await expect(pageA.getByRole("link", { name: new RegExp(CLUB_RENAMED) })).not.toBeVisible();
 });

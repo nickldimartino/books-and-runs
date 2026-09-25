@@ -1,6 +1,6 @@
 import type { TranslationKey } from "../lib/i18n/keys";
 import type { CosmeticUnlockRule } from "../lib/cosmeticUnlocks";
-import { cardCosmeticRequirementLabel } from "../lib/cardCosmeticUnlocks";
+import { cosmeticRequirementText } from "../lib/cosmeticRequirementText";
 
 // Cosmetic *names* (theme/card back/card face) stay English everywhere, but
 // their one-line descriptions (tooltips) are real sentences, so each is a
@@ -13,10 +13,7 @@ export const cardFaceDescKey = (id: string) => `settingsCardFace.desc.${id}` as 
 
 type T = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-/** Localized "how to unlock" tooltip for the two rule kinds card faces/backs
- * actually use; anything else falls back to the shared English label. */
-export function cardUnlockText(t: T, rule: CosmeticUnlockRule): string {
-  if (rule.kind === "level") return t("settingsPicker.unlocksAtLevel", { level: rule.level });
-  if (rule.kind === "boutique") return t("settingsPicker.boutiqueLocked");
-  return cardCosmeticRequirementLabel(rule);
+/** Localized "how to unlock" tooltip for a locked card face/back. */
+export function cardUnlockText(t: T, tPlural: (key: string, count: number, vars?: Record<string, string | number>) => string, rule: CosmeticUnlockRule): string {
+  return cosmeticRequirementText(t, tPlural, rule);
 }

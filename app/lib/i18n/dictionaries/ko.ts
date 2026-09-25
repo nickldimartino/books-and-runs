@@ -34,6 +34,31 @@ const ko = {
   "settingsPicker.signature": "시그니처",
   "settingsPicker.unlocksAtLevel": "레벨 {level}에 해금",
   "settingsPicker.boutiqueLocked": "부티크 — 아직 구매할 수 없어요",
+  "player.badge.free": "무료",
+  "cosmeticReq.categoryMastered": "'{category}' 카테고리의 모든 업적 마스터하기",
+  "cosmeticReq.categoriesMasteredCount": "업적 카테고리 {total}개 중 {count}개 마스터하기",
+  "cosmeticReq.allCategoriesMastered": "모든 업적 카테고리 마스터하기",
+  "cosmeticReq.gamesPlayed": "솔로/패스 앤 플레이 게임 {count}판 플레이하기",
+  "cosmeticReq.dailyDealStreak": "데일리 딜 {days}일 연속 달성하기",
+  "cosmeticReq.weeklyChallengeStreak": "위클리 챌린지 {weeks}주 연속 달성하기",
+  "cosmeticReq.complete": "모든 카테고리 마스터, 250레벨 달성, 데일리 딜 30일 연속 달성하기",
+  "cosmeticReq.creatorOnly": "Books & Runs 제작자 전용",
+  "cosmeticReq.supporterOnly": "후원하면 잠금 해제돼요 — 설정 → 도움말 → 개발자 후원하기 참고",
+  "cosmeticReq.worstScoreUnder": "{score}점을 넘겨서 게임을 끝낸 적이 없어야 해요",
+  "cosmeticReq.averageScoreUnder": "{games}판 이상에서 평균 {score}점 미만",
+  "cosmeticReq.gamesTied.one": "{count}판 무승부 만들기",
+  "cosmeticReq.gamesTied.other": "{count}판 무승부 만들기",
+  "cosmeticReq.mpWinStreak": "멀티플레이 {streak}연승 달성하기",
+  "cosmeticReq.cat.accountStats": "계정 통계",
+  "cosmeticReq.cat.aiRivals": "AI 라이벌",
+  "cosmeticReq.cat.melding": "멜드",
+  "cosmeticReq.cat.layingOff": "붙이기",
+  "cosmeticReq.cat.drawDiscard": "뽑기와 버리기",
+  "cosmeticReq.cat.goingOut": "나가기",
+  "cosmeticReq.cat.contracts": "계약",
+  "cosmeticReq.cat.tableComposition": "테이블 구성",
+  "cosmeticReq.cat.multiplayer": "멀티플레이어",
+  "cosmeticReq.cat.challenges": "챌린지",
   "settingsTheme.signInPrompt": "테마를 고르려면 로그인하세요. 로그아웃 상태에서는 항상 기본 테이블로 플레이하니, 기기 간에 헷갈릴 일이 없어요.",
   "settingsCardBack.description": "카드 뒷면의 무늬와 색이에요 — 뽑는 더미와, 다른 플레이어가 뒤집어 든 패에 쓰여요. 테마와는 별개라서 어떤 테이블 룩에도 원하는 카드 뒷면을 조합할 수 있어요.",
   "settingsCardFace.description": "카드의 숫자와 무늬를 그리는 방식이에요. 테마, 카드 뒷면과는 별개라서 어떤 테이블 룩에도 원하는 카드 앞면을 조합할 수 있어요.",
@@ -176,6 +201,24 @@ const ko = {
   "settings.showMeldHint": "“힌트: 자동 멜드” 버튼",
   "settings.showMeldHintDescription":
     "손패로 계약을 완성할 수 있을 때 한 번의 탭으로 대신 멜드해 주는 버튼을 표시해요. 위의 다른 도우미와 달리 턴의 일부를 대신 진행하기 때문에 기본값은 꺼짐이에요.",
+  "settings.showLegalMoves": "가능한 동작 표시",
+  "settings.showLegalMovesDescription":
+    "할 수 있는 동작을 강조해요. 어느 더미에서 뽑을 수 있는지, 선택한 카드를 어디에 레이오프할 수 있는지, 손패가 이번 라운드 계약에 얼마나 가까운지 알려줘요. 버튼이 회색인 이유도 글로 보여줘요.",
+  "settings.confirmDiscard": "버리기 전에 확인",
+  "settings.confirmDiscardDescription":
+    "버릴 때마다 “…을(를) 버리고 차례를 마칠까요?”라고 물어봐요. 끄면 한 번 탭으로 버려요. 다만 버리기는 차례를 끝내며 되돌릴 수 없어요.",
+  "settings.gameSpeed": "게임 속도",
+  "settings.gameSpeedDescription":
+    "상대의 진행과 카드가 움직이는 속도예요. 여유롭게는 모두 느리게, 빠르게는 대기를 줄이고, 즉시는 대기와 카드 애니메이션을 건너뛰어요. 상대 차례에 탭해서 대기를 건너뛸 수도 있어요.",
+  "settings.gameSpeed.relaxed": "여유롭게",
+  "settings.gameSpeed.normal": "보통",
+  "settings.gameSpeed.fast": "빠르게",
+  "settings.gameSpeed.instant": "즉시",
+  "settings.reduceMotion": "동작 줄이기",
+  "settings.reduceMotionDescription":
+    "앱 전체에서 카드 이동, 색종이, 깜빡이는 강조, 대부분의 전환 효과를 꺼요. “기기 설정 따르기”는 시스템의 동작 줄이기 설정을 따르고, “항상 줄이기”는 기기 설정과 상관없이 적용돼요.",
+  "settings.reduceMotion.system": "기기 설정 따르기",
+  "settings.reduceMotion.on": "항상 줄이기",
 
   "settings.turnNotifications": "차례 알림",
   "settings.turnNotificationsDescription":
@@ -301,6 +344,26 @@ const ko = {
   "game.layOff.errorMultiple":
     "이 카드들은 한꺼번에 그곳에 레이오프할 수 없어요 — 다시 선택하거나 한 장씩 레이오프해 보세요.",
   "game.layOff.errorSingle": "그 카드는 더 이상 그곳에 레이오프할 수 없어요 — 다시 선택해 보세요.",
+  "game.skipWait": "대기 건너뛰기",
+  "game.discardToPile": "선택한 카드를 버리기 더미에 버리기",
+  "game.turnHint.drawn": "멜드를 만들거나, 카드를 골라 버리고 차례를 마치세요.",
+  "game.turnHint.melded": "멜드에 카드를 레이오프한 뒤, 버려서 차례를 마치세요.",
+  "game.progress.books": "세트 {ready}/{need} 준비됨",
+  "game.progress.runs": "런 {ready}/{need} 준비됨",
+  "game.progress.closestBook": "가장 근접: {rank} ({have}/{need})",
+  "game.progress.closestRun": "가장 근접: {suit} ({have}/{need})",
+  "game.progress.ready": "지금 손패로 이번 라운드 계약을 멜드할 수 있어요.",
+  "game.why.drawFirst": "먼저 카드를 뽑으세요.",
+  "game.why.finishWildChoice": "먼저 와일드 카드가 대신할 카드를 고르세요.",
+  "game.why.tooManyGroups": "이번 라운드에 필요한 것보다 많이 묶었어요. 하나를 빼세요.",
+  "game.why.groupMore": "멜드를 확정하려면 {need}을(를) 묶어야 해요.",
+  "game.why.groupAll": "이번 라운드는 모든 카드를 멜드해야 해요. 아직 {count}장이 묶이지 않았어요.",
+  "game.why.selectToDiscard": "버릴 카드를 고르세요.",
+  "game.why.selectOneToDiscard": "버릴 카드는 한 장만 고르세요.",
+  "game.why.selectToLayOff": "레이오프할 카드를 고르세요.",
+  "game.why.noLayOffTarget": "테이블에 그 카드를 붙일 수 있는 멜드가 없어요.",
+  "game.why.pickMeld": "여러 멜드에 붙일 수 있어요. 테이블에서 하나를 고르세요.",
+  "game.hand.ptsExplain": "지금 다른 사람이 나가면 받게 될 벌점이에요. 낮을수록 좋아요.",
 
   "signIn.title": "로그인",
   "signIn.notSetUp.title": "로그인이 아직 설정되지 않았어요",
@@ -311,6 +374,14 @@ const ko = {
   "signIn.mfaPrompt": "인증 앱에 표시된 6자리 코드를 입력하세요.",
   "signIn.verifying": "확인하는 중…",
   "signIn.verify": "확인",
+  "signIn.or": "또는",
+  "signIn.magic.button": "로그인 링크를 이메일로 받기",
+  "signIn.magic.sent":
+    "{email}(으)로 로그인 링크를 보냈어요. 이 기기에서 링크를 열면 로그인이 완료돼요. 이메일에 6자리 코드가 있다면 아래에 대신 입력해도 돼요.",
+  "signIn.magic.codeLabel": "이메일의 6자리 코드",
+  "signIn.magic.codePlaceholder": "123456",
+  "signIn.magic.needEmail": "먼저 이메일 주소를 입력해 주세요.",
+  "signIn.oauth.continueWith": "{provider}(으)로 계속하기",
   "signIn.checkEmail": "계정을 확인하려면 이메일(스팸함 포함)을 확인한 다음 돌아와서 로그인하세요.",
   "signIn.backToSignIn": "로그인으로 돌아가기",
   "signIn.resetEmailSent": "{email} 계정이 존재한다면, 비밀번호 재설정 링크를 보냈어요.",
@@ -356,6 +427,9 @@ const ko = {
   "multiplayer.rematch": "리매치 — 같은 플레이어",
   "multiplayer.leaveConfirm": "이 게임을 나갈까요? 기권 처리돼요.",
   "multiplayer.leave": "나가기",
+  "multiplayer.resignTitle": "이 게임을 나갈까요?",
+  "multiplayer.resignBody": "기권 처리돼요. 손패가 사라지고, 고정 벌점을 받아 꼴찌가 되며, 게임은 당신 없이 계속돼요. 되돌릴 수 없어요.",
+  "multiplayer.resignConfirm": "나가고 기권하기",
   "multiplayer.playingAsync": "비동기로 플레이 중",
   "multiplayer.playingAsyncBody":
     "동시에 접속해 있을 필요는 없어요. 차례를 마치면 다음 플레이어 차례가 돼요 — 홈에서 확인하거나, 설정에서 알림을 켜면 내 차례가 됐을 때 알 수 있어요.",
@@ -379,6 +453,36 @@ const ko = {
   "multiplayer.handEmpty": "손패가 비었어요 — 차례를 마치면 아웃돼요.",
 
   "common.close": "닫기",
+  "shortcuts.title": "키보드 및 게임패드 단축키",
+  "shortcuts.openHelp": "키보드 단축키",
+  "shortcuts.keyboardHeading": "키보드",
+  "shortcuts.moveFocus": "카드와 버튼 사이 이동",
+  "shortcuts.selectCard": "선택한 카드 선택/해제",
+  "shortcuts.draw": "더미에서 뽑기",
+  "shortcuts.drawDiscard": "버리기 더미 맨 위 카드 가져오기",
+  "shortcuts.focusHand": "내 손패로 이동",
+  "shortcuts.group": "선택 묶기 / 멜드 확정 / 레이오프",
+  "shortcuts.discard": "선택한 카드 버리기",
+  "shortcuts.sortRank": "손패를 숫자순 정렬",
+  "shortcuts.sortSuit": "손패를 무늬순 정렬",
+  "shortcuts.undo": "마지막 멜드/레이오프 취소",
+  "shortcuts.help": "이 도움말 보기",
+  "shortcuts.close": "대화상자와 메뉴 닫기",
+  "shortcuts.typingNote": "입력란에 글을 쓰는 동안에는 단축키가 멈춰요.",
+  "shortcuts.gamepadHeading": "게임패드",
+  "shortcuts.gamepad.move": "방향 패드 / 왼쪽 스틱 — 포커스 이동",
+  "shortcuts.gamepad.select": "A — 선택 / 확인",
+  "shortcuts.gamepad.back": "B — 뒤로 / 취소",
+  "shortcuts.gamepad.draw": "X — 더미에서 뽑기",
+  "shortcuts.gamepad.sort": "Y — 손패 정렬",
+  "shortcuts.gamepad.zones": "LB / RB — 손패·더미·테이블 사이 이동, LT 묶기/멜드, RT 버리기",
+  "shortcuts.gamepad.help": "시작 — 이 도움말",
+  "gamepad.select": "선택",
+  "gamepad.back": "뒤로",
+  "gamepad.draw": "뽑기",
+  "gamepad.sort": "정렬",
+  "gamepad.zones": "영역",
+  "gamepad.help": "도움말",
 
   "opponentStrip.thinking": "{name}님이 생각 중…",
   "opponentStrip.cardsInHand.one": "{count}장",
@@ -397,6 +501,7 @@ const ko = {
   "roundSummary.achievementsUnlocked.other": "이번 라운드에 업적 달성",
   "roundSummary.player": "플레이어",
   "roundSummary.thisRound": "이번 라운드",
+  "roundSummary.penaltyNote": "“이번 라운드”는 각자 손에 남은 카드의 벌점이에요. 합계가 가장 낮은 사람이 이겨요.",
   "roundSummary.total": "합계",
   "roundSummary.leading": "선두",
   "roundSummary.startNextRound": "다음 라운드 시작",
@@ -450,6 +555,11 @@ const ko = {
   "gameOver.saved": "통계에 저장했어요.",
   "gameOver.saveError": "통계에 저장하지 못했어요 — 연결 상태를 확인해 주세요.",
   "gameOver.xpLine": "+{amount} XP — {label}",
+  "gameOver.dailyXp": "오늘의 딜 +{xp} XP",
+  "gameOver.weeklyXp": "이번 주 챌린지 +{xp} XP",
+  "gameOver.streakBonus": "{days}일 연속 보너스 +{xp} XP",
+  "gameOver.levelUp": "레벨 업! 이제 레벨 {level}",
+  "gameOver.xp.quest": "퀘스트: {quest}",
   "gameOver.playRealGame": "실제 게임 플레이하기",
   "gameOver.playAgain": "다시 플레이",
 
@@ -557,6 +667,41 @@ const ko = {
   "home.progressTile.friends": "친구",
 
   "home.closestAchievement": "가장 가까운 업적",
+  "home.reward.badge": "{name} 배지",
+  "home.reward.avatar_frame": "{name} 프레임",
+  "home.reward.title": "“{name}” 칭호",
+  "home.reward.banner": "{name} 배너",
+  "home.nextReward": "레벨 {level} 다음 보상: {reward}",
+  "home.nextRewardMore": "레벨 {level} 다음 보상: {reward} 외 {count}개",
+  "quests.title": "퀘스트",
+  "quests.daily": "오늘",
+  "quests.weekly": "이번 주",
+  "quests.resets": "{time} 후 새 퀘스트",
+  "quests.time.dh": "{d}일 {h}시간",
+  "quests.time.hm": "{h}시간 {m}분",
+  "quests.time.m": "{m}분",
+  "quests.progress": "{progress} / {target}",
+  "quests.xp": "+{xp} XP",
+  "quests.signInHint": "로그인하면 퀘스트로 XP를 얻을 수 있어요.",
+  "quests.toast.title": "퀘스트 완료!",
+  "quests.toast.line": "{quest} · +{xp} XP",
+  "quests.metric.gamesPlayed": "게임 끝까지 플레이",
+  "quests.metric.gamesWon": "게임 승리",
+  "quests.metric.booksMelded": "세트 멜드하기",
+  "quests.metric.runsMelded": "런 멜드하기",
+  "quests.metric.cardsLaidOff": "카드 레이오프하기",
+  "quests.metric.roundsWon": "나가서 라운드 승리",
+  "quests.metric.roundsWonNoDiscard": "버리지 않고 나가기",
+  "quests.metric.meldsWithZeroWilds": "와일드 없이 멜드하기",
+  "quests.metric.cardsDrawnFromDiscard": "버리기 더미에서 가져오기",
+  "quests.metric.oversizedRunsMelded": "필요보다 긴 런 멜드하기",
+  "quests.metric.wildsUsedInMelds": "멜드에 와일드 사용하기",
+  "welcomeBack.title": "다시 오신 걸 환영해요!",
+  "welcomeBack.gamesWaiting.one": "{count}개의 게임이 내 차례를 기다리고 있어요",
+  "welcomeBack.gamesWaiting.other": "{count}개의 게임이 내 차례를 기다리고 있어요",
+  "welcomeBack.streak": "데일리 딜 {count}일 연속 기록이 이어지고 있어요. 오늘의 딜이 준비되어 있어요.",
+  "welcomeBack.dailyReady": "오늘의 데일리 딜은 언제든 플레이할 수 있어요.",
+  "welcomeBack.quests": "새 퀘스트가 준비되어 있어요.",
 
   "home.more": "더보기",
   "home.playWithFriends": "친구와 플레이",
@@ -578,6 +723,8 @@ const ko = {
   "home.multiplayerGame": "멀티플레이어 게임",
   "home.noMovesInDays": "{days}일간 움직임 없음",
   "home.daysAbbr": "{days}일",
+  "home.turnEndsIn": "{time} 남음",
+  "home.turnOverdue": "시간 초과",
 
   "home.yourGames": "내 게임",
   "home.respondError": "응답하지 못했어요 — 연결 상태를 확인해 주세요.",
@@ -790,6 +937,9 @@ const ko = {
   "howToPlay.organizing.body1": "손패 순서는 순전히 편의를 위한 것이라 게임에는 아무 영향이 없어요. ",
   "howToPlay.organizing.body2":
     "을 사용해 카드를 자동으로 묶거나, 카드를 누른 채로 원하는 위치로 드래그해 손패를 원하는 대로 정리하세요.",
+  "howToPlay.shortcuts.title": "키보드 및 게임패드",
+  "howToPlay.shortcuts.body":
+    "화면을 만지지 않고도 플레이할 수 있어요. D는 뽑기, 방향키는 카드 사이 이동, Enter는 선택, Delete는 버리기, ?는 모든 단축키 목록이에요. 게임패드도 돼요. 방향 패드로 이동, A로 선택, B로 뒤로 가요.",
 
   "howToPlay.settings.body1":
     "설정에서는 앱과 테이블의 색상 테마를 고르고, 테마와 별개로 카드 뒷면을 고르고, 새 게임 화면에서 추가하는 AI 상대의 기본 난이도를 정하고, 효과음을 켜거나 끄고, 레이오프 가능 배지를 켜거나 끄고, “지금 누구 차례?” 버튼을 켜거나 끄고, 색약 친화적 카드 색상을 켤 수 있어요. 이 중 어떤 것도 위의 규칙을 바꾸지 않아요 — 모두 겉모습과 선택적인 도움 기능일 뿐이에요.",
@@ -966,7 +1116,9 @@ const ko = {
   "clubs.removeMemberError": "내보내지 못했어요 — 다시 시도해 주세요.",
   "clubs.renameError": "이름을 바꾸지 못했어요 — 다시 시도해 주세요.",
   "clubs.deleteError": "삭제하지 못했어요 — 다시 시도해 주세요.",
-  "clubs.confirmDelete": "\"{name}\" 클럽을 삭제할까요? 모든 사람에게서 삭제돼요.",
+  "clubs.confirmDelete.title": "\"{name}\" 클럽을 삭제할까요?",
+  "clubs.confirmDelete.body": "클럽과 순위, 멤버 목록이 모든 사람에게서 삭제돼요. 되돌릴 수 없어요.",
+  "clubs.confirmDelete.confirm": "클럽 삭제",
   "clubs.rename": "이름 변경",
   "clubs.startTournament": "이 클럽으로 토너먼트 시작",
   "clubs.standingsHeading": "순위 — 멀티플레이어 기록",
@@ -1019,9 +1171,201 @@ const ko = {
   "account.data.preparing": "다운로드를 준비하는 중…",
   "account.data.downloadButton": "내 데이터 다운로드",
   "account.data.exportError": "다운로드를 준비하지 못했어요 — 다시 시도해 주세요.",
+  "safety.menu.aria":
+    "{name}님 관련 더보기",
+  "safety.menu.title":
+    "신고 또는 차단",
+  "safety.menu.report":
+    "신고",
+  "safety.menu.block":
+    "차단",
+  "safety.block.confirmTitle":
+    "{name}님을 차단할까요?",
+  "safety.block.confirmBody":
+    "친구 관계가 해제되고 서로에게 보이지 않게 돼요. 친구 요청, 게임 초대, 반응, 순위표 표시가 양쪽 모두 막혀요. 상대에게는 알림이 가지 않아요. 계정 페이지에서 언제든 차단을 해제할 수 있어요.",
+  "safety.block.error":
+    "차단하지 못했어요. 다시 시도해 주세요.",
+  "safety.block.done":
+    "{name}님을 차단했어요.",
+  "safety.report.title":
+    "{name}님 신고",
+  "safety.report.intro":
+    "신고는 개발자가 검토해요. 누가 신고했는지는 상대에게 알려지지 않아요.",
+  "safety.report.reasonLabel":
+    "사유",
+  "safety.report.noteLabel":
+    "덧붙일 내용이 있나요? (선택)",
+  "safety.report.submit":
+    "신고 보내기",
+  "safety.report.sending":
+    "보내는 중…",
+  "safety.report.error":
+    "신고를 보내지 못했어요. 다시 시도해 주세요.",
+  "safety.report.sentTitle":
+    "신고해 주셔서 고마워요",
+  "safety.report.sentBody":
+    "확인해 볼게요. {name}님을 더 이상 보고 싶지 않다면 차단할 수도 있어요.",
+  "safety.report.alsoBlock":
+    "{name}님도 차단",
+  "safety.reason.offensive":
+    "불쾌한 이름, 소개 또는 사진",
+  "safety.reason.harassment":
+    "괴롭힘 또는 욕설",
+  "safety.reason.impersonation":
+    "다른 사람 사칭",
+  "safety.reason.cheating":
+    "부정행위",
+  "safety.reason.spam":
+    "스팸 또는 광고",
+  "safety.reason.inappropriate_photo":
+    "부적절한 프로필 사진",
+  "safety.reason.other":
+    "기타",
+  "safety.content.name":
+    "이 이름은 사용할 수 없어요. 다른 이름을 골라 주세요.",
+  "safety.content.bio":
+    "소개에 사용할 수 없는 단어가 있어요. 다시 써 주세요.",
+  "safety.content.link":
+    "링크와 이메일 주소는 사용할 수 없어요.",
+  "safety.content.reserved":
+    "예약된 이름이에요. 다른 이름을 골라 주세요.",
+  "safety.content.empty":
+    "이름을 입력해 주세요.",
+  "safety.blocked.heading":
+    "차단한 플레이어",
+  "safety.blocked.empty":
+    "차단한 플레이어가 없어요.",
+  "safety.blocked.description":
+    "차단한 플레이어는 친구 요청이나 게임 초대를 보낼 수 없고, 서로의 순위표에도 나타나지 않아요.",
+  "safety.blocked.unblock":
+    "차단 해제",
+  "safety.players.heading":
+    "플레이어 — 신고 또는 차단",
+  "safety.err.connect":
+    "이 플레이어와는 연결할 수 없어요.",
+  "safety.err.tooMany":
+    "시도가 너무 많아요. 잠시 후 다시 시도해 주세요.",
+  "err.mp.alreadyNudged":
+    "최근에 이미 콕 찔렀어요.",
+  "err.mp.nothingToNudge":
+    "지금은 콕 찌를 상대가 없어요.",
+  "account.delete.description":
+    "계정과 연결된 모든 데이터를 영구적으로 삭제해요.",
+  "account.delete.item.data":
+    "프로필, 사진, 통계, 기록, 업적, 설정, 친구, 순위표 항목이 삭제돼요.",
+  "account.delete.item.games":
+    "진행 중인 게임은 기권 처리돼요. 끝난 게임은 다른 플레이어를 위해 남고, 내 이름은 '삭제된 플레이어'로 바뀌어요.",
+  "account.delete.item.clubs":
+    "내가 만든 클럽과 토너먼트도 삭제돼요.",
+  "account.delete.item.irreversible":
+    "되돌릴 수 없어요.",
+  "account.delete.button":
+    "내 계정 삭제…",
+  "account.delete.typePrompt":
+    "확인하려면 {word}을(를) 입력하세요",
+  "account.delete.confirmWord":
+    "삭제",
+  "account.delete.continue":
+    "계속",
+  "account.delete.fallbackPrefix":
+    "로그인할 수 없거나 문의하고 싶다면",
+  "account.delete.fallbackLink":
+    "문의하기",
+  "account.delete.confirmTitle":
+    "계정을 삭제할까요?",
+  "account.delete.confirmBody":
+    "이 계정과 연결된 모든 것이 영구적으로 삭제돼요. 되돌릴 수 없어요.",
+  "account.delete.confirmButton":
+    "영구 삭제",
+  "account.delete.done":
+    "계정이 삭제됐어요.",
+  "account.delete.error":
+    "계정을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  "account.delete.errLeave":
+    "게임에서 나가지 못했어요. 잠시 후 다시 시도해 주세요.",
+  "support.privacyRequest":
+    "개인정보 또는 계정 요청",
+  "support.subjectPlaceholderPrivacy":
+    "예: 계정을 삭제해 주세요",
+  "support.descriptionPlaceholderPrivacy":
+    "필요한 내용을 알려 주세요. 아래 이메일로 답변드리며, 본인 확인을 요청할 수 있어요.",
+  "newGameMultiplayer.turnLimit.heading":
+    "턴 제한 시간",
+  "newGameMultiplayer.turnLimit.off":
+    "제한 없음",
+  "newGameMultiplayer.turnLimit.hours":
+    "{hours}시간",
+  "newGameMultiplayer.turnLimit.note":
+    "한 턴당 {hours}시간이에요. 시간이 지나면 안전한 수가 대신 진행되고, 연속으로 두 번 놓치면 기권 처리돼요.",
+  "newGameMultiplayer.turnLimit.offNote":
+    "시계 없음: 게임이 얼마든 기다려요. 멈춘 게임은 '나가기'로 끝낼 수 있어요.",
+  "turnTimer.expired":
+    "시간 초과",
+  "turnTimer.yourEnds":
+    "내 턴이 {time} 후 끝나요",
+  "turnTimer.theirEnds":
+    "상대의 턴이 {time} 후 끝나요",
+  "turnTimer.lastChance":
+    "지난 턴을 놓쳤어요. 이번에도 놓치면 기권 처리돼요.",
+  "turnTimer.unit.minutes":
+    "{n}분",
+  "turnTimer.unit.hours":
+    "{n}시간",
+  "turnTimer.unit.days":
+    "{n}일",
+  "emotes.heading":
+    "빠른 반응",
+  "emotes.error":
+    "보내지 못했어요. 잠시 후 다시 시도해 주세요.",
+  "emotes.bubble":
+    "{name}: {emoji} {text}",
+  "emote.hello":
+    "안녕하세요!",
+  "emote.nice_meld":
+    "멋진 멜드!",
+  "emote.your_turn":
+    "네 차례야!",
+  "emote.oops":
+    "앗!",
+  "emote.thanks":
+    "고마워요!",
+  "emote.wow":
+    "와!",
+  "emote.lucky":
+    "운이 좋네요!",
+  "emote.good_game":
+    "좋은 게임이었어요",
+  "settings.notify.heading":
+    "알림 종류",
+  "settings.notify.turns":
+    "내 차례",
+  "settings.notify.turnsHint":
+    "내 차례이거나 시간이 얼마 남지 않았을 때.",
+  "settings.notify.invites":
+    "초대와 친구 요청",
+  "settings.notify.invitesHint":
+    "게임 초대와 새 친구 요청.",
+  "settings.notify.nudges":
+    "콕 찌르기와 반응",
+  "settings.notify.nudgesHint":
+    "누군가 콕 찌르거나 게임에서 반응을 보낼 때.",
+  "settings.notify.streaks":
+    "연속 기록 알림",
+  "settings.notify.streaksHint":
+    "데일리/위클리 연속 기록이 끊길 것 같을 때.",
+  "settings.notify.quietHours":
+    "방해 금지 시간",
+  "settings.notify.quietHoursHint":
+    "이 시간대(현지 시간)에는 푸시 알림을 보내지 않아요. 알림함은 계속 갱신돼요.",
+  "settings.notify.from":
+    "시작",
+  "settings.notify.to":
+    "~",
+  "leaderboard.loadMore":
+    "더 보기",
+  "leaderboard.yourRank":
+    "{total}명 중 {rank}위",
   "account.delete.heading": "계정 삭제",
-  "account.delete.bodyPrefix": "아직 직접 삭제하는 기능은 없어요. 계정과 연결된 모든 것(통계, 게임 기록, 업적, 표시 이름, 친구, 멀티플레이어 게임)을 삭제하려면 다음 주소로 이메일을 보내 주세요:",
-  "account.delete.bodySuffix": "이때 계정에 등록된 주소를 사용해 주세요.",
   "account.error.notConfigured": "설정되지 않았어요.",
   "account.error.wrongPassword": "현재 비밀번호가 올바르지 않아요.",
   "account.error.needsFreshSignIn": "인증 앱 코드로 다시 로그인해야 해요 — 로그아웃했다가 다시 로그인한 뒤 시도해 주세요.",
@@ -1045,7 +1389,8 @@ const ko = {
   "terms.service.title": "앱의 변경",
   "terms.service.body": "이 앱은 개인 개발자가 운영하는 취미 프로젝트입니다. 우리는 언제든지 기능을 추가, 변경 또는 삭제하거나, 통계와 리더보드를 초기화하거나 재조정하거나, 앱 또는 앱의 일부(온라인 기능 포함) 제공을 중단할 수 있습니다. 중요한 변경에 대해서는 가능한 경우 합리적인 사전 안내를 하도록 노력하겠지만, 온라인 기능을 항상 이용할 수 있다고 약속할 수는 없습니다.",
   "terms.termination.title": "이용 종료",
-  "terms.termination.body": "언제든 앱 사용을 중단하거나 계정을 삭제할 수 있습니다(방법은 개인정보 처리방침을 참고하십시오). 개발자는 계정이 이 약관을 위반하는 경우(예: 부정행위, 괴롭힘, 부적절한 이름이나 사진, 서비스를 공격하거나 과부하를 일으키려는 시도) 해당 계정을 정지, 제한 또는 삭제하거나 콘텐츠를 삭제할 수 있으며, 서비스나 다른 플레이어를 보호하기 위해 필요한 경우에는 사전 통지 없이 그렇게 할 수 있습니다. 실수라고 생각하시면 저희에게 문의해 주십시오.",
+  "terms.termination.body":
+    "앱 사용은 언제든 중단할 수 있고, 계정 페이지에서 계정을 삭제할 수도 있어요(자세한 내용은 개인정보 처리방침 참고). 부정행위, 괴롭힘, 불쾌한 이름이나 사진, 서비스 공격 또는 과부하 시도 등 이 약관을 위반하면 개발자가 계정을 정지·제한·삭제하거나 콘텐츠를 제거할 수 있으며, 서비스나 다른 플레이어를 보호하기 위해 필요하면 사전 고지 없이 할 수 있어요. 플레이어는 서로 신고하고 차단할 수 있고, 신고는 개발자가 검토해요. 결정이 잘못됐다고 생각하면 연락해 주세요.",
   "terms.law.title": "준거법",
   "terms.law.body": "이 약관의 어떤 내용도 거주 국가의 법률에 따라 본인에게 인정되는 강행적 법적 권리를 박탈하지 않으며, 해당 규정은 계속 본인에게 적용됩니다.",
   "terms.changes.title": "약관 변경",
@@ -1059,6 +1404,8 @@ const ko = {
   "privacy.localPlay.title": "로컬 플레이에는 계정이 필요 없습니다",
   "privacy.localPlay.body": "로그인하지 않으면 게임과 설정은 본인 곁에만 남습니다. 진행 중인 게임, 하우스 룰 설정, 환경설정은 브라우저나 기기의 로컬 저장소에만 저장되고, 어디로도 전송되지 않으며, 우리가 볼 수도 없습니다.",
   "privacy.localPlay.diagnostics": "계정이 없어도 문제를 찾아 고칠 수 있도록 두 가지 작은 정보는 전송됩니다. 하나는 충돌 및 오류 보고서(오류 메시지, 보고 당시 보고 있던 페이지, 브라우저와 기기 유형, 앱 버전)이고, 다른 하나는 “게임이 시작됨”과 같은 익명 사용 횟수와 게임 모드, 난이도 같은 대략적인 세부 정보입니다. 사용 횟수에는 계정, 이름, 기기 식별자가 포함되지 않습니다. 어떤 요청이든 보내면 IP 주소는 불가피하게 호스팅 제공업체에 보이지만, 우리는 이 기록에 IP 주소를 저장하지 않습니다. 지원 페이지를 이용하는 경우, 메시지와 함께 포함하기로 한 파일이나 연락 주소가 개발자에게 이메일로 전달됩니다.",
+  "privacy.localPlay.speed":
+    "앱을 빠르게 유지하기 위해 일부 방문에서는 페이지 속도 측정값도 함께 전송돼요. 페이지를 불러오고 반응하는 데 걸린 시간(반올림한 값)과 페이지 이름, 연결 유형(예: “4g”)만 포함되며, 사용 횟수와 마찬가지로 계정, 이름, 기기 식별자는 담기지 않아요.",
   "privacy.account.title": "계정을 만드는 경우",
   "privacy.account.intro": "로그인은 선택 사항이며, 통계, 업적, 계정 레벨, 리더보드, 친구, 클럽, 토너먼트, 턴제 멀티플레이어 게임을 사용할 수 있게 해 줍니다. 이메일로 로그인하면 다음을 저장합니다:",
   "privacy.account.item.email": "인증 제공업체(Supabase Auth)를 통한 이메일 주소와 안전하게 해시 처리된 비밀번호, 그리고 2단계 인증(인증 앱)을 켠 경우 그 관련 정보. 로그인 세션은 브라우저의 로컬 저장소에 보관됩니다.",
@@ -1069,7 +1416,12 @@ const ko = {
   "privacy.account.item.profile": "공개 프로필: 로그인한 모든 플레이어가 리더보드 항목과 함께 볼 수 있으며, 선택 사항인 짧은 자기소개, 아바타(이모지와 색상, 또는 직접 업로드한 사진), 배너, 프레임, 칭호, 배지, 고정한 업적과 카드 스타일, 레벨과 통계, 데일리 딜 연속 기록, 가입 시점이 포함됩니다. 업로드한 프로필 사진은 공개 이미지 버킷에 저장되므로 사진 링크를 아는 사람은 누구나 열어 볼 수 있습니다. 다른 사람이 보면 곤란한 것은 업로드하지 마십시오. 플레이어는 프로필 사진을 신고할 수 있으며, 우리는 그 신고(누가 누구를 신고했는지, 그리고 선택 사항인 사유)를 보관합니다.",
   "privacy.account.item.saves": "어느 기기에서든 이어서 할 수 있도록 하는 진행 상황: 계정에 저장된 진행 중인 솔로 게임, 데일리 딜과 위클리 챌린지 완료 기록 및 점수, 월간 시즌 합계, 저장해 둔 즐겨찾는 게임 설정.",
   "privacy.account.item.clubs": "만들거나 참여한 클럽과 토너먼트: 클럽 또는 토너먼트 이름(구성원과 참가자에게 보임), 소유자 또는 주최자, 그리고 구성원과 참가자가 누구인지.",
-  "privacy.account.item.push": "알림을 켜면 브라우저의 푸시 구독 정보(브라우저의 푸시 서비스가 제공하는 주소와 암호화 키). 이는 “내 차례”, 친구, 데일리 딜 알림을 보내기 위한 것입니다. 직접 동의하지 않으면 꺼져 있으며, 앱이나 브라우저 또는 기기 설정에서 언제든 끌 수 있습니다.",
+  "privacy.account.item.push":
+    "알림을 켜면 브라우저의 푸시 구독 정보(브라우저 푸시 서비스가 제공하는 주소와 암호화 키)를 저장해 '내 차례', 게임 초대, 친구 요청, 콕 찌르기, 반응, 연속 기록 알림을 선택한 언어로 보내드려요. 받을 알림 종류를 고르고 방해 금지 시간을 설정할 수 있어요. 이를 지키기 위해 해당 설정과 기기의 UTC 시차를 저장해요. 직접 켜기 전에는 꺼져 있고, 앱이나 브라우저·기기 설정에서 언제든 끌 수 있어요.",
+  "privacy.account.item.safety":
+    "안전 기록: 내가 차단한 플레이어(서로에게 보이지 않게 돼요)와 다른 플레이어에 대해 제출한 신고(누가 누구를, 사유, 선택 메모, 신고한 위치, 신고 당시 상대방의 이름과 소개). 신고는 개발자만 볼 수 있고 검토에 필요한 기간 동안 보관돼요. 신고당한 플레이어는 누가 신고했는지 알 수 없어요. 표시 이름, 소개, 클럽 이름은 금지어 목록과 사칭 규칙으로 자동 검사도 해요.",
+  "privacy.account.item.emotes":
+    "멀티플레이 게임 중 보내는 빠른 반응(정해진 프리셋 중 하나이며 자유 입력은 없어요). 같은 게임의 다른 플레이어에게 보이고, 게임마다 최근 것만 보관해요.",
   "privacy.account.item.support": "개발자 후원하기 페이지에서 팁을 보내면 결제는 전적으로 Stripe가 처리하며, 우리는 카드 정보를 볼 수 없습니다. 후원자 배지를 드리기 위해 결제가 이루어졌다는 사실(Stripe 세션 참조 정보, 금액, 통화)만 저장합니다.",
   "privacy.account.item.security": "단기 기술 기록: 앱 내 알림과 남용 방지에 사용하는 요청 횟수 카운터(길어야 몇 주간 보관), 그리고 로그인한 사용자의 경우 문제를 조사할 수 있도록 오류 보고서가 계정에 연결될 수 있습니다.",
   "privacy.account.item.friendsPrefix": "계정별",
@@ -1090,14 +1442,18 @@ const ko = {
   "privacy.export.title": "데이터 내보내기 및 삭제",
   "privacy.export.bodyPrefix": "계정 페이지의",
   "privacy.export.downloadLabel": "내 데이터 다운로드",
-  "privacy.export.bodyMiddle": "버튼을 누르면 계정에 연결된 데이터(프로필, 통계, 기록, 업적, 설정, 저장 데이터, 친구, 멀티플레이어 기록)를 하나의 파일로 언제든 요청 없이 받을 수 있습니다. 아직 직접 삭제하는 버튼은 없습니다. 계정과 연결된 모든 것(통계, 게임 기록, 업적 진행 상황, 프로필, 친구, 클럽, 멀티플레이어 게임)을 삭제하려면 계정에 등록된 주소에서 다음 주소로 이메일을 보내 주십시오:",
-  "privacy.export.bodySuffix": "요청을 받으면 삭제하겠습니다. 계정을 삭제하면 다른 플레이어의 친구 목록에서도 삭제됩니다.",
+  "privacy.export.bodyMiddle":
+    "버튼으로 계정과 연결된 데이터(프로필, 통계, 기록, 업적, 설정, 저장 데이터, 친구, 차단한 플레이어, 멀티플레이 전적)를 언제든 요청 없이 하나의 파일로 받을 수 있어요. '계정 삭제' 버튼도 있어요. 비밀번호로 확인하면 계정과 연결된 모든 것(통계, 게임 기록, 업적 진행 상황, 프로필과 프로필 사진, 친구, 내가 만든 클럽과 토너먼트, 알림 구독)이 즉시 삭제돼요. 다른 사람과 함께한 게임은 상대방에게 남으며 내 이름은 '삭제된 플레이어'로 바뀌고, 진행 중인 게임은 기권 처리돼요. 버튼을 사용할 수 없다면(예: 비밀번호를 잊은 경우) 다음 주소로 이메일을 보내 주세요:",
+  "privacy.export.bodySuffix":
+    "(계정에 등록된 주소에서 보내 주세요). 저희가 삭제해 드려요. 계정을 삭제하면 다른 플레이어의 친구 목록에서도 사라져요.",
   "privacy.retention.title": "데이터 보관 기간",
-  "privacy.retention.body": "계정 데이터는 계정이 존재하는 동안 보관합니다. 계정 삭제를 요청하시면 신속하게, 어떠한 경우에도 합리적인 기간 내에 삭제하는 것을 목표로 합니다. 충돌 보고서는 약 30일 후 자동으로 삭제되고, 단기 알림 및 남용 방지 기록은 길어야 몇 주 후에 삭제됩니다. 익명 사용 횟수에는 개인 식별자가 없으며 최대 약 13개월간 보관됩니다. 제공업체의 백업에는 덮어써지기 전까지 제한된 기간 동안 사본이 남아 있을 수 있습니다.",
+  "privacy.retention.body":
+    "계정이 존재하는 동안 계정 데이터를 보관해요. 계정을 삭제하면(앱에서 삭제하거나 요청하는 경우) 데이터가 즉시 제거돼요. 이메일로 요청한 경우에는 신속하게, 어떤 경우에도 합리적인 기간 안에 처리해요. 다른 플레이어에 대해 접수한 신고는 검토에 필요한 기간 동안 보관해요. 오류 보고서는 약 30일 후 자동 삭제되고, 단기 알림 및 남용 방지 기록은 길어야 몇 주 보관해요. 익명 사용 횟수에는 개인 식별 정보가 없으며 최대 약 13개월 보관해요. 백업본은 덮어쓰이기 전까지 제한된 기간 남아 있을 수 있어요.",
   "privacy.transfers.title": "국외 이전",
   "privacy.transfers.body": "호스팅 제공업체는 귀하가 거주하는 국가 밖에 있는 서버에 데이터를 저장하고 처리할 수 있습니다. 그런 경우 국제 데이터 이전에 대한 제공업체의 보호 조치에 의존합니다. 계정을 이용함으로써 귀하는 데이터가 다른 국가에서 처리될 수 있음을 이해하는 것으로 봅니다.",
   "privacy.rights.title": "귀하의 권리",
-  "privacy.rights.body": "거주 지역에 따라 개인정보에 대한 열람, 정정, 삭제, 이동 가능한 형식의 사본 수령, 특정 처리에 대한 이의 제기 또는 처리 정지 요구, 그리고 이미 한 동의의 철회 권리가 있을 수 있습니다. 이 중 상당 부분은 직접 하실 수 있습니다. 앱에서 프로필과 설정을 수정하고, 계정 페이지에서 데이터를 내려받으십시오. 그 밖의 사항이나 계정 삭제는 아래 주소로 이메일을 보내 주십시오. 또한 거주 지역의 개인정보 보호 감독기관에 불만을 제기할 권리도 있습니다. 요청을 처리하기 전에 본인이 맞는지 확인이 필요할 수 있습니다.",
+  "privacy.rights.body":
+    "거주 지역에 따라 개인 데이터에 대한 열람, 정정, 삭제, 이동 가능한 형식의 사본 수령, 특정 처리에 대한 이의 제기 또는 제한 요청, 동의 철회 권리가 있을 수 있어요. 대부분은 직접 할 수 있어요. 앱에서 프로필과 설정을 수정하고, 계정 페이지에서 데이터를 다운로드하거나 계정을 삭제할 수 있어요. 그 밖의 경우에는 아래 주소로 이메일을 보내 주세요. 거주 지역의 개인정보 보호 기관에 불만을 제기할 권리도 있어요. 요청을 처리하기 전에 본인 여부를 확인할 수 있어요.",
   "privacy.children.title": "아동의 개인정보",
   "privacy.children.body": "이 앱은 만 13세 미만 아동을 대상으로 하지 않으며, 아동의 개인정보를 알면서 수집하지 않습니다. 현지 법률이 개인정보 처리에 대해 동의할 수 있는 최소 연령을 더 높게 정하고 있는 경우(예: 대한민국은 만 14세, 유럽연합 일부 국가는 만 16세), 이 앱은 그 연령 미만인 사람도 대상으로 하지 않으며, 해당 연령 미만이라면 계정을 만들지 마십시오. 아동이 우리에게 개인정보를 제공했다고 생각되면 저희에게 연락해 주십시오. 삭제하겠습니다.",
   "privacy.changes.title": "방침 변경",
@@ -1192,7 +1548,11 @@ const ko = {
   "tournaments.gamesWon": "{count}승",
   "tournaments.rounds": "라운드",
   "tournaments.roundN": "{round}라운드",
-  "tournaments.confirmCancel": "이 토너먼트를 취소할까요? 이미 진행한 게임의 결과는 그대로 남아요.",
+  "tournaments.confirmCancel.title": "이 토너먼트를 취소할까요?",
+  "tournaments.confirmCancel.body":
+    "토너먼트가 모든 참가자에게 종료돼요. 이미 진행한 게임의 결과는 남지만, 아직 하지 않은 라운드는 진행되지 않아요.",
+  "tournaments.confirmCancel.confirm": "토너먼트 취소",
+  "tournaments.confirmCancel.keep": "유지하기",
   "tournaments.cancelError": "취소하지 못했어요 — 다시 시도해 주세요.",
   "tournaments.cancelTournament": "토너먼트 취소",
   "tournaments.new.title": "새 토너먼트",
@@ -1260,7 +1620,8 @@ const ko = {
   "player.creator.title": "Books & Runs 제작자",
   "player.creator.label": "제작자",
   "player.joined": "{date} 가입",
-  "player.report.button": "사진 신고",
+  "player.report.button":
+    "신고",
   "player.share.shared": "공유했어요.",
   "player.share.error": "이미지를 준비하지 못했어요 — 다시 시도해 주세요.",
   "player.report.prompt": "이 사진에 어떤 문제가 있나요? (선택)",
@@ -1470,6 +1831,14 @@ const ko = {
   "achievementFamily.largeTableGames.unit": "플레이어 6명 이상인 게임",
   "achievementFamily.turnsTaken.title": "마라토너",
   "achievementFamily.turnsTaken.unit": "진행한 턴",
+  "achievementFamily.dailyDealsCompleted.title": "데일리 단골",
+  "achievementFamily.dailyDealsCompleted.unit": "완료한 데일리 딜",
+  "achievementFamily.dailyDealBestStreak.title": "연속 기록 지킴이",
+  "achievementFamily.dailyDealBestStreak.unit": "일 연속 (데일리 딜 최고 기록)",
+  "achievementFamily.weeklyChallengesCompleted.title": "도전자",
+  "achievementFamily.weeklyChallengesCompleted.unit": "완료한 위클리 챌린지",
+  "achievementFamily.weeklyChallengeBestStreak.title": "매주 꾸준히",
+  "achievementFamily.weeklyChallengeBestStreak.unit": "주 연속 (위클리 챌린지 최고 기록)",
   "reviewPrompt.title": "Books & Runs가 마음에 드나요?",
   "reviewPrompt.rateBody": "간단한 평가가 큰 도움이 돼요.",
   "reviewPrompt.feedbackBody": "멋진 승리예요! 몇 초만 피드백을 남겨 주시면 큰 도움이 돼요.",
@@ -1478,6 +1847,18 @@ const ko = {
   "reviewPrompt.yes": "네!",
   "update.newVersion": "Books & Runs의 새 버전이 준비되었어요.",
   "update.refresh": "새로고침",
+  "toast.offline": "오프라인이에요. 게임은 그대로 할 수 있고, 다시 연결되면 진행 상황이 동기화돼요.",
+  "toast.backOnline": "다시 온라인이에요.",
+  "toast.saved": "저장했어요",
+  "toast.copied": "클립보드에 복사했어요",
+  "toast.syncFailed": "동기화하지 못했어요. 잠시 후 다시 시도할게요.",
+  "install.title": "Books & Runs 설치하기",
+  "install.body": "홈 화면에 추가하면 전체 화면으로 즐기고, 바로 실행하고, 내 차례 알림도 받을 수 있어요.",
+  "install.button": "설치",
+  "install.notNow": "나중에",
+  "install.ios.title": "Books & Runs를 홈 화면에 추가하기",
+  "install.ios.body":
+    "공유 아이콘을 탭한 다음 “홈 화면에 추가”를 눌러 주세요. iPhone과 iPad에서는 앱이 홈 화면에 있어야만 내 차례 알림이 와요.",
   "error.eyebrow": "문제가 발생했어요",
   "error.title": "이 화면에서 오류가 발생했어요",
   "error.body": "다시 시도해 보세요. 계속 발생하면 새 게임을 시작하면 대부분 해결돼요.",

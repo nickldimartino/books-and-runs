@@ -10,6 +10,13 @@
 // else back to Home.
 
 import { useEffect, useRef, useState } from "react";
+import { useGameShortcuts, type ShortcutHandlers } from "../lib/useGameShortcuts";
+import { KeyboardHelp } from "../components/KeyboardHelp";
+import { useMediaQuery, WIDE_TABLE_QUERY } from "../lib/useMediaQuery";
+import { contractProgress, type ContractProgress } from "../lib/contractProgress";
+import { playError } from "../lib/sound";
+import { speedFactor } from "../lib/motion";
+import { hapticError } from "../lib/haptics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../AuthContext";
@@ -113,6 +120,14 @@ function shortNameForHeader(name: string): string {
   return name.length > 12 ? `${name.slice(0, 11)}…` : name;
 }
 
+/** Mounts the global keyboard shortcuts (see lib/gameShortcuts.ts). A tiny
+ * component rather than a hook call in GamePage because GamePage returns early
+ * (loading, round summary, pass gate…) before its handlers exist. */
+function GameShortcuts({ handlers, enabled }: { handlers: ShortcutHandlers; enabled: boolean }) {
+  useGameShortcuts(handlers, enabled);
+  return null;
+}
+
 export default function GamePage() {
   const router = useRouter();
   const { t, tPlural } = useT();
@@ -128,6 +143,7 @@ export default function GamePage() {
     isTutorial,
     isDailyDeal,
     revealHand,
+    skipAiWait,
     draw,
     confirmMeld,
     hintMeldContract,
@@ -198,6 +214,10 @@ export default function GamePage() {
   const [tutorialOverlayVisible, setTutorialOverlayVisible] = useState(true);
   const [whoseTurnVisible, setWhoseTurnVisible] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState<Card | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // ≥1024px: the hand lives in an always-visible dock beside the table
+  // instead of the modal drawer (see the human-turn layout below).
+  const isWide = useMediaQuery(WIDE_TABLE_QUERY);
   // Reset alongside every other per-turn UI state.
   const [handDrawerOpen, setHandDrawerOpen] = useState(false);
   const handDrawerRef = useRef<HTMLDivElement | null>(null);
@@ -259,21 +279,25 @@ export default function GamePage() {
     const fl = cardFlightRef.current;
     if (!fl) return;
 
-    const handTarget: HTMLElement | null = handDrawerOpen
-      ? document.querySelector('[data-tutorial="hand"]')
-      : document.querySelector('[data-tutorial="hand-bar"]');
+    const handTarget: HTMLElement | null =
+      handDrawerOpen || isWide
+        ? document.querySelector('[data-tutorial="hand"]')
+        : document.querySelector('[data-tutorial="hand-bar"]');
+    // An AI's cards travel to/from its chip area at the top of the board (the
+    // sticky OpponentStrip) — always on screen, unlike the AI panel anchor.
+    const stripEl = document.querySelector<HTMLElement>('[data-tutorial="opponent-strip"]');
 
     if (flightEvent.kind === "draw") {
       fl.fly([
         {
           card: flightEvent.card,
           from: flightEvent.fromDiscard ? discardPileRef.current : drawPileRef.current,
-          to: handTarget,
+          to: flightEvent.isAI ? (stripEl ?? aiAnchorRef.current) : handTarget,
           faceDown: !flightEvent.fromDiscard,
         },
       ]);
     } else if (flightEvent.kind === "discard") {
-      const src = flightEvent.isAI ? aiAnchorRef.current : handTarget ?? aiAnchorRef.current;
+      const src = flightEvent.isAI ? (stripEl ?? aiAnchorRef.current) : handTarget ?? aiAnchorRef.current;
       fl.fly([{ card: flightEvent.card, from: src, to: discardPileRef.current }]);
     } else if (flightEvent.kind === "layoff") {
       const src = flightEvent.isAI ? aiAnchorRef.current : (handTarget ?? aiAnchorRef.current);
@@ -305,7 +329,7 @@ export default function GamePage() {
         })
       );
     }
-  }, [flightEvent, handDrawerOpen]);
+  }, [flightEvent, handDrawerOpen, isWide]);
 
   useEffect(() => {
     return () => {
@@ -320,8 +344,9 @@ export default function GamePage() {
   // expected to do: stop the page behind it from scrolling, close on
   // Escape, and trap focus (useFocusTrap on handDrawerRef below) so a
   // keyboard / screen-reader user can't tab out onto the hidden board.
+  const drawerVisible = handDrawerOpen && !isWide;
   useEffect(() => {
-    if (!handDrawerOpen) return;
+    if (!drawerVisible) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKeyDown(e: KeyboardEvent) {
@@ -332,8 +357,8 @@ export default function GamePage() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [handDrawerOpen]);
-  useFocusTrap(handDrawerRef, handDrawerOpen);
+  }, [drawerVisible]);
+  useFocusTrap(handDrawerRef, drawerVisible);
 
   // Screen-reader announcements (rendered into the sr-only live region in
   // the main return): whose turn it is, and your own draw.
@@ -678,6 +703,16 @@ export default function GamePage() {
   const highlightLayoffs = isTutorial || savedSettings.highlightLayoffs;
   const showWhoseTurn = isTutorial || savedSettings.showWhoseTurn;
   const showMeldHint = savedSettings.showMeldHint;
+  // The tutorial always shows the assist too, like it does the toggles above.
+  const showLegalMoves = isTutorial || savedSettings.showLegalMoves;
+  // The tutorial keeps its scripted "Confirm" step no matter what.
+  const confirmDiscardSetting = isTutorial || savedSettings.confirmDiscard;
+
+  // How close the hand is to this round's contract (Show legal moves assist) —
+  // the progress line in the turn-status slot and the soft ring on the cards
+  // that contribute. Nothing to show once the contract is melded.
+  const progress = showLegalMoves && !player.hasMeldedContract ? contractProgress(player.hand, contract) : null;
+  const progressLine = progress ? progressLineFor(progress) : null;
 
   // Grouping books before runs is just how Table melds always renders now —
   // it used to be its own toggle, but there was never a good reason to turn
@@ -725,6 +760,36 @@ export default function GamePage() {
     );
   }
 
+  /** "Books 1 of 2 ready — closest: 5 (2/3) · Runs …" for the Show legal
+   * moves assist; the closing "ready" line once the hand can meld now. */
+  function progressLineFor(p: ContractProgress): string {
+    const done = p.booksReady >= p.booksNeeded && p.runsReady >= p.runsNeeded;
+    if (done) return t("game.progress.ready");
+    const parts: string[] = [];
+    if (p.booksNeeded > 0) {
+      let part = t("game.progress.books", { ready: p.booksReady, need: p.booksNeeded });
+      if (p.booksReady < p.booksNeeded && p.nextBook) {
+        part += ` — ${t("game.progress.closestBook", { rank: p.nextBook.rank, have: p.nextBook.have, need: p.nextBook.need })}`;
+      }
+      parts.push(part);
+    }
+    if (p.runsNeeded > 0) {
+      let part = t("game.progress.runs", { ready: p.runsReady, need: p.runsNeeded });
+      if (p.runsReady < p.runsNeeded && p.nextRun) {
+        part += ` — ${t("game.progress.closestRun", { suit: t(`card.suit.${p.nextRun.suit}` as TranslationKey), have: p.nextRun.have, need: p.nextRun.need })}`;
+      }
+      parts.push(part);
+    }
+    return parts.join(" · ");
+  }
+
+  // Sound + haptic buzz whenever the game rejects a move, alongside the
+  // written reason (groupError / layOffError, shown with aria-live).
+  function flagRejected() {
+    playError();
+    hapticError();
+  }
+
   // The specific reason a lay-off attempt just failed — checked in the same
   // order GameContext's own layOff() and gameEngine's layOffCard() actually
   // gate on, so this always names the *first* real blocker rather than a
@@ -758,6 +823,7 @@ export default function GamePage() {
         setLayOffError(null);
       } else {
         setLayOffError(layOffFailureReason());
+        flagRejected();
       }
       return;
     }
@@ -777,6 +843,7 @@ export default function GamePage() {
         setLayOffError(null);
       } else {
         setLayOffError(layOffFailureReason());
+        flagRejected();
       }
       return;
     }
@@ -794,6 +861,7 @@ export default function GamePage() {
       setLayOffError(null);
     } else {
       setLayOffError(layOffFailureReason());
+      flagRejected();
     }
   }
 
@@ -816,6 +884,13 @@ export default function GamePage() {
     if (selectedCardIds.length !== 1) return;
     const card = player.hand.find((c) => c.id === selectedCardIds[0]);
     if (!card) return;
+    // Settings → "Confirm before discarding" off: one tap ends the turn.
+    if (!confirmDiscardSetting) {
+      discard(card.id);
+      setSelectedCardIds([]);
+      setPendingLayOff(null);
+      return;
+    }
     setConfirmingDiscard(card);
   }
 
@@ -844,6 +919,7 @@ export default function GamePage() {
     }
     if (!result.valid || !result.type) {
       setGroupError(result.reason ? translateError(result.reason, t) : t("game.buildMeld.invalidGroup"));
+      flagRejected();
       return;
     }
     setPendingGroups((prev) => [
@@ -898,8 +974,49 @@ export default function GamePage() {
       setGroupError(null);
     } else {
       setGroupError(t("game.buildMeld.confirmMeldFailed"));
+      flagRejected();
     }
   }
+
+  // Why an action button is greyed out, in words — shown next to the buttons
+  // (aria-live) when Settings → Show legal moves is on. First real blocker
+  // wins, same idea as layOffFailureReason above.
+  let whyMeld: string | null = null;
+  if (!hasDrawn) whyMeld = t("game.why.drawFirst");
+  else if (pendingGroupChoice) whyMeld = t("game.why.finishWildChoice");
+  else if (!meldReady) {
+    if (stagedBooks > contract.books || stagedRuns > contract.runs) whyMeld = t("game.why.tooManyGroups");
+    else if (stagedBooks < contract.books || stagedRuns < contract.runs) {
+      whyMeld = t("game.why.groupMore", {
+        need: contractNeedLabel(
+          Math.max(0, contract.books - stagedBooks),
+          Math.max(0, contract.runs - stagedRuns),
+          tPlural
+        ),
+      });
+    } else if (contract.wholeHandMeld && cardsNotYetGrouped > 0) {
+      whyMeld = tPlural("game.why.groupAll", cardsNotYetGrouped);
+    }
+  }
+  let whyDiscard: string | null = null;
+  if (!hasDrawn) whyDiscard = t("game.why.drawFirst");
+  else if (selectedCardIds.length === 0) whyDiscard = t("game.why.selectToDiscard");
+  else if (selectedCardIds.length > 1) whyDiscard = t("game.why.selectOneToDiscard");
+  let whyLayOff: string | null = null;
+  if (!hasDrawn) whyLayOff = t("game.why.drawFirst");
+  else if (!player.hasMeldedContract) whyLayOff = t("game.layOff.errorNotMelded");
+  else if (selectedCardIds.length === 0) whyLayOff = t("game.why.selectToLayOff");
+  else if (!selectedCardCanLayOff) whyLayOff = t("game.why.noLayOffTarget");
+
+  // The one-line status slot above the melds: what to do next. Always
+  // rendered (same height either way) so drawing doesn't shift the table.
+  const turnHint = !hasDrawn
+    ? t("game.drawToStart")
+    : progressLine && !player.hasMeldedContract
+      ? progressLine
+      : player.hasMeldedContract
+        ? t("game.turnHint.melded")
+        : t("game.turnHint.drawn");
 
   // Extracted as its own const purely for readability — this, discardSection,
   // and handSection all mount inside the hand drawer (see its render further
@@ -972,7 +1089,16 @@ export default function GamePage() {
         </div>
       )}
 
-      {groupError && <p className="text-xs text-[var(--danger)]">{groupError}</p>}
+      {groupError && (
+        <p role="alert" className="text-xs text-[var(--danger)]">
+          {groupError}
+        </p>
+      )}
+      {progressLine && hasDrawn && !isWide && (
+        <p className="text-xs font-medium text-[var(--accent)]" data-testid="contract-progress">
+          {progressLine}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button
@@ -1009,6 +1135,11 @@ export default function GamePage() {
           </button>
         )}
       </div>
+      {showLegalMoves && whyMeld && (
+        <p role="status" aria-live="polite" className="text-xs text-[var(--faint)]" data-testid="why-meld">
+          {whyMeld}
+        </p>
+      )}
     </section>
   );
 
@@ -1021,6 +1152,7 @@ export default function GamePage() {
           </span>
           <button
             onClick={confirmDiscard}
+            autoFocus
             className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow"
           >
             {t("common.confirm")}
@@ -1043,7 +1175,10 @@ export default function GamePage() {
           <button
             onClick={handleLayOffFromDrawer}
             disabled={!selectedCardCanLayOff || !!pendingLayOff}
-            className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+            title={whyLayOff ?? undefined}
+            className={`rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40 ${
+              isWide ? "hidden" : ""
+            }`}
           >
             {tPlural("game.discard.layOffCard", selectedCardsForLayOff.length > 1 ? 2 : 1)}
           </button>
@@ -1054,6 +1189,11 @@ export default function GamePage() {
           >
             {t("game.discard.discardSelected")}
           </button>
+          {showLegalMoves && whyDiscard && (
+            <p role="status" aria-live="polite" className="w-full text-center text-xs text-[var(--faint)]" data-testid="why-discard">
+              {whyDiscard}
+            </p>
+          )}
         </>
       )}
     </section>
@@ -1064,7 +1204,7 @@ export default function GamePage() {
       <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
           {player.id === YOU_PLAYER_ID ? t("game.hand.yourHand") : t("game.hand.playerHand", { name: shortNameForHeader(player.name) })}
-          <span className="ml-2 font-normal normal-case text-[var(--muted)]">
+          <span className="ml-2 font-normal normal-case text-[var(--muted)]" title={t("game.hand.ptsExplain")}>
             ({t("game.hand.pts", { count: handPenalty(player.hand) })})
           </span>
           {player.hasMeldedContract && (
@@ -1092,16 +1232,95 @@ export default function GamePage() {
         onCardClick={handleCardClick}
         onReorder={reorderHand}
         layoffEligibleIds={layoffEligibleHandIds}
+        hintIds={progress?.hintCardIds}
       />
       <p className="mt-1 text-center text-xs text-[var(--faint)]">{t("game.hand.dragToReorder")}</p>
     </section>
   );
 
+  // Keyboard/gamepad shortcut actions (see GameShortcuts). Every one is a
+  // no-op off your own turn.
+  const myTurn = !player.isAI && !awaitingReveal;
+  const shortcutHandlers: ShortcutHandlers = {
+    draw: () => {
+      if (myTurn && !hasDrawn) draw(false);
+    },
+    drawDiscard: () => {
+      if (myTurn && !hasDrawn && discardTop) draw(true);
+    },
+    sortRank: () => myTurn && sortHand("rank"),
+    sortSuit: () => myTurn && sortHand("suit"),
+    group: () => {
+      if (!myTurn) return;
+      if (!hasDrawn) {
+        setAnnouncement(t("game.why.drawFirst"));
+        flagRejected();
+        return;
+      }
+      if (!player.hasMeldedContract) {
+        if (selectedCardIds.length > 0) handleGroupSelected();
+        else if (meldReady) handleConfirmMeld();
+        else if (whyMeld) setAnnouncement(whyMeld);
+        return;
+      }
+      if (selectedCardIds.length === 0) {
+        setAnnouncement(t("game.why.selectToLayOff"));
+        return;
+      }
+      const targets = state.melds.filter((m) =>
+        selectedCardsForLayOff.length > 1
+          ? canLayOffMultiple(selectedCardIds, m.id)
+          : !!selectedCard && layOffOptions(selectedCard, m).length > 0
+      );
+      if (targets.length === 1) handleMeldClick(targets[0]);
+      else if (targets.length > 1) {
+        setHandDrawerOpen(false);
+        tableMeldsElRef.current?.scrollIntoView({ block: "nearest" });
+        document.querySelector<HTMLElement>(`[data-meld-id="${targets[0].id}"]`)?.focus();
+        setAnnouncement(t("game.why.pickMeld"));
+      } else {
+        setLayOffError(t("game.why.noLayOffTarget"));
+        flagRejected();
+      }
+    },
+    discard: () => {
+      if (!myTurn) return;
+      if (hasDrawn && selectedCardIds.length === 1) handleDiscardSelected();
+      else if (whyDiscard) {
+        setAnnouncement(whyDiscard);
+        flagRejected();
+      }
+    },
+    undo: () => {
+      if (canUndo) undoLastAction();
+    },
+    focusHand: () => {
+      if (!myTurn) return;
+      const focus = () =>
+        document.querySelector<HTMLElement>('[data-nav-zone="hand"] [role="button"][tabindex="0"]')?.focus();
+      if (isWide || handDrawerOpen) focus();
+      else {
+        setHandDrawerOpen(true);
+        setTimeout(focus, 60);
+      }
+    },
+    help: () => setHelpOpen((o) => !o),
+    escape: () => {
+      if (helpOpen) setHelpOpen(false);
+      else if (confirmingDiscard) cancelDiscard();
+    },
+  };
+
   return (
     <main
-      data-no-text-scale
-      className="game-felt mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6"
+      // Text scaling applies on the board now (no data-no-text-scale): the
+      // header/strip/buttons wrap instead of overflowing. Wider than a phone
+      // column from 1024px up, where the hand becomes a dock beside the table.
+      className="game-felt mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-6 lg:max-w-6xl xl:max-w-7xl"
+      style={{ "--motion-scale": speedFactor() } as React.CSSProperties}
     >
+      <GameShortcuts handlers={shortcutHandlers} enabled={!(isTutorial && tutorialOverlayVisible)} />
+      <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       {/* Screen-reader running commentary — turn changes and your own draws.
           AI plays are announced separately by OpponentStrip's status line. */}
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
@@ -1144,6 +1363,14 @@ export default function GamePage() {
           >
             {t("common.howToPlay")}
           </Link>
+          <button
+            onClick={() => setHelpOpen(true)}
+            aria-label={t("shortcuts.openHelp")}
+            title={t("shortcuts.openHelp")}
+            className="hidden rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[var(--panel-soft)] sm:inline-block"
+          >
+            ?
+          </button>
           <SoundQuickToggle />
         </div>
       </div>
@@ -1206,7 +1433,10 @@ export default function GamePage() {
               <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
                 {player.id === YOU_PLAYER_ID ? t("game.hand.yourHand") : t("game.hand.playerHand", { name: shortNameForHeader(player.name) })}
               </p>
-              <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+              <p
+                className="text-lg font-bold leading-tight text-[var(--heading)]"
+                title={t("game.hand.ptsExplain")}
+              >
                 {t("game.hand.pts", { count: handPenalty(player.hand) })}
               </p>
             </>
@@ -1232,7 +1462,7 @@ export default function GamePage() {
             .map((p) => (
               <li key={p.id} className="flex min-w-0 items-center justify-end gap-1">
                 {p.id === YOU_PLAYER_ID && level && (
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[var(--accent)]">
                     {t("game.levelBadge", { level: level.level })}
                   </span>
                 )}
@@ -1243,7 +1473,7 @@ export default function GamePage() {
                     glance: one is this account's real, earned progress, the
                     other is flavor. */}
                 {p.isAI && p.difficulty && (
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--muted)]">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[var(--muted)]">
                     {t("game.levelBadge", { level: AI_THEORETICAL_LEVEL[p.difficulty] })}
                   </span>
                 )}
@@ -1294,17 +1524,25 @@ export default function GamePage() {
 
       {player.isAI ? (
         // The strip above carries whose turn it is and the play-by-play now
-        // — this view just keeps the piles on screen (so the AI's discard
-        // flight has somewhere to land) with a quiet reminder of who's up.
+        // — this view just keeps the piles on screen (so the AI's draw and
+        // discard flights have somewhere to land) with a quiet reminder of
+        // who's up. Tapping anywhere on it (or the button) skips the pause.
         <div
           ref={(el) => {
             aiAnchorRef.current = el;
           }}
+          onClick={skipAiWait}
           className="flex flex-1 flex-col items-center justify-center gap-5 py-6 text-center"
         >
           <section className="flex items-end justify-center gap-6">
             <div className="flex flex-col items-center gap-1 opacity-60">
-              <DrawPile count={state.drawPile.length} />
+              <div
+                ref={(el) => {
+                  drawPileRef.current = el;
+                }}
+              >
+                <DrawPile count={state.drawPile.length} />
+              </div>
               <span className="text-xs text-[var(--faint)]">{t("game.draw", { count: state.drawPile.length })}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
@@ -1322,10 +1560,29 @@ export default function GamePage() {
             {t("game.waitingFor", { name: player.name })}
             {personaBlurbFor(player.name, t) ? ` — ${personaBlurbFor(player.name, t)}` : ""}
           </p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              skipAiWait();
+            }}
+            className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            {t("game.skipWait")}
+          </button>
         </div>
       ) : (
         <>
-          <section data-tutorial="draw-piles" className="flex items-center justify-center gap-6">
+          <div
+            className={
+              isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-start gap-6" : "contents"
+            }
+          >
+          <div className={isWide ? "flex min-w-0 flex-col gap-6" : "contents"}>
+          <section
+            data-tutorial="draw-piles"
+            data-nav-zone="piles"
+            className="flex items-center justify-center gap-6"
+          >
             <div className="flex flex-col items-center gap-1">
               <button
                 ref={(el) => {
@@ -1333,8 +1590,9 @@ export default function GamePage() {
                 }}
                 onClick={() => draw(false)}
                 disabled={hasDrawn}
-                className="disabled:opacity-50"
+                className={`rounded-lg disabled:opacity-50 ${showLegalMoves && !hasDrawn ? "legal-pulse" : ""}`}
                 aria-label={t("game.drawFromPile")}
+                title={`${t("game.drawFromPile")} (D)`}
               >
                 <DrawPile count={state.drawPile.length} />
               </button>
@@ -1346,10 +1604,16 @@ export default function GamePage() {
                 ref={(el) => {
                   discardPileRef.current = el;
                 }}
-                onClick={() => draw(true)}
-                disabled={hasDrawn || !discardTop}
-                className="disabled:opacity-50"
-                aria-label={t("game.drawFromDiscard")}
+                // Before drawing: take the top discard. After drawing with one
+                // card selected: tap here to discard it (same confirm setting
+                // as the Discard button).
+                onClick={() => (hasDrawn ? handleDiscardSelected() : draw(true))}
+                disabled={hasDrawn ? selectedCardIds.length !== 1 || !!pendingLayOff : !discardTop}
+                className={`rounded-lg disabled:opacity-50 ${
+                  showLegalMoves && !hasDrawn && discardTop ? "legal-pulse" : ""
+                } ${showLegalMoves && hasDrawn && selectedCardIds.length === 1 ? "legal-ring" : ""}`}
+                aria-label={hasDrawn ? t("game.discardToPile") : t("game.drawFromDiscard")}
+                title={hasDrawn ? t("game.discardToPile") : `${t("game.drawFromDiscard")} (Shift+D)`}
               >
                 <DiscardPile cards={state.discardPile} canLayOff={discardTopCanLayOff} />
               </button>
@@ -1357,11 +1621,17 @@ export default function GamePage() {
             </div>
           </section>
 
-          {!hasDrawn && (
-            <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-center text-xs font-medium text-[var(--accent)]">
-              {t("game.drawToStart")}
-            </p>
-          )}
+          {/* Turn-status slot: always rendered at a fixed minimum height, so
+              drawing a card swaps its text instead of removing a banner and
+              shoving the table up (the ~145px layout shift the audit found). */}
+          <p
+            role="status"
+            aria-live="polite"
+            className="flex min-h-[3.25rem] items-center justify-center rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-center text-xs font-medium text-[var(--accent)]"
+            data-testid="turn-hint"
+          >
+            {turnHint}
+          </p>
 
           {pendingLayOff && (
             // Fixed + viewport-centered, the same idea as the "It's ___'s
@@ -1411,13 +1681,28 @@ export default function GamePage() {
 
           <section
             data-tutorial="table-melds"
+            data-nav-zone="melds"
             ref={tableMeldsElRef}
             className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4"
           >
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
               {t("game.tableMelds.heading")}
             </h2>
-            {layOffError && <p className="mb-2 text-xs text-[var(--danger)]">{layOffError}</p>}
+            {layOffError && (
+              <p role="alert" className="mb-2 text-xs text-[var(--danger)]">
+                {layOffError}
+              </p>
+            )}
+            {showLegalMoves &&
+              hasDrawn &&
+              player.hasMeldedContract &&
+              selectedCardIds.length > 0 &&
+              !selectedCardCanLayOff &&
+              !layOffError && (
+                <p role="status" aria-live="polite" className="mb-2 text-xs text-[var(--faint)]">
+                  {t("game.why.noLayOffTarget")}
+                </p>
+              )}
             {state.melds.length === 0 ? (
               <div className="flex items-center gap-3 py-2">
                 <div className="flex shrink-0 gap-1.5" aria-hidden="true">
@@ -1533,9 +1818,29 @@ export default function GamePage() {
               </div>
             )}
           </section>
+          </div>
 
-          <HandPreviewBar cards={visibleHand} onTap={() => setHandDrawerOpen(true)} />
-          {handDrawerOpen && (
+          {isWide && (
+            // Wide screens: the hand is a permanent, non-modal dock beside the
+            // table — select, group, lay off and discard without ever opening
+            // a drawer, with the piles and melds staying in view. (Phones keep
+            // the modal drawer below.) data-tutorial="hand-bar" so the
+            // tutorial's "your hand" step has something to spotlight here.
+            <aside
+              data-tutorial="hand-bar"
+              data-testid="hand-dock"
+              aria-label={t("game.manageHand")}
+              className="panel-elevated sticky top-28 flex max-h-[calc(100vh-8rem)] flex-col gap-4 overflow-y-auto rounded-2xl bg-[var(--panel)] p-4"
+            >
+              {buildMeldSection}
+              {discardSection}
+              {handSection}
+            </aside>
+          )}
+          </div>
+
+          {!isWide && <HandPreviewBar cards={visibleHand} onTap={() => setHandDrawerOpen(true)} />}
+          {drawerVisible && (
             <>
               {/* Backdrop: this drawer is the one genuine modal in the
                   codebase (see the scroll-lock/Escape effect above) — the
@@ -1584,7 +1889,7 @@ export default function GamePage() {
               to scroll further and reveal it: the bar never hides in this
               layout, and the *page's own* scroll extent has no idea a fixed
               element is sitting on top of its end. */}
-          <div aria-hidden="true" className="h-20 md:h-28" />
+          {!isWide && <div aria-hidden="true" className="h-20 md:h-28" />}
         </>
       )}
 

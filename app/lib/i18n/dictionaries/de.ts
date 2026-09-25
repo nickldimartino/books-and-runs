@@ -34,6 +34,31 @@ const de = {
   "settingsPicker.signature": "Signature",
   "settingsPicker.unlocksAtLevel": "Ab Stufe {level} freigeschaltet",
   "settingsPicker.boutiqueLocked": "Boutique — noch nicht kaufbar",
+  "player.badge.free": "Kostenlos",
+  "cosmeticReq.categoryMastered": "Meistere alle Erfolge der Kategorie {category}",
+  "cosmeticReq.categoriesMasteredCount": "Meistere {count} von {total} Erfolgskategorien",
+  "cosmeticReq.allCategoriesMastered": "Meistere jede Erfolgskategorie",
+  "cosmeticReq.gamesPlayed": "Spiele {count} Solo- oder Pass-and-Play-Spiele",
+  "cosmeticReq.dailyDealStreak": "Erreiche eine {days}-Tage-Serie beim Tages-Deal",
+  "cosmeticReq.weeklyChallengeStreak": "Erreiche eine {weeks}-Wochen-Serie bei der Wochen-Challenge",
+  "cosmeticReq.complete": "Meistere jede Kategorie, erreiche Stufe 250 und eine 30-Tage-Serie beim Tages-Deal",
+  "cosmeticReq.creatorOnly": "Exklusiv für den Entwickler von Books & Runs",
+  "cosmeticReq.supporterOnly": "Wird durch ein Trinkgeld freigeschaltet — siehe Einstellungen → Hilfe → Unterstütze den Entwickler",
+  "cosmeticReq.worstScoreUnder": "Beende nie ein Spiel mit mehr als {score} Punkten",
+  "cosmeticReq.averageScoreUnder": "Durchschnitt unter {score} Punkten in mindestens {games} Spielen",
+  "cosmeticReq.gamesTied.one": "Spiele {count} Spiel unentschieden",
+  "cosmeticReq.gamesTied.other": "Spiele {count} Spiele unentschieden",
+  "cosmeticReq.mpWinStreak": "Erreiche eine Mehrspieler-Siegesserie von {streak} Spielen",
+  "cosmeticReq.cat.accountStats": "Kontostatistik",
+  "cosmeticReq.cat.aiRivals": "KI-Rivalen",
+  "cosmeticReq.cat.melding": "Melden",
+  "cosmeticReq.cat.layingOff": "Anlegen",
+  "cosmeticReq.cat.drawDiscard": "Ziehen & Ablegen",
+  "cosmeticReq.cat.goingOut": "Aussteigen",
+  "cosmeticReq.cat.contracts": "Kontrakte",
+  "cosmeticReq.cat.tableComposition": "Tischbesetzung",
+  "cosmeticReq.cat.multiplayer": "Mehrspieler",
+  "cosmeticReq.cat.challenges": "Challenges",
   "settingsTheme.signInPrompt": "Melde dich an, um ein Design zu wählen. Ohne Anmeldung wird immer der Standardtisch verwendet, sodass du zwischen Geräten nichts aus den Augen verlierst.",
   "settingsCardBack.description": "Das Muster und die Farbe der Kartenrückseite — auf dem Ziehstapel und auf der verdeckten Hand anderer Spieler. Unabhängig vom Design, sodass sich jeder Tisch mit jeder Rückseite kombinieren lässt.",
   "settingsCardFace.description": "Wie Rang und Farbe einer Karte gezeichnet werden. Unabhängig von Design und Kartenrückseite, sodass sich jeder Tisch mit jeder Kartenvorderseite kombinieren lässt.",
@@ -178,6 +203,24 @@ const de = {
   "settings.showMeldHint": "Schaltfläche „Tipp: Automatisch melden“",
   "settings.showMeldHintDescription":
     "Zeigt eine Schaltfläche, die deinen Kontrakt mit einem Tipp für dich auslegt, sobald deine Hand ihn erfüllen kann. Standardmäßig aus — anders als die anderen Hilfen oben übernimmt dies einen Teil deines Zugs für dich.",
+  "settings.showLegalMoves": "Mögliche Züge anzeigen",
+  "settings.showLegalMovesDescription":
+    "Hebt hervor, was du tun kannst: von welchen Stapeln du ziehen darfst, wo eine ausgewählte Karte angelegt werden kann und wie nah deine Hand am Kontrakt dieser Runde ist. Erklärt außerdem in Worten, warum eine Schaltfläche ausgegraut ist.",
+  "settings.confirmDiscard": "Vor dem Ablegen bestätigen",
+  "settings.confirmDiscardDescription":
+    "Fragt vor jedem Ablegen „…ablegen und Zug beenden?“. Ausgeschaltet legst du mit einem Tipp ab — ein Ablegen beendet aber deinen Zug und lässt sich nicht rückgängig machen.",
+  "settings.gameSpeed": "Spielgeschwindigkeit",
+  "settings.gameSpeedDescription":
+    "Wie schnell Gegner spielen und Karten sich bewegen. Gemütlich verlangsamt alles, Schnell verkürzt die Pausen, Sofort überspringt Wartezeiten und Kartenanimationen. Du kannst auch während eines gegnerischen Zugs tippen, um die Pause zu überspringen.",
+  "settings.gameSpeed.relaxed": "Gemütlich",
+  "settings.gameSpeed.normal": "Normal",
+  "settings.gameSpeed.fast": "Schnell",
+  "settings.gameSpeed.instant": "Sofort",
+  "settings.reduceMotion": "Bewegung reduzieren",
+  "settings.reduceMotionDescription":
+    "Schaltet Kartenflüge, Konfetti, pulsierende Hervorhebungen und die meisten Übergänge in der ganzen App aus. „Wie Gerät“ folgt der Bewegungseinstellung deines Systems; „Immer reduzieren“ gilt unabhängig davon.",
+  "settings.reduceMotion.system": "Wie Gerät",
+  "settings.reduceMotion.on": "Immer reduzieren",
 
   "settings.turnNotifications": "Zug-Benachrichtigungen",
   "settings.turnNotificationsDescription":
@@ -307,6 +350,31 @@ const de = {
   "game.layOff.errorMultiple":
     "Diese Karten können dort nicht alle zusammen angelegt werden — wähle sie erneut aus oder lege sie einzeln an.",
   "game.layOff.errorSingle": "Diese Karte kann dort nicht mehr angelegt werden — wähle sie erneut aus.",
+  "game.skipWait": "Warten überspringen",
+  "game.discardToPile": "Ausgewählte Karte auf den Ablagestapel legen",
+  "game.turnHint.drawn":
+    "Bilde deine Meldung oder wähle eine Karte und lege sie ab, um deinen Zug zu beenden.",
+  "game.turnHint.melded":
+    "Lege Karten an Meldungen an und lege dann ab, um deinen Zug zu beenden.",
+  "game.progress.books": "Sätze {ready} von {need} bereit",
+  "game.progress.runs": "Folgen {ready} von {need} bereit",
+  "game.progress.closestBook": "am nächsten: {rank} ({have}/{need})",
+  "game.progress.closestRun": "am nächsten: {suit} ({have}/{need})",
+  "game.progress.ready": "Deine Hand kann den Kontrakt dieser Runde jetzt melden.",
+  "game.why.drawFirst": "Ziehe zuerst eine Karte.",
+  "game.why.finishWildChoice": "Wähle zuerst, wofür die Wildcard steht.",
+  "game.why.tooManyGroups":
+    "Du hast mehr gruppiert, als diese Runde braucht — entferne eine Gruppe.",
+  "game.why.groupMore": "Gruppiere {need}, um deine Meldung zu bestätigen.",
+  "game.why.groupAll":
+    "In dieser Runde müssen alle Karten gemeldet werden — noch {count} ungruppiert.",
+  "game.why.selectToDiscard": "Wähle eine Karte zum Ablegen.",
+  "game.why.selectOneToDiscard": "Wähle nur eine Karte zum Ablegen aus.",
+  "game.why.selectToLayOff": "Wähle eine Karte zum Anlegen.",
+  "game.why.noLayOffTarget": "Keine Meldung auf dem Tisch nimmt diese Karte an.",
+  "game.why.pickMeld": "Mehrere Meldungen passen — wähle eine auf dem Tisch aus.",
+  "game.hand.ptsExplain":
+    "Strafpunkte, die du bekämst, wenn jetzt jemand anderes ausmacht — weniger ist besser.",
 
   "signIn.title": "Anmelden",
   "signIn.notSetUp.title": "Anmeldung ist noch nicht eingerichtet",
@@ -317,6 +385,14 @@ const de = {
   "signIn.mfaPrompt": "Gib den 6-stelligen Code aus deiner Authenticator-App ein.",
   "signIn.verifying": "Wird überprüft…",
   "signIn.verify": "Bestätigen",
+  "signIn.or": "oder",
+  "signIn.magic.button": "Anmelde-Link per E-Mail senden",
+  "signIn.magic.sent":
+    "Wir haben einen Anmelde-Link an {email} geschickt. Öffne ihn auf diesem Gerät, um die Anmeldung abzuschließen. Wenn die E-Mail einen 6-stelligen Code enthält, kannst du ihn stattdessen unten eingeben.",
+  "signIn.magic.codeLabel": "6-stelliger Code aus der E-Mail",
+  "signIn.magic.codePlaceholder": "123456",
+  "signIn.magic.needEmail": "Gib zuerst deine E-Mail-Adresse ein.",
+  "signIn.oauth.continueWith": "Weiter mit {provider}",
   "signIn.checkEmail":
     "Überprüfe deine E-Mails (auch den Spam-Ordner), um dein Konto zu bestätigen, und melde dich anschließend an.",
   "signIn.backToSignIn": "Zurück zur Anmeldung",
@@ -363,6 +439,10 @@ const de = {
   "multiplayer.rematch": "Revanche — gleiche Spieler",
   "multiplayer.leaveConfirm": "Dieses Spiel verlassen? Du gibst es damit auf.",
   "multiplayer.leave": "Verlassen",
+  "multiplayer.resignTitle": "Dieses Spiel verlassen?",
+  "multiplayer.resignBody":
+    "Du gibst auf: Deine Hand wird geleert, du bekommst eine feste Strafe und wirst Letzter, und das Spiel läuft ohne dich weiter. Das lässt sich nicht rückgängig machen.",
+  "multiplayer.resignConfirm": "Verlassen und aufgeben",
   "multiplayer.playingAsync": "Asynchron spielen",
   "multiplayer.playingAsyncBody":
     "Du musst nicht zur selben Zeit online sein wie die anderen. Mach deinen Zug, dann ist der nächste Spieler dran — schau auf der Startseite vorbei oder aktiviere Benachrichtigungen in den Einstellungen, um zu erfahren, wann du wieder an der Reihe bist.",
@@ -387,6 +467,37 @@ const de = {
   "multiplayer.handEmpty": "Deine Hand ist leer — beende deinen Zug, um auszusteigen.",
 
   "common.close": "Schließen",
+  "shortcuts.title": "Tastatur- und Gamepad-Kürzel",
+  "shortcuts.openHelp": "Tastaturkürzel",
+  "shortcuts.keyboardHeading": "Tastatur",
+  "shortcuts.moveFocus": "Zwischen Karten und Schaltflächen wechseln",
+  "shortcuts.selectCard": "Fokussierte Karte auswählen / abwählen",
+  "shortcuts.draw": "Vom Stapel ziehen",
+  "shortcuts.drawDiscard": "Oberste Ablagekarte nehmen",
+  "shortcuts.focusHand": "Zu deiner Hand springen",
+  "shortcuts.group": "Auswahl gruppieren / Meldung bestätigen / anlegen",
+  "shortcuts.discard": "Ausgewählte Karte ablegen",
+  "shortcuts.sortRank": "Hand nach Rang sortieren",
+  "shortcuts.sortSuit": "Hand nach Farbe sortieren",
+  "shortcuts.undo": "Letzte Meldung / letztes Anlegen rückgängig",
+  "shortcuts.help": "Diese Hilfe anzeigen",
+  "shortcuts.close": "Dialoge und Menüs schließen",
+  "shortcuts.typingNote": "Kürzel pausieren, solange du in ein Textfeld tippst.",
+  "shortcuts.gamepadHeading": "Gamepad",
+  "shortcuts.gamepad.move": "Steuerkreuz / linker Stick — Fokus bewegen",
+  "shortcuts.gamepad.select": "A — auswählen / bestätigen",
+  "shortcuts.gamepad.back": "B — zurück / abbrechen",
+  "shortcuts.gamepad.draw": "X — vom Stapel ziehen",
+  "shortcuts.gamepad.sort": "Y — Hand sortieren",
+  "shortcuts.gamepad.zones":
+    "LB / RB — zwischen Hand, Stapeln und Tisch springen; LT gruppieren/melden, RT ablegen",
+  "shortcuts.gamepad.help": "Start — diese Hilfe",
+  "gamepad.select": "Wählen",
+  "gamepad.back": "Zurück",
+  "gamepad.draw": "Ziehen",
+  "gamepad.sort": "Sortieren",
+  "gamepad.zones": "Bereiche",
+  "gamepad.help": "Hilfe",
 
   "opponentStrip.thinking": "{name} überlegt…",
   "opponentStrip.cardsInHand.one": "{count} Karte",
@@ -405,6 +516,8 @@ const de = {
   "roundSummary.achievementsUnlocked.other": "Erfolge in dieser Runde freigeschaltet",
   "roundSummary.player": "Spieler",
   "roundSummary.thisRound": "Diese Runde",
+  "roundSummary.penaltyNote":
+    "„Diese Runde“ sind Strafpunkte für die Karten, die noch in der Hand sind — wer die niedrigste Summe hat, gewinnt.",
   "roundSummary.total": "Gesamt",
   "roundSummary.leading": "Führend",
   "roundSummary.startNextRound": "Nächste Runde starten",
@@ -460,6 +573,11 @@ const de = {
   "gameOver.saved": "In deiner Statistik gespeichert.",
   "gameOver.saveError": "Speichern in deiner Statistik fehlgeschlagen — überprüfe deine Verbindung.",
   "gameOver.xpLine": "+{amount} XP — {label}",
+  "gameOver.dailyXp": "+{xp} XP für den heutigen Deal",
+  "gameOver.weeklyXp": "+{xp} XP für die Wochen-Challenge",
+  "gameOver.streakBonus": "+{xp} XP Serienbonus · {days} Tage",
+  "gameOver.levelUp": "Stufe aufgestiegen! Jetzt Stufe {level}",
+  "gameOver.xp.quest": "Quest: {quest}",
   "gameOver.playRealGame": "Ein echtes Spiel spielen",
   "gameOver.playAgain": "Nochmal spielen",
 
@@ -565,6 +683,41 @@ const de = {
   "home.progressTile.friends": "Freunde",
 
   "home.closestAchievement": "Nächster Erfolg",
+  "home.reward.badge": "{name}-Abzeichen",
+  "home.reward.avatar_frame": "{name}-Rahmen",
+  "home.reward.title": "Titel „{name}“",
+  "home.reward.banner": "{name}-Banner",
+  "home.nextReward": "Nächste Belohnung auf Stufe {level}: {reward}",
+  "home.nextRewardMore": "Nächste Belohnung auf Stufe {level}: {reward} + {count} weitere",
+  "quests.title": "Quests",
+  "quests.daily": "Heute",
+  "quests.weekly": "Diese Woche",
+  "quests.resets": "Neue Quests in {time}",
+  "quests.time.dh": "{d} T {h} Std.",
+  "quests.time.hm": "{h} Std. {m} Min.",
+  "quests.time.m": "{m} Min.",
+  "quests.progress": "{progress} / {target}",
+  "quests.xp": "+{xp} XP",
+  "quests.signInHint": "Melde dich an, um mit Quests XP zu sammeln.",
+  "quests.toast.title": "Quest abgeschlossen!",
+  "quests.toast.line": "{quest} · +{xp} XP",
+  "quests.metric.gamesPlayed": "Spiele beenden",
+  "quests.metric.gamesWon": "Spiele gewinnen",
+  "quests.metric.booksMelded": "Sätze melden",
+  "quests.metric.runsMelded": "Folgen melden",
+  "quests.metric.cardsLaidOff": "Karten anlegen",
+  "quests.metric.roundsWon": "Runden durch Ausspielen gewinnen",
+  "quests.metric.roundsWonNoDiscard": "Ausspielen ohne Ablegen",
+  "quests.metric.meldsWithZeroWilds": "Ohne Wildcards melden",
+  "quests.metric.cardsDrawnFromDiscard": "Vom Ablagestapel ziehen",
+  "quests.metric.oversizedRunsMelded": "Längere Folgen als nötig melden",
+  "quests.metric.wildsUsedInMelds": "Wildcards in Meldungen verwenden",
+  "welcomeBack.title": "Willkommen zurück!",
+  "welcomeBack.gamesWaiting.one": "{count} Spiel wartet auf deinen Zug",
+  "welcomeBack.gamesWaiting.other": "{count} Spiele warten auf deinen Zug",
+  "welcomeBack.streak": "Deine Tages-Deal-Serie von {count} Tagen läuft weiter – der heutige Deal ist bereit.",
+  "welcomeBack.dailyReady": "Der heutige Tages-Deal ist bereit, wann immer du es bist.",
+  "welcomeBack.quests": "Neue Quests warten auf dich.",
 
   "home.more": "Mehr",
   "home.playWithFriends": "Mit Freunden spielen",
@@ -586,6 +739,8 @@ const de = {
   "home.multiplayerGame": "Mehrspieler-Spiel",
   "home.noMovesInDays": "{days} T. kein Zug",
   "home.daysAbbr": "{days} T.",
+  "home.turnEndsIn": "Zug endet in {time}",
+  "home.turnOverdue": "überfällig",
 
   "home.yourGames": "Deine Spiele",
   "home.respondError": "Antwort fehlgeschlagen — überprüfe deine Verbindung.",
@@ -801,6 +956,9 @@ const de = {
     "Die Reihenfolge deiner Hand dient nur deiner eigenen Übersicht — sie hat keinen Einfluss auf das Spiel. Nutze",
   "howToPlay.organizing.body2":
     "um Karten automatisch zu gruppieren, oder halte eine Karte gedrückt und ziehe sie an eine neue Stelle, um deine Hand genau nach deinem Geschmack zu ordnen.",
+  "howToPlay.shortcuts.title": "Tastatur & Gamepad",
+  "howToPlay.shortcuts.body":
+    "Du kannst spielen, ohne den Bildschirm zu berühren: D zieht, die Pfeiltasten wechseln zwischen Karten, Enter wählt eine aus, Entf legt ab, und ? listet alle Kürzel auf. Auch ein Gamepad funktioniert — Steuerkreuz zum Bewegen, A zum Auswählen, B für zurück.",
 
   "howToPlay.settings.body1":
     "In den Einstellungen kannst du ein Farbdesign für App und Tisch wählen, eine Kartenrückseite unabhängig davon festlegen, einen Standard-KI-Schwierigkeitsgrad für neue KI-Gegner auf dem Bildschirm „Neues Spiel“ setzen, Soundeffekte ein- oder ausschalten, die Anlage-Abzeichen ein- oder ausschalten, die Schaltfläche „Wer ist dran?“ umschalten und farbenblindheitsfreundliche Kartenfarben aktivieren. Nichts davon ändert eine der obigen Regeln — es ist alles nur Look-and-Feel und optionale Hilfe.",
@@ -1008,7 +1166,10 @@ const de = {
   "clubs.removeMemberError": "Konnte nicht entfernt werden — versuche es erneut.",
   "clubs.renameError": "Konnte nicht umbenannt werden — versuche es erneut.",
   "clubs.deleteError": "Konnte nicht gelöscht werden — versuche es erneut.",
-  "clubs.confirmDelete": "„{name}“ löschen? Das entfernt ihn für alle.",
+  "clubs.confirmDelete.title": "„{name}“ löschen?",
+  "clubs.confirmDelete.body":
+    "Der Club, seine Rangliste und die Mitgliederliste werden für alle entfernt. Das lässt sich nicht rückgängig machen.",
+  "clubs.confirmDelete.confirm": "Club löschen",
   "clubs.rename": "Umbenennen",
   "clubs.startTournament": "Ein Turnier mit diesem Club starten",
   "clubs.standingsHeading": "Tabelle — Mehrspieler-Bilanz",
@@ -1067,10 +1228,201 @@ const de = {
   "account.data.preparing": "Dein Download wird vorbereitet…",
   "account.data.downloadButton": "Meine Daten herunterladen",
   "account.data.exportError": "Der Download konnte nicht vorbereitet werden — versuche es erneut.",
+  "safety.menu.aria":
+    "Weitere Aktionen für {name}",
+  "safety.menu.title":
+    "Melden oder blockieren",
+  "safety.menu.report":
+    "Melden",
+  "safety.menu.block":
+    "Blockieren",
+  "safety.block.confirmTitle":
+    "{name} blockieren?",
+  "safety.block.confirmBody":
+    "Ihr seid danach keine Freunde mehr und für einander unsichtbar – keine Freundschaftsanfragen, Spieleinladungen, Reaktionen oder Bestenlisten-Einträge in beide Richtungen. Die Person erfährt nichts davon. Du kannst die Sperre jederzeit auf deiner Kontoseite aufheben.",
+  "safety.block.error":
+    "Blockieren fehlgeschlagen – versuch es nochmal.",
+  "safety.block.done":
+    "Du hast {name} blockiert.",
+  "safety.report.title":
+    "{name} melden",
+  "safety.report.intro":
+    "Meldungen gehen zur Prüfung an den Entwickler. Die Person erfährt nicht, wer sie gemeldet hat.",
+  "safety.report.reasonLabel":
+    "Grund",
+  "safety.report.noteLabel":
+    "Noch etwas, das wir wissen sollten? (optional)",
+  "safety.report.submit":
+    "Meldung senden",
+  "safety.report.sending":
+    "Wird gesendet…",
+  "safety.report.error":
+    "Meldung konnte nicht gesendet werden – versuch es nochmal.",
+  "safety.report.sentTitle":
+    "Danke für deine Meldung",
+  "safety.report.sentBody":
+    "Wir sehen uns das an. Wenn du nichts mehr von {name} sehen oder hören willst, kannst du die Person zusätzlich blockieren.",
+  "safety.report.alsoBlock":
+    "{name} auch blockieren",
+  "safety.reason.offensive":
+    "Anstößiger Name, Bio oder Foto",
+  "safety.reason.harassment":
+    "Belästigung oder Beleidigung",
+  "safety.reason.impersonation":
+    "Gibt sich als jemand anderes aus",
+  "safety.reason.cheating":
+    "Betrug",
+  "safety.reason.spam":
+    "Spam oder Werbung",
+  "safety.reason.inappropriate_photo":
+    "Unangemessenes Profilfoto",
+  "safety.reason.other":
+    "Etwas anderes",
+  "safety.content.name":
+    "Dieser Name ist hier nicht erlaubt – bitte wähle einen anderen.",
+  "safety.content.bio":
+    "Diese Bio enthält nicht erlaubte Wörter – bitte formuliere sie um.",
+  "safety.content.link":
+    "Links und E-Mail-Adressen sind hier nicht erlaubt.",
+  "safety.content.reserved":
+    "Dieser Name ist reserviert – bitte wähle einen anderen.",
+  "safety.content.empty":
+    "Bitte gib einen Namen ein.",
+  "safety.blocked.heading":
+    "Blockierte Spieler",
+  "safety.blocked.empty":
+    "Du hast niemanden blockiert.",
+  "safety.blocked.description":
+    "Blockierte Spieler können dir keine Freundschaftsanfragen oder Spieleinladungen schicken, und ihr taucht nicht in den Bestenlisten des anderen auf.",
+  "safety.blocked.unblock":
+    "Entsperren",
+  "safety.players.heading":
+    "Spieler – melden oder blockieren",
+  "safety.err.connect":
+    "Mit diesem Spieler kannst du dich nicht verbinden.",
+  "safety.err.tooMany":
+    "Zu viele Versuche – versuch es später nochmal.",
+  "err.mp.alreadyNudged":
+    "Es wurde kürzlich schon angestupst.",
+  "err.mp.nothingToNudge":
+    "Gerade gibt es niemanden zum Anstupsen.",
+  "account.delete.description":
+    "Lösche dein Konto und alles, was daran hängt, endgültig.",
+  "account.delete.item.data":
+    "Profil, Foto, Statistiken, Verlauf, Erfolge, Einstellungen, Freunde und Bestenlisten-Eintrag werden gelöscht.",
+  "account.delete.item.games":
+    "Laufende Spiele werden für dich aufgegeben. Beendete Spiele bleiben für die anderen erhalten – mit „Gelöschter Spieler“ statt deines Namens.",
+  "account.delete.item.clubs":
+    "Clubs und Turniere, die dir gehören, werden ebenfalls gelöscht.",
+  "account.delete.item.irreversible":
+    "Das lässt sich nicht rückgängig machen.",
+  "account.delete.button":
+    "Mein Konto löschen…",
+  "account.delete.typePrompt":
+    "Tippe zur Bestätigung {word}",
+  "account.delete.confirmWord":
+    "LÖSCHEN",
+  "account.delete.continue":
+    "Weiter",
+  "account.delete.fallbackPrefix":
+    "Kannst du dich nicht anmelden oder möchtest uns lieber fragen?",
+  "account.delete.fallbackLink":
+    "Kontakt",
+  "account.delete.confirmTitle":
+    "Konto löschen?",
+  "account.delete.confirmBody":
+    "Alles, was mit diesem Konto verbunden ist, wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.",
+  "account.delete.confirmButton":
+    "Endgültig löschen",
+  "account.delete.done":
+    "Dein Konto wurde gelöscht.",
+  "account.delete.error":
+    "Konto konnte nicht gelöscht werden – versuch es gleich nochmal.",
+  "account.delete.errLeave":
+    "Die Spiele konnten nicht verlassen werden – versuch es gleich nochmal.",
+  "support.privacyRequest":
+    "Datenschutz- oder Kontoanfrage",
+  "support.subjectPlaceholderPrivacy":
+    "z. B. Bitte lösche mein Konto",
+  "support.descriptionPlaceholderPrivacy":
+    "Sag uns, was du brauchst. Wir antworten an die unten angegebene E-Mail-Adresse und bitten dich ggf., deine Identität zu bestätigen.",
+  "newGameMultiplayer.turnLimit.heading":
+    "Zeitlimit pro Zug",
+  "newGameMultiplayer.turnLimit.off":
+    "Kein Limit",
+  "newGameMultiplayer.turnLimit.hours":
+    "{hours} Std.",
+  "newGameMultiplayer.turnLimit.note":
+    "Jeder Zug hat {hours} Stunden. Läuft die Zeit ab, wird ein sicherer Zug für die Person gespielt; beim zweiten verpassten Zug in Folge gibt sie auf.",
+  "newGameMultiplayer.turnLimit.offNote":
+    "Keine Uhr: Das Spiel wartet beliebig lange. Ein hängendes Spiel kann weiterhin über „Verlassen“ beendet werden.",
+  "turnTimer.expired":
+    "Zeit abgelaufen",
+  "turnTimer.yourEnds":
+    "Dein Zug endet in {time}",
+  "turnTimer.theirEnds":
+    "Der Zug endet in {time}",
+  "turnTimer.lastChance":
+    "Du hast deinen letzten Zug verpasst – verpasst du diesen, gibst du auf.",
+  "turnTimer.unit.minutes":
+    "{n} Min.",
+  "turnTimer.unit.hours":
+    "{n} Std.",
+  "turnTimer.unit.days":
+    "{n} Tg.",
+  "emotes.heading":
+    "Schnelle Reaktionen",
+  "emotes.error":
+    "Konnte nicht gesendet werden – versuch es gleich nochmal.",
+  "emotes.bubble":
+    "{name}: {emoji} {text}",
+  "emote.hello":
+    "Hallo!",
+  "emote.nice_meld":
+    "Schöner Satz!",
+  "emote.your_turn":
+    "Du bist dran!",
+  "emote.oops":
+    "Ups!",
+  "emote.thanks":
+    "Danke!",
+  "emote.wow":
+    "Wow!",
+  "emote.lucky":
+    "Glückliches Ziehen!",
+  "emote.good_game":
+    "Gutes Spiel",
+  "settings.notify.heading":
+    "Welche Benachrichtigungen",
+  "settings.notify.turns":
+    "Du bist dran",
+  "settings.notify.turnsHint":
+    "Du bist am Zug oder deine Zeit läuft ab.",
+  "settings.notify.invites":
+    "Einladungen & Freundschaftsanfragen",
+  "settings.notify.invitesHint":
+    "Spieleinladungen und neue Freundschaftsanfragen.",
+  "settings.notify.nudges":
+    "Anstupser & Reaktionen",
+  "settings.notify.nudgesHint":
+    "Wenn dich jemand anstupst oder in einem Spiel reagiert.",
+  "settings.notify.streaks":
+    "Serien-Erinnerungen",
+  "settings.notify.streaksHint":
+    "Wenn deine Serie im Tages-Deal oder in der Wochen-Challenge abzureißen droht.",
+  "settings.notify.quietHours":
+    "Ruhezeiten",
+  "settings.notify.quietHoursHint":
+    "In diesem Zeitfenster (deine Ortszeit) gibt es keine Push-Benachrichtigungen. Dein Posteingang wird weiter aktualisiert.",
+  "settings.notify.from":
+    "Von",
+  "settings.notify.to":
+    "bis",
+  "leaderboard.loadMore":
+    "Mehr anzeigen",
+  "leaderboard.yourRank":
+    "Du bist Platz {rank} von {total}",
   "account.delete.heading": "Dein Konto löschen",
-  "account.delete.bodyPrefix":
-    "Eine Selbstlöschung gibt es noch nicht. Um dein Konto und alles, was damit verknüpft ist — Statistiken, Spielverlauf, Erfolge, Anzeigename, Freunde und Mehrspieler-Spiele — zu entfernen, schreib eine E-Mail an",
-  "account.delete.bodySuffix": "von der E-Mail-Adresse deines Kontos.",
   "account.error.notConfigured": "Nicht eingerichtet.",
   "account.error.wrongPassword": "Das aktuelle Passwort ist falsch.",
   "account.error.needsFreshSignIn":
@@ -1107,7 +1459,7 @@ const de = {
     "Die App ist ein Hobbyprojekt, das von einem einzelnen Entwickler betrieben wird. Wir dürfen jederzeit Funktionen hinzufügen, ändern oder entfernen, Statistiken und Bestenlisten zurücksetzen oder neu ausbalancieren oder das Angebot der App oder von Teilen davon (einschließlich der Online-Funktionen) einstellen. Wir bemühen uns, wesentliche Änderungen, wo möglich, mit angemessener Frist anzukündigen, können aber nicht zusichern, dass die Online-Funktionen stets verfügbar sind.",
   "terms.termination.title": "Beendigung",
   "terms.termination.body":
-    "Sie können die Nutzung der App jederzeit beenden oder Ihr Konto löschen (wie, steht in der Datenschutzrichtlinie). Der Entwickler darf ein Konto sperren, einschränken oder löschen oder Inhalte entfernen, wenn es gegen diese Bedingungen verstößt — zum Beispiel bei Betrug, Belästigung, anstößigen Namen oder Fotos oder Versuchen, den Dienst anzugreifen oder zu überlasten — und darf dies ohne Vorankündigung tun, soweit es zum Schutz des Dienstes oder anderer Spieler erforderlich ist. Wenn Sie glauben, dass dies ein Irrtum war, kontaktieren Sie uns.",
+    "Sie können die App jederzeit nicht mehr nutzen oder Ihr Konto auf der Konto-Seite löschen (Details in der Datenschutzerklärung). Der Entwickler kann ein Konto sperren, einschränken oder löschen oder Inhalte entfernen, wenn es gegen diese Bedingungen verstößt – etwa durch Betrug, Belästigung, anstößige Namen oder Fotos oder Angriffe auf bzw. Überlastung des Dienstes – und das ohne Vorankündigung tun, wenn es zum Schutz des Dienstes oder anderer Spieler nötig ist. Spieler können einander melden und blockieren; Meldungen prüft der Entwickler. Wenn Sie eine Entscheidung für einen Fehler halten, melden Sie sich bei uns.",
   "terms.law.title": "Anwendbares Recht",
   "terms.law.body":
     "Nichts in diesen Bedingungen nimmt Ihnen die zwingenden gesetzlichen Rechte, die Sie nach dem Recht des Landes haben, in dem Sie leben; diese Vorschriften gelten für Sie weiter.",
@@ -1129,6 +1481,8 @@ const de = {
     "Wenn Sie sich nie anmelden, bleiben Ihre Spiele und Einstellungen bei Ihnen. Ihr laufendes Spiel, Ihre Hausregel-Einstellungen und Ihre Präferenzen werden nur im lokalen Speicher Ihres Browsers oder Geräts gespeichert, niemals irgendwohin übertragen und niemals von uns eingesehen.",
   "privacy.localPlay.diagnostics":
     "Zwei Kleinigkeiten werden auch ohne Konto gesendet, damit Probleme gefunden und behoben werden können: Absturz- und Fehlerberichte (die Fehlermeldung, die Seite, auf der Sie sich befanden, Ihr Browser- und Gerätetyp sowie die App-Version) und anonyme Nutzungszählungen wie „ein Spiel wurde gestartet“ mit groben Angaben wie Spielmodus und Schwierigkeit. Nutzungszählungen enthalten keine Konto-, Namens- oder Gerätekennung. Ihre IP-Adresse ist für unseren Hosting-Anbieter bei jeder Anfrage zwangsläufig sichtbar, wir speichern sie aber nicht in diesen Datensätzen. Wenn Sie die Support-Seite nutzen, werden die Nachricht sowie alle Dateien oder die Kontaktadresse, die Sie angeben, per E-Mail an den Entwickler gesendet.",
+  "privacy.localPlay.speed":
+    "Damit die App schnell bleibt, sendet ein kleiner Teil der Besuche außerdem eine Messung der Seitengeschwindigkeit: wie lange die Seite zum Laden und Reagieren brauchte (gerundet), zusammen mit dem Seitennamen und der Verbindungsart (z. B. „4g“). Wie die Nutzungszahlen enthält sie weder Konto noch Namen noch Gerätekennung.",
   "privacy.account.title": "Wenn Sie ein Konto erstellen",
   "privacy.account.intro":
     "Die Anmeldung ist optional und schaltet Statistiken, Erfolge, Ihre Kontostufe, die Bestenliste, Freunde, Clubs, Turniere und rundenbasierte Mehrspieler-Spiele frei. Wenn Sie sich mit E-Mail anmelden, speichern wir:",
@@ -1149,7 +1503,11 @@ const de = {
   "privacy.account.item.clubs":
     "Clubs und Turniere, die Sie erstellen oder denen Sie beitreten: der Club- oder Turniername (für Mitglieder bzw. Teilnehmer sichtbar), wer Inhaber oder Gastgeber ist und wer die Mitglieder und Teilnehmer sind.",
   "privacy.account.item.push":
-    "Wenn Sie Benachrichtigungen aktivieren, das Push-Abonnement Ihres Browsers (eine Adresse und Verschlüsselungsschlüssel, die vom Push-Dienst Ihres Browsers bereitgestellt werden), damit wir Ihnen Benachrichtigungen wie „Sie sind am Zug“, zu Freunden und Erinnerungen zum Tages-Deal senden können. Dies ist ausgeschaltet, sofern Sie nicht einwilligen, und Sie können es jederzeit in der App oder in Ihren Browser- oder Geräteeinstellungen ausschalten.",
+    "Wenn Sie Benachrichtigungen einschalten, speichern wir das Push-Abo Ihres Browsers (eine Adresse und Verschlüsselungsschlüssel des Push-Dienstes Ihres Browsers), um Ihnen „Du bist dran“-, Spieleinladungs-, Freundschaftsanfrage-, Anstupser-, Reaktions- und Serien-Erinnerungen in Ihrer gewählten Sprache zu senden. Sie wählen, welche Arten Sie erhalten, und können Ruhezeiten festlegen; um sie einzuhalten, speichern wir diese Auswahl und den UTC-Zeitversatz Ihres Geräts. Das ist aus, solange Sie nicht zustimmen, und lässt sich jederzeit in der App oder in den Browser- bzw. Geräteeinstellungen ausschalten.",
+  "privacy.account.item.safety":
+    "Sicherheitsdaten: die Spieler, die Sie blockieren (Sie sind füreinander unsichtbar), und Meldungen, die Sie über andere Spieler einreichen (wer wen gemeldet hat, der Grund, eine optionale kurze Notiz, wo gemeldet wurde und Name und Bio der gemeldeten Person zu diesem Zeitpunkt). Meldungen sieht nur der Entwickler; sie werden so lange aufbewahrt, wie zur Prüfung nötig. Die gemeldete Person erfährt nicht, wer sie gemeldet hat. Anzeigenamen, Bios und Clubnamen werden außerdem automatisch anhand einer Liste gesperrter Wörter und Regeln gegen Identitätsvortäuschung geprüft.",
+  "privacy.account.item.emotes":
+    "Schnelle Reaktionen, die Sie in einem Mehrspielerspiel senden (eines von festen Vorgaben – nie freier Text); sie werden den anderen Spielern dieses Spiels angezeigt und nur für die jeweils letzten pro Spiel aufbewahrt.",
   "privacy.account.item.support":
     "Wenn Sie über die Seite „Den Entwickler unterstützen“ ein Trinkgeld senden, wird die Zahlung vollständig von Stripe abgewickelt, und wir sehen Ihre Kartendaten nie. Wir speichern nur, dass eine Zahlung erfolgt ist (die Stripe-Sitzungsreferenz, den Betrag und die Währung), damit wir Ihnen das Unterstützer-Abzeichen geben können.",
   "privacy.account.item.security":
@@ -1181,18 +1539,18 @@ const de = {
   "privacy.export.bodyPrefix": "Auf der Konto-Seite gibt es die Schaltfläche",
   "privacy.export.downloadLabel": "Meine Daten herunterladen",
   "privacy.export.bodyMiddle":
-    "— damit erhalten Sie die an Ihr Konto gebundenen Daten (Profil, Statistiken, Verlauf, Erfolge, Einstellungen, Speicherstände, Freunde und Mehrspieler-Aufzeichnungen) jederzeit und ohne Anfrage als eine Datei. Eine Schaltfläche zum eigenständigen Löschen gibt es noch nicht. Um Ihr Konto und alles, was damit verknüpft ist — Statistiken, Spielverlauf, Erfolgsfortschritt, Profil, Freunde, Clubs und Mehrspieler-Spiele — zu löschen, schreiben Sie eine E-Mail an",
+    "— damit erhalten Sie die mit Ihrem Konto verbundenen Daten (Profil, Statistiken, Verlauf, Erfolge, Einstellungen, Spielstände, Freunde, blockierte Spieler und Mehrspieler-Bilanz) jederzeit als eine Datei, ganz ohne Anfrage. Dort gibt es auch die Schaltfläche „Mein Konto löschen“: Nach Bestätigung mit Ihrem Passwort werden Ihr Konto und alles, was daran hängt – Statistiken, Spielverlauf, Erfolgsfortschritt, Profil und Profilfoto, Freunde, Ihre Clubs und Turniere, Benachrichtigungs-Abos – sofort gelöscht. Spiele, die Sie mit anderen gespielt haben, bleiben für diese erhalten, mit „Gelöschter Spieler“ statt Ihres Namens; laufende Spiele werden für Sie aufgegeben. Wenn Sie die Schaltfläche nicht nutzen können (z. B. bei vergessenem Passwort), schreiben Sie eine E-Mail an",
   "privacy.export.bodySuffix":
-    "von der E-Mail-Adresse des Kontos, und wir löschen es. Das Löschen Ihres Kontos entfernt Sie auch aus den Freundeslisten anderer Spieler.",
+    "von der im Konto hinterlegten Adresse, und wir löschen es für Sie. Mit dem Konto verschwinden Sie auch aus den Freundeslisten anderer Spieler.",
   "privacy.retention.title": "Wie lange wir Daten aufbewahren",
   "privacy.retention.body":
-    "Wir bewahren Ihre Kontodaten auf, solange Ihr Konto besteht. Nachdem Sie uns um die Löschung Ihres Kontos gebeten haben, bemühen wir uns, es zügig und in jedem Fall innerhalb einer angemessenen Frist zu entfernen. Absturzberichte werden nach etwa 30 Tagen automatisch gelöscht, kurzlebige Benachrichtigungs- und Missbrauchsvermeidungsdaten spätestens nach einigen Wochen. Anonyme Nutzungszählungen enthalten keine persönlichen Kennungen und werden bis zu etwa 13 Monate aufbewahrt. Kopien können für begrenzte Zeit in Backups der Anbieter verbleiben, bevor sie überschrieben werden.",
+    "Wir speichern Ihre Kontodaten, solange Ihr Konto besteht. Wenn Sie Ihr Konto löschen (in der App oder auf Anfrage), werden die Daten sofort entfernt – bei einer Anfrage per E-Mail zeitnah und in jedem Fall innerhalb eines angemessenen Zeitraums. Meldungen, die Sie über andere Spieler einreichen, bewahren wir so lange auf, wie zur Prüfung nötig. Absturzberichte werden nach etwa 30 Tagen automatisch gelöscht, kurzlebige Benachrichtigungs- und Missbrauchsschutzdaten nach spätestens einigen Wochen. Anonyme Nutzungszähler enthalten keine persönlichen Kennungen und werden bis zu etwa 13 Monate aufbewahrt. Kopien können noch begrenzte Zeit in Backups des Anbieters verbleiben, bevor sie überschrieben werden.",
   "privacy.transfers.title": "Internationale Übermittlungen",
   "privacy.transfers.body":
     "Unser Hosting-Anbieter kann Daten auf Servern außerhalb des Landes speichern und verarbeiten, in dem Sie leben. Wo das geschieht, stützen wir uns auf die Garantien des Anbieters für internationale Übermittlungen (Drittlandübermittlung). Mit der Nutzung eines Kontos nehmen Sie zur Kenntnis, dass Ihre Daten in anderen Ländern verarbeitet werden können.",
   "privacy.rights.title": "Ihre Rechte",
   "privacy.rights.body":
-    "Je nachdem, wo Sie leben, haben Sie möglicherweise das Recht, auf Ihre personenbezogenen Daten zuzugreifen, sie zu berichtigen, zu löschen, eine Kopie in einem übertragbaren Format zu erhalten, einer bestimmten Verarbeitung zu widersprechen oder uns um deren Einschränkung zu bitten und erteilte Einwilligungen zu widerrufen (Betroffenenrechte). Vieles davon können Sie selbst tun: Bearbeiten Sie Ihr Profil und Ihre Einstellungen in der App und laden Sie Ihre Daten auf der Konto-Seite herunter. Für alles Weitere oder um Ihr Konto zu löschen, schreiben Sie an die unten stehende Adresse. Sie haben außerdem das Recht, bei Ihrer örtlichen Datenschutz-Aufsichtsbehörde Beschwerde einzulegen. Möglicherweise müssen wir bestätigen, dass Sie es wirklich sind, bevor wir einen Antrag bearbeiten.",
+    "Je nach Wohnort haben Sie möglicherweise das Recht, auf Ihre personenbezogenen Daten zuzugreifen, sie zu berichtigen, zu löschen, eine Kopie in übertragbarem Format zu erhalten, bestimmten Verarbeitungen zu widersprechen oder deren Einschränkung zu verlangen und erteilte Einwilligungen zu widerrufen. Vieles davon können Sie selbst tun: Profil und Einstellungen in der App bearbeiten, Ihre Daten herunterladen und Ihr Konto auf der Konto-Seite löschen. Für alles Weitere schreiben Sie an die unten stehende Adresse. Sie haben außerdem das Recht, sich bei Ihrer Datenschutzbehörde zu beschweren. Möglicherweise müssen wir vor der Bearbeitung prüfen, ob Sie es wirklich sind.",
   "privacy.children.title": "Datenschutz für Kinder",
   "privacy.children.body":
     "Diese App richtet sich nicht an Kinder unter 13 Jahren, und wir erheben wissentlich keine personenbezogenen Daten von ihnen. Wo das örtliche Recht ein höheres Mindestalter für die Einwilligung in die Verarbeitung der eigenen personenbezogenen Daten festlegt (zum Beispiel 14 in Südkorea oder 16 in Teilen der Europäischen Union), richtet sich die App auch nicht an Personen unter diesem Alter, und Sie sollten kein Konto erstellen, wenn Sie jünger sind. Wenn Sie glauben, dass ein Kind uns personenbezogene Daten übermittelt hat, kontaktieren Sie uns, und wir löschen sie.",
@@ -1311,7 +1669,11 @@ const de = {
   "tournaments.gamesWon": "{count}S",
   "tournaments.rounds": "Runden",
   "tournaments.roundN": "Runde {round}",
-  "tournaments.confirmCancel": "Dieses Turnier abbrechen? Bereits gespielte Spiele behalten ihre Ergebnisse.",
+  "tournaments.confirmCancel.title": "Dieses Turnier abbrechen?",
+  "tournaments.confirmCancel.body":
+    "Das Turnier endet für alle. Bereits gespielte Spiele behalten ihre Ergebnisse; noch nicht gespielte Runden finden nicht mehr statt.",
+  "tournaments.confirmCancel.confirm": "Turnier abbrechen",
+  "tournaments.confirmCancel.keep": "Behalten",
   "tournaments.cancelError": "Konnte nicht abgebrochen werden — versuche es erneut.",
   "tournaments.cancelTournament": "Turnier abbrechen",
 
@@ -1389,7 +1751,8 @@ const de = {
   "player.creator.title": "Erschaffer von Books & Runs",
   "player.creator.label": "Erschaffer",
   "player.joined": "Dabei seit {date}",
-  "player.report.button": "Foto melden",
+  "player.report.button":
+    "Melden",
   "player.share.shared": "Geteilt.",
   "player.share.error": "Dieses Bild konnte nicht vorbereitet werden — versuche es erneut.",
   "player.report.prompt": "Was stimmt mit diesem Foto nicht? (optional)",
@@ -1634,6 +1997,14 @@ const de = {
   "achievementFamily.largeTableGames.unit": "Spiele mit 6 oder mehr Spielern",
   "achievementFamily.turnsTaken.title": "Marathonläufer",
   "achievementFamily.turnsTaken.unit": "gespielte Züge",
+  "achievementFamily.dailyDealsCompleted.title": "Tages-Stammgast",
+  "achievementFamily.dailyDealsCompleted.unit": "abgeschlossene Tages-Deals",
+  "achievementFamily.dailyDealBestStreak.title": "Serienhüter",
+  "achievementFamily.dailyDealBestStreak.unit": "Tage in Folge (beste Tages-Deal-Serie)",
+  "achievementFamily.weeklyChallengesCompleted.title": "Herausforderer",
+  "achievementFamily.weeklyChallengesCompleted.unit": "abgeschlossene Wochen-Challenges",
+  "achievementFamily.weeklyChallengeBestStreak.title": "Woche für Woche",
+  "achievementFamily.weeklyChallengeBestStreak.unit": "Wochen in Folge (beste Wochen-Challenge-Serie)",
 
   // reviewPrompt.*
   "reviewPrompt.title": "Gefällt dir Books & Runs?",
@@ -1644,6 +2015,20 @@ const de = {
   "reviewPrompt.yes": "Ja!",
   "update.newVersion": "Eine neue Version von Books & Runs ist verfügbar.",
   "update.refresh": "Neu laden",
+  "toast.offline":
+    "Du bist offline — Spiele funktionieren weiterhin, und dein Fortschritt wird synchronisiert, sobald du wieder online bist.",
+  "toast.backOnline": "Wieder online.",
+  "toast.saved": "Gespeichert",
+  "toast.copied": "In die Zwischenablage kopiert",
+  "toast.syncFailed": "Synchronisierung fehlgeschlagen — wir versuchen es gleich noch einmal.",
+  "install.title": "Books & Runs installieren",
+  "install.body":
+    "Füge es deinem Startbildschirm hinzu: Vollbild-Spiel, schneller Start und Benachrichtigungen, wenn du dran bist.",
+  "install.button": "Installieren",
+  "install.notNow": "Nicht jetzt",
+  "install.ios.title": "Books & Runs zum Home-Bildschirm hinzufügen",
+  "install.ios.body":
+    "Tippe auf das Teilen-Symbol, dann auf „Zum Home-Bildschirm“. Auf iPhone und iPad funktionieren Benachrichtigungen, wenn du dran bist, erst, sobald die App auf deinem Home-Bildschirm liegt.",
   "error.eyebrow": "Etwas ist schiefgelaufen",
   "error.title": "Dieser Bildschirm hat einen Fehler",
   "error.body": "Versuch es erneut – wenn es weiterhin passiert, hilft meist ein neues Spiel.",

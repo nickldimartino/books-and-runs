@@ -1,5 +1,8 @@
 "use client";
 
+// (The worker itself is generated per deploy from sw/sw.template.js by
+// app/sw.js/route.ts — see that template's header for the caching design.)
+
 import { useEffect } from "react";
 
 export const SW_UPDATE_AVAILABLE_EVENT = "br:sw-update-available";
@@ -60,7 +63,7 @@ export function ServiceWorkerRegistrar() {
     }
 
     navigator.serviceWorker
-      .register("/sw.js")
+      .register("/sw.js", { updateViaCache: "none" })
       .then((reg) => {
         if (cancelled) return;
         registration = reg;

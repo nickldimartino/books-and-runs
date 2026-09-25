@@ -162,14 +162,14 @@ export function OpponentStrip({
                 className={
                   isEmojiAvatar
                     ? "text-sm leading-none"
-                    : "grid h-4 w-4 place-items-center rounded-full bg-[var(--panel-soft)] text-[10px] font-bold leading-none text-[var(--muted)]"
+                    : "grid h-5 w-5 place-items-center rounded-full bg-[var(--panel-soft)] text-[11px] font-bold leading-none text-[var(--muted)]"
                 }
               >
                 {avatar}
               </span>
               {active && <span className="max-w-[7.5rem] truncate font-medium">{shortName}</span>}
               <span
-                className={`rounded-full px-1.5 text-[10px] font-semibold leading-[1.35] ${
+                className={`rounded-full px-1.5 text-[11px] font-semibold leading-[1.35] ${
                   active
                     ? "bg-[var(--accent)] text-[var(--on-accent)]"
                     : "bg-[var(--panel-soft)] text-[var(--muted)]"
@@ -228,7 +228,7 @@ function ActivityCard({ label, card }: { label: string; card: DiscardEvent["card
       {/* No whitespace-nowrap here on purpose — a longer translated label
           ("Last discard"/"Last pickup") wraps to 2 lines within this fixed
           narrow column instead of forcing the row wider than its popover. */}
-      <p className="text-[10px] uppercase leading-tight tracking-wide text-[var(--faint)]">{label}</p>
+      <p className="text-[11px] uppercase leading-tight tracking-wide text-[var(--faint)]">{label}</p>
       <div className="mt-1 flex justify-center">
         {card ? (
           <PlayingCard card={card} small />

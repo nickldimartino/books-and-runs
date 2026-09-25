@@ -57,12 +57,12 @@ import {
   findPremiumEmojiOption,
   isPremiumEmojiUnlocked,
   PREMIUM_EMOJI_OPTIONS,
-  premiumEmojiRequirementLabel,
   type PremiumEmojiOption,
 } from "../lib/avatarPresets";
 import { InvalidAvatarFileError, uploadAvatarPhoto } from "../lib/avatarUpload";
 import { BANNER_OPTIONS, findBannerOption } from "../lib/bannerPresets";
-import { cosmeticRequirementLabel, isCosmeticUnlocked, makeUnlockContext } from "../lib/cosmeticUnlocks";
+import { isCosmeticUnlocked, makeUnlockContext } from "../lib/cosmeticUnlocks";
+import { cosmeticRequirementText } from "../lib/cosmeticRequirementText";
 import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
 import { defaultRarityForUnlock, RARITY_TEXT_ACCENT } from "../lib/cosmeticRarity";
 import { formatScore } from "../lib/formatScore";
@@ -77,12 +77,10 @@ import {
   LeaderboardEntry,
   MAX_BIO_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
-  MAX_REPORT_REASON_LENGTH,
   MAX_SHOWCASE_ITEMS,
   displayNameFor,
   isDisplayNameAvailable,
   playerProfileHref,
-  reportProfilePhoto,
   revertToEmojiAvatar,
   showcaseKeyFor,
   syncLeaderboardStats,
@@ -96,6 +94,9 @@ import {
   updateLeaderboardShowcase,
   updateLeaderboardTitle,
 } from "../lib/leaderboardStore";
+import { blockUser, ContentRejectedError, contentRejectionKey } from "../lib/safetyStore";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ReportDialog } from "../components/ReportDialog";
 import { EMPTY_MP_STATS, getMyMpHistory, getMyMpStats, MpHistoryEntry, MpStats } from "../lib/mpStore";
 import { AVATAR_FRAME_COLOR, AVATAR_FRAME_OPTIONS, findAvatarFrameOption, findTitleOption, TITLE_OPTIONS } from "../lib/profileCosmetics";
 import {
@@ -336,6 +337,7 @@ export default function PlayerProfilePage() {
   const { level } = usePlayerLevel();
   const router = useRouter();
   const { t, tPlural, locale } = useT();
+  const req = (rule: Parameters<typeof cosmeticRequirementText>[2]) => cosmeticRequirementText(t, tPlural, rule);
   const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -449,20 +451,26 @@ export default function PlayerProfilePage() {
     return gamesTogether > 0 ? { wins, losses, ties, gamesTogether } : null;
   }, [h2hHistory, user, profileId, isSelf]);
 
-  // ── Report photo ──────────────────────────────────────────────────────
-  const [reportState, setReportState] = useState<"idle" | "open" | "sending" | "sent" | "error">("idle");
-  const [reportReason, setReportReason] = useState("");
+  // ── Report / block (someone else's profile) ───────────────────────────
+  const [reporting, setReporting] = useState(false);
+  const [confirmingBlock, setConfirmingBlock] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+  const [blockedNow, setBlockedNow] = useState(false);
 
-  async function submitReport(e: FormEvent) {
-    e.preventDefault();
-    if (!supabase || !user || !profileId) return;
-    setReportState("sending");
+  async function confirmBlock() {
+    if (!supabase || !profileId) return;
+    setBlockBusy(true);
+    setBlockError(null);
     try {
-      await reportProfilePhoto(supabase, profileId, reportReason.trim() || null);
-      setReportState("sent");
+      await blockUser(supabase, profileId);
+      setConfirmingBlock(false);
+      setBlockedNow(true);
     } catch (err) {
-      console.error("Failed to report photo:", err);
-      setReportState("error");
+      console.error("Failed to block:", err);
+      setBlockError(t("safety.block.error"));
+    } finally {
+      setBlockBusy(false);
     }
   }
 
@@ -531,6 +539,8 @@ export default function PlayerProfilePage() {
     } catch (err) {
       if (err instanceof DisplayNameTakenError) {
         setNameError(translateError(err.message, t));
+      } else if (err instanceof ContentRejectedError) {
+        setNameError(t(contentRejectionKey(err.issue, "name")));
       } else {
         console.error("Failed to save display name:", err);
       }
@@ -541,6 +551,7 @@ export default function PlayerProfilePage() {
   // ── Self-editing: bio ──────────────────────────────────────────────────
   const [bioInput, setBioInput] = useState("");
   const [bioSaveState, setBioSaveState] = useState<SaveState>("idle");
+  const [bioError, setBioError] = useState<string | null>(null);
 
   useEffect(() => {
     if (entry && isSelf) setBioInput(entry.bio ?? "");
@@ -550,13 +561,18 @@ export default function PlayerProfilePage() {
     e.preventDefault();
     if (!supabase || !user) return;
     setBioSaveState("saving");
+    setBioError(null);
     try {
       const trimmed = bioInput.trim();
       await updateLeaderboardBio(supabase, user.id, trimmed.length > 0 ? trimmed : null);
       setEntry((prev) => (prev ? { ...prev, bio: trimmed || null } : prev));
       setBioSaveState("saved");
     } catch (err) {
-      console.error("Failed to save bio:", err);
+      if (err instanceof ContentRejectedError) {
+        setBioError(t(contentRejectionKey(err.issue, "bio")));
+      } else {
+        console.error("Failed to save bio:", err);
+      }
       setBioSaveState("error");
     }
   }
@@ -1180,15 +1196,28 @@ export default function PlayerProfilePage() {
                   below: these are things you do occasionally, not the
                   content itself. */}
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                {!isSelf && entry.avatar_kind === "photo" && entry.avatar_photo_path && reportState === "idle" && (
-                  <button
-                    onClick={() => setReportState("open")}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
-                  >
-                    {t("player.report.button")}
-                  </button>
+                {!isSelf && user && !blockedNow && (
+                  <>
+                    <button
+                      onClick={() => setReporting(true)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+                    >
+                      {t("player.report.button")}
+                    </button>
+                    <button
+                      onClick={() => setConfirmingBlock(true)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${onBanner ? "border-white/30 text-white/90 hover:bg-white/10" : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"}`}
+                    >
+                      {t("safety.menu.block")}
+                    </button>
+                  </>
                 )}
               </div>
+              {blockedNow && (
+                <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>
+                  {t("safety.block.done", { name: displayNameFor(entry) })}
+                </p>
+              )}
               {shareState === "shared" && (
                 <p className={`text-xs ${onBanner ? "text-white/90" : "text-[var(--muted)]"}`}>{t("player.share.shared")}</p>
               )}
@@ -1196,39 +1225,31 @@ export default function PlayerProfilePage() {
                 <p className="text-xs text-[var(--danger)]">{t("player.share.error")}</p>
               )}
 
-              {(reportState === "open" || reportState === "sending") && (
-                <form onSubmit={submitReport} className="mt-2 flex w-full flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-3 text-left">
-                  <label className="text-xs font-medium text-[var(--muted)]">
-                    {t("player.report.prompt")}
-                  </label>
-                  <textarea
-                    value={reportReason}
-                    onChange={(e) => setReportReason(e.target.value)}
-                    maxLength={MAX_REPORT_REASON_LENGTH}
-                    rows={2}
-                    className="resize-none rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+              {!isSelf && user && (
+                <>
+                  <ReportDialog
+                    open={reporting}
+                    targetUserId={profileId ?? ""}
+                    targetName={displayNameFor(entry)}
+                    context="profile"
+                    onClose={() => setReporting(false)}
+                    onBlockRequested={() => setConfirmingBlock(true)}
                   />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setReportState("idle")}
-                      disabled={reportState === "sending"}
-                      className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-60"
-                    >
-                      {t("common.cancel")}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={reportState === "sending"}
-                      className="flex-1 rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
-                    >
-                      {reportState === "sending" ? t("player.report.sending") : t("player.report.submit")}
-                    </button>
-                  </div>
-                </form>
+                  <ConfirmDialog
+                    open={confirmingBlock}
+                    danger
+                    busy={blockBusy}
+                    title={t("safety.block.confirmTitle", { name: displayNameFor(entry) })}
+                    body={blockError ?? t("safety.block.confirmBody")}
+                    confirmLabel={t("safety.menu.block")}
+                    onConfirm={confirmBlock}
+                    onCancel={() => {
+                      setConfirmingBlock(false);
+                      setBlockError(null);
+                    }}
+                  />
+                </>
               )}
-              {reportState === "sent" && <p className="text-xs text-[var(--muted)]">{t("player.report.sent")}</p>}
-              {reportState === "error" && <p className="text-xs text-[var(--danger)]">{t("player.report.error")}</p>}
             </div>
           </ProfileBanner>
 
@@ -1394,9 +1415,9 @@ export default function PlayerProfilePage() {
                         aria-label={
                           unlocked
                             ? t("player.badge.useEmoji", { emoji: option.emoji })
-                            : t("player.badge.lockedAriaLabel", { emoji: option.emoji, requirement: premiumEmojiRequirementLabel(option.unlock) })
+                            : t("player.badge.lockedAriaLabel", { emoji: option.emoji, requirement: (option.unlock ? req(option.unlock) : t("player.badge.free")) })
                         }
-                        title={unlocked ? undefined : premiumEmojiRequirementLabel(option.unlock)}
+                        title={unlocked ? undefined : (option.unlock ? req(option.unlock) : t("player.badge.free"))}
                         className={`relative grid aspect-square place-items-center rounded-lg text-[var(--heading)] transition ${
                           !unlocked
                             ? `bg-[var(--panel-soft)] ${LOCKED_ITEM_CLASS}`
@@ -1432,7 +1453,7 @@ export default function PlayerProfilePage() {
                   return (
                     <p className="flex items-center gap-1.5 text-[10px] text-[var(--faint)]">
                       <PremiumBadgeIcon option={shown} className="block h-3 w-3 shrink-0" />
-                      <span>— {premiumEmojiRequirementLabel(shown.unlock)}</span>
+                      <span>— {(shown.unlock ? req(shown.unlock) : t("player.badge.free"))}</span>
                     </p>
                   );
                 })()}
@@ -1535,9 +1556,9 @@ export default function PlayerProfilePage() {
                           // reaches a touch device, and even an already-
                           // unlocked item is worth a reminder of how it
                           // was earned.
-                          if (option.unlock) setFrameInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
+                          if (option.unlock) setFrameInfo(`${option.label} — ${req(option.unlock)}`);
                         }}
-                        title={unlocked ? undefined : option.unlock && cosmeticRequirementLabel(option.unlock)}
+                        title={unlocked ? undefined : option.unlock && req(option.unlock)}
                         className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                           !unlocked
                             ? LOCKED_ITEM_CLASS
@@ -1593,9 +1614,9 @@ export default function PlayerProfilePage() {
                         key={option.id}
                         onClick={() => {
                           if (unlocked) chooseTitle(option.id);
-                          if (option.unlock) setTitleInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
+                          if (option.unlock) setTitleInfo(`${option.label} — ${req(option.unlock)}`);
                         }}
-                        title={unlocked || !option.unlock ? undefined : cosmeticRequirementLabel(option.unlock)}
+                        title={unlocked || !option.unlock ? undefined : req(option.unlock)}
                         style={unlocked && accent && !selected ? { borderColor: accent, color: accent } : undefined}
                         className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                           !unlocked
@@ -1649,9 +1670,9 @@ export default function PlayerProfilePage() {
                         key={option.id}
                         onClick={() => {
                           if (unlocked) chooseBanner(option.id);
-                          if (option.unlock) setBannerInfo(`${option.label} — ${cosmeticRequirementLabel(option.unlock)}`);
+                          if (option.unlock) setBannerInfo(`${option.label} — ${req(option.unlock)}`);
                         }}
-                        title={unlocked ? undefined : option.unlock && cosmeticRequirementLabel(option.unlock)}
+                        title={unlocked ? undefined : option.unlock && req(option.unlock)}
                         className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                           !unlocked
                             ? LOCKED_ITEM_CLASS
@@ -1713,7 +1734,7 @@ export default function PlayerProfilePage() {
                         <div className="flex flex-wrap gap-2">
                           {boutiqueBadges.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
-                            const requirement = cosmeticRequirementLabel(option.unlock!);
+                            const requirement = req(option.unlock!);
                             return (
                               <button
                                 key={option.emoji}
@@ -1753,7 +1774,7 @@ export default function PlayerProfilePage() {
                               <button
                                 key={option.id}
                                 onClick={() => unlocked && chooseFrame(option.id)}
-                                title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock!)}
+                                title={unlocked ? undefined : req(option.unlock!)}
                                 className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                                   !unlocked
                                     ? LOCKED_ITEM_CLASS
@@ -1782,7 +1803,7 @@ export default function PlayerProfilePage() {
                               <button
                                 key={option.id}
                                 onClick={() => unlocked && chooseTitle(option.id)}
-                                title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock!)}
+                                title={unlocked ? undefined : req(option.unlock!)}
                                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                                   !unlocked
                                     ? `border-[var(--border)] text-[var(--faint)] ${LOCKED_ITEM_CLASS}`
@@ -1808,7 +1829,7 @@ export default function PlayerProfilePage() {
                               <button
                                 key={option.id}
                                 onClick={() => unlocked && chooseBanner(option.id)}
-                                title={unlocked ? undefined : cosmeticRequirementLabel(option.unlock!)}
+                                title={unlocked ? undefined : req(option.unlock!)}
                                 className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
                                   !unlocked
                                     ? LOCKED_ITEM_CLASS
@@ -1883,7 +1904,9 @@ export default function PlayerProfilePage() {
                   </div>
                 </form>
                 {bioSaveState === "saved" && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
-                {bioSaveState === "error" && <p className="text-xs text-[var(--danger)]">{t("common.error")}</p>}
+                {bioSaveState === "error" && (
+                  <p className="text-xs text-[var(--danger)]">{bioError ?? t("common.error")}</p>
+                )}
                 </div>
               </div>
               )}

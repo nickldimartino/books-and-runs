@@ -23,12 +23,17 @@ export function DocumentTitleLocalizer() {
   useEffect(() => {
     const path = (pathname ?? "/").replace(/\/+$/, "") || "/";
     const key = PAGE_TITLE_KEYS[path];
-    const title = key ? `${t(key)} — Books & Runs` : path === "/not-found" ? null : t("meta.homeTitle");
-    if (!title) return;
+    // Only routes with a translation key (and Home) are localized; every
+    // other route keeps its own build-time <title> (routeMetadata.ts) rather
+    // than being overwritten with the Home title.
+    const title = key ? `${t(key)} — Books & Runs` : path === "/" ? t("meta.homeTitle") : null;
     const id = window.setTimeout(() => {
-      document.title = document.title.startsWith("Page not found") || document.title === t("notFound.title") + " — Books & Runs"
-        ? `${t("notFound.title")} — Books & Runs`
-        : title;
+      const notFoundTitle = `${t("notFound.title")} — Books & Runs`;
+      if (document.title.startsWith("Page not found") || document.title === notFoundTitle) {
+        document.title = notFoundTitle;
+      } else if (title) {
+        document.title = title;
+      }
     }, 50);
     return () => window.clearTimeout(id);
   }, [pathname, t]);

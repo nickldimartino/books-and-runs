@@ -7,6 +7,7 @@
 // card-back, and card-face pickers and to the Account page.
 
 import Link from "next/link";
+import { NotificationPrefs } from "../components/NotificationPrefs";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
@@ -48,7 +49,15 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "../lib/pushSubscriptions";
-import { DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
+import {
+  DEFAULT_SETTINGS,
+  GAME_SPEEDS,
+  HouseSettings,
+  loadLocalSettings,
+  REDUCE_MOTION_PREFS,
+  saveLocalSettings,
+} from "../lib/settingsStore";
+import { applyReduceMotion } from "../lib/motion";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "../lib/themeStore";
 import {
   applyColorblindMode,
@@ -544,11 +553,17 @@ export default function SettingsPage() {
         highlightLayoffs: DEFAULT_SETTINGS.highlightLayoffs,
         showWhoseTurn: DEFAULT_SETTINGS.showWhoseTurn,
         showMeldHint: DEFAULT_SETTINGS.showMeldHint,
+        gameSpeed: DEFAULT_SETTINGS.gameSpeed,
+        showLegalMoves: DEFAULT_SETTINGS.showLegalMoves,
+        confirmDiscard: DEFAULT_SETTINGS.confirmDiscard,
       });
     } else if (which === "accessibility") {
       handleColorblindModeChange(DEFAULT_COLORBLIND_MODE);
       handleTextScaleChange(DEFAULT_TEXT_SCALE);
-      updateSettings({ hapticsEnabled: DEFAULT_SETTINGS.hapticsEnabled });
+      updateSettings({
+        hapticsEnabled: DEFAULT_SETTINGS.hapticsEnabled,
+        reduceMotion: DEFAULT_SETTINGS.reduceMotion,
+      });
     }
     setConfirmingReset(null);
   }
@@ -612,6 +627,9 @@ export default function SettingsPage() {
       saveLocalSettings(next);
       return next;
     });
+    // Reduce motion is also a <html> attribute (CSS + init.js key off it), so
+    // it applies live like text size / colorblind mode do.
+    if (patch.reduceMotion !== undefined) applyReduceMotion(patch.reduceMotion);
     pushHouseSettingsPatch(supabase, user?.id ?? null, patch);
   }
 
@@ -762,6 +780,7 @@ export default function SettingsPage() {
                   </div>
                 )}
                 {pushError && <p className="text-xs text-[var(--danger)]">{pushError}</p>}
+                <NotificationPrefs settings={settings} onChange={updateSettings} />
               </section>
             </SettingsSection>
           )}
@@ -938,6 +957,40 @@ export default function SettingsPage() {
             onChange={(v) => updateSettings({ showMeldHint: v })}
             description={t("settings.showMeldHintDescription")}
           />
+
+          <BoolToggle
+            label={t("settings.showLegalMoves")}
+            value={settings.showLegalMoves}
+            onChange={(v) => updateSettings({ showLegalMoves: v })}
+            description={t("settings.showLegalMovesDescription")}
+          />
+
+          <BoolToggle
+            label={t("settings.confirmDiscard")}
+            value={settings.confirmDiscard}
+            onChange={(v) => updateSettings({ confirmDiscard: v })}
+            description={t("settings.confirmDiscardDescription")}
+          />
+
+          <section className="flex flex-col gap-2">
+            <InfoDetails label={t("settings.gameSpeed")}>{t("settings.gameSpeedDescription")}</InfoDetails>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label={t("settings.gameSpeed")}>
+              {GAME_SPEEDS.map((sp) => (
+                <button
+                  key={sp}
+                  onClick={() => updateSettings({ gameSpeed: sp })}
+                  aria-pressed={settings.gameSpeed === sp}
+                  className={`rounded-md px-3 py-2 text-sm font-medium ${
+                    settings.gameSpeed === sp
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {t(`settings.gameSpeed.${sp}` as TranslationKey)}
+                </button>
+              ))}
+            </div>
+          </section>
           <SectionReset
             confirming={confirmingReset === "gameplay"}
             onAsk={() => setConfirmingReset("gameplay")}
@@ -999,6 +1052,26 @@ export default function SettingsPage() {
                   }`}
                 >
                   {t(TEXT_SCALE_LABEL_KEYS[s.id])}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <InfoDetails label={t("settings.reduceMotion")}>{t("settings.reduceMotionDescription")}</InfoDetails>
+            <div className="flex gap-2" role="group" aria-label={t("settings.reduceMotion")}>
+              {REDUCE_MOTION_PREFS.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => updateSettings({ reduceMotion: m })}
+                  aria-pressed={settings.reduceMotion === m}
+                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
+                    settings.reduceMotion === m
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  {t(`settings.reduceMotion.${m}` as TranslationKey)}
                 </button>
               ))}
             </div>

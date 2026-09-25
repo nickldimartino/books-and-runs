@@ -61,8 +61,9 @@ import {
   saveGame,
   saveWeeklyChallengeGame,
 } from "./lib/localSave";
-import { playCardSlide, playCardTap, playMeld, playUndo, setTutorialSoundOverride } from "./lib/sound";
-import { hapticLight, hapticMedium } from "./lib/haptics";
+import { playCardSlide, playCardTap, playDeal, playMeld, playUndo, playYourTurn, setTutorialSoundOverride } from "./lib/sound";
+import { hapticDiscard, hapticLight, hapticMedium, hapticTurn } from "./lib/haptics";
+import { scaleMs } from "./lib/motion";
 import {
   createContext,
   ReactNode,
@@ -88,7 +89,7 @@ interface BuyOffer {
  * consumer that ignores it changes nothing.
  */
 type FlightInput =
-  | { kind: "draw"; card: Card; fromDiscard: boolean; byId: string }
+  | { kind: "draw"; card: Card; fromDiscard: boolean; byId: string; isAI?: boolean }
   | { kind: "discard"; card: Card; byId: string; isAI: boolean; note?: string }
   | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean; note?: string }
   | { kind: "layoff"; card: Card; meldId: string; byId: string; isAI: boolean };
@@ -141,6 +142,9 @@ interface GameContextValue {
   /** Same, for an in-progress Weekly Challenge. */
   continueWeeklyChallenge: () => void;
   revealHand: () => void;
+  /** Cuts the current AI "thinking" / result-hold pause short — the tap-to-
+   * skip on an AI turn. A no-op when nothing is pending. */
+  skipAiWait: () => void;
   draw: (fromDiscard: boolean) => void;
   confirmMeld: (groups: string[][], preferredRunStarts?: (number | undefined)[]) => boolean;
   /** Auto-lays your contract if your current hand can complete it right
@@ -219,6 +223,17 @@ const GameContext = createContext<GameContextValue | null>(null);
  * becomes multi-device.
  */
 const BUY_DISCARD_ENABLED = false;
+
+/**
+ * Whether a turn hand-off needs the "pass the device" screen: only when 2+
+ * humans share this device. With exactly one human (solo vs AI, the tutorial,
+ * Daily Deal/Weekly Challenge) there's nobody to hide the hand from, so the
+ * gate is pure friction and is skipped at game start, resume and after every
+ * AI turn.
+ */
+export function needsPassGate(s: GameState | null): boolean {
+  return !!s && s.players.filter((p) => !p.isAI).length > 1;
+}
 
 // The "thinking…" beat before an AI acts, and the beat after it acts so the
 // result (the discard landing, "Talon laid down 2 Books") is actually
@@ -531,14 +546,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
     commit();
   }, [clearUndoState, commit]);
 
+  // The AI loop's one pending pause (the "thinking…" beat or the result hold),
+  // kept so a tap can cut it short (skipAiWait) — there's only ever one.
+  const aiWaitRef = useRef<{ timer: ReturnType<typeof setTimeout>; fn: () => void } | null>(null);
+  const scheduleAi = useCallback((fn: () => void, ms: number) => {
+    const run = () => {
+      aiWaitRef.current = null;
+      fn();
+    };
+    aiWaitRef.current = { timer: setTimeout(run, ms), fn: run };
+  }, []);
+  const skipAiWait = useCallback(() => {
+    const w = aiWaitRef.current;
+    if (!w) return;
+    clearTimeout(w.timer);
+    w.fn();
+  }, []);
+
   /** Runs AI turns one at a time (with a small delay for visibility) until it's a
-   * human's turn again, or the round/game ends. */
+   * human's turn again, or the round/game ends. Pauses and animation lengths
+   * scale with the Game speed setting (see motion.ts); AI actions make soft
+   * sounds so the opponent's turn isn't silent. */
   const runAiLoop = useCallback(() => {
     const s = stateRef.current;
     if (!s || s.roundOver || s.gameOver) {
       setAiThinking(false);
       if (s && !s.roundOver && !s.gameOver) {
-        setAwaitingReveal(true);
+        setAwaitingReveal(needsPassGate(s));
       }
       return;
     }
@@ -547,11 +581,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setAiThinking(false);
       setHasDrawnBoth(false);
       setLastDrawnCardId(null);
-      setAwaitingReveal(true);
+      setAwaitingReveal(needsPassGate(s));
       return;
     }
     setAiThinking(true);
-    setTimeout(() => {
+    scheduleAi(() => {
       const live = stateRef.current;
       if (!live || live.roundOver || live.gameOver) {
         commit();
@@ -563,18 +597,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const meldsBefore = live.melds.length;
       const meldSizeBefore = new Map(live.melds.map((m) => [m.id, m.cards.length]));
       const discardBefore = live.discardPile.length;
+      const discardTopBefore = live.discardPile[live.discardPile.length - 1];
 
       const aiEntries = playAITurn(live);
       if (aiEntries.length > 0) moveLogRef.current = [...moveLogRef.current, ...aiEntries];
+      const drawEntry = aiEntries.find((e) => e.type === "draw");
+      const tookDiscard = !!drawEntry && drawEntry.type === "draw" && drawEntry.fromDiscard;
 
       const nextIsHuman = !live.roundOver && !live.gameOver && !live.players[live.currentPlayerIndex].isAI;
 
       // Sum up what the turn did into one status note (multiple rapid
       // emitFlight calls collapse to the last one in a render batch, so the
-      // note rides on the single discard event). One card slide for the
-      // whole turn — the discard onto the pile — but only while another AI
-      // is still up: once it's your turn the pass-and-play gate takes over
-      // and there's no pile for it to land on.
+      // note rides on the single discard event, emitted after the draw
+      // flight has had time to play).
       const newMelds = live.melds.slice(meldsBefore);
       const grown = live.melds.filter(
         (m) => meldSizeBefore.has(m.id) && m.cards.length > (meldSizeBefore.get(m.id) ?? 0)
@@ -600,7 +635,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       const note = `${aiName} ${action}`;
 
-      if (!nextIsHuman) {
+      // Two beats so the turn reads: the draw (a face-down card from the pile,
+      // or the face-up discard) now, then the meld/discard a moment later.
+      // Soft sounds accompany each; both respect the sound setting.
+      if (discardTopBefore) {
+        emitFlight({ kind: "draw", card: discardTopBefore, fromDiscard: tookDiscard, byId: aiId, isAI: true });
+      }
+      playCardSlide(true);
+      const secondBeatMs = scaleMs(320);
+      setTimeout(() => {
+        if (newMelds.length > 0 || laidOff > 0) playMeld(true);
+        if (didDiscard) playCardTap(true);
         if (didDiscard) {
           emitFlight({
             kind: "discard",
@@ -613,27 +658,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
           // round 7: melded the whole hand, no discard to slide
           emitFlight({ kind: "meld", cards: [], byId: aiId, isAI: true, note });
         }
-      }
+      }, secondBeatMs);
 
       commit();
 
       if (live.roundOver || live.gameOver) {
         setTimeout(runAiLoop, 0);
       } else if (nextIsHuman) {
-        // Straight to the pass-and-play gate — no lingering AI board
-        // between the last AI's move and "it's your turn" (that in-between
-        // beat read as awkward).
+        // With one human at the table there's no pass-and-play gate: control
+        // goes straight to them, with a soft "your turn" cue since the gate
+        // is no longer what signals it. 2+ humans still get the gate.
         setAiThinking(false);
         setHasDrawnBoth(false);
         setLastDrawnCardId(null);
-        setAwaitingReveal(true);
+        setAwaitingReveal(needsPassGate(live));
+        if (!needsPassGate(live)) {
+          setTimeout(() => {
+            playYourTurn();
+            hapticTurn();
+          }, secondBeatMs);
+        }
       } else {
         // Hold on the finished turn so its result is legible before the
         // next AI's own "thinking…" beat.
-        setTimeout(runAiLoop, AI_RESULT_HOLD_MS);
+        scheduleAi(runAiLoop, scaleMs(AI_RESULT_HOLD_MS));
       }
-    }, AI_TURN_DELAY_MS);
-  }, [commit, setHasDrawnBoth, emitFlight]);
+    }, scaleMs(AI_TURN_DELAY_MS));
+  }, [commit, setHasDrawnBoth, emitFlight, scheduleAi]);
 
   const startNewGame = useCallback(
     (configs: PlayerConfig[], contracts?: ContractRequirement[], trackStats: boolean = true) => {
@@ -656,7 +707,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       stateRef.current = state;
       setSnapshot({ ...state });
       setHasDrawnBoth(false);
-      setAwaitingReveal(!state.players[state.currentPlayerIndex].isAI);
+      setAwaitingReveal(needsPassGate(state) && !state.players[state.currentPlayerIndex].isAI);
       setAiThinking(false);
       setRoundStartScoresBoth(Object.fromEntries(state.players.map((p) => [p.id, p.cumulativeScore])));
       recordedRoundsRef.current = new Set();
@@ -665,6 +716,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastDrawnCardId(null);
       setBuyOffer(null);
       buyQueueRef.current = [];
+      playDeal();
 
       // Fresh game — reset achievement progress and record table composition
       // up front, since it's known now and won't change for the rest of the
@@ -750,7 +802,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     stateRef.current = state;
     setSnapshot({ ...state });
     setHasDrawnBoth(false);
-    setAwaitingReveal(!state.players[state.currentPlayerIndex].isAI);
+    setAwaitingReveal(needsPassGate(state) && !state.players[state.currentPlayerIndex].isAI);
     setAiThinking(false);
     setRoundStartScoresBoth(Object.fromEntries(state.players.map((p) => [p.id, p.cumulativeScore])));
     recordedRoundsRef.current = new Set();
@@ -804,7 +856,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
       runAiLoop();
     } else {
-      setAwaitingReveal(true);
+      setAwaitingReveal(needsPassGate(saved.state));
     }
   }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
@@ -828,7 +880,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     stateRef.current = state;
     setSnapshot({ ...state });
     setHasDrawnBoth(false);
-    setAwaitingReveal(!state.players[state.currentPlayerIndex].isAI);
+    setAwaitingReveal(needsPassGate(state) && !state.players[state.currentPlayerIndex].isAI);
     setAiThinking(false);
     setRoundStartScoresBoth(Object.fromEntries(state.players.map((p) => [p.id, p.cumulativeScore])));
     recordedRoundsRef.current = new Set();
@@ -887,7 +939,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
       runAiLoop();
     } else {
-      setAwaitingReveal(true);
+      setAwaitingReveal(needsPassGate(saved.state));
     }
   }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
@@ -930,7 +982,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!saved.state.roundOver && !saved.state.gameOver && current.isAI) {
       runAiLoop();
     } else {
-      setAwaitingReveal(true);
+      setAwaitingReveal(needsPassGate(saved.state));
     }
   }, [runAiLoop, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState, setTrackStatsBoth]);
 
@@ -1347,7 +1399,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (roundEnded) applyDeltas(roundWonDeltas(s.selectedContracts[s.round - 1], true));
       }
       playCardTap();
-      hapticLight();
+      hapticDiscard();
       commit();
       setHasDrawnBoth(false);
       setLastDrawnCardId(null);
@@ -1380,11 +1432,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setBuyOffer(null);
     buyQueueRef.current = [];
     setRoundStartScoresBoth(Object.fromEntries(next.players.map((p) => [p.id, p.cumulativeScore])));
+    playDeal();
     persist();
     if (next.players[next.currentPlayerIndex].isAI) {
       runAiLoop();
     } else {
-      setAwaitingReveal(true);
+      setAwaitingReveal(needsPassGate(next));
     }
   }, [runAiLoop, persist, setHasDrawnBoth, setRoundStartScoresBoth, clearUndoState]);
 
@@ -1443,6 +1496,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       continueDailyDeal,
       continueWeeklyChallenge,
       revealHand,
+      skipAiWait,
       draw,
       confirmMeld,
       hintMeldContract,
@@ -1487,6 +1541,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       continueDailyDeal,
       continueWeeklyChallenge,
       revealHand,
+      skipAiWait,
       draw,
       confirmMeld,
       hintMeldContract,

@@ -23,6 +23,8 @@ import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useAuth } from "../../AuthContext";
 import { usePlayerLevel } from "../../PlayerLevelContext";
 import { BackLink } from "../../components/BackLink";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { KeyboardHelp } from "../../components/KeyboardHelp";
 import { CardFlightLayer, type CardFlightHandle } from "../../components/CardFlightLayer";
 import { DraggableHand } from "../../components/DraggableHand";
 import { HandPreviewBar } from "../../components/HandPreviewBar";
@@ -30,6 +32,8 @@ import { HandSortButtons } from "../../components/HandSortButtons";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
 import { PageTip } from "../../components/PageTip";
+import { MpTableExtras } from "../../components/MpTableExtras";
+import { TurnTimerBadge } from "../../components/TurnTimerBadge";
 import { SoundQuickToggle } from "../../components/SoundQuickToggle";
 import { DiscardPile, DrawPile } from "../../components/Piles";
 import { PlayingCard } from "../../components/PlayingCard";
@@ -47,6 +51,13 @@ import { loadLocalSettings } from "../../lib/settingsStore";
 import { supabase } from "../../lib/supabaseClient";
 import { getTournamentForGame } from "../../lib/tournamentsStore";
 import { useFocusTrap } from "../../lib/useFocusTrap";
+import { useGameShortcuts, type ShortcutHandlers } from "../../lib/useGameShortcuts";
+import { useMediaQuery, WIDE_TABLE_QUERY } from "../../lib/useMediaQuery";
+import { contractProgress, type ContractProgress } from "../../lib/contractProgress";
+import { playError } from "../../lib/sound";
+import { speedFactor } from "../../lib/motion";
+import { hapticError } from "../../lib/haptics";
+import type { TranslationKey } from "../../lib/i18n/keys";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { groupMeldsByOwner, layOffOptions } from "@/meld";
 import { handPenalty } from "@/scorer";
@@ -84,6 +95,13 @@ const RANK_SUIT: Record<string, string> = {
 };
 const label = (c: Card, jokerAbbr: string) => `${c.rank === "JOKER" ? jokerAbbr : c.rank}${c.suit === "joker" ? "" : RANK_SUIT[c.suit]}`;
 
+/** Mounts the global keyboard shortcuts — a component (not a hook call in the
+ * page) because the page returns early before its handlers exist. */
+function GameShortcuts({ handlers }: { handlers: ShortcutHandlers }) {
+  useGameShortcuts(handlers);
+  return null;
+}
+
 export default function MultiplayerPlayPage() {
   const router = useRouter();
   const { t, tPlural } = useT();
@@ -102,6 +120,11 @@ export default function MultiplayerPlayPage() {
   // game/page.tsx) — a bottom-sheet modal holding the hand + meld builder,
   // reachable via HandPreviewBar, instead of a permanently-inline hand.
   const [handDrawerOpen, setHandDrawerOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [resignOpen, setResignOpen] = useState(false);
+  // ≥1024px: the hand is a permanent dock beside the table (as in solo).
+  const isWide = useMediaQuery(WIDE_TABLE_QUERY);
+  const drawerVisible = handDrawerOpen && !isWide;
   // Same confirm-before-you-can't-take-it-back step as solo/pass-and-play's
   // discardSection (see game/page.tsx's confirmingDiscard) — holds the
   // card id, not the Card itself, since MP's own redacted view is what
@@ -248,7 +271,7 @@ export default function MultiplayerPlayPage() {
     if (!flightEvent || flightEvent.id === lastFlightIdRef.current) return;
     lastFlightIdRef.current = flightEvent.id;
     const fl = cardFlightRef.current;
-    const handTarget: HTMLElement | null = handDrawerOpen
+    const handTarget: HTMLElement | null = handDrawerOpen || isWide
       ? document.querySelector('[data-tutorial="hand"]')
       : document.querySelector('[data-tutorial="hand-bar"]');
     if (flightEvent.kind === "draw") {
@@ -294,7 +317,7 @@ export default function MultiplayerPlayPage() {
         })
       );
     }
-  }, [flightEvent, handDrawerOpen]);
+  }, [flightEvent, handDrawerOpen, isWide]);
 
   const discardTopId = view?.discardTop?.id ?? null;
   const prevDiscardTopRef = useRef<{ id: string | null; round: number | null } | null>(null);
@@ -351,7 +374,7 @@ export default function MultiplayerPlayPage() {
   // game/page.tsx's identical effect): stop the page behind it from
   // scrolling, close on Escape.
   useEffect(() => {
-    if (!handDrawerOpen) return;
+    if (!drawerVisible) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKeyDown(e: KeyboardEvent) {
@@ -362,8 +385,16 @@ export default function MultiplayerPlayPage() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [handDrawerOpen]);
-  useFocusTrap(handDrawerRef, handDrawerOpen);
+  }, [drawerVisible]);
+  useFocusTrap(handDrawerRef, drawerVisible);
+
+  // A rejected move gets a buzz + thud on top of the written error, like solo.
+  useEffect(() => {
+    if (g.error || g.groupError) {
+      playError();
+      hapticError();
+    }
+  }, [g.error, g.groupError]);
 
   // Same ambient-pad treatment as local play's game screen — see its own
   // comment for why this only reads the setting once, on mount.
@@ -622,6 +653,101 @@ export default function MultiplayerPlayPage() {
 
   const meldsByOwner = groupMeldsByOwner(view.melds);
 
+  // Assist + confirm settings (same meanings as solo — see settingsStore.ts).
+  const savedSettings = loadLocalSettings();
+  const showLegalMoves = savedSettings.showLegalMoves;
+  const confirmDiscardSetting = savedSettings.confirmDiscard;
+  const progress = showLegalMoves && isMyTurn && !alreadyMelded ? contractProgress(view.yourHand, { ...view.contract, round: view.round, label: view.roundLabel }) : null;
+  const progressLine = progress ? progressLineFor(progress) : null;
+
+  function progressLineFor(p: ContractProgress): string {
+    if (p.booksReady >= p.booksNeeded && p.runsReady >= p.runsNeeded) return t("game.progress.ready");
+    const parts: string[] = [];
+    if (p.booksNeeded > 0) {
+      let part = t("game.progress.books", { ready: p.booksReady, need: p.booksNeeded });
+      if (p.booksReady < p.booksNeeded && p.nextBook) {
+        part += ` — ${t("game.progress.closestBook", { rank: p.nextBook.rank, have: p.nextBook.have, need: p.nextBook.need })}`;
+      }
+      parts.push(part);
+    }
+    if (p.runsNeeded > 0) {
+      let part = t("game.progress.runs", { ready: p.runsReady, need: p.runsNeeded });
+      if (p.runsReady < p.runsNeeded && p.nextRun) {
+        part += ` — ${t("game.progress.closestRun", { suit: t(`card.suit.${p.nextRun.suit}` as TranslationKey), have: p.nextRun.have, need: p.nextRun.need })}`;
+      }
+      parts.push(part);
+    }
+    return parts.join(" · ");
+  }
+
+  // Why an action is greyed out, in words (Show legal moves assist).
+  let whyMeld: string | null = null;
+  if (!drawn) whyMeld = t("game.why.drawFirst");
+  else if (g.pendingRunChoice) whyMeld = t("game.why.finishWildChoice");
+  else if (!contractStaged) {
+    if (stagedBooks > view.contract.books || stagedRuns > view.contract.runs) whyMeld = t("game.why.tooManyGroups");
+    else {
+      whyMeld = t("game.why.groupMore", {
+        need: contractNeedLabel(
+          Math.max(0, view.contract.books - stagedBooks),
+          Math.max(0, view.contract.runs - stagedRuns),
+          tPlural
+        ),
+      });
+    }
+  }
+  let whyDiscard: string | null = null;
+  if (!drawn) whyDiscard = t("game.why.drawFirst");
+  else if (g.selectedIds.length === 0) whyDiscard = t("game.why.selectToDiscard");
+  else if (g.selectedIds.length > 1) whyDiscard = t("game.why.selectOneToDiscard");
+
+  // One-tap discard when Settings → Confirm before discarding is off.
+  function requestDiscard() {
+    if (!oneSelected || !drawn || g.busy) return;
+    if (confirmDiscardSetting) setConfirmingDiscard(g.selectedIds[0]);
+    else void g.discard(g.selectedIds[0]);
+  }
+
+  const shortcutHandlers: ShortcutHandlers = {
+    draw: () => {
+      if (isMyTurn && !drawn && !g.busy) void g.draw("stock");
+    },
+    drawDiscard: () => {
+      if (isMyTurn && !drawn && !g.busy && view.discardTop) void g.draw("discard");
+    },
+    sortRank: () => sortHand("rank"),
+    sortSuit: () => sortHand("suit"),
+    group: () => {
+      if (!isMyTurn) return;
+      if (!drawn) return;
+      if (!alreadyMelded) {
+        if (g.selectedIds.length > 0) g.stageGroup();
+        else if (contractStaged && !g.busy) void g.confirmMeld();
+      } else if (oneSelected && layoffTargets.length === 1 && selectedCard) {
+        const meld = view.melds.find((m) => m.id === layoffTargets[0]);
+        const opts = meld ? layOffOptions(selectedCard, meld) : [];
+        if (meld && opts.length > 0) void g.layOff(selectedCard.id, meld.id, opts.length === 1 ? opts[0] : "low");
+      }
+    },
+    discard: () => {
+      if (isMyTurn && !goingOut) requestDiscard();
+    },
+    focusHand: () => {
+      const focus = () =>
+        document.querySelector<HTMLElement>('[data-nav-zone="hand"] [role="button"][tabindex="0"]')?.focus();
+      if (isWide || handDrawerOpen) focus();
+      else {
+        setHandDrawerOpen(true);
+        setTimeout(focus, 60);
+      }
+    },
+    help: () => setHelpOpen((o) => !o),
+    escape: () => {
+      if (helpOpen) setHelpOpen(false);
+      else if (confirmingDiscard) setConfirmingDiscard(null);
+    },
+  };
+
   // Same purely-local sort/reorder as game/page.tsx's hand drawer — see
   // handOrder's own doc for why this never reaches the server. Both work on
   // the *whole* hand's order, not just what's visible: cards staged into a
@@ -660,274 +786,10 @@ export default function MultiplayerPlayPage() {
     });
   }
 
-  return (
-    <main data-no-text-scale className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 px-4 py-6">
-      <div className="flex items-center justify-between">
-        <BackLink />
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/how-to-play?from=mp&g=${gameId ?? ""}`}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            {t("common.howToPlay")}
-          </Link>
-          <SoundQuickToggle />
-          <button
-            onClick={() => {
-              if (confirm(t("multiplayer.leaveConfirm"))) g.resign();
-            }}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-          >
-            {t("multiplayer.leave")}
-          </button>
-        </div>
-      </div>
-
-      <PageTip id="multiplayer-play" title={t("multiplayer.playingAsync")}>
-        {t("multiplayer.playingAsyncBody")}
-      </PageTip>
-
-      <header className="panel-elevated flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3">
-        <div className="shrink-0 text-left">
-          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-            {t("game.roundOf", { round: view.round, total: view.totalRounds })}
-          </p>
-          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-            {(() => {
-              const found = CONTRACTS.find((c) => c.round === view.round);
-              return found ? contractNeedLabel(found.books, found.runs, tPlural) : view.roundLabel;
-            })()}
-          </p>
-        </div>
-        <div className="min-w-0 px-1 text-center">
-          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">{t("game.hand.yourHand")}</p>
-          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-            {t("game.hand.pts", { count: handPenalty(view.yourHand) })}
-          </p>
-        </div>
-        <ul className="shrink-0 space-y-1 text-right text-xs text-[var(--muted)]">
-          {scores.map((p) => (
-            <li key={p.seat} className="flex items-center justify-end gap-1">
-              {p.userId === user?.id && level && (
-                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
-                  {t("game.levelBadge", { level: level.level })}
-                </span>
-              )}
-              {p.isAI && p.difficulty && (
-                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--muted)]">
-                  {t("game.levelBadge", { level: AI_THEORETICAL_LEVEL[p.difficulty] })}
-                </span>
-              )}
-              <span className="truncate">
-                {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </header>
-
-      <div ref={opponentAnchorRef}>
-        <OpponentStrip
-          players={opponentPlayers}
-          currentPlayerIndex={view.currentSeat}
-          discardHistory={view.discardHistory}
-          pickupHistory={view.pickupHistory}
-          aiStatus={null}
-          aiThinking={false}
-          bios={bioBySeatId}
-        />
-      </div>
-
-      {g.syncFailed && (
-        <p className="text-center text-xs text-[var(--faint)]">{t("multiplayer.syncError")}</p>
-      )}
-
-      {/* While the hand drawer is open its own copy of this (below) is the
-          one you can actually see — this one sits behind the drawer's
-          backdrop, which is where a rejected meld used to vanish. */}
-      {g.error && !handDrawerOpen && (
-        <p role="alert" className="text-sm text-[var(--danger)]">
-          {g.error}
-        </p>
-      )}
-
-      {roundSummaryFor != null &&
-        (() => {
-          const rr = view.roundResults.find((r) => r.round === roundSummaryFor);
-          if (!rr) return null;
-          const ranked = [...rr.scores].sort((a, b) => a.penalty - b.penalty);
-          return (
-            <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-[var(--heading)]">
-                  {t("multiplayer.roundSummary.heading", {
-                    round: rr.round,
-                    label: (() => {
-                      const found = CONTRACTS.find((c) => c.round === rr.round);
-                      return found ? contractNeedLabel(found.books, found.runs, tPlural) : rr.label;
-                    })(),
-                  })}
-                </h2>
-                <button
-                  onClick={() => setRoundSummaryFor(null)}
-                  className="rounded p-0.5 text-sm text-[var(--faint)] hover:text-[var(--muted)]"
-                  aria-label={t("common.dismiss")}
-                >
-                  ✕
-                </button>
-              </div>
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {ranked.map((s) => (
-                  <li key={s.seat} className="flex items-center justify-between">
-                    <span className="text-[var(--muted)]">
-                      {view.players.find((p) => p.seat === s.seat)?.name ?? t("multiplayer.seatN", { seat: s.seat })}
-                    </span>
-                    <span className="text-[var(--heading)]">
-                      +{s.penalty} <span className="text-[var(--faint)]">({s.cumulative})</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-xs text-[var(--faint)]">
-                {t("multiplayer.roundSummary.nextRound", { round: rr.round + 1 })}
-              </p>
-            </section>
-          );
-        })()}
-
-      {!isMyTurn ? (
-        <div className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">
-          <p>
-            {t("multiplayer.waitingForTurn.prefix")}{" "}
-            <strong className="text-[var(--heading)]">{currentName}</strong>{" "}
-            {t("multiplayer.waitingForTurn.suffix")}
-          </p>
-          {view.currentUserId && view.currentUserId !== user?.id && (
-            <button
-              onClick={() => g.nudge()}
-              disabled={g.nudgeState !== "idle"}
-              className="mt-2 rounded-md border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel)] disabled:opacity-60"
-            >
-              {g.nudgeState === "sent"
-                ? t("multiplayer.nudged")
-                : g.nudgeState === "error"
-                  ? t("multiplayer.cantNudgeYet")
-                  : t("multiplayer.nudgeName", { name: currentName })}
-            </button>
-          )}
-          {g.daysSinceMove != null && g.daysSinceMove >= 14 && (
-            <p className="mt-1 text-xs text-[var(--faint)]">
-              {t("multiplayer.abandonedNotice", { days: g.daysSinceMove })}
-            </p>
-          )}
-        </div>
-      ) : !drawn ? (
-        <p className="rounded-lg bg-[var(--accent)]/10 px-4 py-3 text-center text-sm font-medium text-[var(--accent)]">
-          {t("multiplayer.yourTurnDraw")}
-        </p>
-      ) : null}
-
-      <section className="flex items-start justify-center gap-8">
-        <div className="flex flex-col items-center gap-1">
-          <button
-            ref={(el) => {
-              drawPileElRef.current = el;
-            }}
-            disabled={!isMyTurn || drawn || g.busy}
-            onClick={() => g.draw("stock")}
-            className="disabled:opacity-50"
-            aria-label={t("game.drawFromPile")}
-          >
-            <DrawPile count={view.drawPileCount} />
-          </button>
-          <span className="text-xs text-[var(--faint)]">{t("game.draw", { count: view.drawPileCount })}</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <button
-            ref={(el) => {
-              discardPileElRef.current = el;
-            }}
-            disabled={!isMyTurn || drawn || g.busy || !view.discardTop}
-            onClick={() => g.draw("discard")}
-            className="disabled:opacity-50"
-            aria-label={t("multiplayer.takeDiscardTop")}
-          >
-            <DiscardPile cards={view.discardPile} canLayOff={discardTopCanLayOff} />
-          </button>
-          <span className="text-xs text-[var(--faint)]">{t("game.discardPile")}</span>
-        </div>
-      </section>
-
-      <section ref={tableMeldsElRef} className="rounded-xl bg-[var(--panel-soft)] p-4">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("game.tableMelds.heading")}</h2>
-        {view.melds.length === 0 ? (
-          <p className="text-sm text-[var(--faint)]">{t("multiplayer.noMeldsThisRound")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {meldsByOwner.map(([ownerId, melds]) => (
-              <div key={ownerId}>
-                <p className="mb-1 text-[10px] text-[var(--faint)]">
-                  {view.players[Number(ownerId.replace("seat-", ""))]?.name ?? ownerId}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {melds.map((meld) => {
-                    const armed = layoffArmed && layoffTargets.includes(meld.id);
-                    return (
-                      <button
-                        key={meld.id}
-                        data-meld-id={meld.id}
-                        onClick={() => onMeldClick(meld)}
-                        disabled={!armed}
-                        className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""}`}
-                      >
-                        <span className="flex items-end gap-1">
-                          {meld.cards.map((c) => (
-                            <PlayingCard key={c.id} card={c} small />
-                          ))}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Same hand-drawer pattern as solo/pass-and-play (see game/page.tsx):
-          a permanent, fixed preview bar is the entry point, tapping it opens
-          a bottom-sheet modal with the sortable hand and (while it's your
-          actionable turn) the meld builder. Available any time the game's
-          on screen, not just on your turn — unlike solo, this is always
-          *your own* hand (opponents' are redacted), so there's no reason to
-          hide it while waiting. */}
-      <HandPreviewBar cards={orderedVisibleHand} onTap={() => setHandDrawerOpen(true)} />
-      {handDrawerOpen && (
-        <>
-          <div
-            aria-hidden="true"
-            onClick={() => setHandDrawerOpen(false)}
-            className="fixed inset-0 z-[45] bg-black/50"
-          />
-          <div
-            ref={handDrawerRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("game.manageHand")}
-            tabIndex={-1}
-            className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl outline-none"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[var(--heading)]">{t("game.manageHand")}</h2>
-              <button
-                onClick={() => setHandDrawerOpen(false)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-              >
-                {t("common.done")}
-              </button>
-            </div>
-
+  // The hand + meld builder + discard controls — the modal drawer on phones,
+  // the always-visible dock beside the table on wide screens.
+  const drawerBody = (
+    <>
             {g.error && (
               <div
                 role="alert"
@@ -1019,7 +881,14 @@ export default function MultiplayerPlayPage() {
                   </div>
                 )}
 
-                {g.groupError && <p className="text-xs text-[var(--danger)]">{g.groupError}</p>}
+                {g.groupError && (
+                  <p role="alert" className="text-xs text-[var(--danger)]">
+                    {g.groupError}
+                  </p>
+                )}
+                {progressLine && drawn && !isWide && (
+                  <p className="text-xs font-medium text-[var(--accent)]">{progressLine}</p>
+                )}
 
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
@@ -1038,6 +907,11 @@ export default function MultiplayerPlayPage() {
                     {t("game.buildMeld.confirmMeld")}
                   </button>
                 </div>
+                {showLegalMoves && whyMeld && (
+                  <p role="status" aria-live="polite" className="text-xs text-[var(--faint)]">
+                    {whyMeld}
+                  </p>
+                )}
               </section>
             )}
 
@@ -1088,19 +962,26 @@ export default function MultiplayerPlayPage() {
                       <button
                         onClick={armLayoffFromDrawer}
                         disabled={!drawn || !oneSelected || layoffTargets.length === 0}
-                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+                        className={`rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40 ${
+                          isWide ? "hidden" : ""
+                        }`}
                       >
                         {tPlural("game.discard.layOffCard", 1)}
                       </button>
                     )}
                     {!goingOut && (
                       <button
-                        onClick={() => oneSelected && setConfirmingDiscard(g.selectedIds[0])}
+                        onClick={requestDiscard}
                         disabled={!drawn || !oneSelected || g.busy}
                         className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {t("game.discard.discardSelected")}
                       </button>
+                    )}
+                    {showLegalMoves && !goingOut && whyDiscard && (
+                      <p role="status" aria-live="polite" className="w-full text-center text-xs text-[var(--faint)]">
+                        {whyDiscard}
+                      </p>
                     )}
                     {goingOut && (
                       <button
@@ -1138,14 +1019,359 @@ export default function MultiplayerPlayPage() {
                   onCardClick={acting ? onCardTap : noopTap}
                   onReorder={reorderHand}
                   layoffEligibleIds={layoffEligibleIds}
+                  hintIds={progress?.hintCardIds}
                 />
               )}
               <p className="mt-1 text-center text-xs text-[var(--faint)]">{t("game.hand.dragToReorder")}</p>
             </section>
+    </>
+  );
+
+  return (
+    <main
+      className="mx-auto flex min-h-screen max-w-2xl flex-col gap-5 px-4 py-6 lg:max-w-6xl xl:max-w-7xl"
+      style={{ "--motion-scale": speedFactor() } as React.CSSProperties}
+    >
+      <GameShortcuts handlers={shortcutHandlers} />
+      <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <ConfirmDialog
+        open={resignOpen}
+        danger
+        title={t("multiplayer.resignTitle")}
+        body={t("multiplayer.resignBody")}
+        confirmLabel={t("multiplayer.resignConfirm")}
+        onCancel={() => setResignOpen(false)}
+        onConfirm={() => {
+          setResignOpen(false);
+          g.resign();
+        }}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
+        <BackLink />
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/how-to-play?from=mp&g=${gameId ?? ""}`}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            {t("common.howToPlay")}
+          </Link>
+          <button
+            onClick={() => setHelpOpen(true)}
+            aria-label={t("shortcuts.openHelp")}
+            title={t("shortcuts.openHelp")}
+            className="hidden rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[var(--panel-soft)] sm:inline-block"
+          >
+            ?
+          </button>
+          <SoundQuickToggle />
+          <button
+            onClick={() => setResignOpen(true)}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+          >
+            {t("multiplayer.leave")}
+          </button>
+        </div>
+      </div>
+
+      <PageTip id="multiplayer-play" title={t("multiplayer.playingAsync")}>
+        {t("multiplayer.playingAsyncBody")}
+      </PageTip>
+
+      <header className="panel-elevated flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3">
+        <div className="shrink-0 text-left">
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
+            {t("game.roundOf", { round: view.round, total: view.totalRounds })}
+          </p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+            {(() => {
+              const found = CONTRACTS.find((c) => c.round === view.round);
+              return found ? contractNeedLabel(found.books, found.runs, tPlural) : view.roundLabel;
+            })()}
+          </p>
+        </div>
+        <div className="min-w-0 px-1 text-center">
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">{t("game.hand.yourHand")}</p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+            {t("game.hand.pts", { count: handPenalty(view.yourHand) })}
+          </p>
+        </div>
+        <ul className="shrink-0 space-y-1 text-right text-xs text-[var(--muted)]">
+          {scores.map((p) => (
+            <li key={p.seat} className="flex items-center justify-end gap-1">
+              {p.userId === user?.id && level && (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[var(--accent)]">
+                  {t("game.levelBadge", { level: level.level })}
+                </span>
+              )}
+              {p.isAI && p.difficulty && (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[var(--muted)]">
+                  {t("game.levelBadge", { level: AI_THEORETICAL_LEVEL[p.difficulty] })}
+                </span>
+              )}
+              <span className="truncate">
+                {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </header>
+
+      <div ref={opponentAnchorRef}>
+        <OpponentStrip
+          players={opponentPlayers}
+          currentPlayerIndex={view.currentSeat}
+          discardHistory={view.discardHistory}
+          pickupHistory={view.pickupHistory}
+          aiStatus={null}
+          aiThinking={false}
+          bios={bioBySeatId}
+        />
+      </div>
+
+      {g.syncFailed && (
+        <p className="text-center text-xs text-[var(--faint)]">{t("multiplayer.syncError")}</p>
+      )}
+
+      {/* While the hand drawer is open its own copy of this (below) is the
+          one you can actually see — this one sits behind the drawer's
+          backdrop, which is where a rejected meld used to vanish. */}
+      {g.error && !handDrawerOpen && (
+        <p role="alert" className="text-sm text-[var(--danger)]">
+          {g.error}
+        </p>
+      )}
+
+      {roundSummaryFor != null &&
+        (() => {
+          const rr = view.roundResults.find((r) => r.round === roundSummaryFor);
+          if (!rr) return null;
+          const ranked = [...rr.scores].sort((a, b) => a.penalty - b.penalty);
+          return (
+            <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-[var(--heading)]">
+                  {t("multiplayer.roundSummary.heading", {
+                    round: rr.round,
+                    label: (() => {
+                      const found = CONTRACTS.find((c) => c.round === rr.round);
+                      return found ? contractNeedLabel(found.books, found.runs, tPlural) : rr.label;
+                    })(),
+                  })}
+                </h2>
+                <button
+                  onClick={() => setRoundSummaryFor(null)}
+                  className="rounded p-0.5 text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+                  aria-label={t("common.dismiss")}
+                >
+                  ✕
+                </button>
+              </div>
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {ranked.map((s) => (
+                  <li key={s.seat} className="flex items-center justify-between">
+                    <span className="text-[var(--muted)]">
+                      {view.players.find((p) => p.seat === s.seat)?.name ?? t("multiplayer.seatN", { seat: s.seat })}
+                    </span>
+                    <span className="text-[var(--heading)]">
+                      +{s.penalty} <span className="text-[var(--faint)]">({s.cumulative})</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-[var(--faint)]">
+                {t("multiplayer.roundSummary.nextRound", { round: rr.round + 1 })}
+              </p>
+            </section>
+          );
+        })()}
+
+      {!view.gameOver && g.turnLimitHours > 0 && (
+        <div className="flex justify-center">
+          <TurnTimerBadge
+            turnLimitHours={g.turnLimitHours}
+            turnStartedAt={g.turnStartedAt}
+            isMine={isMyTurn}
+            missedTurns={isMyTurn ? g.yourMissedTurns : 0}
+          />
+        </div>
+      )}
+
+      {!isMyTurn ? (
+        <div className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">
+          <p>
+            {t("multiplayer.waitingForTurn.prefix")}{" "}
+            <strong className="text-[var(--heading)]">{currentName}</strong>{" "}
+            {t("multiplayer.waitingForTurn.suffix")}
+          </p>
+          {view.currentUserId && view.currentUserId !== user?.id && (
+            <button
+              onClick={() => g.nudge()}
+              disabled={g.nudgeState !== "idle"}
+              className="mt-2 rounded-md border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel)] disabled:opacity-60"
+            >
+              {g.nudgeState === "sent"
+                ? t("multiplayer.nudged")
+                : g.nudgeState === "error"
+                  ? t("multiplayer.cantNudgeYet")
+                  : t("multiplayer.nudgeName", { name: currentName })}
+            </button>
+          )}
+          {g.daysSinceMove != null && g.daysSinceMove >= 14 && (
+            <p className="mt-1 text-xs text-[var(--faint)]">
+              {t("multiplayer.abandonedNotice", { days: g.daysSinceMove })}
+            </p>
+          )}
+        </div>
+      ) : (
+        // Same fixed-height slot whether or not you've drawn, so drawing
+        // doesn't shift the table (see solo's turn-status slot).
+        <p
+          role="status"
+          aria-live="polite"
+          className="flex min-h-[3.25rem] items-center justify-center rounded-lg bg-[var(--accent)]/10 px-4 py-3 text-center text-sm font-medium text-[var(--accent)]"
+        >
+          {!drawn
+            ? t("multiplayer.yourTurnDraw")
+            : (progressLine ?? (alreadyMelded ? t("game.turnHint.melded") : t("game.turnHint.drawn")))}
+        </p>
+      )}
+
+      <div className={isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-start gap-6" : "contents"}>
+      <div className={isWide ? "flex min-w-0 flex-col gap-5" : "contents"}>
+      <section data-nav-zone="piles" className="flex items-start justify-center gap-8">
+        <div className="flex flex-col items-center gap-1">
+          <button
+            ref={(el) => {
+              drawPileElRef.current = el;
+            }}
+            disabled={!isMyTurn || drawn || g.busy}
+            onClick={() => g.draw("stock")}
+            className={`rounded-lg disabled:opacity-50 ${showLegalMoves && isMyTurn && !drawn ? "legal-pulse" : ""}`}
+            title={`${t("game.drawFromPile")} (D)`}
+            aria-label={t("game.drawFromPile")}
+          >
+            <DrawPile count={view.drawPileCount} />
+          </button>
+          <span className="text-xs text-[var(--faint)]">{t("game.draw", { count: view.drawPileCount })}</span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <button
+            ref={(el) => {
+              discardPileElRef.current = el;
+            }}
+            disabled={!isMyTurn || drawn || g.busy || !view.discardTop}
+            onClick={() => g.draw("discard")}
+            className={`rounded-lg disabled:opacity-50 ${
+              showLegalMoves && isMyTurn && !drawn && view.discardTop ? "legal-pulse" : ""
+            }`}
+            title={`${t("multiplayer.takeDiscardTop")} (Shift+D)`}
+            aria-label={t("multiplayer.takeDiscardTop")}
+          >
+            <DiscardPile cards={view.discardPile} canLayOff={discardTopCanLayOff} />
+          </button>
+          <span className="text-xs text-[var(--faint)]">{t("game.discardPile")}</span>
+        </div>
+      </section>
+
+      {gameId && (
+        <MpTableExtras
+          gameId={gameId}
+          players={view.players}
+          myUserId={user?.id}
+          emoteTick={g.emoteTick}
+          canEmote
+        />
+      )}
+
+      <section ref={tableMeldsElRef} data-nav-zone="melds" className="rounded-xl bg-[var(--panel-soft)] p-4">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("game.tableMelds.heading")}</h2>
+        {view.melds.length === 0 ? (
+          <p className="text-sm text-[var(--faint)]">{t("multiplayer.noMeldsThisRound")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {meldsByOwner.map(([ownerId, melds]) => (
+              <div key={ownerId}>
+                <p className="mb-1 text-[11px] text-[var(--faint)]">
+                  {view.players[Number(ownerId.replace("seat-", ""))]?.name ?? ownerId}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {melds.map((meld) => {
+                    const armed = layoffArmed && layoffTargets.includes(meld.id);
+                    return (
+                      <button
+                        key={meld.id}
+                        data-meld-id={meld.id}
+                        onClick={() => onMeldClick(meld)}
+                        disabled={!armed}
+                        className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""}`}
+                      >
+                        <span className="flex items-end gap-1">
+                          {meld.cards.map((c) => (
+                            <PlayingCard key={c.id} card={c} small />
+                          ))}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Same hand-drawer pattern as solo/pass-and-play (see game/page.tsx):
+          a permanent, fixed preview bar is the entry point, tapping it opens
+          a bottom-sheet modal with the sortable hand and (while it's your
+          actionable turn) the meld builder. Available any time the game's
+          on screen, not just on your turn — unlike solo, this is always
+          *your own* hand (opponents' are redacted), so there's no reason to
+          hide it while waiting. */}
+      </div>
+      {isWide && (
+        // Wide screens: the hand is a permanent dock beside the table (see
+        // solo's game/page.tsx). Phones keep the modal drawer below.
+        <aside
+          data-tutorial="hand-bar"
+          data-testid="hand-dock"
+          aria-label={t("game.manageHand")}
+          className="panel-elevated sticky top-28 flex max-h-[calc(100vh-8rem)] flex-col gap-4 overflow-y-auto rounded-2xl bg-[var(--panel)] p-4"
+        >
+          {drawerBody}
+        </aside>
+      )}
+      </div>
+
+      {!isWide && <HandPreviewBar cards={orderedVisibleHand} onTap={() => setHandDrawerOpen(true)} />}
+      {drawerVisible && (
+        <>
+          <div
+            aria-hidden="true"
+            onClick={() => setHandDrawerOpen(false)}
+            className="fixed inset-0 z-[45] bg-black/50"
+          />
+          <div
+            ref={handDrawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("game.manageHand")}
+            tabIndex={-1}
+            className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl outline-none"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[var(--heading)]">{t("game.manageHand")}</h2>
+              <button
+                onClick={() => setHandDrawerOpen(false)}
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+              >
+                {t("common.done")}
+              </button>
+            </div>
+            {drawerBody}
           </div>
         </>
       )}
-      <div aria-hidden="true" className="h-20 md:h-28" />
+      {!isWide && <div aria-hidden="true" className="h-20 md:h-28" />}
       <CardFlightLayer ref={cardFlightRef} />
     </main>
   );

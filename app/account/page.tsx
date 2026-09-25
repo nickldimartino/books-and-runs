@@ -8,7 +8,9 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
+import { BlockedPlayersSection } from "../components/BlockedPlayersSection";
 import { CenteredMessage } from "../components/CenteredMessage";
+import { DeleteAccountSection } from "../components/DeleteAccountSection";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { buildUserDataExport, downloadUserDataExport } from "../lib/exportUserData";
@@ -16,6 +18,7 @@ import type { TranslationKey } from "../lib/i18n/keys";
 import { useT, Vars } from "../lib/i18n/LocaleProvider";
 import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
+import { toast } from "../lib/toastBus";
 import { translateError } from "../lib/i18n/serverErrors";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -101,7 +104,10 @@ export default function AccountPage() {
     // feature entirely) — cheap, and this page is a natural place someone
     // lands specifically because they care what the leaderboard shows them.
     syncLeaderboardStats(supabase, user.id)
-      .catch((err) => console.error("Failed to sync leaderboard entry:", err))
+      .catch((err) => {
+        console.error("Failed to sync leaderboard entry:", err);
+        toast({ id: "sync-failed", key: "toast.syncFailed", kind: "error" });
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -167,6 +173,7 @@ export default function AccountPage() {
     setCurrentPassword("");
     setNewPassword("");
     setPasswordSaveState("saved");
+    toast({ key: "account.password.updated", kind: "success" });
   }
 
   async function handleExportData() {
@@ -468,21 +475,9 @@ export default function AccountPage() {
             )}
           </section>
 
-          <section className="flex flex-col gap-2 border-t border-[var(--border)] pt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-              {t("account.delete.heading")}
-            </h2>
-            <p className="text-xs text-[var(--muted)]">
-              {t("account.delete.bodyPrefix")}{" "}
-              <a
-                href="mailto:nick.l.dimartino@icloud.com?subject=Delete%20my%20Books%20%26%20Runs%20account"
-                className="text-[var(--heading)] underline hover:text-[var(--accent)]"
-              >
-                nick.l.dimartino@icloud.com
-              </a>{" "}
-              {t("account.delete.bodySuffix")}
-            </p>
-          </section>
+          <BlockedPlayersSection />
+
+          <DeleteAccountSection />
         </>
       )}
 

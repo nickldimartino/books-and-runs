@@ -20,6 +20,8 @@ vi.mock("./lib/sound", () => ({
   playCardSlide: vi.fn(),
   playMeld: vi.fn(),
   playUndo: vi.fn(),
+  playDeal: vi.fn(),
+  playYourTurn: vi.fn(),
   playAchievementUnlock: vi.fn(),
   playLevelUp: vi.fn(),
   setTutorialSoundOverride: vi.fn(),
@@ -27,6 +29,8 @@ vi.mock("./lib/sound", () => ({
 vi.mock("./lib/haptics", () => ({
   hapticLight: vi.fn(),
   hapticMedium: vi.fn(),
+  hapticDiscard: vi.fn(),
+  hapticTurn: vi.fn(),
 }));
 
 let api: ReturnType<typeof useGame>;
@@ -86,14 +90,57 @@ function meldFirstSolvableHand(): number {
 }
 
 describe("GameContext — turn flow", () => {
-  it("starts a game with the human at the pass-gate, no cards drawn", () => {
+  it("starts a one-human game straight on the board (no pass-gate), no cards drawn", () => {
     mount();
     act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
     expect(api.state).not.toBeNull();
     expect(api.state!.players).toHaveLength(2);
-    expect(api.awaitingReveal).toBe(true);
+    expect(api.awaitingReveal).toBe(false);
     expect(api.hasDrawn).toBe(false);
     expect(api.state!.players[0].hand).toHaveLength(13);
+  });
+
+  it("keeps the pass-gate when two humans share the device", () => {
+    mount();
+    act(() =>
+      api.startNewGame(
+        [
+          { id: YOU_PLAYER_ID, name: "You", isAI: false },
+          { id: "p2", name: "Sam", isAI: false },
+        ],
+        CONTRACTS
+      )
+    );
+    expect(api.awaitingReveal).toBe(true);
+    act(() => api.revealHand());
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+    // hand-off to the second human re-arms the gate
+    expect(api.state!.currentPlayerIndex).toBe(1);
+    expect(api.awaitingReveal).toBe(true);
+  });
+
+  it("skips the gate after an AI turn hands back to the only human", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(api.state!.currentPlayerIndex).toBe(0);
+    expect(api.awaitingReveal).toBe(false);
+  });
+
+  it("skipAiWait() cuts the AI thinking pause short", () => {
+    mount();
+    act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+    expect(api.state!.currentPlayerIndex).toBe(1);
+    expect(api.aiThinking).toBe(true);
+    act(() => api.skipAiWait());
+    expect(api.state!.currentPlayerIndex).toBe(0);
   });
 
   it("draw() takes exactly one card per turn, even when called rapidly", () => {

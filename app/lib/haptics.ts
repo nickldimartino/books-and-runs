@@ -82,3 +82,24 @@ export function hapticSuccess(): void {
   }
   webVibrate([14, 40, 14]);
 }
+
+/** A move the game rejected (invalid meld, lay-off or discard) — a short
+ * double buzz, distinct from the single taps above. */
+export function hapticError(): void {
+  if (!allowed()) return;
+  if (Capacitor.isNativePlatform()) {
+    void nativeNotification("ERROR" as NotificationType);
+    return;
+  }
+  webVibrate([30, 40, 30]);
+}
+
+/** It's your turn again after the AIs played. */
+export function hapticTurn(): void {
+  impact("LIGHT" as ImpactStyle, 12);
+}
+
+/** Discarding a card — a firmer single tap than selecting one. */
+export function hapticDiscard(): void {
+  impact("MEDIUM" as ImpactStyle, 14);
+}

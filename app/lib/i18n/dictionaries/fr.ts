@@ -34,6 +34,31 @@ const fr = {
   "settingsPicker.signature": "Signature",
   "settingsPicker.unlocksAtLevel": "Débloqué au niveau {level}",
   "settingsPicker.boutiqueLocked": "Boutique — pas encore disponible à l'achat",
+  "player.badge.free": "Gratuit",
+  "cosmeticReq.categoryMastered": "Maîtrise tous les succès de la catégorie {category}",
+  "cosmeticReq.categoriesMasteredCount": "Maîtrise {count} catégories de succès sur {total}",
+  "cosmeticReq.allCategoriesMastered": "Maîtrise toutes les catégories de succès",
+  "cosmeticReq.gamesPlayed": "Joue {count} parties solo ou en passe-et-joue",
+  "cosmeticReq.dailyDealStreak": "Atteins une série de {days} jours au Défi du jour",
+  "cosmeticReq.weeklyChallengeStreak": "Atteins une série de {weeks} semaines au Défi de la semaine",
+  "cosmeticReq.complete": "Maîtrise toutes les catégories, atteins le niveau 250 et une série de 30 jours au Défi du jour",
+  "cosmeticReq.creatorOnly": "Réservé au créateur de Books & Runs",
+  "cosmeticReq.supporterOnly": "Débloqué en laissant un pourboire — voir Réglages → Aide → Soutenir le développeur",
+  "cosmeticReq.worstScoreUnder": "Ne termine jamais une partie au-dessus de {score} points",
+  "cosmeticReq.averageScoreUnder": "Moyenne inférieure à {score} points sur {games}+ parties",
+  "cosmeticReq.gamesTied.one": "Fais match nul sur {count} partie",
+  "cosmeticReq.gamesTied.other": "Fais match nul sur {count} parties",
+  "cosmeticReq.mpWinStreak": "Atteins une série de {streak} victoires en multijoueur",
+  "cosmeticReq.cat.accountStats": "Statistiques du compte",
+  "cosmeticReq.cat.aiRivals": "Rivaux IA",
+  "cosmeticReq.cat.melding": "Poses",
+  "cosmeticReq.cat.layingOff": "Dépôts",
+  "cosmeticReq.cat.drawDiscard": "Pioche et défausse",
+  "cosmeticReq.cat.goingOut": "Sortie",
+  "cosmeticReq.cat.contracts": "Contrats",
+  "cosmeticReq.cat.tableComposition": "Composition de la table",
+  "cosmeticReq.cat.multiplayer": "Multijoueur",
+  "cosmeticReq.cat.challenges": "Défis",
   "settingsTheme.signInPrompt": "Connecte-toi pour choisir un thème — hors connexion, la table par défaut est toujours utilisée, donc rien à retenir d'un appareil à l'autre.",
   "settingsCardBack.description": "Le motif et la couleur du dos de tes cartes — la pioche, et la main d'un autre joueur quand elle est face cachée. Indépendant du thème, donc n'importe quelle table peut s'associer à n'importe quel dos.",
   "settingsCardFace.description": "La façon dont le rang et la couleur d'une carte sont dessinés. Indépendant du thème et du dos des cartes, donc n'importe quelle table peut s'associer à n'importe quelle face.",
@@ -176,6 +201,24 @@ const fr = {
   "settings.showMeldHint": "Bouton « Astuce : combinaison automatique »",
   "settings.showMeldHintDescription":
     "Afficher un bouton qui pose ton contrat pour toi en un tap dès que ta main peut le compléter. Désactivé par défaut — contrairement aux autres aides ci-dessus, celui-ci joue une partie de ton tour à ta place.",
+  "settings.showLegalMoves": "Afficher les coups possibles",
+  "settings.showLegalMovesDescription":
+    "Met en évidence ce que tu peux faire : quelles piles tu peux piocher, où déposer une carte sélectionnée et à quel point ta main est proche du contrat de la manche. Explique aussi, avec des mots, pourquoi un bouton est grisé.",
+  "settings.confirmDiscard": "Confirmer avant de défausser",
+  "settings.confirmDiscardDescription":
+    "Demande « Défausser … et finir ton tour ? » avant chaque défausse. Désactivé, tu défausses d'un seul tap — mais une défausse termine ton tour et ne peut pas être annulée.",
+  "settings.gameSpeed": "Vitesse de jeu",
+  "settings.gameSpeedDescription":
+    "La vitesse à laquelle les adversaires jouent et les cartes bougent. Tranquille ralentit tout, Rapide raccourcit les pauses, Instantané saute les attentes et les animations de cartes. Tu peux aussi toucher pendant le tour d'un adversaire pour passer sa pause.",
+  "settings.gameSpeed.relaxed": "Tranquille",
+  "settings.gameSpeed.normal": "Normale",
+  "settings.gameSpeed.fast": "Rapide",
+  "settings.gameSpeed.instant": "Instantanée",
+  "settings.reduceMotion": "Réduire les animations",
+  "settings.reduceMotionDescription":
+    "Désactive les envols de cartes, les confettis, les surbrillances pulsantes et la plupart des transitions dans toute l'appli. « Suivre l'appareil » respecte le réglage de réduction des animations de ton système ; « Toujours réduire » s'applique quoi que dise ton appareil.",
+  "settings.reduceMotion.system": "Suivre l'appareil",
+  "settings.reduceMotion.on": "Toujours réduire",
 
   "settings.turnNotifications": "Notifications de tour",
   "settings.turnNotificationsDescription":
@@ -301,6 +344,30 @@ const fr = {
   "game.layOff.errorMultiple":
     "Ces cartes ne peuvent pas toutes être déposées ensemble là — essaie de les sélectionner à nouveau, ou dépose-les une par une.",
   "game.layOff.errorSingle": "Cette carte ne peut plus être déposée là — essaie de la sélectionner à nouveau.",
+  "game.skipWait": "Passer l'attente",
+  "game.discardToPile": "Défausser la carte sélectionnée sur la pile",
+  "game.turnHint.drawn":
+    "Forme ta combinaison, ou choisis une carte et défausse-la pour finir ton tour.",
+  "game.turnHint.melded":
+    "Dépose des cartes sur les combinaisons, puis défausse pour finir ton tour.",
+  "game.progress.books": "Brelans {ready} sur {need} prêts",
+  "game.progress.runs": "Suites {ready} sur {need} prêtes",
+  "game.progress.closestBook": "le plus proche : {rank} ({have}/{need})",
+  "game.progress.closestRun": "la plus proche : {suit} ({have}/{need})",
+  "game.progress.ready": "Ta main peut poser le contrat de cette manche maintenant.",
+  "game.why.drawFirst": "Pioche d'abord une carte.",
+  "game.why.finishWildChoice": "Choisis d'abord ce que remplace la carte joker.",
+  "game.why.tooManyGroups": "Tu as groupé plus que cette manche ne demande — retire un groupe.",
+  "game.why.groupMore": "Groupe {need} pour confirmer ta combinaison.",
+  "game.why.groupAll":
+    "Toutes les cartes doivent être posées cette manche — encore {count} non groupées.",
+  "game.why.selectToDiscard": "Sélectionne une carte à défausser.",
+  "game.why.selectOneToDiscard": "Sélectionne une seule carte à défausser.",
+  "game.why.selectToLayOff": "Sélectionne une carte à déposer.",
+  "game.why.noLayOffTarget": "Aucune combinaison sur la table n'accepte cette carte.",
+  "game.why.pickMeld": "Plusieurs combinaisons conviennent — choisis-en une sur la table.",
+  "game.hand.ptsExplain":
+    "Points de pénalité que tu prendrais si quelqu'un d'autre sortait maintenant — moins, c'est mieux.",
 
   "signIn.title": "Connexion",
   "signIn.notSetUp.title": "La connexion n'est pas encore configurée",
@@ -311,6 +378,14 @@ const fr = {
   "signIn.mfaPrompt": "Entre le code à 6 chiffres de ton application d'authentification.",
   "signIn.verifying": "Vérification…",
   "signIn.verify": "Vérifier",
+  "signIn.or": "ou",
+  "signIn.magic.button": "M'envoyer un lien de connexion",
+  "signIn.magic.sent":
+    "Nous avons envoyé un lien de connexion à {email}. Ouvre-le sur cet appareil pour terminer la connexion. Si l'e-mail contient un code à 6 chiffres, tu peux le saisir ci-dessous à la place.",
+  "signIn.magic.codeLabel": "Code à 6 chiffres de l'e-mail",
+  "signIn.magic.codePlaceholder": "123456",
+  "signIn.magic.needEmail": "Saisis d'abord ton adresse e-mail.",
+  "signIn.oauth.continueWith": "Continuer avec {provider}",
   "signIn.checkEmail": "Vérifie ta boîte mail (y compris les spams) pour confirmer ton compte, puis reviens te connecter.",
   "signIn.backToSignIn": "Retour à la connexion",
   "signIn.resetEmailSent": "Si un compte existe pour {email}, nous avons envoyé un lien pour réinitialiser le mot de passe.",
@@ -356,6 +431,10 @@ const fr = {
   "multiplayer.rematch": "Revanche — mêmes joueurs",
   "multiplayer.leaveConfirm": "Quitter cette partie ? Tu la perds par forfait.",
   "multiplayer.leave": "Quitter",
+  "multiplayer.resignTitle": "Quitter cette partie ?",
+  "multiplayer.resignBody":
+    "Tu déclares forfait : ta main est vidée, tu prends une pénalité fixe et finis dernier, et la partie continue sans toi. C'est irréversible.",
+  "multiplayer.resignConfirm": "Quitter et déclarer forfait",
   "multiplayer.playingAsync": "Partie asynchrone",
   "multiplayer.playingAsyncBody":
     "Vous n'avez pas besoin d'être en ligne en même temps. Joue ton tour, puis ce sera au joueur suivant — reviens vérifier depuis l'Accueil, ou active les notifications dans les Réglages pour savoir quand ce sera à nouveau ton tour.",
@@ -380,6 +459,37 @@ const fr = {
   "multiplayer.handEmpty": "Ta main est vide — termine ton tour pour sortir.",
 
   "common.close": "Fermer",
+  "shortcuts.title": "Raccourcis clavier et manette",
+  "shortcuts.openHelp": "Raccourcis clavier",
+  "shortcuts.keyboardHeading": "Clavier",
+  "shortcuts.moveFocus": "Passer d'une carte ou d'un bouton à l'autre",
+  "shortcuts.selectCard": "Sélectionner / désélectionner la carte ciblée",
+  "shortcuts.draw": "Piocher dans la pioche",
+  "shortcuts.drawDiscard": "Prendre la carte du dessus de la défausse",
+  "shortcuts.focusHand": "Aller à ta main",
+  "shortcuts.group": "Grouper la sélection / confirmer / déposer",
+  "shortcuts.discard": "Défausser la carte sélectionnée",
+  "shortcuts.sortRank": "Trier la main par valeur",
+  "shortcuts.sortSuit": "Trier la main par couleur",
+  "shortcuts.undo": "Annuler la dernière combinaison ou pose",
+  "shortcuts.help": "Afficher cette aide",
+  "shortcuts.close": "Fermer les fenêtres et menus",
+  "shortcuts.typingNote": "Les raccourcis sont suspendus quand tu écris dans un champ de texte.",
+  "shortcuts.gamepadHeading": "Manette",
+  "shortcuts.gamepad.move": "Croix directionnelle / stick gauche — déplacer le focus",
+  "shortcuts.gamepad.select": "A — sélectionner / confirmer",
+  "shortcuts.gamepad.back": "B — retour / annuler",
+  "shortcuts.gamepad.draw": "X — piocher dans la pioche",
+  "shortcuts.gamepad.sort": "Y — trier la main",
+  "shortcuts.gamepad.zones":
+    "LB / RB — passer entre main, piles et table ; LT grouper/poser, RT défausser",
+  "shortcuts.gamepad.help": "Start — cette aide",
+  "gamepad.select": "Choisir",
+  "gamepad.back": "Retour",
+  "gamepad.draw": "Piocher",
+  "gamepad.sort": "Trier",
+  "gamepad.zones": "Zones",
+  "gamepad.help": "Aide",
 
   "opponentStrip.thinking": "{name} réfléchit…",
   "opponentStrip.cardsInHand.one": "{count} carte",
@@ -398,6 +508,8 @@ const fr = {
   "roundSummary.achievementsUnlocked.other": "Succès débloqués cette manche",
   "roundSummary.player": "Joueur",
   "roundSummary.thisRound": "Cette manche",
+  "roundSummary.penaltyNote":
+    "« Cette manche » correspond aux points de pénalité des cartes restées en main — le total le plus bas gagne.",
   "roundSummary.total": "Total",
   "roundSummary.leading": "En tête",
   "roundSummary.startNextRound": "Commencer la manche suivante",
@@ -451,6 +563,11 @@ const fr = {
   "gameOver.saved": "Enregistré dans tes statistiques.",
   "gameOver.saveError": "Impossible d'enregistrer dans tes statistiques — vérifie ta connexion.",
   "gameOver.xpLine": "+{amount} XP — {label}",
+  "gameOver.dailyXp": "+{xp} XP pour le défi du jour",
+  "gameOver.weeklyXp": "+{xp} XP pour le défi de la semaine",
+  "gameOver.streakBonus": "+{xp} XP bonus de série · {days} jours",
+  "gameOver.levelUp": "Niveau supérieur ! Tu es niveau {level}",
+  "gameOver.xp.quest": "Quête : {quest}",
   "gameOver.playRealGame": "Jouer une vraie partie",
   "gameOver.playAgain": "Rejouer",
 
@@ -555,6 +672,41 @@ const fr = {
   "home.progressTile.friends": "Amis",
 
   "home.closestAchievement": "Succès le plus proche",
+  "home.reward.badge": "badge {name}",
+  "home.reward.avatar_frame": "cadre {name}",
+  "home.reward.title": "titre « {name} »",
+  "home.reward.banner": "bannière {name}",
+  "home.nextReward": "Prochaine récompense au niveau {level} : {reward}",
+  "home.nextRewardMore": "Prochaine récompense au niveau {level} : {reward} + {count} autres",
+  "quests.title": "Quêtes",
+  "quests.daily": "Aujourd'hui",
+  "quests.weekly": "Cette semaine",
+  "quests.resets": "Nouvelles quêtes dans {time}",
+  "quests.time.dh": "{d} j {h} h",
+  "quests.time.hm": "{h} h {m} min",
+  "quests.time.m": "{m} min",
+  "quests.progress": "{progress} / {target}",
+  "quests.xp": "+{xp} XP",
+  "quests.signInHint": "Connecte-toi pour gagner de l'XP avec les quêtes.",
+  "quests.toast.title": "Quête accomplie !",
+  "quests.toast.line": "{quest} · +{xp} XP",
+  "quests.metric.gamesPlayed": "Terminer des parties",
+  "quests.metric.gamesWon": "Gagner des parties",
+  "quests.metric.booksMelded": "Poser des brelans",
+  "quests.metric.runsMelded": "Poser des suites",
+  "quests.metric.cardsLaidOff": "Déposer des cartes",
+  "quests.metric.roundsWon": "Gagner des manches en terminant",
+  "quests.metric.roundsWonNoDiscard": "Terminer sans défausser",
+  "quests.metric.meldsWithZeroWilds": "Poser sans joker",
+  "quests.metric.cardsDrawnFromDiscard": "Piocher dans la défausse",
+  "quests.metric.oversizedRunsMelded": "Poser des suites plus longues que requis",
+  "quests.metric.wildsUsedInMelds": "Utiliser des jokers dans tes combinaisons",
+  "welcomeBack.title": "Content de te revoir !",
+  "welcomeBack.gamesWaiting.one": "{count} partie attend ton tour",
+  "welcomeBack.gamesWaiting.other": "{count} parties attendent ton tour",
+  "welcomeBack.streak": "Ta série de {count} jours au Défi du jour continue – celui d'aujourd'hui est prêt.",
+  "welcomeBack.dailyReady": "Le Défi du jour t'attend, quand tu veux.",
+  "welcomeBack.quests": "De nouvelles quêtes sont prêtes.",
 
   "home.more": "Plus",
   "home.playWithFriends": "Jouer avec des amis",
@@ -576,6 +728,8 @@ const fr = {
   "home.multiplayerGame": "Partie multijoueur",
   "home.noMovesInDays": "{days}j sans coup",
   "home.daysAbbr": "{days}j",
+  "home.turnEndsIn": "fin du tour dans {time}",
+  "home.turnOverdue": "en retard",
 
   "home.yourGames": "Tes parties",
   "home.respondError": "Impossible de répondre — vérifie ta connexion.",
@@ -788,6 +942,9 @@ const fr = {
   "howToPlay.organizing.body1": "L'ordre de ta main est juste pour ta commodité — il n'a aucun effet sur le jeu. Utilise",
   "howToPlay.organizing.body2":
     "pour regrouper les cartes automatiquement, ou maintiens et fais glisser une carte vers un nouvel emplacement pour organiser ta main exactement comme tu veux.",
+  "howToPlay.shortcuts.title": "Clavier et manette",
+  "howToPlay.shortcuts.body":
+    "Tu peux jouer sans toucher l'écran : D pour piocher, les flèches pour passer d'une carte à l'autre, Entrée pour en sélectionner une, Suppr pour défausser, et ? pour lister tous les raccourcis. Une manette fonctionne aussi — croix directionnelle pour bouger, A pour sélectionner, B pour revenir.",
 
   "howToPlay.settings.body1":
     "Les Réglages te permettent de choisir un thème de couleur pour l'application et la table, de choisir un dos de carte indépendamment de ce thème, de définir une difficulté d'IA par défaut pour les nouveaux adversaires IA que tu ajoutes sur l'écran Nouvelle partie, d'activer ou de désactiver les effets sonores, d'activer ou de désactiver les badges de dépôt possible, de basculer le bouton « À qui le tour ? » et d'activer des couleurs de cartes adaptées au daltonisme. Rien de tout ça ne change les règles ci-dessus — ce n'est que de l'apparence et de l'assistance facultative.",
@@ -960,7 +1117,10 @@ const fr = {
   "clubs.removeMemberError": "Impossible de le retirer — réessaie.",
   "clubs.renameError": "Impossible de le renommer — réessaie.",
   "clubs.deleteError": "Impossible de le supprimer — réessaie.",
-  "clubs.confirmDelete": "Supprimer « {name} » ? Il sera supprimé pour tout le monde.",
+  "clubs.confirmDelete.title": "Supprimer « {name} » ?",
+  "clubs.confirmDelete.body":
+    "Le club, son classement et sa liste de membres sont supprimés pour tout le monde. Cette action est irréversible.",
+  "clubs.confirmDelete.confirm": "Supprimer le club",
   "clubs.rename": "Renommer",
   "clubs.startTournament": "Lancer un tournoi avec ce club",
   "clubs.standingsHeading": "Classement — bilan multijoueur",
@@ -1013,9 +1173,201 @@ const fr = {
   "account.data.preparing": "Préparation du téléchargement…",
   "account.data.downloadButton": "Télécharger mes données",
   "account.data.exportError": "Impossible de préparer le téléchargement — réessaie.",
+  "safety.menu.aria":
+    "Plus d'actions pour {name}",
+  "safety.menu.title":
+    "Signaler ou bloquer",
+  "safety.menu.report":
+    "Signaler",
+  "safety.menu.block":
+    "Bloquer",
+  "safety.block.confirmTitle":
+    "Bloquer {name} ?",
+  "safety.block.confirmBody":
+    "Vous ne serez plus amis et vous serez masqués l'un pour l'autre : ni demandes d'ami, ni invitations, ni réactions, ni lignes de classement, dans les deux sens. La personne n'en sera pas informée. Tu peux débloquer à tout moment depuis ta page Compte.",
+  "safety.block.error":
+    "Blocage impossible — réessaie.",
+  "safety.block.done":
+    "Tu as bloqué {name}.",
+  "safety.report.title":
+    "Signaler {name}",
+  "safety.report.intro":
+    "Les signalements sont examinés par le développeur. La personne ne saura pas qui l'a signalée.",
+  "safety.report.reasonLabel":
+    "Motif",
+  "safety.report.noteLabel":
+    "Autre chose à nous dire ? (facultatif)",
+  "safety.report.submit":
+    "Envoyer le signalement",
+  "safety.report.sending":
+    "Envoi…",
+  "safety.report.error":
+    "Impossible d'envoyer le signalement — réessaie.",
+  "safety.report.sentTitle":
+    "Merci pour le signalement",
+  "safety.report.sentBody":
+    "Nous allons examiner cela. Si tu ne veux plus voir {name} ni recevoir de ses nouvelles, tu peux aussi le bloquer.",
+  "safety.report.alsoBlock":
+    "Bloquer aussi {name}",
+  "safety.reason.offensive":
+    "Nom, bio ou photo choquant(e)",
+  "safety.reason.harassment":
+    "Harcèlement ou insultes",
+  "safety.reason.impersonation":
+    "Usurpation d'identité",
+  "safety.reason.cheating":
+    "Triche",
+  "safety.reason.spam":
+    "Spam ou publicité",
+  "safety.reason.inappropriate_photo":
+    "Photo de profil inappropriée",
+  "safety.reason.other":
+    "Autre chose",
+  "safety.content.name":
+    "Ce nom n'est pas autorisé ici — choisis-en un autre.",
+  "safety.content.bio":
+    "Cette bio contient des mots interdits — reformule-la.",
+  "safety.content.link":
+    "Les liens et adresses e-mail ne sont pas autorisés ici.",
+  "safety.content.reserved":
+    "Ce nom est réservé — choisis-en un autre.",
+  "safety.content.empty":
+    "Saisis un nom.",
+  "safety.blocked.heading":
+    "Joueurs bloqués",
+  "safety.blocked.empty":
+    "Tu n'as bloqué personne.",
+  "safety.blocked.description":
+    "Les joueurs bloqués ne peuvent pas t'envoyer de demandes d'ami ni d'invitations, et vous n'apparaissez pas dans le classement l'un de l'autre.",
+  "safety.blocked.unblock":
+    "Débloquer",
+  "safety.players.heading":
+    "Joueurs — signaler ou bloquer",
+  "safety.err.connect":
+    "Tu ne peux pas te connecter avec ce joueur.",
+  "safety.err.tooMany":
+    "Trop de tentatives — réessaie plus tard.",
+  "err.mp.alreadyNudged":
+    "Une relance a déjà été envoyée récemment.",
+  "err.mp.nothingToNudge":
+    "Il n'y a personne à relancer pour le moment.",
+  "account.delete.description":
+    "Supprime définitivement ton compte et tout ce qui y est lié.",
+  "account.delete.item.data":
+    "Ton profil, ta photo, tes stats, ton historique, tes succès, tes réglages, tes amis et ta ligne de classement sont supprimés.",
+  "account.delete.item.games":
+    "Les parties en cours sont abandonnées pour toi. Les parties terminées restent pour les autres joueurs, avec « Joueur supprimé » à la place de ton nom.",
+  "account.delete.item.clubs":
+    "Les clubs et tournois dont tu es propriétaire sont aussi supprimés.",
+  "account.delete.item.irreversible":
+    "Cette action est irréversible.",
+  "account.delete.button":
+    "Supprimer mon compte…",
+  "account.delete.typePrompt":
+    "Saisis {word} pour confirmer",
+  "account.delete.confirmWord":
+    "SUPPRIMER",
+  "account.delete.continue":
+    "Continuer",
+  "account.delete.fallbackPrefix":
+    "Tu ne peux pas te connecter ou tu préfères nous écrire ?",
+  "account.delete.fallbackLink":
+    "Contacte-nous",
+  "account.delete.confirmTitle":
+    "Supprimer ton compte ?",
+  "account.delete.confirmBody":
+    "Tout ce qui est lié à ce compte sera définitivement supprimé. Impossible d'annuler.",
+  "account.delete.confirmButton":
+    "Supprimer définitivement",
+  "account.delete.done":
+    "Ton compte a été supprimé.",
+  "account.delete.error":
+    "Impossible de supprimer le compte — réessaie dans un instant.",
+  "account.delete.errLeave":
+    "Impossible de quitter tes parties — réessaie dans un instant.",
+  "support.privacyRequest":
+    "Demande liée à la vie privée ou au compte",
+  "support.subjectPlaceholderPrivacy":
+    "p. ex. Merci de supprimer mon compte",
+  "support.descriptionPlaceholderPrivacy":
+    "Dis-nous ce dont tu as besoin. Nous répondrons à l'adresse e-mail ci-dessous et pourrons te demander de confirmer ton identité.",
+  "newGameMultiplayer.turnLimit.heading":
+    "Limite de temps par tour",
+  "newGameMultiplayer.turnLimit.off":
+    "Sans limite",
+  "newGameMultiplayer.turnLimit.hours":
+    "{hours} h",
+  "newGameMultiplayer.turnLimit.note":
+    "Chaque tour dure {hours} heures. Si le temps est écoulé, un coup sûr est joué à sa place ; un deuxième tour manqué d'affilée entraîne l'abandon.",
+  "newGameMultiplayer.turnLimit.offNote":
+    "Pas de chrono : la partie attend aussi longtemps que nécessaire. Une partie bloquée peut toujours être quittée.",
+  "turnTimer.expired":
+    "Temps écoulé",
+  "turnTimer.yourEnds":
+    "Ton tour se termine dans {time}",
+  "turnTimer.theirEnds":
+    "Son tour se termine dans {time}",
+  "turnTimer.lastChance":
+    "Tu as manqué ton dernier tour — rate celui-ci et tu abandonnes.",
+  "turnTimer.unit.minutes":
+    "{n} min",
+  "turnTimer.unit.hours":
+    "{n} h",
+  "turnTimer.unit.days":
+    "{n} j",
+  "emotes.heading":
+    "Réactions rapides",
+  "emotes.error":
+    "Envoi impossible — réessaie dans un instant.",
+  "emotes.bubble":
+    "{name} : {emoji} {text}",
+  "emote.hello":
+    "Salut !",
+  "emote.nice_meld":
+    "Belle combinaison !",
+  "emote.your_turn":
+    "À toi !",
+  "emote.oops":
+    "Oups !",
+  "emote.thanks":
+    "Merci !",
+  "emote.wow":
+    "Waouh !",
+  "emote.lucky":
+    "Belle pioche !",
+  "emote.good_game":
+    "Bien joué",
+  "settings.notify.heading":
+    "Quelles notifications",
+  "settings.notify.turns":
+    "À toi de jouer",
+  "settings.notify.turnsHint":
+    "C'est ton tour ou ton temps s'épuise.",
+  "settings.notify.invites":
+    "Invitations et demandes d'ami",
+  "settings.notify.invitesHint":
+    "Invitations à jouer et nouvelles demandes d'ami.",
+  "settings.notify.nudges":
+    "Relances et réactions",
+  "settings.notify.nudgesHint":
+    "Quand quelqu'un te relance ou réagit dans une partie.",
+  "settings.notify.streaks":
+    "Rappels de série",
+  "settings.notify.streaksHint":
+    "Quand ta série du défi du jour ou de la semaine risque de s'arrêter.",
+  "settings.notify.quietHours":
+    "Heures calmes",
+  "settings.notify.quietHoursHint":
+    "Pas de notifications push pendant cette plage (heure locale). Ta boîte de réception continue de se mettre à jour.",
+  "settings.notify.from":
+    "De",
+  "settings.notify.to":
+    "à",
+  "leaderboard.loadMore":
+    "Afficher plus",
+  "leaderboard.yourRank":
+    "Tu es {rank}ᵉ sur {total}",
   "account.delete.heading": "Supprimer ton compte",
-  "account.delete.bodyPrefix": "Il n'existe pas encore de suppression en libre-service. Pour supprimer ton compte et tout ce qui y est lié — statistiques, historique des parties, succès, nom d'affichage, amis et parties multijoueur — écris à",
-  "account.delete.bodySuffix": "depuis l'adresse de ton compte.",
   "account.error.notConfigured": "Non configuré.",
   "account.error.wrongPassword": "Le mot de passe actuel est incorrect.",
   "account.error.needsFreshSignIn": "Ta session nécessite une nouvelle connexion avec ton code d'authentification — déconnecte-toi puis reconnecte-toi, et réessaie.",
@@ -1039,7 +1391,8 @@ const fr = {
   "terms.service.title": "Modifications de l'appli",
   "terms.service.body": "L'appli est un projet de loisir géré par un développeur individuel. Nous pouvons ajouter, modifier ou retirer des fonctionnalités, réinitialiser ou rééquilibrer les statistiques et les classements, ou cesser de proposer l'appli ou une partie de celle-ci (y compris les fonctionnalités en ligne) à tout moment. Nous nous efforcerons, lorsque c'est possible, de donner un préavis raisonnable pour les changements importants, mais nous ne pouvons pas promettre que les fonctionnalités en ligne seront toujours disponibles.",
   "terms.termination.title": "Résiliation",
-  "terms.termination.body": "Vous pouvez cesser d'utiliser l'appli ou supprimer votre compte à tout moment (voir la Politique de confidentialité pour la marche à suivre). Le développeur peut suspendre, restreindre ou supprimer un compte, ou retirer du contenu, en cas de violation des présentes conditions — par exemple triche, harcèlement, noms ou photos offensants, ou tentatives d'attaquer ou de surcharger le service — et peut le faire sans préavis lorsque cela est nécessaire pour protéger le service ou les autres joueurs. Si vous pensez qu'il s'agit d'une erreur, contactez-nous.",
+  "terms.termination.body":
+    "Vous pouvez cesser d'utiliser l'app ou supprimer votre compte à tout moment depuis la page Compte (voir la Politique de confidentialité). Le développeur peut suspendre, restreindre ou supprimer un compte, ou retirer du contenu, s'il enfreint ces conditions — par exemple triche, harcèlement, noms ou photos choquants, ou tentatives d'attaque ou de surcharge du service — et peut le faire sans préavis si nécessaire pour protéger le service ou les autres joueurs. Les joueurs peuvent se signaler et se bloquer mutuellement, et les signalements sont examinés par le développeur. Si vous pensez qu'une décision est une erreur, contactez-nous.",
   "terms.law.title": "Droit applicable",
   "terms.law.body": "Aucune disposition des présentes conditions ne vous prive des droits impératifs que vous confère la loi du pays où vous résidez, et ces règles continuent de vous être applicables.",
   "terms.changes.title": "Modifications de ces conditions",
@@ -1053,6 +1406,8 @@ const fr = {
   "privacy.localPlay.title": "Le jeu local ne demande aucun compte",
   "privacy.localPlay.body": "Si vous ne vous connectez jamais, vos parties et vos réglages restent chez vous. Votre partie en cours, vos réglages de règles maison et vos préférences sont stockés uniquement dans le stockage local de votre navigateur ou de votre appareil, ne sont jamais transmis nulle part et ne sont jamais vus par nous.",
   "privacy.localPlay.diagnostics": "Deux petites choses sont envoyées même sans compte, afin que les problèmes puissent être repérés et corrigés : les rapports de plantage et d'erreur (le message d'erreur, la page où vous vous trouviez, le type de votre navigateur et de votre appareil, et la version de l'appli), et des compteurs d'usage anonymes tels que « une partie a été lancée », avec des détails grossiers comme le mode de jeu et la difficulté. Les compteurs d'usage ne comportent aucun compte, nom ni identifiant d'appareil. Votre adresse IP est inévitablement visible de notre hébergeur lors de toute requête, mais nous ne la stockons pas dans ces enregistrements. Si vous utilisez la page Contact et assistance, le message ainsi que les fichiers ou l'adresse de contact que vous choisissez d'y joindre sont envoyés par e-mail au développeur.",
+  "privacy.localPlay.speed":
+    "Pour que l'app reste rapide, une petite partie des visites envoie aussi une mesure de vitesse de page : le temps mis par la page à se charger et à réagir (arrondi), avec le nom de la page et le type de connexion (par exemple « 4g »). Comme les compteurs d'usage, elle ne contient ni compte, ni nom, ni identifiant d'appareil.",
   "privacy.account.title": "Si vous créez un compte",
   "privacy.account.intro": "La connexion est facultative et donne accès aux Statistiques, aux Succès, au niveau de votre compte, au Classement, aux Amis, aux Clubs, aux Tournois et aux parties multijoueur au tour par tour. Si vous vous connectez avec un e-mail, nous stockons :",
   "privacy.account.item.email": "Votre adresse e-mail et un mot de passe haché de façon sécurisée, via notre fournisseur d'authentification (Supabase Auth), ainsi que les informations de votre authentification à deux facteurs (application d'authentification) si vous l'activez. Votre session connectée est conservée dans le stockage local de votre navigateur.",
@@ -1063,7 +1418,12 @@ const fr = {
   "privacy.account.item.profile": "Votre profil public, que tout joueur connecté peut consulter avec votre entrée du Classement : une courte bio facultative, un avatar (un émoji et une couleur, ou une photo que vous téléversez), une bannière, un cadre, un titre, un badge, des succès et un style de cartes épinglés, votre niveau et vos statistiques, vos séries de Défis du jour et la date de votre inscription. Les photos de profil téléversées sont stockées dans un espace d'images public : toute personne disposant du lien de la photo peut donc l'ouvrir. Ne téléversez rien que vous ne voudriez pas que d'autres voient. Les joueurs peuvent signaler une photo de profil, et nous conservons ces signalements (qui a signalé qui, et un motif facultatif).",
   "privacy.account.item.saves": "Votre progression pour pouvoir continuer sur n'importe quel appareil : une partie solo en cours enregistrée sur votre compte, les Défis du jour et Défis de la semaine accomplis et leurs scores, les totaux mensuels de saison, et la configuration de partie favorite que vous avez enregistrée.",
   "privacy.account.item.clubs": "Les clubs et tournois que vous créez ou rejoignez : le nom du club ou du tournoi (visible de ses membres et participants), la personne qui en est propriétaire ou hôte, et la liste de ses membres et participants.",
-  "privacy.account.item.push": "Si vous activez les notifications, l'abonnement push de votre navigateur (une adresse et des clés de chiffrement fournies par le service push de votre navigateur) afin que nous puissions vous envoyer des notifications « à vous de jouer », d'amis et de rappel du Défi du jour. Cette option est désactivée sauf si vous l'activez, et vous pouvez la désactiver à tout moment dans l'appli ou dans les réglages de votre navigateur ou appareil.",
+  "privacy.account.item.push":
+    "Si vous activez les notifications, l'abonnement push de votre navigateur (une adresse et des clés de chiffrement fournies par le service push de votre navigateur) afin de vous envoyer des notifications « à vous de jouer », d'invitation, de demande d'ami, de relance, de réaction et de rappel de série, rédigées dans la langue choisie. Vous choisissez les types reçus et pouvez définir des heures calmes ; pour les respecter, nous conservons ces choix et le décalage UTC de votre appareil. C'est désactivé sauf si vous l'activez, et vous pouvez le couper à tout moment dans l'app ou dans les réglages du navigateur ou de l'appareil.",
+  "privacy.account.item.safety":
+    "Données de sécurité : les joueurs que vous bloquez (vous êtes masqués l'un pour l'autre) et les signalements que vous déposez sur d'autres joueurs (qui a signalé qui, le motif, une courte note facultative, l'endroit du signalement, ainsi que le nom et la bio du joueur signalé à ce moment-là). Les signalements ne sont visibles que du développeur et conservés le temps nécessaire à leur examen ; le joueur signalé ne sait pas qui l'a signalé. Les noms d'affichage, bios et noms de clubs sont aussi vérifiés automatiquement à l'aide d'une liste de mots interdits et de règles contre l'usurpation d'identité.",
+  "privacy.account.item.emotes":
+    "Réactions rapides que vous envoyez pendant une partie multijoueur (l'une d'un ensemble fixe de préréglages, jamais du texte libre), affichées aux autres joueurs de cette partie et conservées uniquement pour les plus récentes de chaque partie.",
   "privacy.account.item.support": "Si vous envoyez un pourboire via la page Soutenir le développeur, le paiement est traité entièrement par Stripe, et nous ne voyons jamais les données de votre carte. Nous stockons uniquement le fait qu'un paiement a eu lieu (la référence de session Stripe, le montant et la devise) afin de pouvoir vous attribuer le badge de supporter.",
   "privacy.account.item.security": "Des enregistrements techniques de courte durée : notifications dans l'appli et compteurs de requêtes servant à prévenir les abus (conservés quelques semaines au plus) et, pour les utilisateurs connectés, les rapports d'erreur peuvent être liés à votre compte afin que nous puissions examiner un problème.",
   "privacy.account.item.friendsPrefix": "Un",
@@ -1084,14 +1444,18 @@ const fr = {
   "privacy.export.title": "Export et suppression des données",
   "privacy.export.bodyPrefix": "La page Compte propose un bouton",
   "privacy.export.downloadLabel": "Télécharger mes données",
-  "privacy.export.bodyMiddle": "qui vous remet les données liées à votre compte (profil, statistiques, historique, succès, réglages, sauvegardes, amis et historique multijoueur) dans un seul fichier, à tout moment, sans avoir à le demander. Il n'existe pas encore de bouton de suppression en libre-service. Pour supprimer votre compte et tout ce qui y est lié — statistiques, historique des parties, progression des succès, profil, amis, clubs et parties multijoueur — écrivez à",
-  "privacy.export.bodySuffix": "depuis l'adresse du compte et nous le supprimerons. Supprimer votre compte vous retire aussi des listes d'amis des autres joueurs.",
+  "privacy.export.bodyMiddle":
+    "qui vous remet les données liées à votre compte (profil, statistiques, historique, succès, réglages, sauvegardes, amis, joueurs bloqués et bilan multijoueur) dans un seul fichier, à tout moment, sans rien demander. Il y a aussi un bouton « Supprimer mon compte » : une fois confirmé avec votre mot de passe, votre compte et tout ce qui y est lié — statistiques, historique des parties, progression des succès, profil et photo de profil, amis, clubs et tournois dont vous êtes propriétaire, abonnements aux notifications — sont supprimés immédiatement. Les parties jouées avec d'autres restent pour eux, avec « Joueur supprimé » à la place de votre nom, et toute partie en cours est abandonnée pour vous. Si vous ne pouvez pas utiliser le bouton (mot de passe perdu, par exemple), écrivez à",
+  "privacy.export.bodySuffix":
+    "depuis l'adresse du compte et nous le supprimerons pour vous. Supprimer votre compte vous retire aussi des listes d'amis des autres joueurs.",
   "privacy.retention.title": "Durée de conservation des données",
-  "privacy.retention.body": "Nous conservons les données de votre compte aussi longtemps que votre compte existe. Après votre demande de suppression de compte, nous visons à les supprimer rapidement et, en tout état de cause, dans un délai raisonnable. Les rapports de plantage sont supprimés automatiquement après environ 30 jours, et les enregistrements de notifications et de prévention des abus de courte durée après quelques semaines au plus. Les compteurs d'usage anonymes ne contiennent aucun identifiant personnel et sont conservés jusqu'à environ 13 mois. Des copies peuvent subsister dans les sauvegardes des prestataires pendant une durée limitée avant d'être écrasées.",
+  "privacy.retention.body":
+    "Nous conservons les données de votre compte tant que votre compte existe. Lorsque vous supprimez votre compte (dans l'app ou sur demande), elles sont supprimées immédiatement — ou, pour une demande faite par e-mail, rapidement et en tout cas dans un délai raisonnable. Les signalements que vous déposez sur d'autres joueurs sont conservés le temps nécessaire à leur examen. Les rapports de plantage sont supprimés automatiquement après environ 30 jours, et les enregistrements de notifications et de prévention des abus de courte durée après quelques semaines au plus. Les compteurs d'usage anonymes ne contiennent aucun identifiant personnel et sont conservés jusqu'à environ 13 mois. Des copies peuvent subsister un temps limité dans les sauvegardes du prestataire avant d'être écrasées.",
   "privacy.transfers.title": "Transferts internationaux",
   "privacy.transfers.body": "Notre hébergeur peut stocker et traiter des données sur des serveurs situés en dehors du pays où vous résidez. Dans ce cas, nous nous appuyons sur les garanties de l'hébergeur en matière de transferts internationaux. En utilisant un compte, vous comprenez que vos données peuvent être traitées dans d'autres pays.",
   "privacy.rights.title": "Vos droits",
-  "privacy.rights.body": "Selon votre lieu de résidence, vous pouvez avoir le droit d'accéder à vos données personnelles, de les rectifier, de les effacer, d'en recevoir une copie dans un format portable, de vous opposer à certains traitements ou de demander leur limitation, et de retirer le consentement que vous avez donné. Vous pouvez en faire une grande partie vous-même : modifier votre profil et vos réglages dans l'appli, et télécharger vos données depuis la page Compte. Pour toute autre demande, ou pour supprimer votre compte, écrivez à l'adresse ci-dessous. Vous avez également le droit d'introduire une réclamation auprès de votre autorité de contrôle locale en matière de protection des données. Nous pouvons avoir besoin de vérifier que c'est bien vous avant de donner suite à une demande.",
+  "privacy.rights.body":
+    "Selon votre lieu de résidence, vous pouvez avoir le droit d'accéder à vos données personnelles, de les corriger, de les supprimer, d'en recevoir une copie dans un format portable, de vous opposer à certains traitements ou d'en demander la limitation, et de retirer votre consentement. Vous pouvez en faire une grande partie vous-même : modifier votre profil et vos réglages dans l'app, télécharger vos données et supprimer votre compte depuis la page Compte. Pour le reste, écrivez à l'adresse ci-dessous. Vous avez aussi le droit de déposer une plainte auprès de votre autorité locale de protection des données. Nous pouvons avoir besoin de vérifier qu'il s'agit bien de vous avant de traiter une demande.",
   "privacy.children.title": "Confidentialité des enfants",
   "privacy.children.body": "Cette appli ne s'adresse pas aux enfants de moins de 13 ans, et nous ne collectons pas sciemment de données personnelles auprès d'eux. Lorsque le droit local fixe un âge minimum plus élevé pour consentir au traitement de ses données personnelles (par exemple 14 ans en Corée du Sud, ou 16 ans dans certaines parties de l'Union européenne), l'appli ne s'adresse pas non plus aux personnes de moins de cet âge, et vous ne devez pas créer de compte si vous en faites partie. Si vous pensez qu'un enfant nous a fourni des données personnelles, contactez-nous et nous les supprimerons.",
   "privacy.changes.title": "Modifications de cette politique",
@@ -1186,7 +1550,11 @@ const fr = {
   "tournaments.gamesWon": "{count}V",
   "tournaments.rounds": "Manches",
   "tournaments.roundN": "Manche {round}",
-  "tournaments.confirmCancel": "Annuler ce tournoi ? Les parties déjà jouées conservent leurs résultats.",
+  "tournaments.confirmCancel.title": "Annuler ce tournoi ?",
+  "tournaments.confirmCancel.body":
+    "Le tournoi prend fin pour tout le monde. Les parties déjà jouées conservent leurs résultats ; les manches restantes n'auront pas lieu.",
+  "tournaments.confirmCancel.confirm": "Annuler le tournoi",
+  "tournaments.confirmCancel.keep": "Le garder",
   "tournaments.cancelError": "Impossible de l'annuler — réessaie.",
   "tournaments.cancelTournament": "Annuler le tournoi",
   "tournaments.new.title": "Nouveau tournoi",
@@ -1254,7 +1622,8 @@ const fr = {
   "player.creator.title": "Créateur de Books & Runs",
   "player.creator.label": "Créateur",
   "player.joined": "Inscrit le {date}",
-  "player.report.button": "Signaler la photo",
+  "player.report.button":
+    "Signaler",
   "player.share.shared": "Partagé.",
   "player.share.error": "Impossible de préparer cette image — réessaie.",
   "player.report.prompt": "Qu'est-ce qui ne va pas avec cette photo ? (facultatif)",
@@ -1464,6 +1833,14 @@ const fr = {
   "achievementFamily.largeTableGames.unit": "parties à 6 joueurs ou plus",
   "achievementFamily.turnsTaken.title": "Marathonien",
   "achievementFamily.turnsTaken.unit": "tours joués",
+  "achievementFamily.dailyDealsCompleted.title": "Habitué du jour",
+  "achievementFamily.dailyDealsCompleted.unit": "défis du jour terminés",
+  "achievementFamily.dailyDealBestStreak.title": "Gardien de série",
+  "achievementFamily.dailyDealBestStreak.unit": "jours de suite (meilleure série du Défi du jour)",
+  "achievementFamily.weeklyChallengesCompleted.title": "Challenger",
+  "achievementFamily.weeklyChallengesCompleted.unit": "défis de la semaine terminés",
+  "achievementFamily.weeklyChallengeBestStreak.title": "Semaine après semaine",
+  "achievementFamily.weeklyChallengeBestStreak.unit": "semaines de suite (meilleure série du Défi de la semaine)",
   "reviewPrompt.title": "Tu aimes Books & Runs ?",
   "reviewPrompt.rateBody": "Une petite note aide beaucoup.",
   "reviewPrompt.feedbackBody": "Belle victoire ! Quelques secondes de retour aident beaucoup.",
@@ -1472,6 +1849,20 @@ const fr = {
   "reviewPrompt.yes": "Oui !",
   "update.newVersion": "Une nouvelle version de Books & Runs est disponible.",
   "update.refresh": "Actualiser",
+  "toast.offline":
+    "Tu es hors ligne — les parties fonctionnent toujours et ta progression sera synchronisée dès que tu seras reconnecté.",
+  "toast.backOnline": "De nouveau en ligne.",
+  "toast.saved": "Enregistré",
+  "toast.copied": "Copié dans le presse-papiers",
+  "toast.syncFailed": "Synchronisation impossible — nouvelle tentative dans un instant.",
+  "install.title": "Installer Books & Runs",
+  "install.body":
+    "Ajoute-le à ton écran d'accueil pour jouer en plein écran, le lancer instantanément et recevoir les notifications quand c'est ton tour.",
+  "install.button": "Installer",
+  "install.notNow": "Pas maintenant",
+  "install.ios.title": "Ajouter Books & Runs à l'écran d'accueil",
+  "install.ios.body":
+    "Appuie sur l'icône de partage, puis « Sur l'écran d'accueil ». Sur iPhone et iPad, les notifications de tour ne fonctionnent qu'une fois l'app ajoutée à l'écran d'accueil.",
   "error.eyebrow": "Un problème est survenu",
   "error.title": "Cet écran a rencontré une erreur",
   "error.body": "Réessaie — si ça continue, démarrer une nouvelle partie règle généralement le problème.",

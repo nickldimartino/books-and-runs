@@ -51,13 +51,28 @@ export interface SoloVerifyPayload {
   weeklyChallengeWeekKey?: string;
 }
 
-interface SoloVerifyResult {
+/** A quest the server just credited (see src/quests.ts). */
+export interface ClaimedQuest {
+  id: string;
+  period: "daily" | "weekly";
+  xp: number;
+}
+
+export interface SoloVerifyResult {
   ok: boolean;
   tracked?: boolean;
   won?: boolean;
   tied?: boolean;
   dailyDeal?: boolean;
   weeklyChallenge?: boolean;
+  /** Daily Deal / Weekly Challenge completion XP newly credited by THIS
+   * request (0 on a replay), and any streak-milestone bonuses credited with
+   * it. Absent from a server that predates the XP ledger (migration 0056) —
+   * callers treat absent as "no XP to show". */
+  xp?: number;
+  streakBonuses?: { days: number; xp: number }[];
+  /** Quests this request newly completed and paid out (regular games only). */
+  quests?: ClaimedQuest[];
 }
 
 export async function verifySoloGame(supabase: SupabaseClient, payload: SoloVerifyPayload): Promise<SoloVerifyResult> {
@@ -121,4 +136,17 @@ export function buildWeeklyChallengeVerifyPayload(
   const base = buildSoloVerifyPayload(state, seed, moveLog, true, []);
   if (!base) return null;
   return { ...base, isWeeklyChallenge: true, weeklyChallengeWeekKey };
+}
+
+/** Asks solo-verify to snapshot today's/this week's quest baselines if the
+ * account has none yet, then auto-claim any quest already complete (e.g.
+ * progress made in multiplayer). Idempotent; returns just what THIS call
+ * newly credited. A server that predates quests rejects the unknown action —
+ * callers should treat any failure as "quests unavailable", not an error. */
+export async function syncQuests(supabase: SupabaseClient): Promise<ClaimedQuest[]> {
+  const res = await callEdgeFunction<SoloVerifyResult>(supabase, FN_BASE, { action: "quests" }, SoloVerifyError, {
+    fallbackMessage: "Quest sync failed.",
+    isOk: (body) => body.ok === true,
+  });
+  return res.quests ?? [];
 }

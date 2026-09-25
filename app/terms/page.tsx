@@ -4,12 +4,15 @@
 // React Context) — see that file's comment.
 
 import { BackLink } from "../components/BackLink";
+import { routeMetadata } from "../lib/routeMetadata";
 import { TermsContent } from "./TermsContent";
 
 // Just the page-specific portion — see not-found.tsx's own comment on why.
-export const metadata = {
+export const metadata = routeMetadata({
   title: "Terms of Service",
-};
+  description: "The terms for using Books & Runs, the free Contract Rummy card game.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

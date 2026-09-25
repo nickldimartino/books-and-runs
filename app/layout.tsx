@@ -9,6 +9,10 @@ import { AccountSwitchGuard } from "./AccountSwitchGuard";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
 import { DocumentTitleLocalizer } from "./components/DocumentTitleLocalizer";
+import { InstallHint } from "./components/InstallHint";
+import { ShellEffects } from "./components/ShellEffects";
+import { ToastHost } from "./components/ToastHost";
+import { GamepadNavigation } from "./components/GamepadNavigation";
 import { LocaleProvider } from "./lib/i18n/LocaleProvider";
 import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
@@ -27,6 +31,12 @@ export const metadata: Metadata = {
   description:
     "Books & Runs is a free browser-based Contract Rummy card game. Play solo against five levels of AI, pass-and-play with friends on one device, or turn-based online — no download required.",
   applicationName: "Books & Runs",
+  category: "games",
+  // iOS Home Screen: "Add to Home Screen" launches full-screen with this title
+  // (Chrome's equivalent comes from the web manifest). Emits
+  // <meta name="mobile-web-app-capable"> + the apple-mobile-web-app-* tags.
+  appleWebApp: { capable: true, title: "Books & Runs" },
+  formatDetection: { telephone: false },
   keywords: ["Contract Rummy", "card game", "rummy", "books and runs", "free card game", "Liverpool Rummy"],
   verification: {
     google: "jI87NzjdGYGEBETrJ4QjX6sIetF6C7kZLg-p4zkwYbc",
@@ -34,6 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Books & Runs",
+    locale: "en_US",
     // Deliberately just the name, not the full "Books & Runs — free
     // Contract Rummy..." <title> — iMessage/Safari's rich link preview
     // strips a title's leading "SiteName — " prefix when it matches
@@ -100,21 +111,41 @@ export const viewport: Viewport = {
 // win, and it's one less inline script in the count if Next ever offers a
 // nonce/hash mechanism for the RSC payload itself.
 
+// Structured data for search results (SoftwareApplication → rich "free game"
+// result). A data block, not executable, so the CSP's script-src doesn't apply.
+const JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Books & Runs",
+  url: "https://books-and-runs.vercel.app",
+  applicationCategory: "GameApplication",
+  operatingSystem: "Any (web browser)",
+  inLanguage: ["en", "zh", "ja", "ko", "de", "fr", "es", "pt-BR", "ru", "it"],
+  description:
+    "A free browser-based Contract Rummy card game: solo against AI, pass-and-play, or turn-based online with friends.",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* eslint-disable-next-line @next/next/no-sync-scripts -- deliberately blocking, see the comment above */}
-        <script src="/init.js" />
+        <script src={`/init.js?v=${process.env.NEXT_PUBLIC_APP_VERSION}`} />
       </head>
       <body className="min-h-screen antialiased">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
         <ServiceWorkerRegistrar />
         <LocaleProvider>
           <UpdateAvailableBanner />
+          <ToastHost />
           <DocumentTitleLocalizer />
+          <GamepadNavigation />
           <AuthProvider>
             <AccountSwitchGuard />
             <AccountSettingsSync />
+            <ShellEffects />
+            <InstallHint />
             <PlayerLevelProvider>
               <PendingSaveSync />
               <GameProvider>

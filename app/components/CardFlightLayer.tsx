@@ -6,7 +6,8 @@
 // calls `fly([{ card, from, to, delay }])` with screen rects; this layer
 // renders throwaway `PlayingCard` clones that tween across and clean
 // themselves up. Purely cosmetic: it carries no game state, and it no-ops
-// entirely under `prefers-reduced-motion`.
+// entirely under reduced motion (in-app setting or OS) and at Game speed "Instant";
+// flight length scales with the Game speed setting (see lib/motion.ts).
 
 import {
   forwardRef,
@@ -19,8 +20,7 @@ import {
 } from "react";
 import { Card } from "@/types";
 import { PlayingCard } from "./PlayingCard";
-
-const FLIGHT_MS = 380;
+import { flightMs, prefersReducedMotion } from "../lib/motion";
 
 interface Point {
   x: number;
@@ -46,6 +46,8 @@ interface Flight {
   from: Point;
   to: Point;
   delay: number;
+  /** Flight length, fixed when the flight was launched so a mid-flight speed change can't desync the cleanup timer. */
+  ms: number;
 }
 
 export interface CardFlightHandle {
@@ -76,7 +78,10 @@ export const CardFlightLayer = forwardRef<CardFlightHandle>(function CardFlightL
 
   const fly = useCallback((specs: FlightSpec[]) => {
     if (typeof window === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // In-app Reduce motion or the OS setting: no flights. Game speed
+    // "Instant" is a zero-length flight, also skipped.
+    const ms = flightMs();
+    if (prefersReducedMotion() || ms <= 0) return;
 
     const added: Flight[] = [];
     for (const spec of specs) {
@@ -89,13 +94,14 @@ export const CardFlightLayer = forwardRef<CardFlightHandle>(function CardFlightL
         faceDown: !!spec.faceDown,
         from,
         to,
-        delay: spec.delay ?? 0,
+        delay: Math.round((spec.delay ?? 0) * (ms / 380)),
+        ms,
       });
     }
     if (added.length === 0) return;
 
     setFlights((f) => [...f, ...added]);
-    const life = Math.max(...added.map((a) => a.delay)) + FLIGHT_MS + 120;
+    const life = Math.max(...added.map((a) => a.delay)) + ms + 120;
     window.setTimeout(() => {
       const ids = new Set(added.map((a) => a.id));
       setFlights((f) => f.filter((x) => !ids.has(x.id)));
@@ -138,8 +144,8 @@ function FlightCard({ flight }: { flight: Flight }) {
     // half so the translate lands the card's centre on the anchor's centre
     transform: `translate(${p.x - 28}px, ${p.y - 40}px) rotate(${arrived ? 0 : -4}deg)`,
     transition: arrived
-      ? `transform ${FLIGHT_MS}ms cubic-bezier(0.33, 0, 0.2, 1) ${flight.delay}ms, opacity 140ms ease ${
-          flight.delay + FLIGHT_MS - 120
+      ? `transform ${flight.ms}ms cubic-bezier(0.33, 0, 0.2, 1) ${flight.delay}ms, opacity 140ms ease ${
+          flight.delay + flight.ms - 120
         }ms`
       : "none",
     opacity: arrived ? 0 : 1,

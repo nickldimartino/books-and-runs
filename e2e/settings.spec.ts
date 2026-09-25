@@ -58,3 +58,19 @@ test("the 'Whose turn is it?' setting is spelled correctly", async ({ page }) =>
   await expect(page.getByText(/whose turn is it\?/i)).toBeVisible();
   await expect(page.getByText(/who's turn is it\?/i)).toHaveCount(0);
 });
+
+test("game speed and reduce motion persist and apply", async ({ page }) => {
+  await page.goto("/settings#gameplay");
+  await page.getByRole("button", { name: "Fast", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Fast", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  await page.goto("/settings#accessibility");
+  await page.getByRole("button", { name: "Always reduce" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-reduce-motion", "on");
+
+  // Survives a reload — init.js re-applies the attribute before first paint.
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-reduce-motion", "on");
+  await page.goto("/settings#gameplay");
+  await expect(page.getByRole("button", { name: "Fast", exact: true })).toHaveAttribute("aria-pressed", "true");
+});

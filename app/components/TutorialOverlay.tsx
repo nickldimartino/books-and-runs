@@ -251,10 +251,10 @@ function TutorialCard({
         />
       )}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)]">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--faint)]">
           {t("tutorial.stepOf", { step: stepIndex + 1, total: totalSteps })}
         </span>
-        <button onClick={onSkip} className="text-[10px] font-medium text-[var(--faint)] hover:text-[var(--muted)]">
+        <button onClick={onSkip} className="text-[11px] font-medium text-[var(--faint)] hover:text-[var(--muted)]">
           {t("tutorial.skip")}
         </button>
       </div>

@@ -39,6 +39,7 @@ import {
 } from "./mpStore";
 import { loadAchievementProgressState } from "./loadAchievementProgress";
 import { parseRedactedView } from "./mpSchema";
+import { isChannelDead, useResumeRefresh } from "./resumeRefresh";
 import { shareStructure } from "./structuralShare";
 import { supabase } from "./supabaseClient";
 import { useT } from "./i18n/LocaleProvider";
@@ -110,6 +111,14 @@ export interface UseMpGame {
   /** Whole days since the game last moved (from mp_games.updated_at), or
    * null. Lets the play screen flag a game that looks abandoned. */
   daysSinceMove: number | null;
+  /** The game's per-turn limit in hours (0 = none) and when the current
+   * turn started, for the countdown badge (src/mp/turnTimer.ts). */
+  turnLimitHours: number;
+  turnStartedAt: string | null;
+  /** Consecutive turns the viewer has let expire — at 1, the next miss forfeits. */
+  yourMissedTurns: number;
+  /** Changes whenever a new emote arrives over realtime (see useMpEmotes). */
+  emoteTick: number;
 
   visibleHand: Card[]; // your hand minus anything staged
   selectedIds: string[];
@@ -212,6 +221,8 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const [newlyUnlockedCosmetics, setNewlyUnlockedCosmetics] = useState<AnyCosmeticOption[]>([]);
   const clearNewlyUnlockedCosmetics = useCallback(() => setNewlyUnlockedCosmetics([]), []);
   const [nudgeState, setNudgeState] = useState<"idle" | "sent" | "error">("idle");
+  // Bumped by the realtime mp_emotes subscription so the emote hook refetches.
+  const [emoteTick, setEmoteTick] = useState(0);
   const loadedFor = useRef<string | null>(null);
 
   // The validated view (defense in depth — a malformed response becomes a
@@ -364,20 +375,53 @@ export function useMpGame(gameId: string | null): UseMpGame {
     })();
   }, [gameId, snapKey, user, view?.gameOver, view?.yourSeat]);
 
+  // Realtime for this game. Kept in a ref-able closure so the resume handler
+  // below can re-open a channel that died while the app was in the
+  // background (phones drop the websocket; the SDK doesn't always recover),
+  // and a re-SUBSCRIBED after a drop refetches, since any events sent while
+  // the socket was down are gone for good.
+  const resubscribeRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (!supabase || !gameId) return;
-    const channel = supabase
-      .channel(`mp-game-${gameId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "mp_games", filter: `id=eq.${gameId}` },
-        () => refresh()
-      )
-      .subscribe();
+    const client = supabase;
+    let everSubscribed = false;
+    const open = () =>
+      client
+        .channel(`mp-game-${gameId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "mp_games", filter: `id=eq.${gameId}` },
+          () => refresh()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "mp_emotes", filter: `game_id=eq.${gameId}` },
+          () => setEmoteTick((n) => n + 1)
+        )
+        .subscribe((status: string) => {
+          if (status !== "SUBSCRIBED") return;
+          if (everSubscribed) refresh();
+          everSubscribed = true;
+        });
+    let channel = open();
+    resubscribeRef.current = () => {
+      if (!isChannelDead(Reflect.get(channel, "state"))) return;
+      client.removeChannel(channel);
+      channel = open();
+    };
     return () => {
-      supabase?.removeChannel(channel);
+      resubscribeRef.current = () => {};
+      client.removeChannel(channel);
     };
   }, [gameId, refresh]);
+
+  // Coming back to the app (tab visible / focus / network back / bfcache
+  // restore): refetch — coalesced with any in-flight refresh by refresh()'s
+  // own inflight/dirty logic — and revive the realtime channel if it died.
+  useResumeRefresh(() => {
+    resubscribeRef.current();
+    refreshRef.current();
+  }, !!gameId);
 
   const contract = useMemo<ContractRequirement | null>(
     () =>
@@ -680,14 +724,15 @@ export function useMpGame(gameId: string | null): UseMpGame {
         supabase,
         view.players,
         user.id,
-        view.contractRounds
+        view.contractRounds,
+        state?.turn_limit_hours
       );
       return game_id;
     } catch (err) {
       setActionError(err instanceof MpError ? tr(err.message) : tr("Couldn't start a rematch."));
       return null;
     }
-  }, [gameId, view, user]);
+  }, [gameId, view, user, state?.turn_limit_hours]);
 
   const daysSinceMove =
     state?.updated_at != null
@@ -712,6 +757,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
     youHaveDrawn: !!view?.youHaveDrawn,
     contract,
     daysSinceMove,
+    turnLimitHours: state?.turn_limit_hours ?? 0,
+    turnStartedAt: state?.turn_started_at ?? null,
+    yourMissedTurns: state?.your_missed_turns ?? 0,
+    emoteTick,
     visibleHand,
     selectedIds,
     draft,

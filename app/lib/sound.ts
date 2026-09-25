@@ -109,30 +109,62 @@ function noiseBurst(
   src.stop(t0 + duration + 0.02);
 }
 
+// An opponent's action plays the same sounds as your own but quieter, so it
+// reads as "over there" rather than "you did that" (see GameContext's AI loop).
+const SOFT = 0.5;
+
 /** Drawing or discarding a single card — a soft, low-pitched flick. */
-export function playCardTap(): void {
+export function playCardTap(soft = false): void {
   if (!soundEnabled()) return;
   const c = getContext();
   if (!c) return;
-  noiseBurst(c, 0, 0.07, 900, 4, 0.28);
+  noiseBurst(c, 0, 0.07, 900, 4, 0.28 * (soft ? SOFT : 1));
 }
 
 /** Sorting the hand, or dropping a card after a drag-reorder — a long sweep. */
-export function playCardSlide(): void {
+export function playCardSlide(soft = false): void {
   if (!soundEnabled()) return;
   const c = getContext();
   if (!c) return;
-  noiseBurst(c, 0, 0.22, 2000, 3, 0.18, 600);
+  noiseBurst(c, 0, 0.22, 2000, 3, 0.18 * (soft ? SOFT : 1), 600);
 }
 
 /** Confirming a meld — three quick descending taps, cards landing in sequence. */
-export function playMeld(): void {
+export function playMeld(soft = false): void {
   if (!soundEnabled()) return;
   const c = getContext();
   if (!c) return;
-  noiseBurst(c, 0, 0.04, 2400, 6, 0.3);
-  noiseBurst(c, 0.045, 0.04, 2100, 6, 0.28);
-  noiseBurst(c, 0.09, 0.05, 1800, 6, 0.32);
+  const k = soft ? SOFT : 1;
+  noiseBurst(c, 0, 0.04, 2400, 6, 0.3 * k);
+  noiseBurst(c, 0.045, 0.04, 2100, 6, 0.28 * k);
+  noiseBurst(c, 0.09, 0.05, 1800, 6, 0.32 * k);
+}
+
+/** A round is dealt — a quick riffle of light flicks. */
+export function playDeal(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  for (let i = 0; i < 6; i++) noiseBurst(c, i * 0.045, 0.035, 1500 + i * 120, 5, 0.16);
+}
+
+/** It's your turn again after the AIs played (there's no pass-the-device
+ * screen to signal it in a one-human game) — a small, soft two-note ping. */
+export function playYourTurn(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  tone(c, 784, 0, 0.14, 0.1, "sine"); // G5
+  tone(c, 988, 0.09, 0.2, 0.11, "sine"); // B5
+}
+
+/** A rejected move — a short, low double thud. */
+export function playError(): void {
+  if (!soundEnabled()) return;
+  const c = getContext();
+  if (!c) return;
+  noiseBurst(c, 0, 0.05, 420, 5, 0.3);
+  noiseBurst(c, 0.07, 0.06, 340, 5, 0.3);
 }
 
 /** A round ends (someone went out) — a two-note bell chime resolving down. */

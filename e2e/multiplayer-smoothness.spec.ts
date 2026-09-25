@@ -12,6 +12,7 @@ import {
   type TestUser,
 } from "./helpers/testAccounts";
 import { playOneTurn } from "./helpers/playMpGame";
+import { openHand } from "./helpers/hand";
 import { createMpGame, getMpState, respondToMpGame } from "../app/lib/mpStore";
 import { compareByMode } from "../app/lib/handSort";
 
@@ -228,14 +229,11 @@ test("solo baseline: draw, sort, discard", async ({ browser }, testInfo) => {
   await page.getByRole("textbox").first().fill("Tester");
   await page.getByRole("button", { name: /add ai/i }).click();
   await page.getByRole("button", { name: /start game/i }).click();
-  await page.getByRole("button", { name: /show my hand/i }).click();
-  await expect(page.getByText(/round 1 of 7/i)).toBeVisible();
+  await expect(page.getByText(/round 1 of \d+/i)).toBeVisible();
 
   const results: Record<string, WindowStats> = {};
   await page.locator('[data-tutorial="draw-piles"] button').first().click();
-  await page.locator('[data-tutorial="hand-bar"]').click();
-  const dialog = page.getByRole("dialog", { name: /manage your hand/i });
-  await expect(dialog).toBeVisible();
+  const dialog = await openHand(page);
   await page.waitForTimeout(800); // card-enter animation
   await install(page);
 

@@ -15,7 +15,7 @@ import { AchievementCategory, AchievementProgressState, allAchievements } from "
 export type CosmeticUnlockRule =
   | { kind: "level"; level: number }
   | { kind: "categoryMastered"; category: AchievementCategory; categoryLabel: string }
-  /** N of the 9 achievement categories fully mastered — a stepping stone
+  /** N of the 10 achievement categories fully mastered — a stepping stone
    * before allCategoriesMastered's "all of them." */
   | { kind: "categoriesMasteredCount"; count: number }
   | { kind: "allCategoriesMastered" }
@@ -179,7 +179,7 @@ export function cosmeticRequirementLabel(rule: CosmeticUnlockRule): string {
     case "categoryMastered":
       return `Master every ${rule.categoryLabel} achievement`;
     case "categoriesMasteredCount":
-      return `Master ${rule.count} of 9 achievement categories`;
+      return `Master ${rule.count} of 10 achievement categories`;
     case "allCategoriesMastered":
       return "Master every achievement category";
     case "gamesPlayed":

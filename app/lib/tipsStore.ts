@@ -41,6 +41,19 @@ function loadSeen(): Set<TipId> {
 
 function saveSeen(seen: Set<TipId>): void {
   writeLocalStorage(KEY, JSON.stringify([...seen]));
+  syncSeenAttribute(seen);
+}
+
+/** Mirrors the seen set onto <html data-seen-tips="home account …">. public/
+ * init.js sets the same attribute before first paint, and globals.css hides
+ * `[data-tip=<id>]` when its id is listed — PageTip is server-rendered
+ * visible (so a first visit gets no late layout shift when the tip would
+ * otherwise pop in after hydration) and this attribute is what keeps a
+ * returning visitor from ever seeing it. Kept current on every write so a
+ * "Show tips again" reset takes effect without a reload. */
+function syncSeenAttribute(seen: Set<TipId>): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-seen-tips", [...seen].join(" "));
 }
 
 export function isTipSeen(id: TipId): boolean {

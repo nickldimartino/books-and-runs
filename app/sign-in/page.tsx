@@ -5,22 +5,50 @@
 // AuthContext's mfaPending state kicks into when an account has 2FA turned
 // on (see /account). `?next=` sends a signed-out visitor back to whatever
 // in-app page asked them to sign in (e.g. a shared friend link).
+//
+// Beyond email + password there is a passwordless path (emailed one-time link,
+// or the 6-digit code from the same email) and — behind the
+// NEXT_PUBLIC_AUTH_PROVIDERS config flag, off by default — Google/Apple
+// buttons. Both come back to this page (a link / OAuth redirect lands here
+// with tokens in the URL hash, which Supabase's client consumes on load), so
+// the redirect effect below also handles new accounts created implicitly.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { useT } from "../lib/i18n/LocaleProvider";
+import {
+  enabledOAuthProviders,
+  isFreshAccount,
+  OAUTH_PROVIDER_LABEL,
+  parseAuthRedirectError,
+  safeNextPath,
+  stashNextPath,
+  takeStashedNext,
+} from "../lib/authRedirect";
 import { markJustSignedUp } from "../lib/onboardingStore";
 import { translateError } from "../lib/i18n/serverErrors";
+
+const OAUTH_PROVIDERS = enabledOAuthProviders(process.env.NEXT_PUBLIC_AUTH_PROVIDERS);
 
 export default function SignInPage() {
   const router = useRouter();
   const { t } = useT();
-  const { configured, user, mfaPending, signInWithPassword, signUpWithPassword, resetPasswordForEmail, verifyMfaCode } =
-    useAuth();
+  const {
+    configured,
+    user,
+    mfaPending,
+    signInWithPassword,
+    signUpWithPassword,
+    signInWithEmailLink,
+    verifyEmailCode,
+    signInWithOAuth,
+    resetPasswordForEmail,
+    verifyMfaCode,
+  } = useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot-password">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,27 +59,37 @@ export default function SignInPage() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [mfaSubmitting, setMfaSubmitting] = useState(false);
+  // Passwordless: the address a sign-in link was sent to (null = not sent).
+  const [linkSentTo, setLinkSentTo] = useState<string | null>(null);
+  const [emailCode, setEmailCode] = useState("");
+  const destRef = useRef<string | null>(null);
+
+  // A used/expired emailed link (or a denied OAuth consent) comes back as
+  // `#error=…&error_description=…` — surface it once, translated.
+  useEffect(() => {
+    const err = parseAuthRedirectError(window.location.hash || window.location.search);
+    if (err) setError(translateError(err, t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
 
   useEffect(() => {
     if (!user) return;
+    // A magic link / OAuth login creates accounts implicitly (password
+    // sign-up flags itself below), so a brand-new account is inferred from
+    // its own timestamps — Home then shows the welcome onboarding.
+    if (isFreshAccount(user)) markJustSignedUp();
     // Return to an in-app page if one was requested (e.g. a shared friend
-    // link routes signed-out visitors through here). Only same-origin
-    // relative paths — resolve against our origin and confirm it didn't
-    // escape. Guards against `//evil.com` and `/\evil.com` (browsers
-    // normalise the backslash), which a plain startsWith("/") check misses.
-    const next = new URLSearchParams(window.location.search).get("next");
-    let dest = "/";
-    if (next) {
-      try {
-        const u = new URL(next, window.location.origin);
-        if (u.origin === window.location.origin && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) {
-          dest = u.pathname + u.search + u.hash;
-        }
-      } catch {
-        /* malformed — fall through to "/" */
-      }
+    // link routes signed-out visitors through here) — from this page's own
+    // `?next=`, or the copy stashed before an emailed link/OAuth redirect
+    // (which reopens this page without it, maybe in another tab). Computed
+    // once: Supabase can fire SIGNED_IN more than once, and the stash is
+    // consumed on read. safeNextPath only allows same-origin relative paths
+    // (guards `//evil.com` and `/\evil.com`).
+    if (destRef.current === null) {
+      const fromUrl = new URLSearchParams(window.location.search).get("next");
+      destRef.current = safeNextPath(fromUrl ?? takeStashedNext(), window.location.origin);
     }
-    router.replace(dest);
+    router.replace(destRef.current);
   }, [user, router]);
 
   if (!configured) {
@@ -102,6 +140,44 @@ export default function SignInPage() {
     if (result.error) setError(translateError(result.error, t));
   }
 
+  // Remember where to go before leaving for an emailed link / OAuth redirect.
+  function stashDestination() {
+    stashNextPath(new URLSearchParams(window.location.search).get("next"));
+  }
+
+  async function handleEmailLink() {
+    setError(null);
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError(t("signIn.magic.needEmail"));
+      return;
+    }
+    setPending(true);
+    stashDestination();
+    const result = await signInWithEmailLink(email.trim());
+    setPending(false);
+    if (result.error) setError(translateError(result.error, t));
+    else setLinkSentTo(email.trim());
+  }
+
+  async function handleEmailCode(e: FormEvent) {
+    e.preventDefault();
+    if (!linkSentTo) return;
+    setError(null);
+    setPending(true);
+    const result = await verifyEmailCode(linkSentTo, emailCode.trim());
+    setPending(false);
+    if (result.error) setError(translateError(result.error, t));
+    // On success the session appears via AuthContext's auth-state listener
+    // and the redirect effect above takes over.
+  }
+
+  async function handleOAuth(provider: (typeof OAUTH_PROVIDERS)[number]) {
+    setError(null);
+    stashDestination();
+    const result = await signInWithOAuth(provider);
+    if (result.error) setError(translateError(result.error, t));
+  }
+
   async function handleMfaSubmit(e: FormEvent) {
     e.preventDefault();
     setMfaError(null);
@@ -118,6 +194,8 @@ export default function SignInPage() {
     setError(null);
     setResetEmailSent(false);
     setCheckEmail(false);
+    setLinkSentTo(null);
+    setEmailCode("");
   }
 
   return (
@@ -149,6 +227,37 @@ export default function SignInPage() {
             {mfaSubmitting ? t("signIn.verifying") : t("signIn.verify")}
           </button>
         </form>
+      ) : linkSentTo ? (
+        <>
+          <p className="text-center text-sm text-[var(--muted)]">{t("signIn.magic.sent", { email: linkSentTo })}</p>
+          <form onSubmit={handleEmailCode} className="flex flex-col gap-3">
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              aria-label={t("signIn.magic.codeLabel")}
+              placeholder={t("signIn.magic.codePlaceholder")}
+              maxLength={8}
+              value={emailCode}
+              onChange={(e) => setEmailCode(e.target.value.replace(/[^0-9]/g, ""))}
+              className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-lg tracking-[0.3em] text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+            />
+            {error && <p className="text-center text-sm text-[var(--danger)]">{error}</p>}
+            <button
+              type="submit"
+              disabled={pending || emailCode.length < 6}
+              className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
+            >
+              {pending ? t("signIn.verifying") : t("signIn.verify")}
+            </button>
+          </form>
+          <button
+            onClick={() => switchMode("sign-in")}
+            className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
+          >
+            {t("signIn.backToSignIn")}
+          </button>
+        </>
       ) : checkEmail ? (
         <>
           <p className="text-center text-sm text-[var(--muted)]">{t("signIn.checkEmail")}</p>
@@ -214,6 +323,34 @@ export default function SignInPage() {
             >
               {t("signIn.forgotPassword")}
             </button>
+          )}
+
+          {mode !== "forgot-password" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 text-xs text-[var(--faint)]" aria-hidden="true">
+                <span className="h-px flex-1 bg-[var(--border)]" />
+                {t("signIn.or")}
+                <span className="h-px flex-1 bg-[var(--border)]" />
+              </div>
+              <button
+                type="button"
+                onClick={handleEmailLink}
+                disabled={pending}
+                className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
+              >
+                {t("signIn.magic.button")}
+              </button>
+              {OAUTH_PROVIDERS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handleOAuth(p)}
+                  className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                >
+                  {t("signIn.oauth.continueWith", { provider: OAUTH_PROVIDER_LABEL[p] })}
+                </button>
+              ))}
+            </div>
           )}
 
           <button

@@ -32,6 +32,7 @@ export function PrivacyContent() {
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.localPlay.title")}</h2>
           <p>{t("privacy.localPlay.body")}</p>
           <p className="mt-2">{t("privacy.localPlay.diagnostics")}</p>
+          <p className="mt-2">{t("privacy.localPlay.speed")}</p>
         </section>
 
         <section>
@@ -54,6 +55,8 @@ export function PrivacyContent() {
             <li>{t("privacy.account.item.multiplayer")}</li>
             <li>{t("privacy.account.item.aiDifficulty")}</li>
             <li>{t("privacy.account.item.push")}</li>
+            <li>{t("privacy.account.item.safety")}</li>
+            <li>{t("privacy.account.item.emotes")}</li>
             <li>{t("privacy.account.item.support")}</li>
             <li>{t("privacy.account.item.security")}</li>
           </ul>

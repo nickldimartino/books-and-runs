@@ -4,7 +4,8 @@
 // file can stay a Server Component for its metadata export (same reason
 // BackLink.tsx is split out — see its own comment).
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { KeyboardHelp } from "../components/KeyboardHelp";
 import { contractNeedLabel } from "../lib/contractDisplay";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { CONTRACTS } from "@/types";
@@ -20,6 +21,7 @@ function Note({ children }: { children: ReactNode }) {
 
 export function HowToPlayContent() {
   const { t, tPlural } = useT();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const PENALTY_ROWS = [
     { label: t("howToPlay.scoring.numberCards"), value: t("howToPlay.scoring.perCard", { points: 5 }) },
@@ -210,6 +212,18 @@ export function HowToPlayContent() {
           <strong className="text-[var(--heading)]">{t("hand.sortByRank")}</strong>{" "}
           {t("howToPlay.organizing.body2")}
         </p>
+      </section>
+
+      <section className="flex flex-col items-start gap-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h2 className="text-base font-semibold text-[var(--heading)]">{t("howToPlay.shortcuts.title")}</h2>
+        <p>{t("howToPlay.shortcuts.body")}</p>
+        <button
+          onClick={() => setShortcutsOpen(true)}
+          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+        >
+          {t("shortcuts.openHelp")}
+        </button>
+        <KeyboardHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       </section>
 
       <section className="flex flex-col gap-2 text-sm leading-relaxed text-[var(--muted)]">

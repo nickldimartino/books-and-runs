@@ -32,7 +32,16 @@ import {
   saveLocalColorblindMode,
 } from "./colorblindStore";
 import { applyLocale, DEFAULT_LOCALE, LocaleId, loadLocalLocale, LOCALES, saveLocalLocale } from "./localeStore";
-import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
+import { applyReduceMotion, isReduceMotionPref } from "./motion";
+import {
+  AmbientTrackChoice,
+  DEFAULT_SETTINGS,
+  GAME_SPEEDS,
+  GameSpeed,
+  HouseSettings,
+  loadLocalSettings,
+  saveLocalSettings,
+} from "./settingsStore";
 import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TEXT_SCALES, TextScale } from "./textScaleStore";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "./themeStore";
 
@@ -53,6 +62,16 @@ export interface AccountSettingsRow {
   ambient_volume: number | null;
   ambient_track: string | null;
   language: string | null;
+  game_speed: string | null;
+  reduce_motion: string | null;
+  show_legal_moves: boolean | null;
+  confirm_discard: boolean | null;
+  notify_turns: boolean | null;
+  notify_invites: boolean | null;
+  notify_nudges: boolean | null;
+  notify_streaks: boolean | null;
+  quiet_hours_start: number | null;
+  quiet_hours_end: number | null;
 }
 
 /** Stand-in for "this account has no `settings` row at all yet" (a brand
@@ -77,10 +96,20 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
   ambient_volume: null,
   ambient_track: null,
   language: null,
+  game_speed: null,
+  reduce_motion: null,
+  show_legal_moves: null,
+  confirm_discard: null,
+  notify_turns: null,
+  notify_invites: null,
+  notify_nudges: null,
+  notify_streaks: null,
+  quiet_hours_start: null,
+  quiet_hours_end: null,
 };
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, text_scale, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track, language";
+  "theme, card_back, card_face, colorblind_mode, text_scale, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track, language, game_speed, reduce_motion, show_legal_moves, confirm_discard, notify_turns, notify_invites, notify_nudges, notify_streaks, quiet_hours_start, quiet_hours_end";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -169,7 +198,19 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     ambientMusicEnabled: row.ambient_music_enabled ?? current.ambientMusicEnabled,
     ambientVolume: row.ambient_volume ?? current.ambientVolume,
     ambientTrack: (row.ambient_track as AmbientTrackChoice | null) ?? current.ambientTrack,
+    gameSpeed: GAME_SPEEDS.includes(row.game_speed as GameSpeed) ? (row.game_speed as GameSpeed) : current.gameSpeed,
+    reduceMotion: isReduceMotionPref(row.reduce_motion) ? row.reduce_motion : current.reduceMotion,
+    showLegalMoves: row.show_legal_moves ?? current.showLegalMoves,
+    confirmDiscard: row.confirm_discard ?? current.confirmDiscard,
+    notifyTurns: row.notify_turns ?? current.notifyTurns,
+    notifyInvites: row.notify_invites ?? current.notifyInvites,
+    notifyNudges: row.notify_nudges ?? current.notifyNudges,
+    notifyStreaks: row.notify_streaks ?? current.notifyStreaks,
+    quietHoursEnabled: row.quiet_hours_start != null && row.quiet_hours_end != null,
+    quietHoursStart: row.quiet_hours_start ?? current.quietHoursStart,
+    quietHoursEnd: row.quiet_hours_end ?? current.quietHoursEnd,
   });
+  applyReduceMotion(loadLocalSettings().reduceMotion);
 
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SYNCED_EVENT));
 }
@@ -197,6 +238,7 @@ export function onAccountSettingsSynced(cb: () => void): () => void {
  */
 export function resetLocalPreferencesToDefaults(): void {
   saveLocalSettings(DEFAULT_SETTINGS);
+  applyReduceMotion(DEFAULT_SETTINGS.reduceMotion);
   saveLocalTheme(DEFAULT_THEME);
   applyTheme(DEFAULT_THEME);
   saveLocalCardBack(DEFAULT_CARD_BACK);
@@ -249,6 +291,14 @@ export function bootstrapMissingAccountSettings(
   if (row.ambient_music_enabled === null) patch.ambient_music_enabled = local.ambientMusicEnabled;
   if (row.ambient_volume === null) patch.ambient_volume = local.ambientVolume;
   if (row.ambient_track === null) patch.ambient_track = local.ambientTrack;
+  if (row.game_speed === null) patch.game_speed = local.gameSpeed;
+  if (row.reduce_motion === null) patch.reduce_motion = local.reduceMotion;
+  if (row.show_legal_moves === null) patch.show_legal_moves = local.showLegalMoves;
+  if (row.confirm_discard === null) patch.confirm_discard = local.confirmDiscard;
+  if (row.notify_turns === null) patch.notify_turns = local.notifyTurns;
+  if (row.notify_invites === null) patch.notify_invites = local.notifyInvites;
+  if (row.notify_nudges === null) patch.notify_nudges = local.notifyNudges;
+  if (row.notify_streaks === null) patch.notify_streaks = local.notifyStreaks;
   if (Object.keys(patch).length === 0) return;
   upsertSettingsPatch(supabase, userId, patch).catch((err) =>
     console.error("Failed to bootstrap account settings from this device:", err.message)
@@ -272,6 +322,16 @@ type SettingsPatch = Partial<{
   ambient_music_enabled: boolean;
   ambient_volume: number;
   ambient_track: string;
+  game_speed: string;
+  reduce_motion: string;
+  show_legal_moves: boolean;
+  confirm_discard: boolean;
+  notify_turns: boolean;
+  notify_invites: boolean;
+  notify_nudges: boolean;
+  notify_streaks: boolean;
+  quiet_hours_start: number | null;
+  quiet_hours_end: number | null;
 }>;
 
 async function upsertSettingsPatch(supabase: SupabaseClient, userId: string, patch: SettingsPatch): Promise<void> {
@@ -310,6 +370,24 @@ export function pushHouseSettingsPatch(supabase: SupabaseClient | null, userId: 
   if (patch.showMeldHint !== undefined) immediate.show_meld_hint = patch.showMeldHint;
   if (patch.ambientMusicEnabled !== undefined) immediate.ambient_music_enabled = patch.ambientMusicEnabled;
   if (patch.ambientTrack !== undefined) immediate.ambient_track = patch.ambientTrack;
+  if (patch.gameSpeed !== undefined) immediate.game_speed = patch.gameSpeed;
+  if (patch.reduceMotion !== undefined) immediate.reduce_motion = patch.reduceMotion;
+  if (patch.showLegalMoves !== undefined) immediate.show_legal_moves = patch.showLegalMoves;
+  if (patch.confirmDiscard !== undefined) immediate.confirm_discard = patch.confirmDiscard;
+  if (patch.notifyTurns !== undefined) immediate.notify_turns = patch.notifyTurns;
+  if (patch.notifyInvites !== undefined) immediate.notify_invites = patch.notifyInvites;
+  if (patch.notifyNudges !== undefined) immediate.notify_nudges = patch.notifyNudges;
+  if (patch.notifyStreaks !== undefined) immediate.notify_streaks = patch.notifyStreaks;
+  if (
+    patch.quietHoursEnabled !== undefined ||
+    patch.quietHoursStart !== undefined ||
+    patch.quietHoursEnd !== undefined
+  ) {
+    // NULL/NULL = off; the local start/end are only pushed while enabled.
+    const on = patch.quietHoursEnabled !== false;
+    immediate.quiet_hours_start = on ? (patch.quietHoursStart ?? DEFAULT_SETTINGS.quietHoursStart) : null;
+    immediate.quiet_hours_end = on ? (patch.quietHoursEnd ?? DEFAULT_SETTINGS.quietHoursEnd) : null;
+  }
   if (Object.keys(immediate).length > 0) {
     upsertSettingsPatch(supabase, userId, immediate).catch((err) =>
       console.error("Failed to sync settings to account:", err.message)
@@ -397,5 +475,15 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     ambient_music_enabled: DEFAULT_SETTINGS.ambientMusicEnabled,
     ambient_volume: DEFAULT_SETTINGS.ambientVolume,
     ambient_track: DEFAULT_SETTINGS.ambientTrack,
+    game_speed: DEFAULT_SETTINGS.gameSpeed,
+    reduce_motion: DEFAULT_SETTINGS.reduceMotion,
+    show_legal_moves: DEFAULT_SETTINGS.showLegalMoves,
+    confirm_discard: DEFAULT_SETTINGS.confirmDiscard,
+    notify_turns: DEFAULT_SETTINGS.notifyTurns,
+    notify_invites: DEFAULT_SETTINGS.notifyInvites,
+    notify_nudges: DEFAULT_SETTINGS.notifyNudges,
+    notify_streaks: DEFAULT_SETTINGS.notifyStreaks,
+    quiet_hours_start: null,
+    quiet_hours_end: null,
   }).catch((err) => console.error("Failed to sync reset settings to account:", err.message));
 }

@@ -18,6 +18,7 @@ import { GameState } from "@/types";
 import { useAuth } from "../AuthContext";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { useGame } from "../GameContext";
+import { CountUp } from "./CountUp";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { diffAchievementProgress, estimateProgress } from "../lib/achievementUnlockDiff";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
@@ -164,13 +165,13 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
                   <td className="px-4 py-2">
                     {p.name}
                     {isLeading && (
-                      <span className="ml-1.5 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                      <span className="ml-1.5 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--accent)]">
                         {t("roundSummary.leading")}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-2">
-                    +{p.cumulativeScore - (roundStartScores[p.id] ?? 0)}
+                    <CountUp prefix="+" value={p.cumulativeScore - (roundStartScores[p.id] ?? 0)} />
                   </td>
                   <td
                     className={`px-4 py-2 font-semibold ${isLeading ? "text-[var(--accent)]" : "text-[var(--heading)]"}`}
@@ -183,6 +184,8 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
           </tbody>
         </table>
       </div>
+
+      <p className="text-center text-xs text-[var(--faint)]">{t("roundSummary.penaltyNote")}</p>
 
       <button
         onClick={onNextRound}

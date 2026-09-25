@@ -15,12 +15,17 @@ interface PageTipProps {
  * lands on the page it's placed on, gone for good (this device) once
  * dismissed; see tipsStore.ts. Reads the seen-flag in an effect rather than
  * useState's initializer so the first client render always matches the
- * server's "nothing yet" — otherwise a returning player's very first paint
- * would flash the tip before hiding it.
+ * server's output. That output is the tip *visible* (a first visit is the
+ * case that matters for layout stability: popping it in after hydration
+ * shoved everything below it down — the Home page's CLS). A returning
+ * visitor never sees it flash because public/init.js stamps
+ * `data-seen-tips` on <html> before first paint and globals.css hides
+ * `[data-tip]` for every listed id (tipsStore.ts keeps the attribute in
+ * sync); this effect then removes the already-hidden node for real.
  */
 export function PageTip({ id, title, children }: PageTipProps) {
   const { t } = useT();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     setVisible(!isTipSeen(id));
@@ -31,6 +36,7 @@ export function PageTip({ id, title, children }: PageTipProps) {
   return (
     <div
       role="note"
+      data-tip={id}
       className="flex items-start gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-left"
     >
       <span

@@ -1,7 +1,7 @@
 import { AchievementCategory } from "@/achievements";
 
 /**
- * Raw path/circle/rect data for the 9 achievement-category icons, factored
+ * Raw path/circle/rect data for the 10 achievement-category icons, factored
  * out of AchievementIcons.tsx so it has exactly one home: the React
  * component renders these as JSX, and shareCard.ts replays the same data
  * as Path2D draws on a <canvas> (which has no SVG renderer of its own).
@@ -74,6 +74,14 @@ export const ACHIEVEMENT_ICON_ELEMENTS: Record<AchievementCategory, IconElement[
     { kind: "path", d: "M3.5 19.5a5 5 0 0 1 10 0" },
     { kind: "circle", cx: 16, cy: 9.5, r: 2.25 },
     { kind: "path", d: "M15 14.6a4.3 4.3 0 0 1 5.5 4.9" },
+  ],
+  // Daily Deal / Weekly Challenge completions and streaks — a calendar page with a check.
+  challenges: [
+    { kind: "rect", x: 4, y: 5, w: 16, h: 15, rx: 2 },
+    { kind: "path", d: "M4 10h16" },
+    { kind: "path", d: "M8.5 3v4" },
+    { kind: "path", d: "M15.5 3v4" },
+    { kind: "path", d: "M9.5 15l2 2 3.5-3.5" },
   ],
 };
 

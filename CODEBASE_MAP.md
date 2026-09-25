@@ -61,8 +61,11 @@ reads and mutates in place.
 | `ai/strategy.ts` | The `AIStrategy` interface + shared helpers (`MISTAKE_CHANCE`, `dangerScore`, `deadCards`, `handWantsCard` — the rank-match/run-adjacency "does this discard obviously help me" check every tier above Beginner applies, lay-off planners). No strategy of its own. |
 | `ai/{beginner,easy,medium,hard,expert}.ts` | One strategy object per difficulty. Beginner = fully random; each harder tier adds judgment and lowers its "human lapse" rate. Headers in each file explain the specific behaviour. |
 | `tutorial.ts` | Builds the scripted (non-random) deal the interactive tutorial runs on. Step copy + gating live in `app/lib/tutorialSteps.ts`. |
-| `leveling.ts` | Account level / XP as a pure function of progress data. `computeTotalXp`, `ACHIEVEMENT_TIER_XP`. |
-| `achievements.ts` | 44 families × 5 tiers = 220 achievements. Pure: `allAchievements(progress)` → unlocked/locked. `AchievementProgressState` is the input shape. |
+| `leveling.ts` | Account level / XP as a pure function of progress data. `computeTotalXp` (derived XP + the server-credited `bonusXp` ledger sum), `ACHIEVEMENT_TIER_XP`. |
+| `dailyRewards.ts` | Import-free, bundled into `solo-verify`: fixed XP for the Daily Deal (25) / Weekly Challenge (100), Daily streak-milestone bonuses (7/30/100 days), the `xp_ledger` ref builders (the idempotency keys), `streakStats()` (same adjacency as migrations 0036/0039), UTC day / ISO-week period keys and reset times. |
+| `quests.ts` | Import-light, bundled into `solo-verify`: the rotating daily/weekly quest catalog (`QUEST_CATALOG`), the seeded per-period selection (`questsForPeriod` — every client and the server derive the same 3), metric snapshots and `questProgress` (progress = verified metric now − the period's server baseline). |
+| `challengeRewards.ts` | The DB-facing half of the two above, written against a tiny structural slice of the Supabase client (`RewardsDb`) so the Edge Function and the unit tests (in-memory fake) run identical code: `creditChallengeCompletion`, `ensureQuestBaselines`, `claimCompletedQuests`. Every write is idempotent by construction (ledger PK + `ON CONFLICT DO NOTHING … RETURNING`, absolute counters). |
+| `achievements.ts` | 48 families × 5 tiers = 240 achievements (the 4 newest, category `challenges`, are Daily/Weekly completions + best streaks — see §9). Pure: `allAchievements(progress)` → unlocked/locked. `AchievementProgressState` is the input shape. |
 | `mp/adapter.ts` | The pure core of multiplayer: `dealGame`, `applyDraw`, `applyMeld`, `applyLayoff`, `applyDiscard` (turn = individual actions mirroring solo; meld/layoff keep the turn open, discard / card-less discard ends it and runs the AI), legacy `applyCommit` (atomic; kept for older clients), `applyResign`, `advanceThroughAi`, `redactFor`. Transactional via `structuredClone`. |
 | `mp/types.ts` | MP adapter types: `MpSeat`, `MpConfig`, `MpEngine`, `RedactedView`, `RoundResult`. |
 | `moveLog.ts` | `MoveLogEntry` — one atomic draw/meld/lay-off/discard, human or AI, appended to alongside `GameState` for solo/pass-and-play games (see `app/GameContext.tsx`'s `moveLogRef`). |
@@ -115,7 +118,7 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 
 | Route | Purpose |
 |---|---|
-| `/` (`page.tsx`) | Home. New Game button + `<HomeGames>` "Your games" list (local save + active MP games + pending invites). Daily Deal + Weekly Challenge entries. Level badge. |
+| `/` (`page.tsx`) | Home. Identity chip (avatar, display name, level, XP bar, next cosmetic reward) when signed in; New Game button; dismissible "welcome back" card after ≥3 days away; `<HomeGames>` "Your games" list (local save + active MP games + pending invites); one-tap Quick Deal (saved lineup) when nothing is in progress; the daily/weekly Quests card; Daily Deal + Weekly Challenge entries. Quests/Quick Deal stay hidden until a first game has been started (firstSessionStore). |
 | `/new-game` | Fork screen: Solo & pass-and-play / With friends / tutorial link. |
 | `/new-game/local` | The solo game setup form (players, difficulty, round mode). |
 | `/new-game/multiplayer` | MP game setup — pick friends + AI seats, choose rounds, send invites. |
@@ -139,7 +142,7 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 | `layout.tsx`, `manifest.ts` | Root layout, PWA manifest. Loads `public/init.js` — a plain synchronous `<script src>` (not `next/script`, deliberately — see the file's own comment) that applies the saved theme/colorblind/card-back/intro-splash state before first paint, so there's no flash of the wrong theme. |
 | `ServiceWorkerRegistrar.tsx` | Mounted in the root layout; registers `public/sw.js`, **production only**. A dev-mode registration used to shadow local code changes with a stale cache — a confusing "why isn't my edit showing up" trap that can persist across dev-server restarts, since the cache lives in the browser, not the server. Offline shell caching — plain runtime caching, no build-time precache manifest. Push (a separate opt-in) is `pushSubscriptions.ts` + the Settings page. Also re-checks for a new deploy on every `visibilitychange` and fires `br:sw-update-available` once a newer service worker actually takes over — the standalone-app equivalent of a browser tab's reload button, since a home-screen install has no such button of its own. |
 | `UpdateAvailableBanner.tsx` | Mounted in the root layout; listens for `br:sw-update-available` and shows a dismissible "new version ready" banner with a Refresh button. Never auto-reloads — see `ServiceWorkerRegistrar.tsx`'s own doc for the detection side. |
-| `public/sw.js`, `public/offline.html` | The service worker itself (fetch caching + `push`/`notificationclick` handlers) and its precached offline fallback page — plain static files, not part of the Next build. |
+| `sw/sw.template.js` -> `/sw.js`, `public/offline.html` | The service worker is a *template* stamped with a per-deploy build id by `app/sw.js/route.ts` (every deploy ships a different worker, so browsers install it, old caches drop and the update banner actually fires; the old static `public/sw.js` never changed). `/_next/static` cache-first in `br-static-v2` (160-entry LRU); navigations + RSC `.txt` network-first with 4 s timeout, keyed by path, 80 entries, in `br-shell-<build>`; un-hashed files (`/init.js?v=`, icons) stale-while-revalidate; redirected responses are un-redirected before caching. Old-worker migration is automatic (`activate` deletes every other `br-*` cache). Helpers tested in `app/sw.test.tsx`. |
 
 ### 3c. Components (`app/components/`)
 
@@ -157,6 +160,7 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 | `GameOverScreen.tsx` | game screen | Final standings, share image, **records the game** (stats/achievements/XP/leaderboard), shows achievement unlocks. |
 | `RoundSummary.tsx` | game + MP screens | Between-round panel; also flushes per-round achievement progress and shows mid-game unlocks. |
 | `AchievementUnlock.tsx` / `AchievementIcons.tsx` | round summary + game over + MP | Shared "you unlocked this" card; one line-art icon per achievement category. |
+| `home/HomeIdentity.tsx` / `home/QuestsCard.tsx` / `home/QuestToast.tsx` / `home/WelcomeBackCard.tsx` / `home/QuickPlayCard.tsx` | Home | The progression layer: identity chip + XP bar (`role=progressbar`, usable on touch), the daily/weekly quests card (guests see the same quests with a sign-in prompt; nothing to "claim" — the server auto-pays), the quest-completed toast, the recap card, and the one-tap saved-lineup deal. |
 | `UnlockToast.tsx` | game over + MP | Top-of-screen toast for a newly-earned profile cosmetic (avatar emoji/frame/title/banner) — see `allCosmetics.ts`'s `diffNewlyUnlockedCosmetics`. Separate from `AchievementUnlock.tsx`, which is for achievements themselves. |
 | `Confetti.tsx` | game over | Win celebration. |
 | `PassGate.tsx` / `BuyOfferGate.tsx` | game screen | "Pass the device to X" interstitial; the (disabled) buy-the-discard offer. |
@@ -195,6 +199,7 @@ stay with each caller.
 | `accountSettingsSync.ts` | Mirrors the stores above to the account (migration 0022's `settings` table) when signed in — push helpers (`pushTheme`/`pushCardBack`/`pushCardFace`/`pushColorblindMode`/`pushTextScale`/`pushHouseSettingsPatch`, the last debouncing the two volume sliders) called from each picker's own change handler; `applyAccountSettings` (pull side, called from `AccountSettingsSync.tsx`) only overwrites a field the account has actually set — validated against each store's own known-option list first, same as every local loader already does — and fires a `br:settings-synced` event so an already-mounted page picks it up live. Exists because a fresh "Add to Home Screen" install gets its own empty local storage on iOS. |
 | `useSyncedLocalPreference.ts` | The "load from local storage, re-load on `br:settings-synced`" effect + loading-state boilerplate every Theme/Card back/Card face/Ambient song settings subpage needs — one hook instead of four hand-copies. Its value type isn't limited to a single primitive: Card back and Ambient song each reload two things from the same event (their own choice plus one read-only value they need but never set). |
 | `accountScope.ts` | Detects a genuine account handoff on this device (as opposed to the same account continuing, or a guest session) — the logic `AccountSwitchGuard.tsx` calls before resetting every local cache above, so one account's leftovers can't leak into (or get pushed into the cloud row of) a different account that signs in next. |
+| `questsStore.ts` / `useQuests.ts` | Client side of quests: reads the server's `quest_baselines` + paid `xp_ledger` refs (owner-read RLS), derives progress from `PlayerLevelContext`'s verified progress (+ this device's unverified in-progress counters for immediacy, display only), asks `solo-verify` `{action:"quests"}` to snapshot/auto-claim on Home load. `welcomeBackStore.ts` — last-Home-visit timestamp for the recap card. |
 | `achievementUnlockDiff.ts` | Pure before/after `AchievementProgressState` diff -> `{newlyUnlocked, leveledUpTo, newCosmetics}` plus `estimateProgress` (wraps `pendingProgress.withSessionCounters`); shared by RoundSummary, GameOverScreen, `useMpGame`. |
 | `tipsStore.ts` | `seenTips` — which first-visit page tips (`PageTip.tsx`) have been dismissed; "Show again" in Settings clears it. |
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
@@ -362,6 +367,8 @@ All pure (`src/achievements.ts`, `src/leveling.ts`). The app just assembles an
 renders `allAchievements()` / `computeTotalXp()`. There is no "unlocked" flag
 stored — unlock = current value ≥ tier threshold, always recomputed.
 
+**Bonus XP (Daily Deal / Weekly Challenge / quests).** Level/XP is derived, so XP that has no counter behind it lives in `xp_ledger` (migration 0056): service-role-only writes, `PRIMARY KEY (user_id, ref)` = the idempotency guarantee. `compute_total_xp()` (SQL) and `computeTotalXp()` (TS, via `AchievementProgressState.bonusXp` ← the `my_bonus_xp()` RPC) both add its sum, so level, Home and the leaderboard agree. `solo-verify` credits it: a verified Daily/Weekly completion pays once per day/week (+ streak milestones once each), and a quest pays once per period once its verified metric has advanced by the target since the server's per-period baseline (`quest_baselines`). A regular game's response carries the quests it just completed; MP-earned progress is claimed by Home's `{action:"quests"}` sync. See `src/dailyRewards.ts`, `src/quests.ts`, `src/challengeRewards.ts`.
+
 ---
 
 ## 5. `supabase/` — backend
@@ -411,6 +418,8 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0053 | Gates the Boutique track behind a real requirement instead of leaving it unconditionally free — a new `boutique` `requirement_kind` (reads `is_creator`, same data as `creator_only` but its own kind so a real purchase can replace just this one branch later) plus `cosmetic_unlocks` rows for the 8 existing badge/frame/title/banner Boutique items. Card face/card back Boutique items stay client-side-only, so they get no row here. |
 | 0054 | Expands the Boutique from 2 to 10 items per category (badge/frame/title/banner/card face/card back), every item unique from each other and from every free/earned option. Widens `leaderboard_badge_ok`/`leaderboard_banner_ok` for the 8 new badges/banners and adds `cosmetic_unlocks` rows (`boutique` kind) for the 32 new badge/frame/title/banner items; the 8 new card faces/backs stay client-side-only. |
 | 0055 | Adds the nullable `settings.language` column (same nullable-column-means-"use local default" pattern as every synced setting since 0022) so the chosen display language follows the account across devices. |
+| 0056 | Bonus-XP ledger + quests: `xp_ledger` (user_id, ref PK, kind, xp — service-role-only writes, owner read), `quest_baselines` (per-period metric snapshot, same RLS), `my_bonus_xp()` RPC, service-role-only `solo_verify_set_counters()` (atomic jsonb merge), and `compute_total_xp()` re-created with the ledger sum. Apply BEFORE redeploying `solo-verify`. |
+| 0057 | Four Daily/Weekly achievement families (`daily_deals_completed`, `daily_deal_best_streak`, `weekly_challenges_completed`, `weekly_challenge_best_streak`, new category `challenges`) added to `achievement_thresholds`, plus a backfill of the counters from existing `daily_deal_completions` / `weekly_challenge_completions` (gaps-and-islands for the streaks). Existing completions do not earn retroactive completion XP. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -456,6 +465,18 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 - Requires migration 0035 (and, for Daily Deal completions specifically,
   0036; Weekly Challenge, 0039) to have run for the holes to actually be
   closed — see `supabase/functions/README.md`.
+- Bonus XP + quests (migrations 0056/0057): a verified Daily Deal / Weekly
+  Challenge completion now also refreshes the account's daily/weekly
+  achievement counters (absolute values recomputed from the completion
+  tables) and credits fixed XP through `xp_ledger` (once per day/week, plus
+  streak milestones once each); the response reports what THIS request newly
+  credited (`xp`, `streakBonuses`). A regular game ensures the account's
+  quest baselines exist *before* its deltas land, then auto-claims completed
+  quests (`quests` in the response). `{ action: "quests" }` (no game) does
+  the same for progress made elsewhere (multiplayer). All of that logic is
+  `src/challengeRewards.ts`, bundled into `_engine/`. Deploying the function
+  before applying 0056 is safe only in the sense that reward/quest calls fail
+  softly (best-effort, never fail a game record) — apply 0056 first.
 
 ### Edge Function (`supabase/functions/contact/`)
 
@@ -991,3 +1012,100 @@ dedicated task. Full architecture in §3e; migration `0055`.
   `mp` Edge Function needs a redeploy for the new split actions and the
   `preferredRunStarts` null normalisation. Flight timing and
   realtime bursts still need a live two-player check.
+
+### 2026-09-25 — game feel, input and accessibility pass
+Implements `docs/audits/2026-09-25/gamefeel_a11y.md` for the game screens.
+- **No pass-the-device gate with one human.** `needsPassGate()` in
+  `GameContext.tsx` (2+ humans only) decides every `setAwaitingReveal` — start,
+  resume, `advanceRound`, after each AI turn. A soft "your turn" chime
+  (`playYourTurn`) replaces the gate's signalling. MP never had a gate.
+- **Game speed + skip.** `settingsStore.gameSpeed` (relaxed/normal/fast/instant)
+  → `lib/motion.ts` `scaleMs()` scales AI think/hold pauses, card flights
+  (`CardFlightLayer`), the deal-in (`--motion-scale` on the board, `.card-enter`),
+  and the round-summary `CountUp`. `GameContext.skipAiWait()` (tap the AI panel /
+  "Skip wait") cuts the pending pause short. AI turns now emit a draw flight and
+  play soft SFX (`playCardSlide(true)` etc.).
+- **Reduce motion.** `settingsStore.reduceMotion` ("system" | "on") →
+  `<html data-reduce-motion="on">` (`motion.applyReduceMotion`, `public/init.js`
+  pre-paint, `accountSettingsSync`). `globals.css` has a blanket
+  animation/transition kill-switch on it; JS animation (flights, `Confetti`,
+  `CountUp`) reads `motion.prefersReducedMotion()`.
+- **Keyboard / gamepad.** `lib/gameShortcuts.ts` (binding table + `matchShortcut`)
+  and `lib/useGameShortcuts.ts` drive D/Shift+D/F, H, M, Del, S/Shift+S, U/Ctrl+Z,
+  ?, Esc on both game screens; `components/KeyboardHelp.tsx` is the sheet (header
+  "?" and How to Play). `DraggableHand` has a roving tabindex + arrow/Home/End
+  and Shift+arrow reorder. `components/GamepadNavigation.tsx` (mounted in
+  `layout.tsx`) polls the Gamepad API: D-pad/stick → `lib/spatialNav.ts` focus
+  movement across the whole app, A/B/X/Y/LB/RB/LT/RT/Start map to Enter/Esc/the
+  same key shortcuts, on-screen prompts only while a pad is connected,
+  `<html data-input="gamepad">` → bold focus rings. Zones = `[data-nav-zone]`.
+- **Layout.** Text scaling now applies on the board (`data-no-text-scale`
+  removed); badges ≥ 11px; ≥1024px the game is a two-column layout (table left,
+  always-visible **hand dock** right — `useMediaQuery(WIDE_TABLE_QUERY)`; phones
+  keep the drawer); the turn-status slot has a fixed height so drawing no longer
+  shifts the table; `touch-action: manipulation`, `overscroll-behavior: none`.
+- **Assist (`showLegalMoves`) + reasons.** `lib/contractProgress.ts` (display-only
+  estimate), pulsing draw targets, ring on the discard pile when a discard is
+  possible, disabled-reason lines (`game.why.*`, aria-live), error buzz/thud on a
+  rejected move. `confirmDiscard` setting (default on) → one-tap discard when off.
+- **Migration 0073** adds nullable `game_speed`, `reduce_motion`,
+  `show_legal_moves`, `confirm_discard` to `settings`.
+- Not done: drag-to-discard/drag-to-meld onto the table, left-handed mirror,
+  landscape-phone layout, dyslexia font, forced-colors rules, the hand dock at
+  768–1023px (the drawer stays there), #16 modes/difficulty.
+
+### 2026-09-25 — progression & retention (UX audit #2, #3, #4 partial, #7 partial, #19)
+
+Implemented from `docs/audits/2026-09-25/ux_retention.md`. Migrations **0056–0057**;
+redeploy `solo-verify` (`node scripts/bundle-solo-verify-engine.mjs && supabase functions deploy solo-verify`).
+
+- **Daily/Weekly XP (#2).** 25 XP per Daily Deal, 100 per Weekly Challenge, Daily
+  streak milestones 7/30/100 days = 50/150/400 (paid once per account). Credited
+  server-side only (`solo-verify` → `xp_ledger`), idempotent on `(user_id, ref)`,
+  shown as "+25 XP" / streak bonus / level-up on the game-over streak card;
+  achievements/cosmetics unlocked by the completion are diffed and shown too.
+  A transient network failure queues the payload for `PendingSaveSync` (safe to
+  retry). Four new achievement families (category `challenges`): Daily
+  completions/best streak, Weekly completions/best streak; counters are
+  recomputed from the completion tables, and migration 0057 backfills them.
+  Note the new category counts toward `complete` (Prismatic) mastery and "N of
+  10 categories" — a 100-day Daily streak is now part of "everything".
+- **Quests (#3b).** 3 daily + 3 weekly, seeded by UTC day / ISO week
+  (`src/quests.ts`), progress from server-verified counters minus a server-side
+  per-period baseline, XP auto-credited (nothing to claim/miss), toast on Home
+  + lines on the game-over XP list. Guests see the same quests with a sign-in
+  prompt (no local progress — display-only guest progress would have needed
+  the unverified-counter path the rest of the app deliberately avoids).
+  Hidden on a device's first session. A quest completed via multiplayer is
+  paid on the next Home visit (the MP function was not touched).
+- **Identity chip + XP bar (#3a/#19).** `HomeIdentity`: avatar, display name,
+  level, XP progress bar, "next reward at level N" (`allCosmetics.nextLevelUnlocks`).
+  The account e-mail no longer appears on Home.
+- **Welcome back (#7).** Dismissible recap after ≥3 days away (games waiting,
+  live Daily streak, fresh quests). **Streak shield/grace day: not done** — the
+  streak is recomputed by DB triggers (0036/0039) from completion rows, so a
+  shield needs a new earning rule + trigger changes; deliberately skipped.
+- **#4.** Home Quick Deal (saved lineup, one tap, hidden while a game is in
+  progress); first-ever setup defaults to a Short game vs an Easy AI (only when
+  Settings' preferred difficulty is the untouched Medium). Not done: sticky
+  Start bar, stacked-tip suppression. **#15 (recently unlocked strip) not done:**
+  unlocks are derived, no unlock timestamps exist.
+- Tests: `src/{dailyRewards,quests,challengeRewards}.test.ts` (fake-DB idempotency
+  suite), an `achievement_thresholds` SQL parity test in `src/achievements.test.ts`,
+  `app/lib/{questsStore,welcomeBackStore,nextLevelUnlocks}.test.tsx`,
+  `app/components/home/QuestsCard.test.tsx`, `e2e/home-progress.spec.ts`.
+
+
+### 2026-09-25 - technical / PWA / platform pass
+- **Perf**: Home CLS 0.126 -> 0 (guest). `PageTip` is server-rendered visible and hidden pre-paint via `<html data-seen-tips>` (init.js + tipsStore); Home's Quests card / "Your games" skeleton / Sign-in prompt are hidden pre-paint by `html[data-started]` / `[data-signed-in]` (init.js, `data-home-*` in page.tsx); `IntroSplash` is in the static HTML (armed by `html[data-intro]`) so the first-visit LCP element no longer waits on hydration. Side builds: `BR_DIST_DIR=.build-x npx next build` (own dist dir, skips typecheck). `tsc --noEmit` can show stale `.next/dev/types` errors from `tsconfig.tsbuildinfo` - delete it or use `--incremental false`.
+- **Bundle (designed, not done)**: ~230 KB gz real (the 39 KB `noModule` polyfill chunk is never fetched by modern browsers). Levers left: the eager 42 KB gz English dictionary (split rarely-used namespaces into per-route modules with a lazy `t()` fallback) and mounting GameProvider/engine/AI (~25 KB) only on game routes.
+- **Install/platform**: installHint.ts + InstallHint.tsx (after first completed game via `track("game_completed")`; backoff 7/14/28 d, max 3; iOS Share-sheet coach), `storage.persist()` on sign-in/first game, app badge = pending turns (appBadge.ts, ShellEffects), manifest shortcuts/screenshots (`scripts/capture-screenshots.mjs`), `orientation: any`.
+- **Toasts**: toastBus.ts + ToastHost (one `role=status` region); update banner, offline/online, account saved/sync-failed use it.
+- **Web vitals**: webVitals.ts -> `app_events` name `web_vitals` (1-in-5 sessions, bucketed, path only); privacy key `privacy.localPlay.speed`.
+- **Sign-in**: magic link + emailed 6-digit code; OAuth buttons behind `NEXT_PUBLIC_AUTH_PROVIDERS=google,apple` (off by default); authRedirect.ts (next stash, fresh-account -> markJustSignedUp, hash errors).
+- **SEO**: each route has a tiny server `layout.tsx` using `routeMetadata()` (title/description/canonical/OG/Twitter; account-gated screens noindex), JSON-LD, real sitemap date. Crawler-visible metadata stays English: the export prerenders one HTML per route and language is a client-side localStorage preference, so there is no URL for hreflang to point at. Locale-prefixed routes would need a `[locale]` segment + `generateStaticParams`, per-locale metadata from the dictionaries, a locale-aware sitemap, and init.js/LocaleProvider reading the locale from the URL - deliberately not built.
+
+
+### 2026-09-25 — social/safety wave (migrations 0060–0064)
+
+Block/report/mute (`app/lib/safetyStore.ts`, `SafetyMenu`/`ReportDialog`, Account → Blocked players), content filter (`src/safety/*`, mirrored in SQL by 0060 — regenerate with `scripts/gen-blocklist-sql.mjs`), self-serve deletion (`delete-account` function + `DeleteAccountSection`), MP turn clock (`src/mp/turnTimer.ts`, `autoPlay.ts`, enforcement in `mp/index.ts`, `TurnTimerBadge`), emotes (`src/mp/emotes.ts`, `MpTableExtras`), resume refetch (`app/lib/resumeRefresh.ts`, used by `useMpGame`/`useNotifications`), server-paged leaderboard (0063), localised push + prefs (`supabase/functions/_shared/push.ts`, `NotificationPrefs`). Legal text (Terms/Privacy, all 10 languages) was updated to match; a lawyer should re-check it.

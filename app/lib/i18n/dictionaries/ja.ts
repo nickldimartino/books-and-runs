@@ -34,6 +34,31 @@ const ja = {
   "settingsPicker.signature": "シグネチャー",
   "settingsPicker.unlocksAtLevel": "レベル{level}で解放",
   "settingsPicker.boutiqueLocked": "ブティック — まだ購入できません",
+  "player.badge.free": "無料",
+  "cosmeticReq.categoryMastered": "「{category}」カテゴリの実績をすべてマスターする",
+  "cosmeticReq.categoriesMasteredCount": "{total}個の実績カテゴリのうち{count}個をマスターする",
+  "cosmeticReq.allCategoriesMastered": "すべての実績カテゴリをマスターする",
+  "cosmeticReq.gamesPlayed": "ひとり用またはパス&プレイのゲームを{count}回プレイする",
+  "cosmeticReq.dailyDealStreak": "デイリーディールを{days}日連続で達成する",
+  "cosmeticReq.weeklyChallengeStreak": "ウィークリーチャレンジを{weeks}週連続で達成する",
+  "cosmeticReq.complete": "すべてのカテゴリをマスターし、レベル250に到達し、デイリーディールを30日連続で達成する",
+  "cosmeticReq.creatorOnly": "Books & Runsの作者専用",
+  "cosmeticReq.supporterOnly": "チップで解除されます — 設定 → ヘルプ → 開発者をサポートする を参照",
+  "cosmeticReq.worstScoreUnder": "{score}点を超えてゲームを終えたことがない",
+  "cosmeticReq.averageScoreUnder": "{games}ゲーム以上で平均{score}点未満",
+  "cosmeticReq.gamesTied.one": "{count}ゲームを引き分けにする",
+  "cosmeticReq.gamesTied.other": "{count}ゲームを引き分けにする",
+  "cosmeticReq.mpWinStreak": "マルチプレイで{streak}連勝する",
+  "cosmeticReq.cat.accountStats": "アカウント統計",
+  "cosmeticReq.cat.aiRivals": "AIライバル",
+  "cosmeticReq.cat.melding": "メルド",
+  "cosmeticReq.cat.layingOff": "付け札",
+  "cosmeticReq.cat.drawDiscard": "引くと捨てる",
+  "cosmeticReq.cat.goingOut": "上がり",
+  "cosmeticReq.cat.contracts": "コントラクト",
+  "cosmeticReq.cat.tableComposition": "テーブル構成",
+  "cosmeticReq.cat.multiplayer": "マルチプレイ",
+  "cosmeticReq.cat.challenges": "チャレンジ",
   "settingsTheme.signInPrompt": "テーマを選ぶにはサインインしてください。サインアウト中は常にデフォルトのテーブルが使われるので、端末間で迷うことはありません。",
   "settingsCardBack.description": "カードの裏面の柄と色です。山札や、他のプレイヤーの伏せた手札に使われます。テーマとは別なので、どのテーブルにもどの裏面でも組み合わせられます。",
   "settingsCardFace.description": "カードのランクとスートの描かれ方です。テーマやカードの裏面とは別なので、どのテーブルにもどの表面でも組み合わせられます。",
@@ -176,6 +201,24 @@ const ja = {
   "settings.showMeldHint": "「ヒント：自動メルド」ボタン",
   "settings.showMeldHintDescription":
     "手札でコントラクトを完成できるとき、ワンタップで自動的にメルドしてくれるボタンを表示します。初期設定はオフです。上の他の補助機能と違い、これはあなたの代わりにターンの一部をプレイします。",
+  "settings.showLegalMoves": "有効な操作を表示",
+  "settings.showLegalMovesDescription":
+    "できることをハイライトします。どの山から引けるか、選んだカードをどこにレイオフできるか、手札が今ラウンドのコントラクトにどれだけ近いか。ボタンがグレーな理由も文章で表示します。",
+  "settings.confirmDiscard": "ディスカード前に確認",
+  "settings.confirmDiscardDescription":
+    "ディスカードのたびに「…を捨ててターンを終えますか？」と確認します。オフにするとワンタップで捨てられますが、ディスカードはターンを終えるため取り消せません。",
+  "settings.gameSpeed": "ゲームスピード",
+  "settings.gameSpeedDescription":
+    "相手のプレイやカードの動く速さです。ゆっくりはすべてを遅く、速いは待ち時間を短く、即時は待機とカードのアニメーションを省略します。相手のターン中にタップして待ち時間をスキップすることもできます。",
+  "settings.gameSpeed.relaxed": "ゆっくり",
+  "settings.gameSpeed.normal": "標準",
+  "settings.gameSpeed.fast": "速い",
+  "settings.gameSpeed.instant": "即時",
+  "settings.reduceMotion": "視覚効果を減らす",
+  "settings.reduceMotionDescription":
+    "アプリ全体でカードの移動、紙吹雪、点滅するハイライト、ほとんどの切り替え効果をオフにします。「端末に従う」はシステムの視差効果を減らす設定に従い、「常に減らす」は端末の設定に関係なく適用します。",
+  "settings.reduceMotion.system": "端末に従う",
+  "settings.reduceMotion.on": "常に減らす",
 
   "settings.turnNotifications": "ターン通知",
   "settings.turnNotificationsDescription":
@@ -301,6 +344,26 @@ const ja = {
   "game.layOff.errorMultiple":
     "それらのカードはまとめてレイオフできません。もう一度選び直すか、1枚ずつレイオフしてみてください。",
   "game.layOff.errorSingle": "そのカードはもうそこにレイオフできません。もう一度選び直してみてください。",
+  "game.skipWait": "待機をスキップ",
+  "game.discardToPile": "選択したカードをディスカード山に捨てる",
+  "game.turnHint.drawn": "メルドを作るか、カードを選んでディスカードしてターンを終えましょう。",
+  "game.turnHint.melded": "メルドにカードをレイオフして、ディスカードでターンを終えましょう。",
+  "game.progress.books": "ブック {ready}/{need} 完成可能",
+  "game.progress.runs": "ラン {ready}/{need} 完成可能",
+  "game.progress.closestBook": "最有力: {rank}（{have}/{need}）",
+  "game.progress.closestRun": "最有力: {suit}（{have}/{need}）",
+  "game.progress.ready": "今の手札でこのラウンドのコントラクトをメルドできます。",
+  "game.why.drawFirst": "先にカードを引いてください。",
+  "game.why.finishWildChoice": "先にワイルドカードが何の代わりか選んでください。",
+  "game.why.tooManyGroups": "このラウンドに必要な数より多くグループ化しています。1つ外してください。",
+  "game.why.groupMore": "メルドを確定するには {need} をグループ化してください。",
+  "game.why.groupAll": "このラウンドは全カードをメルドする必要があります。未グループ: {count}枚。",
+  "game.why.selectToDiscard": "捨てるカードを選んでください。",
+  "game.why.selectOneToDiscard": "捨てるカードは1枚だけ選んでください。",
+  "game.why.selectToLayOff": "レイオフするカードを選んでください。",
+  "game.why.noLayOffTarget": "そのカードを置けるメルドがテーブルにありません。",
+  "game.why.pickMeld": "複数のメルドに置けます。テーブルから1つ選んでください。",
+  "game.hand.ptsExplain": "今誰かが上がった場合にあなたに加算される罰点です。低いほど有利です。",
 
   "signIn.title": "サインイン",
   "signIn.notSetUp.title": "サインインはまだ設定されていません",
@@ -311,6 +374,14 @@ const ja = {
   "signIn.mfaPrompt": "認証アプリに表示された6桁のコードを入力してください。",
   "signIn.verifying": "確認中…",
   "signIn.verify": "確認",
+  "signIn.or": "または",
+  "signIn.magic.button": "サインインリンクをメールで送る",
+  "signIn.magic.sent":
+    "{email} にサインインリンクを送りました。このデバイスでリンクを開くとサインインが完了します。メールに6桁のコードがある場合は、下に入力しても構いません。",
+  "signIn.magic.codeLabel": "メールに記載の6桁のコード",
+  "signIn.magic.codePlaceholder": "123456",
+  "signIn.magic.needEmail": "先にメールアドレスを入力してください。",
+  "signIn.oauth.continueWith": "{provider}で続ける",
   "signIn.checkEmail": "アカウントを確認するため、メール（迷惑メールフォルダも含む）をチェックしてから戻ってサインインしてください。",
   "signIn.backToSignIn": "サインインに戻る",
   "signIn.resetEmailSent": "{email}宛のアカウントが存在する場合、パスワード再設定用のリンクを送信しました。",
@@ -356,6 +427,9 @@ const ja = {
   "multiplayer.rematch": "再戦 — 同じメンバーで",
   "multiplayer.leaveConfirm": "このゲームを離れますか？不戦敗になります。",
   "multiplayer.leave": "離れる",
+  "multiplayer.resignTitle": "このゲームを離れますか？",
+  "multiplayer.resignBody": "不戦敗になります。手札は破棄され、一定の罰点が加算されて最下位になり、ゲームはあなた抜きで続行されます。この操作は取り消せません。",
+  "multiplayer.resignConfirm": "離れて不戦敗にする",
   "multiplayer.playingAsync": "非同期プレイ中",
   "multiplayer.playingAsyncBody":
     "全員が同時にオンラインである必要はありません。自分の番をプレイすれば、次は相手の番です。ホーム画面から様子を確認するか、設定で通知をオンにすると自分の番が来たときにわかります。",
@@ -380,6 +454,36 @@ const ja = {
   "multiplayer.handEmpty": "手札がありません — ターンを終了して上がってください。",
 
   "common.close": "閉じる",
+  "shortcuts.title": "キーボードとゲームパッドのショートカット",
+  "shortcuts.openHelp": "キーボードショートカット",
+  "shortcuts.keyboardHeading": "キーボード",
+  "shortcuts.moveFocus": "カードとボタンの間を移動",
+  "shortcuts.selectCard": "フォーカス中のカードを選択/解除",
+  "shortcuts.draw": "山札から引く",
+  "shortcuts.drawDiscard": "ディスカード山の一番上を取る",
+  "shortcuts.focusHand": "自分の手札へ移動",
+  "shortcuts.group": "選択をグループ化 / メルド確定 / レイオフ",
+  "shortcuts.discard": "選択したカードをディスカード",
+  "shortcuts.sortRank": "手札をランク順に並べ替え",
+  "shortcuts.sortSuit": "手札をスート順に並べ替え",
+  "shortcuts.undo": "直前のメルド/レイオフを元に戻す",
+  "shortcuts.help": "このヘルプを表示",
+  "shortcuts.close": "ダイアログやメニューを閉じる",
+  "shortcuts.typingNote": "テキスト欄に入力している間、ショートカットは無効になります。",
+  "shortcuts.gamepadHeading": "ゲームパッド",
+  "shortcuts.gamepad.move": "十字キー / 左スティック — フォーカス移動",
+  "shortcuts.gamepad.select": "A — 選択 / 決定",
+  "shortcuts.gamepad.back": "B — 戻る / キャンセル",
+  "shortcuts.gamepad.draw": "X — 山札から引く",
+  "shortcuts.gamepad.sort": "Y — 手札を並べ替え",
+  "shortcuts.gamepad.zones": "LB / RB — 手札・山札・テーブル間を移動、LT グループ/メルド、RT ディスカード",
+  "shortcuts.gamepad.help": "スタート — このヘルプ",
+  "gamepad.select": "選択",
+  "gamepad.back": "戻る",
+  "gamepad.draw": "ドロー",
+  "gamepad.sort": "並べ替え",
+  "gamepad.zones": "エリア",
+  "gamepad.help": "ヘルプ",
 
   "opponentStrip.thinking": "{name}が考えています…",
   "opponentStrip.cardsInHand.one": "{count}枚",
@@ -398,6 +502,7 @@ const ja = {
   "roundSummary.achievementsUnlocked.other": "このラウンドで実績を獲得しました",
   "roundSummary.player": "プレイヤー",
   "roundSummary.thisRound": "このラウンド",
+  "roundSummary.penaltyNote": "「今ラウンド」は各自の手札に残ったカードの罰点です。合計が最も低い人が勝ちます。",
   "roundSummary.total": "合計",
   "roundSummary.leading": "首位",
   "roundSummary.startNextRound": "次のラウンドを開始",
@@ -451,6 +556,11 @@ const ja = {
   "gameOver.saved": "統計に保存しました。",
   "gameOver.saveError": "統計に保存できませんでした。接続を確認してください。",
   "gameOver.xpLine": "+{amount} XP — {label}",
+  "gameOver.dailyXp": "今日のディールで +{xp} XP",
+  "gameOver.weeklyXp": "今週のチャレンジで +{xp} XP",
+  "gameOver.streakBonus": "{days}日連続ボーナス +{xp} XP",
+  "gameOver.levelUp": "レベルアップ！レベル {level} になりました",
+  "gameOver.xp.quest": "クエスト：{quest}",
   "gameOver.playRealGame": "本番のゲームをプレイ",
   "gameOver.playAgain": "もう一度プレイ",
 
@@ -555,6 +665,41 @@ const ja = {
   "home.progressTile.friends": "フレンド",
 
   "home.closestAchievement": "もうすぐ達成できる実績",
+  "home.reward.badge": "{name} バッジ",
+  "home.reward.avatar_frame": "{name} フレーム",
+  "home.reward.title": "称号「{name}」",
+  "home.reward.banner": "{name} バナー",
+  "home.nextReward": "レベル {level} の次の報酬：{reward}",
+  "home.nextRewardMore": "レベル {level} の次の報酬：{reward} ほか {count} 件",
+  "quests.title": "クエスト",
+  "quests.daily": "今日",
+  "quests.weekly": "今週",
+  "quests.resets": "{time}後に新しいクエスト",
+  "quests.time.dh": "{d}日{h}時間",
+  "quests.time.hm": "{h}時間{m}分",
+  "quests.time.m": "{m}分",
+  "quests.progress": "{progress} / {target}",
+  "quests.xp": "+{xp} XP",
+  "quests.signInHint": "サインインすると、クエストでXPを獲得できます。",
+  "quests.toast.title": "クエスト達成！",
+  "quests.toast.line": "{quest} · +{xp} XP",
+  "quests.metric.gamesPlayed": "ゲームを最後までプレイ",
+  "quests.metric.gamesWon": "ゲームに勝利",
+  "quests.metric.booksMelded": "ブックをメルド",
+  "quests.metric.runsMelded": "ランをメルド",
+  "quests.metric.cardsLaidOff": "カードをレイオフ",
+  "quests.metric.roundsWon": "上がってラウンドに勝利",
+  "quests.metric.roundsWonNoDiscard": "ディスカードせずに上がる",
+  "quests.metric.meldsWithZeroWilds": "ワイルドなしでメルド",
+  "quests.metric.cardsDrawnFromDiscard": "ディスカード山から引く",
+  "quests.metric.oversizedRunsMelded": "規定より長いランをメルド",
+  "quests.metric.wildsUsedInMelds": "メルドにワイルドを使う",
+  "welcomeBack.title": "おかえりなさい！",
+  "welcomeBack.gamesWaiting.one": "{count}件のゲームがあなたの番を待っています",
+  "welcomeBack.gamesWaiting.other": "{count}件のゲームがあなたの番を待っています",
+  "welcomeBack.streak": "デイリーディールの{count}日連続記録は継続中です。今日のディールが待っています。",
+  "welcomeBack.dailyReady": "今日のデイリーディールはいつでもプレイできます。",
+  "welcomeBack.quests": "新しいクエストが用意されています。",
 
   "home.more": "その他",
   "home.playWithFriends": "フレンドとプレイ",
@@ -576,6 +721,8 @@ const ja = {
   "home.multiplayerGame": "マルチプレイヤーゲーム",
   "home.noMovesInDays": "{days}日間動きなし",
   "home.daysAbbr": "{days}日",
+  "home.turnEndsIn": "あと{time}",
+  "home.turnOverdue": "時間切れ",
 
   "home.yourGames": "あなたのゲーム",
   "home.respondError": "応答できませんでした。接続を確認してください。",
@@ -788,6 +935,9 @@ const ja = {
   "howToPlay.organizing.body1": "手札の並び順は自分の見やすさのためだけのもので、ゲームには影響しません。",
   "howToPlay.organizing.body2":
     "を使うとカードが自動でまとまります。カードを長押ししてドラッグすれば好きな位置に動かせます。",
+  "howToPlay.shortcuts.title": "キーボードとゲームパッド",
+  "howToPlay.shortcuts.body":
+    "画面に触れなくても遊べます。D でドロー、矢印キーでカード間を移動、Enter で選択、Delete でディスカード、? で全ショートカットを表示します。ゲームパッドも使えます。十字キーで移動、A で選択、B で戻ります。",
 
   "howToPlay.settings.body1":
     "設定では、アプリとテーブルのカラーテーマの選択、テーマとは別のカードの裏面の選択、新規ゲーム画面で追加するAI対戦相手のデフォルト難易度の設定、効果音のオン・オフ、レイオフ可能バッジのオン・オフ、「今、誰の番？」ボタンの切り替え、色覚サポートのカード配色の切り替えができます。これらはいずれも上記のルールには影響せず、見た目と任意の補助機能に関するものです。",
@@ -960,7 +1110,9 @@ const ja = {
   "clubs.removeMemberError": "削除できませんでした。もう一度お試しください。",
   "clubs.renameError": "名前を変更できませんでした。もう一度お試しください。",
   "clubs.deleteError": "削除できませんでした。もう一度お試しください。",
-  "clubs.confirmDelete": "「{name}」を削除しますか？ 全員から削除されます。",
+  "clubs.confirmDelete.title": "「{name}」を削除しますか？",
+  "clubs.confirmDelete.body": "クラブ、順位表、メンバー一覧が全員から削除されます。この操作は元に戻せません。",
+  "clubs.confirmDelete.confirm": "クラブを削除",
   "clubs.rename": "名前を変更",
   "clubs.startTournament": "このクラブでトーナメントを始める",
   "clubs.standingsHeading": "順位 — マルチプレイヤー成績",
@@ -1013,9 +1165,201 @@ const ja = {
   "account.data.preparing": "ダウンロードを準備しています…",
   "account.data.downloadButton": "データをダウンロード",
   "account.data.exportError": "ダウンロードを準備できませんでした。もう一度お試しください。",
+  "safety.menu.aria":
+    "{name}のその他の操作",
+  "safety.menu.title":
+    "報告またはブロック",
+  "safety.menu.report":
+    "報告する",
+  "safety.menu.block":
+    "ブロック",
+  "safety.block.confirmTitle":
+    "{name}をブロックしますか？",
+  "safety.block.confirmBody":
+    "フレンドが解除され、お互いに表示されなくなります。フレンド申請・ゲーム招待・リアクション・ランキング表示も双方向で止まります。相手には通知されません。アカウントページでいつでも解除できます。",
+  "safety.block.error":
+    "ブロックできませんでした。もう一度お試しください。",
+  "safety.block.done":
+    "{name}をブロックしました。",
+  "safety.report.title":
+    "{name}を報告",
+  "safety.report.intro":
+    "報告は開発者が確認します。誰が報告したかは相手に伝わりません。",
+  "safety.report.reasonLabel":
+    "理由",
+  "safety.report.noteLabel":
+    "補足があれば入力してください（任意）",
+  "safety.report.submit":
+    "報告を送信",
+  "safety.report.sending":
+    "送信中…",
+  "safety.report.error":
+    "報告を送信できませんでした。もう一度お試しください。",
+  "safety.report.sentTitle":
+    "報告ありがとうございます",
+  "safety.report.sentBody":
+    "内容を確認します。{name}さんの表示ややり取りが不要なら、ブロックもできます。",
+  "safety.report.alsoBlock":
+    "{name}もブロックする",
+  "safety.reason.offensive":
+    "不適切な名前・自己紹介・写真",
+  "safety.reason.harassment":
+    "嫌がらせ・暴言",
+  "safety.reason.impersonation":
+    "なりすまし",
+  "safety.reason.cheating":
+    "不正行為",
+  "safety.reason.spam":
+    "スパム・宣伝",
+  "safety.reason.inappropriate_photo":
+    "不適切なプロフィール写真",
+  "safety.reason.other":
+    "その他",
+  "safety.content.name":
+    "その名前は使用できません。別の名前を選んでください。",
+  "safety.content.bio":
+    "自己紹介に使用できない言葉が含まれています。言い換えてください。",
+  "safety.content.link":
+    "ここではリンクやメールアドレスは使用できません。",
+  "safety.content.reserved":
+    "その名前は予約されています。別の名前を選んでください。",
+  "safety.content.empty":
+    "名前を入力してください。",
+  "safety.blocked.heading":
+    "ブロックしたプレイヤー",
+  "safety.blocked.empty":
+    "ブロックしているプレイヤーはいません。",
+  "safety.blocked.description":
+    "ブロックしたプレイヤーはフレンド申請やゲーム招待を送れず、お互いのランキングにも表示されません。",
+  "safety.blocked.unblock":
+    "ブロック解除",
+  "safety.players.heading":
+    "プレイヤー — 報告・ブロック",
+  "safety.err.connect":
+    "このプレイヤーとはつながれません。",
+  "safety.err.tooMany":
+    "試行回数が多すぎます。しばらくしてからお試しください。",
+  "err.mp.alreadyNudged":
+    "最近すでに催促されています。",
+  "err.mp.nothingToNudge":
+    "今は催促できる相手がいません。",
+  "account.delete.description":
+    "アカウントと関連するすべてのデータを完全に削除します。",
+  "account.delete.item.data":
+    "プロフィール、写真、統計、履歴、実績、設定、フレンド、ランキング登録が削除されます。",
+  "account.delete.item.games":
+    "進行中のゲームは棄権扱いになります。終了したゲームは他のプレイヤーのために残り、あなたの名前は「削除されたプレイヤー」に置き換わります。",
+  "account.delete.item.clubs":
+    "あなたが管理するクラブとトーナメントも削除されます。",
+  "account.delete.item.irreversible":
+    "この操作は取り消せません。",
+  "account.delete.button":
+    "アカウントを削除…",
+  "account.delete.typePrompt":
+    "確認のため {word} と入力してください",
+  "account.delete.confirmWord":
+    "削除",
+  "account.delete.continue":
+    "続ける",
+  "account.delete.fallbackPrefix":
+    "サインインできない場合や、問い合わせたい場合は",
+  "account.delete.fallbackLink":
+    "お問い合わせ",
+  "account.delete.confirmTitle":
+    "アカウントを削除しますか？",
+  "account.delete.confirmBody":
+    "このアカウントに関連するすべてが完全に削除されます。元に戻せません。",
+  "account.delete.confirmButton":
+    "完全に削除",
+  "account.delete.done":
+    "アカウントを削除しました。",
+  "account.delete.error":
+    "アカウントを削除できませんでした。しばらくしてからお試しください。",
+  "account.delete.errLeave":
+    "ゲームから退出できませんでした。しばらくしてからお試しください。",
+  "support.privacyRequest":
+    "プライバシー／アカウントに関するリクエスト",
+  "support.subjectPlaceholderPrivacy":
+    "例：アカウントを削除してください",
+  "support.descriptionPlaceholderPrivacy":
+    "ご希望の内容をお書きください。下のメールアドレスに返信します。本人確認をお願いする場合があります。",
+  "newGameMultiplayer.turnLimit.heading":
+    "ターンの制限時間",
+  "newGameMultiplayer.turnLimit.off":
+    "制限なし",
+  "newGameMultiplayer.turnLimit.hours":
+    "{hours}時間",
+  "newGameMultiplayer.turnLimit.note":
+    "1ターンあたり{hours}時間です。時間切れになると安全な手が代わりに打たれ、2回連続で切れると棄権扱いになります。",
+  "newGameMultiplayer.turnLimit.offNote":
+    "時計なし：いつまでも待ちます。止まったゲームは「退出」で終了できます。",
+  "turnTimer.expired":
+    "時間切れ",
+  "turnTimer.yourEnds":
+    "あなたのターンは{time}後に終了",
+  "turnTimer.theirEnds":
+    "相手のターンは{time}後に終了",
+  "turnTimer.lastChance":
+    "前回のターンを逃しました。今回も逃すと棄権になります。",
+  "turnTimer.unit.minutes":
+    "{n}分",
+  "turnTimer.unit.hours":
+    "{n}時間",
+  "turnTimer.unit.days":
+    "{n}日",
+  "emotes.heading":
+    "クイックリアクション",
+  "emotes.error":
+    "送信できませんでした。しばらくしてからお試しください。",
+  "emotes.bubble":
+    "{name}：{emoji} {text}",
+  "emote.hello":
+    "こんにちは！",
+  "emote.nice_meld":
+    "ナイスメルド！",
+  "emote.your_turn":
+    "あなたの番だよ！",
+  "emote.oops":
+    "おっと！",
+  "emote.thanks":
+    "ありがとう！",
+  "emote.wow":
+    "わあ！",
+  "emote.lucky":
+    "ラッキー！",
+  "emote.good_game":
+    "グッドゲーム",
+  "settings.notify.heading":
+    "通知の種類",
+  "settings.notify.turns":
+    "あなたの番",
+  "settings.notify.turnsHint":
+    "あなたの手番、または時間切れが近いとき。",
+  "settings.notify.invites":
+    "招待とフレンド申請",
+  "settings.notify.invitesHint":
+    "ゲームへの招待と新しいフレンド申請。",
+  "settings.notify.nudges":
+    "催促とリアクション",
+  "settings.notify.nudgesHint":
+    "誰かに催促されたり、ゲーム中にリアクションが届いたとき。",
+  "settings.notify.streaks":
+    "連続記録のリマインダー",
+  "settings.notify.streaksHint":
+    "デイリー／ウィークリーの連続記録が途切れそうなとき。",
+  "settings.notify.quietHours":
+    "おやすみ時間",
+  "settings.notify.quietHoursHint":
+    "この時間帯（現地時間）はプッシュ通知を送りません。受信箱は更新されます。",
+  "settings.notify.from":
+    "開始",
+  "settings.notify.to":
+    "〜",
+  "leaderboard.loadMore":
+    "もっと見る",
+  "leaderboard.yourRank":
+    "あなたは {total} 人中 {rank} 位",
   "account.delete.heading": "アカウントを削除",
-  "account.delete.bodyPrefix": "現在、ご自身での削除機能はありません。アカウントと、それに紐づくすべてのデータ（統計、ゲーム履歴、実績、表示名、フレンド、マルチプレイヤーゲーム）の削除をご希望の場合は、",
-  "account.delete.bodySuffix": "宛に、アカウントに登録されたメールアドレスからメールをお送りください。",
   "account.error.notConfigured": "設定されていません。",
   "account.error.wrongPassword": "現在のパスワードが正しくありません。",
   "account.error.needsFreshSignIn": "認証アプリのコードで、あらためてサインインする必要があります。いったんサインアウトして再度サインインし、もう一度お試しください。",
@@ -1039,7 +1383,8 @@ const ja = {
   "terms.service.title": "本アプリの変更",
   "terms.service.body": "本アプリは、個人の開発者が運営する趣味のプロジェクトです。当社は、機能の追加、変更、削除、統計やランキングのリセットまたは調整、あるいは本アプリまたはその一部（オンライン機能を含みます）の提供の終了を、いつでも行う場合があります。重要な変更については、可能な場合には合理的な予告を行うよう努めますが、オンライン機能を常に利用できることをお約束するものではありません。",
   "terms.termination.title": "利用の終了",
-  "terms.termination.body": "お客様はいつでも本アプリの利用をやめたり、アカウントを削除したりできます（方法についてはプライバシーポリシーをご覧ください）。開発者は、これらの規約に違反するアカウントについて、停止、制限、または削除を行い、またコンテンツを削除する場合があります。たとえば、不正行為、嫌がらせ、不適切な名前や写真、サービスへの攻撃や過負荷を与える行為などが該当します。また、サービスや他のプレイヤーを守るために必要な場合には、予告なく行うことがあります。誤りであるとお考えの場合は、ご連絡ください。",
+  "terms.termination.body":
+    "アプリの利用はいつでもやめられ、アカウントページからアカウントを削除することもできます（詳細はプライバシーポリシーをご覧ください）。不正行為、嫌がらせ、不適切な名前や写真、サービスへの攻撃や過負荷の試みなど、本規約に違反した場合、開発者はアカウントの停止・制限・削除やコンテンツの削除を行うことがあり、サービスや他のプレイヤーを守るために必要な場合は事前の通知なしに行うことがあります。プレイヤー同士で報告・ブロックができ、報告は開発者が確認します。判断が誤りだと思われる場合はご連絡ください。",
   "terms.law.title": "準拠法",
   "terms.law.body": "これらの規約のいかなる内容も、お客様の居住国の法律に基づいてお客様が有する強行法規上の法的権利を奪うものではなく、それらの規定は引き続きお客様に適用されます。",
   "terms.changes.title": "規約の変更",
@@ -1053,6 +1398,8 @@ const ja = {
   "privacy.localPlay.title": "ローカルプレイにアカウントは不要です",
   "privacy.localPlay.body": "サインインしない場合、ゲームや設定はお客様の手元にとどまります。進行中のゲーム、ハウスルール設定、各種の設定は、お使いのブラウザまたはデバイスのローカルストレージにのみ保存され、どこにも送信されず、当社が目にすることもありません。",
   "privacy.localPlay.diagnostics": "アカウントがなくても、問題を見つけて修正できるよう、次の2つの少量の情報が送信されます。1つはクラッシュやエラーの報告（エラーメッセージ、表示していたページ、ブラウザとデバイスの種類、アプリのバージョン）、もう1つは「ゲームが開始された」といった匿名の利用回数で、ゲームモードや難易度などの大まかな詳細を伴います。利用回数には、アカウント、名前、デバイス識別子は含まれません。何らかのリクエストが行われる際、お客様のIPアドレスは当社のホスティング事業者から必然的に見えてしまいますが、当社はこれらの記録にIPアドレスを保存しません。サポートページをご利用になった場合、メッセージと、お客様が含めることを選んだファイルや連絡先アドレスが、開発者にメールで送信されます。",
+  "privacy.localPlay.speed":
+    "アプリを快適に保つため、一部のアクセスでは、ページの表示速度の計測値も送信されます。ページの読み込みと応答にかかった時間（丸めた値）、ページ名、接続の種類（例：「4g」）だけで、利用回数と同じくアカウント・名前・端末の識別子は含まれません。",
   "privacy.account.title": "アカウントを作成した場合",
   "privacy.account.intro": "サインインは任意で、サインインすると、統計、実績、アカウントレベル、ランキング、フレンド、クラブ、トーナメント、ターン制のマルチプレイヤーゲームが利用できます。メールでサインインした場合、次の情報を保存します：",
   "privacy.account.item.email": "メールアドレスと、安全にハッシュ化されたパスワード（認証プロバイダーであるSupabase Auth経由）。二要素認証（認証アプリ）を有効にした場合は、その詳細も保存します。サインイン中のセッションは、お使いのブラウザのローカルストレージに保持されます。",
@@ -1067,7 +1414,12 @@ const ja = {
   "privacy.account.item.multiplayer": "マルチプレイヤーゲームのデータ：あなたが開始または参加したターン制ゲームごとの、他の参加者、席順、現在の手番、手札の枚数、スコア、最終結果。ゲームの完全な状態（シャッフルされた山札と各プレイヤーの手札を含む）はサーバー側で保持され、各プレイヤーには自分自身の視点としてのみ公開されます。他のプレイヤーの手札を見ることはできません。",
   "privacy.account.item.saves": "別のデバイスでも続きから遊べるようにするための進捗：アカウントに保存されたひとり用の進行中のゲーム、デイリーディールとウィークリーチャレンジの達成状況とスコア、月ごとのシーズン合計、保存したお気に入りのゲーム設定。",
   "privacy.account.item.clubs": "お客様が作成または参加したクラブとトーナメント：クラブ名またはトーナメント名（そのメンバーや参加者に表示されます）、所有者または主催者、そしてメンバーや参加者。",
-  "privacy.account.item.push": "通知をオンにした場合は、お使いのブラウザのプッシュ購読情報（ブラウザのプッシュサービスが提供するアドレスと暗号鍵）。これにより、「あなたの番です」、フレンド、デイリーディールのリマインダーの通知をお送りします。これは、お客様が同意しない限りオフであり、アプリ内、またはブラウザやデバイスの設定から、いつでもオフにできます。",
+  "privacy.account.item.push":
+    "通知をオンにすると、ブラウザのプッシュ登録（ブラウザのプッシュサービスが提供するアドレスと暗号鍵）を保存し、「あなたの番」、ゲームへの招待、フレンド申請、催促、リアクション、連続記録のリマインダーを、選択した言語でお送りします。受け取る種類を選び、おやすみ時間を設定できます。これらを守るため、その設定と端末のUTCとの時差を保存します。オプトインしない限りオフで、アプリまたはブラウザ／端末の設定でいつでもオフにできます。",
+  "privacy.account.item.safety":
+    "安全に関する記録：ブロックしたプレイヤー（互いに表示されなくなります）と、他のプレイヤーについて提出した報告（誰が誰を、理由、任意の短いメモ、報告した場所、報告時点での相手の名前と自己紹介）。報告は開発者だけが閲覧でき、確認に必要な期間保持されます。報告された相手には誰が報告したかは伝わりません。表示名・自己紹介・クラブ名は、禁止語リストやなりすまし対策のルールで自動的にも確認されます。",
+  "privacy.account.item.emotes":
+    "マルチプレイ中に送るクイックリアクション（決まったプリセットのいずれかで、自由入力はありません）。同じゲームの他のプレイヤーに表示され、ゲームごとに直近のものだけを保持します。",
   "privacy.account.item.support": "「開発者を応援する」ページからチップを送る場合、支払いはすべてStripeが処理し、当社がお客様のカード情報を目にすることはありません。サポーターバッジをお付けするために、支払いが行われたという事実（Stripeのセッション参照情報、金額、通貨）のみを保存します。",
   "privacy.account.item.aiDifficulty": "お客様の設定。新しいデバイスやインストールにも引き継がれます：テーマ、カード裏面とカード表面、色覚モード、文字サイズ、言語、サウンドと触覚の設定、環境音楽の設定、ヒントとハイライトのオプション、デフォルトのAI難易度、ハウスルールの選択。これらは、サインインしている間のみアカウントに同期されます。サインインしない場合は、お使いのデバイスにのみ保存され、当社に送信されることはありません。",
   "privacy.account.item.security": "短期間だけ保持される技術的な記録：アプリ内通知と、不正利用を防ぐためのリクエストカウンター（長くても数週間保持）。また、サインイン済みのユーザーについては、問題を調査できるよう、エラー報告がアカウントに関連付けられる場合があります。",
@@ -1084,14 +1436,18 @@ const ja = {
   "privacy.export.title": "データの書き出しと削除",
   "privacy.export.bodyPrefix": "アカウントページの「",
   "privacy.export.downloadLabel": "データをダウンロード",
-  "privacy.export.bodyMiddle": "」ボタンを使うと、アカウントに紐づくデータ（プロフィール、統計、履歴、実績、設定、保存データ、フレンド、マルチプレイヤーの記録）を1つのファイルとして、依頼することなくいつでも取得できます。セルフサービスの削除ボタンは、まだありません。アカウントと、それに紐づくすべてのデータ（統計、ゲーム履歴、実績の進捗、プロフィール、フレンド、クラブ、マルチプレイヤーゲーム）を削除するには、",
-  "privacy.export.bodySuffix": "宛に、アカウントに登録されたアドレスからメールをお送りください。当社が削除いたします。アカウントを削除すると、他のプレイヤーのフレンドリストからもあなたが削除されます。",
+  "privacy.export.bodyMiddle":
+    "ボタンでは、アカウントに紐づくデータ（プロフィール、統計、履歴、実績、設定、セーブ、フレンド、ブロックしたプレイヤー、マルチプレイの戦績）を、いつでも申請なしで1つのファイルとして受け取れます。「アカウントを削除」ボタンもあり、パスワードで確認すると、アカウントと関連するすべて（統計、ゲーム履歴、実績の進行状況、プロフィールと写真、フレンド、あなたが管理するクラブ・トーナメント、通知の登録）がただちに削除されます。他のプレイヤーと遊んだゲームは相手側に残り、あなたの名前は「削除されたプレイヤー」に置き換わります。進行中のゲームは棄権扱いになります。ボタンを使えない場合（パスワードを忘れた場合など）は、次のアドレスまでメールしてください：",
+  "privacy.export.bodySuffix":
+    "（アカウントに登録したアドレスから）。こちらで削除します。アカウントを削除すると、他のプレイヤーのフレンド一覧からも削除されます。",
   "privacy.retention.title": "データの保管期間",
-  "privacy.retention.body": "当社は、アカウントが存在する限り、アカウントデータを保管します。お客様がアカウントの削除を依頼した後は、速やかに、かつ、いかなる場合でも合理的な期間内に削除するよう努めます。クラッシュ報告は約30日後に、短期間の通知記録と不正利用防止の記録は長くても数週間後に、自動的に削除されます。匿名の利用回数には個人を特定する識別子が含まれず、最長で約13か月間保管されます。コピーが、上書きされるまでの限られた期間、プロバイダーのバックアップに残る場合があります。",
+  "privacy.retention.body":
+    "アカウントが存在する間、アカウントのデータを保持します。アカウントを削除すると（アプリ内での削除、または依頼による削除）、データはただちに削除されます。メールでの依頼は速やかに、遅くとも合理的な期間内に対応します。他のプレイヤーへの報告は、確認に必要な期間保持されます。クラッシュレポートは約30日後に自動削除され、短期間の通知・不正防止の記録は長くても数週間で削除されます。匿名の利用回数には個人を特定する情報が含まれず、最長で約13か月保持されます。バックアップ上のコピーは、上書きされるまで限られた期間残ることがあります。",
   "privacy.transfers.title": "国際的なデータ移転",
   "privacy.transfers.body": "当社のホスティング事業者は、お客様の居住国の外にあるサーバーでデータを保存および処理することがあります。その場合、当社は、国際的なデータ移転に関する事業者の保護措置に依拠します。アカウントを利用することにより、お客様は、ご自身のデータが他の国で処理される可能性があることを了解したものとします。",
   "privacy.rights.title": "お客様の権利",
-  "privacy.rights.body": "お住まいの地域によっては、お客様には、ご自身の個人データについて、開示を求める権利、訂正する権利、削除する権利、持ち運び可能な形式でコピーを受け取る権利、特定の処理に異議を述べたりその制限を求めたりする権利、および与えた同意を撤回する権利がある場合があります。その多くは、ご自身で行えます。アプリ内でプロフィールや設定を編集したり、アカウントページからデータをダウンロードしたりできます。それ以外の場合や、アカウントを削除する場合は、下記のアドレスにメールをお送りください。また、お住まいの地域のデータ保護当局に苦情を申し立てる権利もあります。請求に対応する前に、ご本人であることの確認が必要になる場合があります。",
+  "privacy.rights.body":
+    "お住まいの地域によっては、個人データへのアクセス、訂正、削除、持ち運び可能な形式でのコピーの受領、特定の処理への異議申し立てや制限の要請、与えた同意の撤回を行う権利があります。その多くはご自身で行えます。アプリ内でプロフィールや設定を編集し、アカウントページからデータをダウンロードしたりアカウントを削除したりできます。それ以外は下記のアドレスまでメールしてください。お住まいの地域のデータ保護当局に苦情を申し立てる権利もあります。依頼に対応する前に本人確認をお願いすることがあります。",
   "privacy.children.title": "お子様のプライバシー",
   "privacy.children.body": "本アプリは13歳未満のお子様を対象としておらず、お子様の個人データを意図的に収集することはありません。現地の法律が、個人データの処理について本人が同意できる最低年齢をより高く定めている場合（たとえば韓国では14歳、欧州連合の一部の地域では16歳）、本アプリはその年齢未満の方も対象としておらず、その年齢未満の場合はアカウントを作成しないでください。お子様が当社に個人データを提供したとお考えの場合は、ご連絡ください。当社が削除します。",
   "privacy.changes.title": "このポリシーの変更",
@@ -1186,7 +1542,10 @@ const ja = {
   "tournaments.gamesWon": "{count}勝",
   "tournaments.rounds": "ラウンド",
   "tournaments.roundN": "第{round}戦",
-  "tournaments.confirmCancel": "このトーナメントをキャンセルしますか？ すでに行ったゲームの結果は残ります。",
+  "tournaments.confirmCancel.title": "このトーナメントをキャンセルしますか？",
+  "tournaments.confirmCancel.body": "トーナメントは全員分が終了します。すでに行ったゲームの結果は残りますが、未実施のラウンドは行われません。",
+  "tournaments.confirmCancel.confirm": "トーナメントをキャンセル",
+  "tournaments.confirmCancel.keep": "続ける",
   "tournaments.cancelError": "キャンセルできませんでした。もう一度お試しください。",
   "tournaments.cancelTournament": "トーナメントをキャンセル",
   "tournaments.new.title": "新しいトーナメント",
@@ -1254,7 +1613,8 @@ const ja = {
   "player.creator.title": "Books & Runsの制作者",
   "player.creator.label": "制作者",
   "player.joined": "{date}に参加",
-  "player.report.button": "写真を報告",
+  "player.report.button":
+    "報告する",
   "player.share.shared": "共有しました。",
   "player.share.error": "画像を準備できませんでした。もう一度お試しください。",
   "player.report.prompt": "この写真のどこに問題がありますか？（任意）",
@@ -1464,6 +1824,14 @@ const ja = {
   "achievementFamily.largeTableGames.unit": "6人以上で遊んだゲーム",
   "achievementFamily.turnsTaken.title": "マラソンランナー",
   "achievementFamily.turnsTaken.unit": "プレイしたターン",
+  "achievementFamily.dailyDealsCompleted.title": "デイリーの常連",
+  "achievementFamily.dailyDealsCompleted.unit": "完了したデイリーディール",
+  "achievementFamily.dailyDealBestStreak.title": "連続記録の守り手",
+  "achievementFamily.dailyDealBestStreak.unit": "日連続（デイリーディールの最長記録）",
+  "achievementFamily.weeklyChallengesCompleted.title": "チャレンジャー",
+  "achievementFamily.weeklyChallengesCompleted.unit": "完了したウィークリーチャレンジ",
+  "achievementFamily.weeklyChallengeBestStreak.title": "毎週欠かさず",
+  "achievementFamily.weeklyChallengeBestStreak.unit": "週連続（ウィークリーチャレンジの最長記録）",
   "reviewPrompt.title": "Books & Runsを楽しんでいますか？",
   "reviewPrompt.rateBody": "ちょっとした評価が大きな支えになります。",
   "reviewPrompt.feedbackBody": "勝利おめでとうございます！ 数秒のご意見が大きな助けになります。",
@@ -1472,6 +1840,18 @@ const ja = {
   "reviewPrompt.yes": "はい！",
   "update.newVersion": "Books & Runs の新しいバージョンが利用できます。",
   "update.refresh": "更新",
+  "toast.offline": "オフラインです。ゲームはそのまま遊べて、オンラインに戻ると進行状況が同期されます。",
+  "toast.backOnline": "オンラインに戻りました。",
+  "toast.saved": "保存しました",
+  "toast.copied": "クリップボードにコピーしました",
+  "toast.syncFailed": "同期できませんでした。しばらくしてからもう一度試します。",
+  "install.title": "Books & Runs をインストール",
+  "install.body": "ホーム画面に追加すると、全画面でプレイでき、すぐに起動でき、自分の番の通知も受け取れます。",
+  "install.button": "インストール",
+  "install.notNow": "今はしない",
+  "install.ios.title": "Books & Runs をホーム画面に追加",
+  "install.ios.body":
+    "共有アイコンをタップして「ホーム画面に追加」を選んでください。iPhone/iPadでは、アプリをホーム画面に追加した場合のみ、自分の番の通知が届きます。",
   "error.eyebrow": "問題が発生しました",
   "error.title": "この画面でエラーが発生しました",
   "error.body": "もう一度お試しください。それでも直らない場合は、新しいゲームを始めると解決することが多いです。",

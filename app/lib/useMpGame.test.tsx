@@ -372,8 +372,28 @@ describe("useMpGame — round and game over", () => {
 });
 
 describe("useMpGame — nudge, cancel", () => {
-  it("nudge() posts to the nudge RPC via supabase and gives feedback on success", async () => {
-    installFetch({ state: () => ({ body: { status: "active", view: BASE_VIEW } }) });
+  it("nudge() posts to the /nudge route (push included) and gives feedback on success", async () => {
+    const calls = installFetch({
+      state: () => ({ body: { status: "active", view: BASE_VIEW } }),
+      nudge: () => ({ body: { ok: true } }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+
+    await act(async () => {
+      await result.current.nudge();
+    });
+
+    expect(calls.find((c) => c.path === "nudge")?.body).toEqual({ game_id: "game-1" });
+    expect(result.current.nudgeState).toBe("sent");
+    expect(playCardTap).toHaveBeenCalled();
+  });
+
+  it("nudge() falls back to the badge-only RPC against a server without the /nudge route", async () => {
+    installFetch({
+      state: () => ({ body: { status: "active", view: BASE_VIEW } }),
+      nudge: () => ({ status: 404, body: { error: "unknown route" } }),
+    });
     const rpc = vi.fn(async () => ({ error: null }));
     (fakeSupabase as unknown as { rpc: typeof rpc }).rpc = rpc;
     const { result } = renderHook(() => useMpGame("game-1"));
@@ -385,7 +405,6 @@ describe("useMpGame — nudge, cancel", () => {
 
     expect(rpc).toHaveBeenCalledWith("mp_nudge", { p_game_id: "game-1" });
     expect(result.current.nudgeState).toBe("sent");
-    expect(playCardTap).toHaveBeenCalled();
   });
 
   it("cancelPending() posts to /cancel and refreshes to the cancelled status", async () => {
@@ -639,5 +658,31 @@ describe("useMpGame — stable, ordered state (multiplayer smoothness)", () => {
     expect(result.current.groupError).toBeNull();
     expect(result.current.stagedBooks).toBe(2);
     expect(result.current.contractStaged).toBe(true);
+  });
+});
+
+describe("useMpGame — resume refetch", () => {
+  it("refetches the game when the tab becomes visible again (missed realtime events)", async () => {
+    const calls = installFetch({ state: () => ({ body: { status: "active", view: BASE_VIEW } }) });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    const before = calls.filter((c) => c.path === "state").length;
+
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("focus"));
+    await waitFor(() => expect(calls.filter((c) => c.path === "state").length).toBeGreaterThan(before));
+  });
+
+  it("exposes the turn clock from the state response", async () => {
+    installFetch({
+      state: () => ({
+        body: { status: "active", view: BASE_VIEW, turn_limit_hours: 48, turn_started_at: "2026-09-25T10:00:00Z", your_missed_turns: 1 },
+      }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    expect(result.current.turnLimitHours).toBe(48);
+    expect(result.current.turnStartedAt).toBe("2026-09-25T10:00:00Z");
+    expect(result.current.yourMissedTurns).toBe(1);
   });
 });

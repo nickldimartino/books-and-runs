@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openHand, waitForMyTurn } from "./helpers/hand";
 
 test.beforeEach(async ({ page }) => {
   // Skip the first-visit intro splash (its own spec covers it).
@@ -26,8 +27,7 @@ async function startSoloGame(page: import("@playwright/test").Page) {
   await page.getByRole("textbox").first().fill("Tester");
   await page.getByRole("button", { name: /add ai/i }).click();
   await page.getByRole("button", { name: /start game/i }).click();
-  await page.getByRole("button", { name: /show my hand/i }).click();
-  await expect(page.getByText(/round 1 of 7/i)).toBeVisible();
+  await expect(page.getByText(/round 1 of \d+/i)).toBeVisible();
 }
 
 test("play one full turn: draw, discard, AI responds, turn returns", async ({ page }) => {
@@ -38,16 +38,15 @@ test("play one full turn: draw, discard, AI responds, turn returns", async ({ pa
   await expect(page.getByText(/draw a card/i)).toHaveCount(0); // prompt gone → drawn
 
   // Open the hand drawer, select the first card, discard it.
-  await page.locator('[data-tutorial="hand-bar"]').click();
-  const dialog = page.getByRole("dialog", { name: /manage your hand/i });
-  await expect(dialog).toBeVisible();
+  const dialog = await openHand(page);
   await dialog.getByRole("button").filter({ has: page.locator("svg") }).first().click();
   await dialog.getByRole("button", { name: /discard selected card/i }).click();
   await page.getByRole("button", { name: /^confirm$/i }).click();
 
-  // The AI takes its turn; control comes back to us (a new pass-gate) or the
-  // round ends — either way the "waiting" state clears within a few seconds.
-  await expect(page.getByText(/pass the device to/i)).toBeVisible({ timeout: 10_000 });
+  // The AI takes its turn and control comes straight back to us — there's no
+  // pass-the-device screen with a single human at the table.
+  await expect(page.getByText(/pass the device to/i)).toHaveCount(0);
+  await waitForMyTurn(page);
 });
 
 test("rapid taps on the draw pile only ever draw one card", async ({ page }) => {

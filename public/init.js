@@ -55,6 +55,17 @@
     }
   } catch (e) {}
 
+  // Same reasoning again, for the in-app Reduce motion setting (see
+  // app/lib/motion.ts) — lives inside the settings JSON blob rather than its
+  // own key, so parse it here. Only "on" sets the attribute; "system" is
+  // handled by the OS media queries in globals.css.
+  try {
+    var hs = JSON.parse(localStorage.getItem("booksAndRuns:settings") || "{}");
+    if (hs && hs.reduceMotion === "on") {
+      document.documentElement.setAttribute("data-reduce-motion", "on");
+    }
+  } catch (e) {}
+
   // Same reasoning again, for the card back — computed rather than just
   // copied from data-theme, since the saved choice might be "match"
   // (mirror the table theme, the default) or a real theme id of its own.
@@ -78,6 +89,42 @@
     }
   } catch (e) {}
 
+  // First-visit page tips (see app/components/PageTip.tsx, tipsStore.ts):
+  // PageTip is server-rendered visible so it never pops in after hydration
+  // (a layout shift); this stamps the ids already dismissed onto <html>, and
+  // globals.css hides `[data-tip=<id>]` for each — before first paint, so a
+  // returning visitor never sees a dismissed tip at all.
+  try {
+    var seenRaw = localStorage.getItem("booksAndRuns:seenTips");
+    var seenIds = seenRaw ? JSON.parse(seenRaw) : [];
+    if (Array.isArray(seenIds)) {
+      document.documentElement.setAttribute(
+        "data-seen-tips",
+        seenIds.filter(function (x) { return typeof x === "string" && /^[a-z-]+$/.test(x); }).join(" ")
+      );
+    }
+  } catch (e) {}
+
+  // Two more layout-stability hints for Home (see the data-home-* attributes
+  // in app/page.tsx and their CSS in globals.css). The prerendered HTML has to
+  // pick one Home layout for everybody; these say which visitors it doesn't
+  // apply to, before first paint, so nothing pops in or out afterwards:
+  //   data-started    — this device has started a game (Quests card shows)
+  //   data-signed-in  — a Supabase session is stored here (Sign-in prompt
+  //                     hidden, "Your games" skeleton shown)
+  try {
+    if (localStorage.getItem("booksAndRuns:hasStartedAGame") === "1") {
+      document.documentElement.setAttribute("data-started", "1");
+    }
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && /^sb-.+-auth-token$/.test(k)) {
+        document.documentElement.setAttribute("data-signed-in", "1");
+        break;
+      }
+    }
+  } catch (e) {}
+
   // Arms the first-visit intro (see components/IntroSplash.tsx). Runs
   // before the body paints so html[data-intro]::before can cover the
   // screen with no flash of the home content underneath. Only the very
@@ -87,7 +134,7 @@
   // component never mounts.
   try {
     if (location.pathname === "/" && !sessionStorage.getItem("booksAndRuns:introSeen")) {
-      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (document.documentElement.hasAttribute("data-reduce-motion") || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
         sessionStorage.setItem("booksAndRuns:introSeen", "1");
       } else {
         document.documentElement.setAttribute("data-intro", "1");

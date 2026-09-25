@@ -12,6 +12,7 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
@@ -21,6 +22,7 @@ import type { TranslationKey } from "../lib/i18n/keys";
 import { nameOf, playerProfileHref } from "../lib/leaderboardStore";
 import { rematchMpGame, MpError } from "../lib/mpStore";
 import { supabase } from "../lib/supabaseClient";
+import { SafetyMenu } from "../components/SafetyMenu";
 import {
   addTournamentRound,
   cancelTournament,
@@ -195,6 +197,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [standings, setStandings] = useState<TournamentStanding[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -346,8 +349,18 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                   {s.userId === user?.id ? t("newGame.you") : nameOf(s.userId, s.displayName)}
                 </span>
               </Link>
-              <span className="shrink-0 text-right text-xs text-[var(--muted)]">
-                {t("game.hand.pts", { count: s.totalScore })} <span className="text-[var(--faint)]">· {t("tournaments.gamesWon", { count: s.gamesWon })}</span>
+              <span className="flex shrink-0 items-center gap-1">
+                <span className="text-right text-xs text-[var(--muted)]">
+                  {t("game.hand.pts", { count: s.totalScore })} <span className="text-[var(--faint)]">· {t("tournaments.gamesWon", { count: s.gamesWon })}</span>
+                </span>
+                {s.userId !== user?.id && (
+                  <SafetyMenu
+                    targetUserId={s.userId}
+                    targetName={nameOf(s.userId, s.displayName)}
+                    context="tournament"
+                    onBlocked={() => load()}
+                  />
+                )}
               </span>
             </li>
           ))}
@@ -373,26 +386,36 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
       {isHost && !tournament.cancelled && (
         <button
-          onClick={async () => {
-            if (!confirm(t("tournaments.confirmCancel"))) return;
-            if (!supabase) return;
-            setBusy(true);
-            try {
-              await cancelTournament(supabase, tournamentId);
-              await load();
-            } catch (err) {
-              console.error("Failed to cancel tournament:", err);
-              setActionError(t("tournaments.cancelError"));
-            } finally {
-              setBusy(false);
-            }
-          }}
+          onClick={() => setConfirmingCancel(true)}
           disabled={busy}
           className="self-start text-xs text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50"
         >
           {t("tournaments.cancelTournament")}
         </button>
       )}
+      <ConfirmDialog
+        open={confirmingCancel}
+        title={t("tournaments.confirmCancel.title")}
+        body={t("tournaments.confirmCancel.body")}
+        confirmLabel={t("tournaments.confirmCancel.confirm")}
+        cancelLabel={t("tournaments.confirmCancel.keep")}
+        danger
+        onConfirm={async () => {
+          setConfirmingCancel(false);
+          if (!supabase) return;
+          setBusy(true);
+          try {
+            await cancelTournament(supabase, tournamentId);
+            await load();
+          } catch (err) {
+            console.error("Failed to cancel tournament:", err);
+            setActionError(t("tournaments.cancelError"));
+          } finally {
+            setBusy(false);
+          }
+        }}
+        onCancel={() => setConfirmingCancel(false)}
+      />
     </main>
   );
 }

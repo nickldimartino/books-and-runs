@@ -13,6 +13,29 @@ const norm = (s: string) => s.trim().replace(/[.!\s]+$/, "").toLowerCase();
 
 const EXACT: Array<[string, TranslationKey]> = [
   ["Something went wrong", "err.generic"],
+  // Guard/validation messages from the mp / delete-account Edge Functions and
+  // the 0056-0064 RPCs that a normal UI path never triggers; they still map
+  // to the translated generic line rather than leaking English.
+  ["unknown emote", "err.generic"],
+  ["invalid target", "err.generic"],
+  ["no such user", "err.generic"],
+  ["cannot report yourself", "err.generic"],
+  ["invalid report", "err.generic"],
+  ["not authenticated", "err.signedOut"],
+  ["unauthorized", "err.signedOut"],
+  ["confirmation required", "err.generic"],
+  ["Method not allowed", "err.generic"],
+  ["You can't connect with this player", "safety.err.connect"],
+  ["Too many attempts — try again later", "safety.err.tooMany"],
+  ["That name isn't allowed", "safety.content.name"],
+  ["That bio isn't allowed", "safety.content.bio"],
+  ["That name is reserved", "safety.content.reserved"],
+  ["Links aren't allowed here", "safety.content.link"],
+  ["Current password is incorrect", "account.error.wrongPassword"],
+  ["Couldn't leave your games — try again in a moment", "account.delete.errLeave"],
+  ["Couldn't delete the account — try again in a moment", "account.delete.error"],
+  ["already nudged recently", "err.mp.alreadyNudged"],
+  ["nothing to nudge", "err.mp.nothingToNudge"],
   ["Couldn't load the game", "err.loadGame"],
   ["Couldn't cancel this game", "err.cancelGame"],
   ["Couldn't respond to this invite", "err.respondInvite"],
@@ -43,6 +66,7 @@ const EXACT: Array<[string, TranslationKey]> = [
   ["New password should be different from the old password", "err.auth.passwordSame"],
   ["Auth session missing", "err.auth.sessionMissing"],
   ["Token has expired or is invalid", "err.auth.tokenExpired"],
+  ["Email link is invalid or has expired", "err.auth.tokenExpired"],
   ["Invalid TOTP code entered", "err.auth.badTotp"],
   ["Invalid MFA code", "err.auth.badTotp"],
   ["Email rate limit exceeded", "err.auth.rateLimit"],

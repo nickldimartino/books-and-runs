@@ -13,6 +13,14 @@ const appVersion =
 
 const nextConfig: NextConfig = {
   output: "export",
+  // Lets a side build (bundle analysis, Lighthouse) write to its own folder
+  // without clobbering .next/out while a dev server or another build runs:
+  //   BR_DIST_DIR=.build-alt npm run build   (static export lands in .build-alt)
+  // (Side builds also skip the type check: they exist to measure bundles, and
+  // `tsc --noEmit` is the gate for correctness.)
+  ...(process.env.BR_DIST_DIR
+    ? { distDir: process.env.BR_DIST_DIR, typescript: { ignoreBuildErrors: true } }
+    : {}),
   images: { unoptimized: true },
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,

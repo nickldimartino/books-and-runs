@@ -34,6 +34,31 @@ const zh = {
   "settingsPicker.signature": "专属",
   "settingsPicker.unlocksAtLevel": "{level} 级解锁",
   "settingsPicker.boutiqueLocked": "精品店 — 暂未开放购买",
+  "player.badge.free": "免费",
+  "cosmeticReq.categoryMastered": "精通「{category}」类别的所有成就",
+  "cosmeticReq.categoriesMasteredCount": "精通 {total} 个成就类别中的 {count} 个",
+  "cosmeticReq.allCategoriesMastered": "精通所有成就类别",
+  "cosmeticReq.gamesPlayed": "玩 {count} 局单人或同屏轮流游戏",
+  "cosmeticReq.dailyDealStreak": "达成 {days} 天的每日挑战连胜",
+  "cosmeticReq.weeklyChallengeStreak": "达成 {weeks} 周的每周挑战连胜",
+  "cosmeticReq.complete": "精通所有类别、达到 250 级,并达成 30 天的每日挑战连胜",
+  "cosmeticReq.creatorOnly": "仅限 Books & Runs 的创作者",
+  "cosmeticReq.supporterOnly": "通过打赏解锁 — 见 设置 → 帮助 → 支持开发者",
+  "cosmeticReq.worstScoreUnder": "从不以超过 {score} 分的成绩结束一局游戏",
+  "cosmeticReq.averageScoreUnder": "在 {games} 局以上的游戏中平均得分低于 {score} 分",
+  "cosmeticReq.gamesTied.one": "打平 {count} 局游戏",
+  "cosmeticReq.gamesTied.other": "打平 {count} 局游戏",
+  "cosmeticReq.mpWinStreak": "达成多人游戏 {streak} 连胜",
+  "cosmeticReq.cat.accountStats": "账号统计",
+  "cosmeticReq.cat.aiRivals": "AI 对手",
+  "cosmeticReq.cat.melding": "组牌",
+  "cosmeticReq.cat.layingOff": "卸牌",
+  "cosmeticReq.cat.drawDiscard": "摸牌与弃牌",
+  "cosmeticReq.cat.goingOut": "出完牌",
+  "cosmeticReq.cat.contracts": "合同",
+  "cosmeticReq.cat.tableComposition": "牌桌构成",
+  "cosmeticReq.cat.multiplayer": "多人游戏",
+  "cosmeticReq.cat.challenges": "挑战",
   "settingsTheme.signInPrompt": "登录后即可选择主题 — 未登录时始终使用默认牌桌，这样就不用在不同设备之间来回对照了。",
   "settingsCardBack.description": "牌背的图案和颜色 — 用于摸牌堆，以及其他玩家扣着的手牌。它与主题相互独立，所以任何桌面风格都可以搭配任何牌背。",
   "settingsCardFace.description": "牌面上点数和花色的绘制方式。它与主题和牌背相互独立，所以任何桌面风格都可以搭配任何牌面。",
@@ -176,6 +201,20 @@ const zh = {
   "settings.showMeldHint": "“提示：自动出组”按钮",
   "settings.showMeldHintDescription":
     "当你的手牌可以凑齐定约时，显示一个按钮，一键帮你完成出组。默认关闭 — 与上面其他辅助功能不同，这会替你完成部分回合操作。",
+  "settings.showLegalMoves": "显示可行操作",
+  "settings.showLegalMovesDescription": "高亮你可以做的事：可以从哪些牌堆摸牌、选中的牌可以放到哪里，以及手牌离本轮定约还有多远。还会用文字说明按钮为什么是灰色的。",
+  "settings.confirmDiscard": "弃牌前确认",
+  "settings.confirmDiscardDescription": "每次弃牌前都会询问“弃掉…并结束回合？”。关闭后点一下就能弃牌 — 但弃牌会结束你的回合，且无法撤销。",
+  "settings.gameSpeed": "游戏速度",
+  "settings.gameSpeedDescription": "控制对手出牌和牌移动的速度。悠闲会放慢一切，快速会缩短停顿，即时则跳过等待和牌的动画。你也可以在对手回合点一下来跳过停顿。",
+  "settings.gameSpeed.relaxed": "悠闲",
+  "settings.gameSpeed.normal": "标准",
+  "settings.gameSpeed.fast": "快速",
+  "settings.gameSpeed.instant": "即时",
+  "settings.reduceMotion": "减少动效",
+  "settings.reduceMotionDescription": "关闭全应用的牌飞行、彩纸、脉动高亮和大多数过渡效果。“跟随设备”会遵循系统的减少动态效果设置；“始终减少”则不论设备设置如何都生效。",
+  "settings.reduceMotion.system": "跟随设备",
+  "settings.reduceMotion.on": "始终减少",
 
   "settings.turnNotifications": "回合通知",
   "settings.turnNotificationsDescription":
@@ -301,6 +340,26 @@ const zh = {
   "game.layOff.errorMultiple":
     "这些牌无法一起放置在那里 — 请重新选择，或逐张放置。",
   "game.layOff.errorSingle": "这张牌现在无法放置在那里了 — 请重新选择。",
+  "game.skipWait": "跳过等待",
+  "game.discardToPile": "将选中的牌弃到弃牌堆",
+  "game.turnHint.drawn": "组成你的定约，或选一张牌弃掉来结束回合。",
+  "game.turnHint.melded": "可以把牌放到已出的组上，然后弃牌结束回合。",
+  "game.progress.books": "同点数组 {ready}/{need} 已就绪",
+  "game.progress.runs": "顺子 {ready}/{need} 已就绪",
+  "game.progress.closestBook": "最接近：{rank}（{have}/{need}）",
+  "game.progress.closestRun": "最接近：{suit}（{have}/{need}）",
+  "game.progress.ready": "你的手牌现在就能完成本轮定约。",
+  "game.why.drawFirst": "请先摸一张牌。",
+  "game.why.finishWildChoice": "请先选择万能牌代表什么。",
+  "game.why.tooManyGroups": "你分的组比本轮所需的多 — 请移除一组。",
+  "game.why.groupMore": "还需为 {need} 分组才能确认出组。",
+  "game.why.groupAll": "本轮必须把所有牌都出组 — 还有 {count} 张未分组。",
+  "game.why.selectToDiscard": "请选择要弃的牌。",
+  "game.why.selectOneToDiscard": "弃牌只能选一张牌。",
+  "game.why.selectToLayOff": "请选择要放置的牌。",
+  "game.why.noLayOffTarget": "桌上没有可以放置这张牌的组。",
+  "game.why.pickMeld": "有多个组可以放置 — 请在桌面上选一个。",
+  "game.hand.ptsExplain": "如果现在有人先出完牌，你要计的罚分 — 越低越好。",
 
   "signIn.title": "登录",
   "signIn.notSetUp.title": "登录功能尚未配置",
@@ -311,6 +370,13 @@ const zh = {
   "signIn.mfaPrompt": "请输入身份验证器 App 中的 6 位验证码。",
   "signIn.verifying": "验证中…",
   "signIn.verify": "验证",
+  "signIn.or": "或",
+  "signIn.magic.button": "给我发送登录链接",
+  "signIn.magic.sent": "我们已向 {email} 发送了登录链接。请在此设备上打开它以完成登录。如果邮件中包含 6 位验证码，也可以在下方输入。",
+  "signIn.magic.codeLabel": "邮件中的 6 位验证码",
+  "signIn.magic.codePlaceholder": "123456",
+  "signIn.magic.needEmail": "请先输入你的邮箱地址。",
+  "signIn.oauth.continueWith": "使用 {provider} 继续",
   "signIn.checkEmail": "请检查你的邮箱（包括垃圾邮件）以确认账号，然后返回登录。",
   "signIn.backToSignIn": "返回登录",
   "signIn.resetEmailSent": "如果 {email} 存在对应账号，我们已发送一封重置密码的邮件。",
@@ -356,6 +422,9 @@ const zh = {
   "multiplayer.rematch": "再来一局 — 相同玩家",
   "multiplayer.leaveConfirm": "离开此游戏？你将被判定为弃权。",
   "multiplayer.leave": "离开",
+  "multiplayer.resignTitle": "离开这局游戏？",
+  "multiplayer.resignBody": "你将判负：你的手牌会被清空，你会受到固定罚分并排在最后，游戏将在没有你的情况下继续。此操作无法撤销。",
+  "multiplayer.resignConfirm": "离开并判负",
   "multiplayer.playingAsync": "异步游玩中",
   "multiplayer.playingAsyncBody":
     "无需同时在线。完成你的回合后即轮到下一位玩家 — 从主页查看进度，或在设置中开启通知，以便及时知道轮到你了。",
@@ -380,6 +449,36 @@ const zh = {
   "multiplayer.handEmpty": "你的手牌已空 — 结束回合以出完手牌。",
 
   "common.close": "关闭",
+  "shortcuts.title": "键盘与手柄快捷键",
+  "shortcuts.openHelp": "键盘快捷键",
+  "shortcuts.keyboardHeading": "键盘",
+  "shortcuts.moveFocus": "在牌和按钮之间移动",
+  "shortcuts.selectCard": "选中/取消选中当前牌",
+  "shortcuts.draw": "从牌堆摸牌",
+  "shortcuts.drawDiscard": "拿弃牌堆顶牌",
+  "shortcuts.focusHand": "跳到你的手牌",
+  "shortcuts.group": "为选中的牌分组 / 确认出组 / 放置",
+  "shortcuts.discard": "弃掉选中的牌",
+  "shortcuts.sortRank": "按点数整理手牌",
+  "shortcuts.sortSuit": "按花色整理手牌",
+  "shortcuts.undo": "撤销上一次出组或放置",
+  "shortcuts.help": "显示此帮助",
+  "shortcuts.close": "关闭对话框和菜单",
+  "shortcuts.typingNote": "在文本框中输入时，快捷键会暂停。",
+  "shortcuts.gamepadHeading": "手柄",
+  "shortcuts.gamepad.move": "方向键 / 左摇杆 — 移动焦点",
+  "shortcuts.gamepad.select": "A — 选择 / 确认",
+  "shortcuts.gamepad.back": "B — 返回 / 取消",
+  "shortcuts.gamepad.draw": "X — 从牌堆摸牌",
+  "shortcuts.gamepad.sort": "Y — 整理手牌",
+  "shortcuts.gamepad.zones": "LB / RB — 在手牌、牌堆和桌面之间跳转；LT 分组/出组，RT 弃牌",
+  "shortcuts.gamepad.help": "Start — 此帮助",
+  "gamepad.select": "选择",
+  "gamepad.back": "返回",
+  "gamepad.draw": "摸牌",
+  "gamepad.sort": "整理",
+  "gamepad.zones": "区域",
+  "gamepad.help": "帮助",
 
   "opponentStrip.thinking": "{name} 正在思考…",
   "opponentStrip.cardsInHand.one": "{count} 张牌",
@@ -398,6 +497,7 @@ const zh = {
   "roundSummary.achievementsUnlocked.other": "本回合解锁了成就",
   "roundSummary.player": "玩家",
   "roundSummary.thisRound": "本回合",
+  "roundSummary.penaltyNote": "“本轮”是每位玩家手中剩余牌的罚分 — 总分最低者获胜。",
   "roundSummary.total": "总计",
   "roundSummary.leading": "领先",
   "roundSummary.startNextRound": "开始下一回合",
@@ -451,6 +551,11 @@ const zh = {
   "gameOver.saved": "已保存到你的统计数据。",
   "gameOver.saveError": "无法保存到你的统计数据 — 请检查网络连接。",
   "gameOver.xpLine": "+{amount} 经验值 — {label}",
+  "gameOver.dailyXp": "今日挑战 +{xp} XP",
+  "gameOver.weeklyXp": "本周挑战 +{xp} XP",
+  "gameOver.streakBonus": "连续 {days} 天奖励 +{xp} XP",
+  "gameOver.levelUp": "升级了！现在是 {level} 级",
+  "gameOver.xp.quest": "任务：{quest}",
   "gameOver.playRealGame": "开始正式游戏",
   "gameOver.playAgain": "再来一局",
 
@@ -558,6 +663,41 @@ const zh = {
   "home.progressTile.friends": "好友",
 
   "home.closestAchievement": "最接近的成就",
+  "home.reward.badge": "{name} 徽章",
+  "home.reward.avatar_frame": "{name} 相框",
+  "home.reward.title": "「{name}」称号",
+  "home.reward.banner": "{name} 横幅",
+  "home.nextReward": "等级 {level} 的下一个奖励：{reward}",
+  "home.nextRewardMore": "等级 {level} 的下一个奖励：{reward}，另有 {count} 个",
+  "quests.title": "任务",
+  "quests.daily": "今天",
+  "quests.weekly": "本周",
+  "quests.resets": "{time}后刷新新任务",
+  "quests.time.dh": "{d}天{h}小时",
+  "quests.time.hm": "{h}小时{m}分钟",
+  "quests.time.m": "{m}分钟",
+  "quests.progress": "{progress} / {target}",
+  "quests.xp": "+{xp} XP",
+  "quests.signInHint": "登录后即可通过任务获得 XP。",
+  "quests.toast.title": "任务完成！",
+  "quests.toast.line": "{quest} · +{xp} XP",
+  "quests.metric.gamesPlayed": "完成对局",
+  "quests.metric.gamesWon": "赢得对局",
+  "quests.metric.booksMelded": "出同点数组",
+  "quests.metric.runsMelded": "出顺子",
+  "quests.metric.cardsLaidOff": "放置牌",
+  "quests.metric.roundsWon": "出完牌赢下回合",
+  "quests.metric.roundsWonNoDiscard": "不弃牌出完手牌",
+  "quests.metric.meldsWithZeroWilds": "不用百搭出组",
+  "quests.metric.cardsDrawnFromDiscard": "从弃牌堆拿牌",
+  "quests.metric.oversizedRunsMelded": "出比要求更长的顺子",
+  "quests.metric.wildsUsedInMelds": "在出组中使用百搭",
+  "welcomeBack.title": "欢迎回来！",
+  "welcomeBack.gamesWaiting.one": "有 {count} 局游戏在等你出牌",
+  "welcomeBack.gamesWaiting.other": "有 {count} 局游戏在等你出牌",
+  "welcomeBack.streak": "你的每日挑战已连续 {count} 天——今天的挑战已就绪。",
+  "welcomeBack.dailyReady": "今天的每日挑战随时可玩。",
+  "welcomeBack.quests": "新的任务已经准备好了。",
 
   "home.more": "更多",
   "home.playWithFriends": "与好友一起游玩",
@@ -579,6 +719,8 @@ const zh = {
   "home.multiplayerGame": "多人游戏",
   "home.noMovesInDays": "{days} 天无动作",
   "home.daysAbbr": "{days} 天",
+  "home.turnEndsIn": "还剩 {time}",
+  "home.turnOverdue": "已超时",
 
   "home.yourGames": "你的游戏",
   "home.respondError": "无法响应 — 请检查网络连接。",
@@ -791,6 +933,9 @@ const zh = {
   "howToPlay.organizing.body1": "手牌的排列顺序纯粹是为了方便你自己 — 不会影响游戏本身。使用",
   "howToPlay.organizing.body2":
     "可自动为卡牌分组，或按住并拖动任意一张牌到新的位置，按你喜欢的方式排列手牌。",
+  "howToPlay.shortcuts.title": "键盘与手柄",
+  "howToPlay.shortcuts.body":
+    "不用碰屏幕也能玩：D 摸牌，方向键在牌之间移动，Enter 选牌，Delete 弃牌，? 列出所有快捷键。手柄同样可用 — 方向键移动，A 选择，B 返回。",
 
   "howToPlay.settings.body1":
     "在设置中，你可以为应用和牌桌选择颜色主题、独立于主题选择牌背样式、为你在“新游戏”页面添加的新 AI 对手设置默认难度、开关音效、开关可放置牌的标记、切换“轮到谁了？”按钮，以及开启色盲友好的卡牌颜色。这些都不会改变上述任何规则 — 全部都只是外观和可选的辅助功能。",
@@ -988,7 +1133,9 @@ const zh = {
   "clubs.removeMemberError": "无法移除该成员 — 请重试。",
   "clubs.renameError": "无法重命名 — 请重试。",
   "clubs.deleteError": "无法删除 — 请重试。",
-  "clubs.confirmDelete": "删除“{name}”？这将为所有人移除该俱乐部。",
+  "clubs.confirmDelete.title": "删除“{name}”？",
+  "clubs.confirmDelete.body": "该俱乐部及其排名和成员名单将为所有人删除，且无法撤销。",
+  "clubs.confirmDelete.confirm": "删除俱乐部",
   "clubs.rename": "重命名",
   "clubs.startTournament": "用此俱乐部发起锦标赛",
   "clubs.standingsHeading": "排名 — 多人对战战绩",
@@ -1045,10 +1192,201 @@ const zh = {
   "account.data.preparing": "正在准备下载…",
   "account.data.downloadButton": "下载我的数据",
   "account.data.exportError": "无法准备下载 — 请重试。",
+  "safety.menu.aria":
+    "{name}的更多操作",
+  "safety.menu.title":
+    "举报或屏蔽",
+  "safety.menu.report":
+    "举报",
+  "safety.menu.block":
+    "屏蔽",
+  "safety.block.confirmTitle":
+    "要屏蔽{name}吗？",
+  "safety.block.confirmBody":
+    "你们将互相解除好友关系并彼此隐藏——双方都无法发送好友请求、游戏邀请、表情，也不会出现在对方的排行榜上。对方不会收到通知。你可以随时在账号页面解除屏蔽。",
+  "safety.block.error":
+    "无法屏蔽，请重试。",
+  "safety.block.done":
+    "你已屏蔽{name}。",
+  "safety.report.title":
+    "举报{name}",
+  "safety.report.intro":
+    "举报会提交给开发者审核。对方不会知道是谁举报的。",
+  "safety.report.reasonLabel":
+    "原因",
+  "safety.report.noteLabel":
+    "还有什么需要补充的吗？（可选）",
+  "safety.report.submit":
+    "发送举报",
+  "safety.report.sending":
+    "发送中…",
+  "safety.report.error":
+    "无法发送举报，请重试。",
+  "safety.report.sentTitle":
+    "感谢你的举报",
+  "safety.report.sentBody":
+    "我们会进行查看。如果你不想再看到{name}或收到对方的消息，也可以将其屏蔽。",
+  "safety.report.alsoBlock":
+    "同时屏蔽{name}",
+  "safety.reason.offensive":
+    "冒犯性的名称、简介或照片",
+  "safety.reason.harassment":
+    "骚扰或辱骂",
+  "safety.reason.impersonation":
+    "冒充他人",
+  "safety.reason.cheating":
+    "作弊",
+  "safety.reason.spam":
+    "垃圾信息或广告",
+  "safety.reason.inappropriate_photo":
+    "不当的头像照片",
+  "safety.reason.other":
+    "其他",
+  "safety.content.name":
+    "这个名称不能使用，请换一个。",
+  "safety.content.bio":
+    "这段简介包含不允许的词语，请修改。",
+  "safety.content.link":
+    "这里不能包含链接或邮箱地址。",
+  "safety.content.reserved":
+    "该名称为保留名称，请换一个。",
+  "safety.content.empty":
+    "请输入名称。",
+  "safety.blocked.heading":
+    "已屏蔽的玩家",
+  "safety.blocked.empty":
+    "你还没有屏蔽任何人。",
+  "safety.blocked.description":
+    "被屏蔽的玩家无法向你发送好友请求或游戏邀请，你们也不会出现在彼此的排行榜上。",
+  "safety.blocked.unblock":
+    "取消屏蔽",
+  "safety.players.heading":
+    "玩家 — 举报或屏蔽",
+  "safety.err.connect":
+    "你无法与该玩家建立联系。",
+  "safety.err.tooMany":
+    "尝试次数过多，请稍后再试。",
+  "err.mp.alreadyNudged":
+    "最近已经有人提醒过了。",
+  "err.mp.nothingToNudge":
+    "现在没有可提醒的人。",
+  "account.delete.description":
+    "永久删除你的账号及其所有相关数据。",
+  "account.delete.item.data":
+    "你的资料、头像照片、统计、历史、成就、设置、好友和排行榜条目都会被删除。",
+  "account.delete.item.games":
+    "进行中的对局将视为你弃权。已结束的对局会为其他玩家保留，你的名字会显示为“已删除的玩家”。",
+  "account.delete.item.clubs":
+    "你创建的俱乐部和锦标赛也会被删除。",
+  "account.delete.item.irreversible":
+    "此操作无法撤销。",
+  "account.delete.button":
+    "删除我的账号…",
+  "account.delete.typePrompt":
+    "输入 {word} 以确认",
+  "account.delete.confirmWord":
+    "删除",
+  "account.delete.continue":
+    "继续",
+  "account.delete.fallbackPrefix":
+    "无法登录，或想直接联系我们？",
+  "account.delete.fallbackLink":
+    "联系我们",
+  "account.delete.confirmTitle":
+    "删除你的账号？",
+  "account.delete.confirmBody":
+    "与此账号相关的一切都将被永久删除，且无法撤销。",
+  "account.delete.confirmButton":
+    "永久删除",
+  "account.delete.done":
+    "你的账号已删除。",
+  "account.delete.error":
+    "无法删除账号，请稍后重试。",
+  "account.delete.errLeave":
+    "无法退出你的对局，请稍后重试。",
+  "support.privacyRequest":
+    "隐私或账号请求",
+  "support.subjectPlaceholderPrivacy":
+    "例如：请删除我的账号",
+  "support.descriptionPlaceholderPrivacy":
+    "请告诉我们你的需求。我们会回复到下方的邮箱，并可能请你确认身份。",
+  "newGameMultiplayer.turnLimit.heading":
+    "回合时间限制",
+  "newGameMultiplayer.turnLimit.off":
+    "不限时",
+  "newGameMultiplayer.turnLimit.hours":
+    "{hours}小时",
+  "newGameMultiplayer.turnLimit.note":
+    "每个回合有 {hours} 小时。超时后会替该玩家走一步安全的牌；连续第二次超时则判为弃权。",
+  "newGameMultiplayer.turnLimit.offNote":
+    "不设时钟：对局会一直等待。停滞的对局仍可通过“离开”结束。",
+  "turnTimer.expired":
+    "时间到",
+  "turnTimer.yourEnds":
+    "你的回合将在{time}后结束",
+  "turnTimer.theirEnds":
+    "对方的回合将在{time}后结束",
+  "turnTimer.lastChance":
+    "你错过了上一个回合——再错过这次就会弃权。",
+  "turnTimer.unit.minutes":
+    "{n}分钟",
+  "turnTimer.unit.hours":
+    "{n}小时",
+  "turnTimer.unit.days":
+    "{n}天",
+  "emotes.heading":
+    "快捷表情",
+  "emotes.error":
+    "无法发送，请稍后再试。",
+  "emotes.bubble":
+    "{name}：{emoji} {text}",
+  "emote.hello":
+    "你好！",
+  "emote.nice_meld":
+    "漂亮的组牌！",
+  "emote.your_turn":
+    "轮到你了！",
+  "emote.oops":
+    "哎呀！",
+  "emote.thanks":
+    "谢谢！",
+  "emote.wow":
+    "哇！",
+  "emote.lucky":
+    "好运气！",
+  "emote.good_game":
+    "打得好",
+  "settings.notify.heading":
+    "通知类型",
+  "settings.notify.turns":
+    "轮到你",
+  "settings.notify.turnsHint":
+    "轮到你出牌，或时间快用完。",
+  "settings.notify.invites":
+    "邀请和好友请求",
+  "settings.notify.invitesHint":
+    "游戏邀请和新的好友请求。",
+  "settings.notify.nudges":
+    "提醒和表情",
+  "settings.notify.nudgesHint":
+    "有人提醒你或在对局中发送表情时。",
+  "settings.notify.streaks":
+    "连续纪录提醒",
+  "settings.notify.streaksHint":
+    "当你的每日/每周挑战连续纪录即将中断时。",
+  "settings.notify.quietHours":
+    "免打扰时段",
+  "settings.notify.quietHoursHint":
+    "在此时段（当地时间）内不发送推送通知，收件箱仍会更新。",
+  "settings.notify.from":
+    "从",
+  "settings.notify.to":
+    "至",
+  "leaderboard.loadMore":
+    "显示更多",
+  "leaderboard.yourRank":
+    "你排名第 {rank} / {total}",
   "account.delete.heading": "删除你的账号",
-  "account.delete.bodyPrefix":
-    "目前尚不支持自助删除。如需移除你的账号及与之相关的所有内容 — 统计数据、游戏记录、成就、显示名称、好友和多人游戏 — 请发送邮件至",
-  "account.delete.bodySuffix": "（需使用你账号绑定的邮箱地址发送）。",
   "account.error.notConfigured": "尚未配置。",
   "account.error.wrongPassword": "当前密码不正确。",
   "account.error.needsFreshSignIn": "你的会话需要用身份验证器代码重新登录 — 请先退出再登录，然后重试。",
@@ -1082,7 +1420,7 @@ const zh = {
     "本应用是由一位个人开发者运营的业余项目。我们可能随时添加、更改或移除功能，重置或重新平衡统计数据和排行榜，或停止提供本应用或其部分内容（包括在线功能）。对于重大变更，我们会尽力在可能的情况下提前给予合理通知，但我们无法保证在线功能始终可用。",
   "terms.termination.title": "终止",
   "terms.termination.body":
-    "您可以随时停止使用本应用或删除您的账号（具体方法参见隐私政策）。如果账号违反本条款 — 例如作弊、骚扰、使用冒犯性的名称或照片，或试图攻击服务或使其过载 — 开发者可能暂停、限制或删除该账号，或移除相关内容；在为保护服务或其他玩家所需时，可不经通知而这样做。如果您认为这是一个错误，请联系我们。",
+    "您可以随时停止使用本应用，或在账号页面删除账号（详情见隐私政策）。如果账号违反这些条款——例如作弊、骚扰、使用冒犯性的名称或照片，或试图攻击或使服务过载——开发者可以暂停、限制或删除该账号，或移除相关内容，并可在为保护服务或其他玩家所必需时不经通知直接执行。玩家之间可以互相举报和屏蔽，举报由开发者审核。如果您认为某项决定有误，请联系我们。",
   "terms.law.title": "适用法律",
   "terms.law.body":
     "本条款中的任何内容均不会剥夺您根据所居住国家/地区的法律所享有的强制性法定权利，这些规定继续适用于您。",
@@ -1104,6 +1442,8 @@ const zh = {
     "如果您从未登录，您的游戏和设置会留在您自己手中。您进行中的游戏、家规设置和偏好设置仅存储在您浏览器或设备的本地存储中，绝不会被传输到任何地方，也绝不会被我们看到。",
   "privacy.localPlay.diagnostics":
     "即使没有账号，也会发送两类少量数据，以便发现并修复问题：崩溃和错误报告（错误信息、您所在的页面、您的浏览器和设备类型以及应用版本），以及匿名使用计数，例如“开始了一局游戏”，附带游戏模式和难度等粗略信息。使用计数不带有账号、姓名或设备标识符。发出任何请求时，我们的托管服务商都不可避免地能看到您的 IP 地址，但我们不会在这些记录中存储它。如果您使用支持页面，您所写的消息以及您选择附上的任何文件或联系地址会通过电子邮件发送给开发者。",
+  "privacy.localPlay.speed":
+    "为了让应用保持流畅，少部分访问还会发送一次页面速度测量：页面加载和响应所用的时间（已取整），以及页面名称和网络类型（例如“4g”）。与使用统计一样，它不包含账号、姓名或设备标识符。",
   "privacy.account.title": "如果您创建了账号",
   "privacy.account.intro":
     "登录是可选的，可解锁统计数据、成就、账号等级、排行榜、好友、俱乐部、锦标赛以及回合制多人游戏。如果您使用邮箱登录，我们会存储：",
@@ -1132,7 +1472,11 @@ const zh = {
   "privacy.account.item.aiDifficulty":
     "您的偏好设置，使其跟随您到新设备或新安装：主题、牌背和牌面、色盲模式、文字大小、语言、声音和震动设置、环境音乐设置、提示和高亮选项、您的默认 AI 难度，以及您选择的家规。这些设置仅在您登录期间才会同步到您的账号；如果您不登录，它们只保留在您的设备上，绝不会发送给我们。",
   "privacy.account.item.push":
-    "如果您开启了通知，则会存储您浏览器的推送订阅（由您浏览器的推送服务提供的地址和加密密钥），以便我们向您发送“轮到您了”、好友和每日挑战提醒通知。除非您选择开启，否则此功能处于关闭状态，您可以随时在应用内或您的浏览器或设备设置中将其关闭。",
+    "如果您开启通知，我们会保存您浏览器的推送订阅（由浏览器推送服务提供的地址和加密密钥），以便向您发送“轮到您了”、游戏邀请、好友请求、提醒、表情和连续纪录提醒通知，并使用您选择的语言。您可以选择接收哪些类型并设置免打扰时段；为遵守这些设置，我们会保存这些选择以及您设备的 UTC 时差。此功能默认关闭，仅在您选择开启后生效，您可随时在应用内或浏览器/设备设置中关闭。",
+  "privacy.account.item.safety":
+    "安全记录：您屏蔽的玩家（使您们彼此不可见），以及您针对其他玩家提交的举报（谁举报了谁、原因、可选的简短说明、举报来源，以及被举报玩家当时的名称和简介）。举报仅开发者可见，并在审核所需的时间内保留；被举报的玩家不会知道是谁举报的。显示名称、简介和俱乐部名称还会根据屏蔽词列表和冒充规则自动检查。",
+  "privacy.account.item.emotes":
+    "您在多人对战中发送的快捷表情（固定预设之一，绝不是自由文本），会显示给该对局中的其他玩家，每局仅保留最近的若干条。",
   "privacy.account.item.support":
     "如果您通过“支持开发者”页面发送打赏，付款完全由 Stripe 处理，我们绝不会看到您的银行卡信息。我们只存储一笔付款已发生这一事实（Stripe 会话编号、金额和币种），以便向您授予支持者徽章。",
   "privacy.account.item.security":
@@ -1156,17 +1500,18 @@ const zh = {
   "privacy.export.bodyPrefix": "账号页面提供了一个",
   "privacy.export.downloadLabel": "下载我的数据",
   "privacy.export.bodyMiddle":
-    "按钮，可让您随时以一个文件的形式获取与您账号相关的数据（个人资料、统计数据、历史记录、成就、设置、存档、好友和多人游戏记录），无需另行申请。目前还没有自助删除按钮。如需删除您的账号及与之相关的所有内容 — 统计数据、游戏历史、成就进度、个人资料、好友、俱乐部和多人游戏 — 请使用账号所用的邮箱地址发送邮件至",
-  "privacy.export.bodySuffix": "，我们会将其删除。删除账号也会将您从其他玩家的好友列表中移除。",
+    "按钮，可随时一次性导出与您账号相关的数据（资料、统计、历史、成就、设置、存档、好友、已屏蔽玩家和多人对战记录），无需申请。账号页面还有“删除我的账号”按钮：用密码确认后，您的账号及其所有相关数据——统计、对局历史、成就进度、资料和头像照片、好友、您创建的俱乐部和锦标赛、通知订阅——会立即被删除。您与他人一起玩过的对局会为对方保留，您的名字将替换为“已删除的玩家”，进行中的对局将视为您弃权。如果您无法使用该按钮（例如忘记了密码），请发送邮件至",
+  "privacy.export.bodySuffix":
+    "（使用账号绑定的邮箱地址），我们会为您删除。删除账号也会将您从其他玩家的好友列表中移除。",
   "privacy.retention.title": "数据保留时长",
   "privacy.retention.body":
-    "只要您的账号存在，我们就会保留您的账号数据。在您要求我们删除账号后，我们会力争及时将其移除，且无论如何会在合理时间内完成。崩溃报告会在大约 30 天后自动删除，短期的通知和防滥用记录最多在几周后删除。匿名使用计数不含个人标识符，最长保留约 13 个月。副本可能在服务提供商的备份中保留有限时间，之后才会被覆盖。",
+    "只要您的账号存在，我们就会保留账号数据。您删除账号（在应用内删除，或请求我们删除）后，数据会立即被移除；通过邮件提出的请求会尽快处理，且无论如何都在合理期限内。您提交的针对其他玩家的举报会在审核所需的时间内保留。崩溃报告会在约 30 天后自动删除，短期通知和防滥用记录最多保留数周。匿名使用计数不含任何个人标识，最多保留约 13 个月。备份副本可能在被覆盖前的有限时间内仍留存于服务提供商处。",
   "privacy.transfers.title": "国际传输",
   "privacy.transfers.body":
     "我们的托管服务商可能在您所居住国家/地区以外的服务器上存储和处理数据。发生这种情况时，我们依赖服务商提供的国际传输保障措施。使用账号即表示您理解您的数据可能会在其他国家/地区被处理。",
   "privacy.rights.title": "您的权利",
   "privacy.rights.body":
-    "视您所居住的地区而定，您可能享有以下权利：访问您的个人数据、更正、删除、以可携带格式获取副本、反对或要求我们限制某些处理，以及撤回您曾给予的同意。其中很多您可以自行完成：在应用中编辑您的个人资料和设置，并在账号页面下载您的数据。如有其他需求，或要删除您的账号，请发送邮件至下方地址。您还有权向当地的数据保护机构提出投诉。在处理请求之前，我们可能需要确认确实是您本人。",
+    "根据您所在的地区，您可能有权访问、更正、删除您的个人数据，以可移植格式获取副本，反对或要求我们限制某些处理，以及撤回您已给出的同意。其中许多您可以自行完成：在应用内编辑资料和设置，在账号页面下载数据并删除账号。其他事项请发送邮件至下方地址。您也有权向当地数据保护机构投诉。在处理请求前，我们可能需要确认是您本人。",
   "privacy.children.title": "儿童隐私",
   "privacy.children.body":
     "本应用并非面向 13 岁以下儿童，我们也不会在知情的情况下收集他们的个人数据。如果当地法律对个人同意处理其个人数据规定了更高的最低年龄（例如韩国为 14 岁，欧盟部分地区为 16 岁），则本应用同样不面向低于该年龄的人群，如果您低于该年龄，请勿创建账号。如果您认为有儿童向我们提供了个人数据，请联系我们，我们会将其删除。",
@@ -1275,7 +1620,10 @@ const zh = {
   "tournaments.gamesWon": "{count} 胜",
   "tournaments.rounds": "各场比赛",
   "tournaments.roundN": "第 {round} 场",
-  "tournaments.confirmCancel": "取消此锦标赛？已完成的比赛结果会保留。",
+  "tournaments.confirmCancel.title": "取消此锦标赛？",
+  "tournaments.confirmCancel.body": "锦标赛将为所有人结束。已完成的比赛结果会保留，尚未进行的轮次将不再进行。",
+  "tournaments.confirmCancel.confirm": "取消锦标赛",
+  "tournaments.confirmCancel.keep": "保留",
   "tournaments.cancelError": "无法取消 — 请重试。",
   "tournaments.cancelTournament": "取消锦标赛",
 
@@ -1353,7 +1701,8 @@ const zh = {
   "player.creator.title": "Books & Runs 的创作者",
   "player.creator.label": "创作者",
   "player.joined": "加入于 {date}",
-  "player.report.button": "举报照片",
+  "player.report.button":
+    "举报",
   "player.share.shared": "已分享。",
   "player.share.error": "无法准备该图片 — 请重试。",
   "player.report.prompt": "这张照片有什么问题？（可选）",
@@ -1594,6 +1943,14 @@ const zh = {
   "achievementFamily.largeTableGames.unit": "局有 6 名及以上玩家的游戏",
   "achievementFamily.turnsTaken.title": "马拉松选手",
   "achievementFamily.turnsTaken.unit": "个回合",
+  "achievementFamily.dailyDealsCompleted.title": "每日常客",
+  "achievementFamily.dailyDealsCompleted.unit": "个每日挑战已完成",
+  "achievementFamily.dailyDealBestStreak.title": "连续达人",
+  "achievementFamily.dailyDealBestStreak.unit": "天连续（每日挑战最佳连续纪录）",
+  "achievementFamily.weeklyChallengesCompleted.title": "挑战者",
+  "achievementFamily.weeklyChallengesCompleted.unit": "个每周挑战已完成",
+  "achievementFamily.weeklyChallengeBestStreak.title": "周复一周",
+  "achievementFamily.weeklyChallengeBestStreak.unit": "周连续（每周挑战最佳连续纪录）",
 
   // reviewPrompt.*
   "reviewPrompt.title": "玩得开心吗？",
@@ -1604,6 +1961,17 @@ const zh = {
   "reviewPrompt.yes": "好呀！",
   "update.newVersion": "Books & Runs 有新版本了。",
   "update.refresh": "刷新",
+  "toast.offline": "你已离线 — 游戏仍可正常进行，联网后进度会自动同步。",
+  "toast.backOnline": "已恢复联网。",
+  "toast.saved": "已保存",
+  "toast.copied": "已复制到剪贴板",
+  "toast.syncFailed": "同步失败 — 稍后会自动重试。",
+  "install.title": "安装 Books & Runs",
+  "install.body": "添加到主屏幕，即可全屏游玩、快速启动，并接收轮到你时的通知。",
+  "install.button": "安装",
+  "install.notNow": "暂不",
+  "install.ios.title": "将 Books & Runs 添加到主屏幕",
+  "install.ios.body": "点击分享图标，然后选择“添加到主屏幕”。在 iPhone 和 iPad 上，只有应用添加到主屏幕后，轮到你时的通知才能使用。",
   "error.eyebrow": "出错了",
   "error.title": "此页面出现了错误",
   "error.body": "请重试——如果问题依然存在，开始一局新游戏通常可以解决。",

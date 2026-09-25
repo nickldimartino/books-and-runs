@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useT } from "./lib/i18n/LocaleProvider";
+import { useEffect } from "react";
 import { SW_UPDATE_AVAILABLE_EVENT } from "./ServiceWorkerRegistrar";
+import { toast } from "./lib/toastBus";
 
 /**
  * The visible affordance a home-screen install otherwise has no equivalent
@@ -11,47 +11,26 @@ import { SW_UPDATE_AVAILABLE_EVENT } from "./ServiceWorkerRegistrar";
  * happens to get a full relaunch. ServiceWorkerRegistrar does the actual
  * detection (re-checking for a new sw.js whenever the app is foregrounded)
  * and fires SW_UPDATE_AVAILABLE_EVENT once a new version has already taken
- * over in the background; this just renders the "tap to apply it" prompt.
+ * over in the background; this turns that into a sticky toast (the shared
+ * ToastHost — toastBus.ts) with a "Refresh" action.
  * Deliberately never auto-reloads — the new version is already in charge of
  * future network requests either way, so there's no harm in leaving this up
  * to the player to dismiss or act on whenever suits them (not mid-turn).
  */
 export function UpdateAvailableBanner() {
-  const { t } = useT();
-  const [visible, setVisible] = useState(false);
-
   useEffect(() => {
     function onUpdate() {
-      setVisible(true);
+      toast({
+        id: "sw-update",
+        key: "update.newVersion",
+        kind: "info",
+        duration: 0,
+        action: { labelKey: "update.refresh", onClick: () => window.location.reload() },
+      });
     }
     window.addEventListener(SW_UPDATE_AVAILABLE_EVENT, onUpdate);
     return () => window.removeEventListener(SW_UPDATE_AVAILABLE_EVENT, onUpdate);
   }, []);
 
-  if (!visible) return null;
-
-  return (
-    <div
-      role="status"
-      className="fixed inset-x-0 top-0 z-50 flex flex-col gap-2 bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--on-accent)] shadow-lg sm:flex-row sm:items-center sm:justify-between"
-      style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}
-    >
-      <span>{t("update.newVersion")}</span>
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          onClick={() => window.location.reload()}
-          className="rounded-full bg-[var(--on-accent)]/20 px-3 py-1 font-semibold hover:bg-[var(--on-accent)]/30"
-        >
-          {t("update.refresh")}
-        </button>
-        <button
-          onClick={() => setVisible(false)}
-          aria-label={t("common.dismiss")}
-          className="rounded-full px-2 py-1 hover:bg-[var(--on-accent)]/20"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-// The Achievements browser: all 44 families × 5 tiers, grouped by category,
+// The Achievements browser: all 48 families × 5 tiers, grouped by category,
 // each showing current value vs. the tier threshold and unlocked state.
 // Pure display over `allAchievements(progress)` — the progress object is
 // assembled from Supabase by loadAchievementProgressState (+ getMyMpStats).
@@ -153,7 +153,7 @@ export default function AchievementsPage() {
         <LoadingSpinner />
       ) : (
         <>
-          {/* The catalog below (44 families × 5 tiers) isn't personal data —
+          {/* The catalog below (48 families × 5 tiers) isn't personal data —
               showing it to a guest, all locked, previews what's worth
               playing for instead of a dead-end "sign in to see this" wall.
               Only the tracking is account-bound. */}

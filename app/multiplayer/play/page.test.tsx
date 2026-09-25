@@ -16,8 +16,19 @@ import type { RedactedView } from "@/mp/types";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("../../AuthContext", () => ({ useAuth: () => ({ user: { id: "u-me" }, loading: false }) }));
 vi.mock("../../PlayerLevelContext", () => ({ usePlayerLevel: () => ({ level: null }) }));
-vi.mock("../../lib/sound", () => ({ playCardTap: vi.fn(), playMeld: vi.fn(), playRoundWin: vi.fn(), playGameWin: vi.fn() }));
-vi.mock("../../lib/haptics", () => ({ hapticLight: vi.fn(), hapticMedium: vi.fn(), hapticSuccess: vi.fn() }));
+vi.mock("../../lib/sound", () => ({
+  playCardTap: vi.fn(),
+  playMeld: vi.fn(),
+  playRoundWin: vi.fn(),
+  playGameWin: vi.fn(),
+  playError: vi.fn(),
+}));
+vi.mock("../../lib/haptics", () => ({
+  hapticLight: vi.fn(),
+  hapticMedium: vi.fn(),
+  hapticSuccess: vi.fn(),
+  hapticError: vi.fn(),
+}));
 vi.mock("../../lib/ambience", () => ({ startAmbience: vi.fn(), stopAmbience: vi.fn() }));
 vi.mock("../../lib/loadAchievementProgress", () => ({ loadAchievementProgressState: vi.fn(async () => ({})) }));
 vi.mock("../../lib/leaderboardStore", () => ({

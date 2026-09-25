@@ -11,16 +11,30 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { CardFanHero } from "./components/CardFanHero";
 import { IntroSplash } from "./components/IntroSplash";
 import { PageTip } from "./components/PageTip";
+import { HomeIdentity } from "./components/home/HomeIdentity";
+import { QuestsCard } from "./components/home/QuestsCard";
+import { QuickPlayCard } from "./components/home/QuickPlayCard";
+import { QuestToast } from "./components/home/QuestToast";
+import { WelcomeBackCard } from "./components/home/WelcomeBackCard";
 import { WelcomeOnboarding } from "./components/WelcomeOnboarding";
+import { formatRemaining, timerState } from "@/mp/turnTimer";
 import { useGame } from "./GameContext";
 import { useT } from "./lib/i18n/LocaleProvider";
 import type { TranslationKey } from "./lib/i18n/keys";
-import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
+import {
+  DailyDealState,
+  loadDailyDealState,
+  localDateKey,
+  mergeCloudDailyDealState,
+  playedToday,
+} from "./lib/dailyDealStore";
+import { useQuests } from "./lib/useQuests";
+import { isReturningAfterAbsence, readLastHomeVisit, touchHomeVisit } from "./lib/welcomeBackStore";
 import { loadPendingSessionCounters, withSessionCounters } from "./lib/pendingProgress";
 import { clearJustSignedUp, hasJustSignedUp } from "./lib/onboardingStore";
 import {
@@ -70,6 +84,14 @@ function summarizeSavedGame(state: GameState, t: T, tPlural: TPlural): string {
   // as one phrase; a comma there ("2 players, vs. 2 AI opponents") read like
   // two disconnected fragments instead of "these two groups facing off."
   return `${t("game.roundOf", { round: state.round, total: state.selectedContracts.length })}${parts.length ? " · " + parts.join(" ") : ""}`;
+}
+
+/** A Daily Deal streak still worth mentioning: last played today or
+ * yesterday (anything older has already lapsed, whatever the stored
+ * number says). */
+function dailyStreakAlive(state: DailyDealState | null): boolean {
+  if (!state || state.streak <= 0 || !state.lastPlayedDate) return false;
+  return state.lastPlayedDate === localDateKey() || state.lastPlayedDate === localDateKey(new Date(Date.now() - 86_400_000));
 }
 
 function StatsIcon() {
@@ -311,6 +333,10 @@ function SignInPrompt({ softened }: { softened: boolean }) {
   return (
     <Link
       href="/sign-in"
+      // Hidden pre-paint for a returning signed-in visitor (html[data-signed-in],
+      // stamped by public/init.js) — this renders server-side for everyone
+      // until auth resolves, and popping out afterwards was a layout shift.
+      data-home-signin
       className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
         softened
           ? "border-[var(--border)] hover:bg-[var(--panel-soft)]"
@@ -351,6 +377,10 @@ function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolea
   const { t } = useT();
   const turnName = g.seats.find((s) => s.seat === g.turn_seat)?.name;
   const stale = daysStale(g.updated_at);
+  // Turn-clock chip (migration 0061): only on an active game with a limit.
+  const clock =
+    g.status === "active" ? timerState(Date.now(), g.turn_started_at ? Date.parse(g.turn_started_at) : null, g.turn_limit_hours ?? 0) : null;
+  const clockLeft = clock && clock.phase !== "off" && clock.phase !== "expired" ? formatRemaining(clock.remainingMs) : null;
   const chip =
     g.status === "pending"
       ? t("home.waitingToStart")
@@ -370,6 +400,18 @@ function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolea
         </span>
         <span className="block text-xs text-[var(--faint)]">
           {t("game.roundOf", { round: g.round, total: g.total_rounds })}
+          {clock && clock.phase !== "off" && (
+            <span
+              className={
+                clock.phase === "expired" ? "text-[var(--danger)]" : clock.phase === "warn" ? "text-amber-500" : undefined
+              }
+            >
+              {" · "}
+              {clockLeft
+                ? t("home.turnEndsIn", { time: t(`turnTimer.unit.${clockLeft.unit}`, { n: clockLeft.value }) })
+                : t("home.turnOverdue")}
+            </span>
+          )}
           {stale != null && !yourTurn && (
             <span className={stale >= 14 ? "text-[var(--danger)]" : undefined}>
               {" · "}
@@ -431,7 +473,10 @@ function HomeGames({
   // the real rows fade into a layout that's already settled.
   if (notifications.loading && !hasSavedGame) {
     return (
-      <section className="flex flex-col gap-2">
+      // data-home-games-skeleton: hidden unless html[data-signed-in] (init.js)
+      // — a guest has no games to load, so for them this placeholder was
+      // pure layout shift when it vanished.
+      <section className="flex flex-col gap-2" data-home-games-skeleton>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("home.yourGames")}</h2>
         <div className="h-[60px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--panel)]" />
       </section>
@@ -540,6 +585,20 @@ export default function HomePage() {
   } = useGame();
   const { level, progress, loading: levelLoading } = usePlayerLevel();
   const notifications = useNotifications();
+  const quests = useQuests();
+  // "Welcome back" after a few days away — the previous visit is read once
+  // on mount (before this visit overwrites it), so the card can't vanish
+  // itself by re-reading the timestamp it just wrote.
+  const [returning, setReturning] = useState(false);
+  // A ref, not a plain read: React StrictMode (dev) runs this effect twice,
+  // and the second run would otherwise read the timestamp the first just
+  // wrote and wrongly conclude the player never left.
+  const previousVisitRef = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (previousVisitRef.current === undefined) previousVisitRef.current = readLastHomeVisit();
+    setReturning(isReturningAfterAbsence(previousVisitRef.current));
+    touchHomeVisit();
+  }, []);
   // Covers both Continue and Daily Deal — either one commits GameContext's
   // state synchronously, but navigating to /game immediately afterward isn't
   // guaranteed to see that update yet (see the effect below), so both wait
@@ -691,6 +750,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
       <IntroSplash />
+      <QuestToast quests={quests.justClaimed} onDismiss={quests.dismissClaimed} />
       <WelcomeOnboarding
         open={showWelcome}
         onDismiss={() => {
@@ -700,19 +760,8 @@ export default function HomePage() {
       />
       <div>
         <CardFanHero />
-        {configured && user && level && (
-          <Link
-            href={playerProfileHref(user.id)}
-            className="mb-3 inline-block rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
-            title={t("home.xpToLevel", { into: level.xpIntoLevel, span: level.xpSpanForLevel, next: level.level + 1 })}
-          >
-            {t("home.levelN", { level: level.level })}
-          </Link>
-        )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
-        {configured && user && (
-          <p className="mt-3 text-xs text-[var(--faint)]">{t("home.signedInAs", { email: user.email ?? "" })}</p>
-        )}
+        {configured && user && <HomeIdentity userId={user.id} level={level} loading={levelLoading} />}
       </div>
 
       <div className="flex w-full flex-col gap-5">
@@ -726,6 +775,24 @@ export default function HomePage() {
         >
           {t("home.newGame")}
         </Link>
+
+        {returning && (
+          <WelcomeBackCard
+            gamesWaiting={
+              notifications.mpGames.filter(
+                (g) => g.invite_status === "accepted" && g.status === "active" && g.turn_user_id === user?.id
+              ).length
+            }
+            dailyStreak={dailyStreakAlive(dailyDeal) ? dailyDeal!.streak : 0}
+            showQuests={!isFirstSession}
+            onDismiss={() => setReturning(false)}
+          />
+        )}
+
+        {/* One-tap "play my usual" — only with nothing in progress (dealing
+            would replace the saved game) and once a game has been started
+            (a first session's one loud action stays New Game). */}
+        {!hasSavedGame && !isFirstSession && <QuickPlayCard onStarted={() => setNavigatingToGame(true)} />}
 
         <HomeGames
           hasSavedGame={hasSavedGame}
@@ -747,6 +814,18 @@ export default function HomePage() {
             played a single turn, even that notch competes with New Game —
             see isFirstSession's own doc — so it drops to a plain border and
             an outlined button until a game actually starts. */}
+        {/* Quests: hidden until a game has been started this session, same
+            "New Game stays the one loud thing" rule as the softened CTAs. */}
+        {/* data-home-quests: rendered server-side, hidden pre-paint until this
+            device has started a game (html[data-started], init.js) — so a
+            first-time visitor's post-mount isFirstSession flip removes an
+            already-invisible card instead of shoving the page up. */}
+        {!isFirstSession && !(configured && user && quests.unavailable) && (
+          <div data-home-quests>
+            <QuestsCard views={quests.views} earning={configured && !!user} now={quests.now} />
+          </div>
+        )}
+
         <section
           className={`flex flex-col gap-3 rounded-xl border px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between ${
             isFirstSession ? "border-[var(--border)]" : "border-[var(--accent)]/40 bg-[var(--accent)]/10"

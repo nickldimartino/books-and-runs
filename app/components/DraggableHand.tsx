@@ -10,6 +10,8 @@ import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEven
 import { Card } from "@/types";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { cardLabel, PlayingCard } from "./PlayingCard";
+import { pickNext } from "../lib/spatialNav";
+import { scaleMs } from "../lib/motion";
 
 interface DraggableHandProps {
   cards: Card[];
@@ -20,6 +22,9 @@ interface DraggableHandProps {
   // Card IDs that could currently be laid off onto some meld on the table —
   // see the "Highlight possible lay-offs" Settings toggle.
   layoffEligibleIds?: Set<string>;
+  // Cards that contribute to the closest-to-complete meld of this round's
+  // contract — softly ringed by the "Show legal moves" assist.
+  hintIds?: Set<string>;
 }
 
 // Drag engages on whichever comes first: holding roughly still for
@@ -81,6 +86,7 @@ export function DraggableHand({
   onCardClick,
   onReorder,
   layoffEligibleIds,
+  hintIds,
 }: DraggableHandProps) {
   const { t } = useT();
   const cardElRefs = useRef(new Map<string, HTMLDivElement>());
@@ -94,6 +100,9 @@ export function DraggableHand({
   const [dragId, setDragId] = useState<string | null>(null);
   const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
   const [order, setOrder] = useState<string[]>(() => cards.map((c) => c.id));
+  // Roving tabindex: the whole hand is one Tab stop (not 13); arrow keys move
+  // between cards. Starts on the freshly drawn card, else the first one.
+  const [rovingId, setRovingId] = useState<string | null>(null);
 
   // Resync local order when the hand's contents or committed order change
   // for reasons other than our own in-progress drag (draw, discard, staged
@@ -107,6 +116,49 @@ export function DraggableHand({
 
   const byId = new Map(cards.map((c) => [c.id, c]));
   const orderedCards = order.map((id) => byId.get(id)).filter((c): c is Card => !!c);
+  const tabStopId =
+    rovingId && byId.has(rovingId)
+      ? rovingId
+      : lastDrawnCardId && byId.has(lastDrawnCardId)
+        ? lastDrawnCardId
+        : (orderedCards[0]?.id ?? null);
+
+  // Arrow keys move focus between cards (Left/Right by order, Up/Down to the
+  // nearest card above/below when the hand wraps onto several rows, Home/End
+  // to the ends); Shift+Left/Right moves the focused card itself, the
+  // keyboard equivalent of drag-to-reorder.
+  function handleArrowKey(e: React.KeyboardEvent, card: Card): boolean {
+    const idx = orderedCards.findIndex((c) => c.id === card.id);
+    let targetId: string | null = null;
+    if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      const to = idx + (e.key === "ArrowLeft" ? -1 : 1);
+      if (to < 0 || to >= orderedCards.length) return true;
+      const next = orderedCards.map((c) => c.id);
+      [next[idx], next[to]] = [next[to], next[idx]];
+      onReorder(next);
+      return true;
+    }
+    if (e.key === "ArrowLeft") targetId = orderedCards[idx - 1]?.id ?? null;
+    else if (e.key === "ArrowRight") targetId = orderedCards[idx + 1]?.id ?? null;
+    else if (e.key === "Home") targetId = orderedCards[0]?.id ?? null;
+    else if (e.key === "End") targetId = orderedCards[orderedCards.length - 1]?.id ?? null;
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      const fromEl = cardElRefs.current.get(card.id);
+      if (!fromEl) return false;
+      const items = orderedCards
+        .filter((c) => c.id !== card.id)
+        .flatMap((c) => {
+          const el = cardElRefs.current.get(c.id);
+          return el ? [{ item: c.id, rect: el.getBoundingClientRect() }] : [];
+        });
+      targetId = pickNext(fromEl.getBoundingClientRect(), items, e.key === "ArrowUp" ? "up" : "down");
+    } else return false;
+    if (targetId) {
+      setRovingId(targetId);
+      cardElRefs.current.get(targetId)?.focus();
+    }
+    return true;
+  }
 
   // Each card's card-enter stagger delay is assigned once, the moment its id
   // is first seen, and reused for as long as it stays in the hand — NOT
@@ -137,7 +189,7 @@ export function DraggableHand({
   let freshCount = 0;
   for (const card of cards) {
     if (!enterDelays.has(card.id)) {
-      enterDelays.set(card.id, freshCount * 40);
+      enterDelays.set(card.id, scaleMs(freshCount * 40));
       freshCount++;
     }
   }
@@ -371,7 +423,7 @@ export function DraggableHand({
   }
 
   return (
-    <div ref={handRootRef} className="flex flex-wrap justify-center gap-2 select-none">
+    <div ref={handRootRef} data-nav-zone="hand" className="flex flex-wrap justify-center gap-2 select-none">
       {orderedCards.map((card) => {
         const isDragging = dragId === card.id;
         return (
@@ -382,14 +434,17 @@ export function DraggableHand({
               else cardElRefs.current.delete(card.id);
             }}
             role="button"
-            tabIndex={0}
+            tabIndex={card.id === tabStopId ? 0 : -1}
             aria-label={cardLabel(card, t)}
             aria-pressed={selectedCardIds.includes(card.id)}
+            onFocus={() => setRovingId(card.id)}
             onPointerDown={(e) => handlePointerDown(e, card)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onCardClick(card);
+              } else if (handleArrowKey(e, card)) {
+                e.preventDefault();
               }
             }}
             style={
@@ -406,7 +461,7 @@ export function DraggableHand({
                 "--card-enter-delay": `${enterDelays.get(card.id) ?? 0}ms`,
               } as CSSProperties
             }
-            className="select-none cursor-grab"
+            className={`select-none cursor-grab ${hintIds?.has(card.id) ? "hint-card" : ""}`}
           >
             <PlayingCard
               card={card}

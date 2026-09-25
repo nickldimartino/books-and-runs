@@ -21,6 +21,24 @@ interface AchievementCountersRow {
 }
 
 /**
+ * The account's server-credited bonus XP (Daily Deal/Weekly Challenge
+ * completions, streak milestones, claimed quests) — the `xp_ledger` sum via
+ * the `my_bonus_xp()` RPC (migration 0056). Best-effort like the MP stats
+ * call: a project that hasn't run 0056 yet, or a transient failure, reads
+ * as 0 rather than failing the whole progress load.
+ */
+export async function loadBonusXp(supabase: SupabaseClient): Promise<number> {
+  try {
+    const { data, error } = await supabase.rpc("my_bonus_xp");
+    if (error) return 0;
+    const n = Number(data);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Fetches the raw data allAchievements()/levelProgress() need to evaluate
  * every family — shared by PlayerLevelContext (the account's current level)
  * and GameOverScreen (diffing before/after this game to list which specific
@@ -33,7 +51,7 @@ export async function loadAchievementProgressState(
   supabase: SupabaseClient,
   userId: string
 ): Promise<AchievementProgressState> {
-  const [statsRes, countersRes, mpStats] = await Promise.all([
+  const [statsRes, countersRes, mpStats, bonusXp] = await Promise.all([
     supabase
       .from("player_stats")
       .select("games_played, games_won, best_score, wins_by_difficulty")
@@ -45,6 +63,7 @@ export async function loadAchievementProgressState(
       .eq("user_id", userId)
       .maybeSingle<AchievementCountersRow>(),
     getMyMpStats(supabase).catch(() => ({ ...EMPTY_MP_STATS })),
+    loadBonusXp(supabase),
   ]);
   return {
     ...EMPTY_PROGRESS_STATE,
@@ -56,5 +75,6 @@ export async function loadAchievementProgressState(
     mpGamesPlayed: mpStats.played,
     mpGamesWon: mpStats.won,
     mpBestWinStreak: mpStats.bestWinStreak,
+    bonusXp,
   };
 }

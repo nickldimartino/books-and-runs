@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { pushFriendEvent } from "./mpStore";
 
 /**
  * Thin wrappers over the friend RPCs from migration 0009, in the same shape
@@ -90,6 +91,7 @@ export async function getFriendRequests(supabase: SupabaseClient): Promise<Frien
 export async function sendFriendRequest(supabase: SupabaseClient, targetUserId: string): Promise<void> {
   const { error } = await supabase.rpc("mp_send_friend_request", { target: targetUserId });
   if (error) throw error;
+  pushFriendEvent(supabase, targetUserId); // "X wants to be your friend" — fire-and-forget
 }
 
 export async function respondToFriendRequest(
@@ -123,5 +125,6 @@ export async function addFriendByCode(
   const { data, error } = await supabase.rpc("mp_add_friend_by_code", { code });
   if (error) throw error;
   const row = (Array.isArray(data) ? data[0] : data) as LookupRow | undefined;
+  if (row?.user_id) pushFriendEvent(supabase, row.user_id);
   return { userId: row?.user_id ?? "", displayName: row?.display_name ?? null };
 }

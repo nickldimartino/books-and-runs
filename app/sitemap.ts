@@ -9,11 +9,15 @@ const SITE = "https://books-and-runs.vercel.app";
 // screens (which need an account or an in-progress game to mean anything).
 const PATHS = ["", "/how-to-play", "/history", "/scorecard", "/new-game", "/privacy", "/terms", "/support"];
 
+// A real content date instead of "now on every build" (which tells crawlers
+// every page changed every deploy and gets the signal ignored). Bump when
+// public-page content meaningfully changes.
+const CONTENT_UPDATED = new Date("2026-09-25");
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
   return PATHS.map((path) => ({
     url: `${SITE}${path}`,
-    lastModified: now,
+    lastModified: CONTENT_UPDATED,
     changeFrequency: path === "" ? "weekly" : "monthly",
     priority: path === "" ? 1 : 0.6,
   }));

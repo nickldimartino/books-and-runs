@@ -95,7 +95,7 @@ export function PlayingCard({
           into fading/scaling in, so the badge visibly appeared *before*
           the card it's describing did. */}
       {isNew && (
-        <span className="card-enter absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
+        <span className="card-enter absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[11px] font-bold leading-tight text-[var(--on-accent)] shadow">
           {t("card.newBadge")}
         </span>
       )}
@@ -106,13 +106,13 @@ export function PlayingCard({
           // the badge needs a light ring around it to stay visible there —
           // --card-bg is a near-white constant across every theme, unlike
           // --panel/--bg which flip dark/light per theme.
-          className="card-enter absolute -top-1.5 -left-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[9px] font-bold leading-none text-[var(--on-accent)] shadow ring-2 ring-[var(--card-bg)]"
+          className="card-enter absolute -top-1.5 -left-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold leading-none text-[var(--on-accent)] shadow ring-2 ring-[var(--card-bg)]"
         >
           ↓
         </span>
       )}
       {standInRank && (
-        <span className="card-enter absolute -bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--highlight)] px-1.5 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
+        <span className="card-enter absolute -bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--highlight)] px-1.5 text-[11px] font-bold leading-tight text-[var(--on-accent)] shadow">
           as {standInRank}
         </span>
       )}

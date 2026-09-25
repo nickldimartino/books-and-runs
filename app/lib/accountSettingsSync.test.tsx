@@ -22,6 +22,7 @@ import {
   resetLocalPreferencesToDefaults,
 } from "./accountSettingsSync";
 import { saveLocalCardBack } from "./cardBackStore";
+import { loadLocalSettings } from "./settingsStore";
 import { DEFAULT_THEME, saveLocalTheme } from "./themeStore";
 
 function fakeSupabase() {
@@ -57,6 +58,16 @@ function blankRow(): AccountSettingsRow {
     ambient_volume: null,
     ambient_track: null,
     language: null,
+    game_speed: null,
+    reduce_motion: null,
+    show_legal_moves: null,
+    confirm_discard: null,
+    notify_turns: null,
+    notify_invites: null,
+    notify_nudges: null,
+    notify_streaks: null,
+    quiet_hours_start: null,
+    quiet_hours_end: null,
   };
 }
 
@@ -66,6 +77,7 @@ beforeEach(() => {
   document.documentElement.removeAttribute("data-cardback");
   document.documentElement.removeAttribute("data-colorblind");
   document.documentElement.removeAttribute("data-lang");
+  document.documentElement.removeAttribute("data-reduce-motion");
 });
 
 afterEach(() => {
@@ -88,8 +100,13 @@ describe("applyAccountSettings", () => {
       ambient_music_enabled: true,
       ambient_volume: 0.2,
       language: "de",
+      game_speed: "fast",
+      reduce_motion: "on",
+      show_legal_moves: false,
+      confirm_discard: false,
     });
 
+    expect(document.documentElement.getAttribute("data-reduce-motion")).toBe("on");
     expect(document.documentElement.getAttribute("data-theme")).toBe("sakura");
     expect(document.documentElement.getAttribute("data-cardback")).toBe("noir");
     expect(document.documentElement.getAttribute("data-colorblind")).toBe("protanopia");
@@ -106,6 +123,10 @@ describe("applyAccountSettings", () => {
       showWhoseTurn: false,
       ambientMusicEnabled: true,
       ambientVolume: 0.2,
+      gameSpeed: "fast",
+      reduceMotion: "on",
+      showLegalMoves: false,
+      confirmDiscard: false,
     });
   });
 
@@ -289,6 +310,14 @@ describe("bootstrapMissingAccountSettings", () => {
       ambient_volume: 0.2,
       ambient_track: "bounce",
       language: "de",
+      game_speed: "normal",
+      reduce_motion: "system",
+      show_legal_moves: true,
+      confirm_discard: true,
+      notify_turns: true,
+      notify_invites: true,
+      notify_nudges: true,
+      notify_streaks: true,
     });
     await Promise.resolve();
 
@@ -312,6 +341,29 @@ describe("pushAllDefaults", () => {
       language: "en",
       sound_on: true,
       haptics_on: true,
+      game_speed: "normal",
+      reduce_motion: "system",
+      show_legal_moves: true,
+      confirm_discard: true,
     });
+  });
+});
+
+describe("notification preferences sync", () => {
+  it("applies pulled prefs, treating both quiet-hour bounds as the on-switch", () => {
+    applyAccountSettings({
+      ...blankRow(),
+      notify_nudges: false,
+      quiet_hours_start: 23,
+      quiet_hours_end: 7,
+    });
+    const s = loadLocalSettings();
+    expect(s.notifyNudges).toBe(false);
+    expect(s.notifyTurns).toBe(true);
+    expect(s.quietHoursEnabled).toBe(true);
+    expect(s.quietHoursStart).toBe(23);
+    expect(s.quietHoursEnd).toBe(7);
+    applyAccountSettings(blankRow());
+    expect(loadLocalSettings().quietHoursEnabled).toBe(false);
   });
 });

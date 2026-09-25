@@ -9,14 +9,17 @@
 // app/how-to-play/page.tsx + HowToPlayContent.tsx.
 
 import { BackLink } from "../components/BackLink";
+import { routeMetadata } from "../lib/routeMetadata";
 import { HistoryContent } from "./HistoryContent";
 
 // Just the page-specific portion — the root layout's title.template
 // ("%s — Books & Runs") appends the suffix automatically; writing it here
 // too would double it in the actual browser tab.
-export const metadata = {
+export const metadata = routeMetadata({
   title: "History of Books & Runs",
-};
+  description: "Where Contract Rummy came from: the origins and history of the game Books & Runs is based on.",
+  path: "/history",
+});
 
 export default function HistoryPage() {
   return (

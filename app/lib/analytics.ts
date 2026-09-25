@@ -8,12 +8,17 @@
 // Dependency-free raw fetch (like errorReporter) so it never touches the
 // initial bundle's critical path, and always best-effort.
 
+import { recordGameCompleted } from "./installHint";
+
 const URL_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 type Props = Record<string, string | number | boolean>;
 
 export function track(name: string, props: Props = {}): void {
+  // The one place every finished game already passes through — reused as the
+  // trigger for the (local-only) install nudge and persistent-storage ask.
+  if (name === "game_completed") recordGameCompleted();
   try {
     if (!URL_BASE || !ANON_KEY || typeof fetch === "undefined") return;
     fetch(`${URL_BASE}/rest/v1/app_events`, {

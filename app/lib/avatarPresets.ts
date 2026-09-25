@@ -48,7 +48,7 @@ export interface PremiumEmojiOption {
 /**
  * Milestone rewards, not free picks — each requires either reaching a
  * level or fully mastering (every family at Expert tier) one of
- * achievements.ts's 9 categories. Shown greyed-out with a lock and the
+ * achievements.ts's 10 categories. Shown greyed-out with a lock and the
  * requirement in the picker until earned (see isPremiumEmojiUnlocked
  * below), never hidden — the point is to be a visible goal, not a secret.
  * Enforced for real at the database (migration 0031's trigger, as the

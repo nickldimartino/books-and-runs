@@ -4,12 +4,15 @@
 // Context) — see that file's comment.
 
 import { BackLink } from "../components/BackLink";
+import { routeMetadata } from "../lib/routeMetadata";
 import { PrivacyContent } from "./PrivacyContent";
 
 // Just the page-specific portion — see not-found.tsx's own comment on why.
-export const metadata = {
+export const metadata = routeMetadata({
   title: "Privacy Policy",
-};
+  description: "How Books & Runs handles your data: what stays on your device, what an account stores, and your choices.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

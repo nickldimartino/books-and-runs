@@ -1,7 +1,8 @@
 "use client";
 
 // The app's single source of truth for "who is signed in". Wraps Supabase
-// Auth (email + password only) and exposes it as a context. Everything
+// Auth (email + password, plus passwordless email link/code and optional
+// Google/Apple OAuth) and exposes it as a context. Everything
 // account-related is optional: when no Supabase project is configured
 // (`isSupabaseConfigured` false) this provider still mounts, `user` stays
 // null forever, and the game plays fine — only stats, the leaderboard, and
@@ -11,6 +12,7 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { installErrorReporter, setErrorUser } from "./lib/errorReporter";
+import type { OAuthProvider } from "./lib/authRedirect";
 import { isSupabaseConfigured, loadSupabase } from "./lib/supabaseClient";
 
 interface AuthResult {
@@ -53,6 +55,15 @@ interface AuthContextValue {
   mfaPending: boolean;
   signInWithPassword: (email: string, password: string) => Promise<AuthResult>;
   signUpWithPassword: (email: string, password: string) => Promise<SignUpResult>;
+  /** Passwordless: emails a one-time sign-in link (and, if the Supabase email
+   * template includes {{ .Token }}, a 6-digit code). Creates the account on
+   * first use. */
+  signInWithEmailLink: (email: string) => Promise<AuthResult>;
+  /** Completes the emailed 6-digit code from signInWithEmailLink. */
+  verifyEmailCode: (email: string, code: string) => Promise<AuthResult>;
+  /** Starts a Google/Apple OAuth redirect. Only reachable when the provider
+   * is enabled (NEXT_PUBLIC_AUTH_PROVIDERS — see authRedirect.ts). */
+  signInWithOAuth: (provider: OAuthProvider) => Promise<AuthResult>;
   resetPasswordForEmail: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
@@ -154,6 +165,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null, confirmationRequired: !data.session };
   }, []);
 
+  const signInWithEmailLink = useCallback(async (email: string) => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      // Bare /sign-in (no query) so it matches Supabase's redirect allow-list
+      // exactly; the page's `?next=` travels via authRedirect.ts's stash.
+      options: { emailRedirectTo: `${window.location.origin}/sign-in`, shouldCreateUser: true },
+    });
+    return { error: error?.message ?? null };
+  }, []);
+
+  const verifyEmailCode = useCallback(async (email: string, code: string) => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.verifyOtp({ email, token: code, type: "email" });
+    // Success creates the session — the onAuthStateChange listener resolves `user`.
+    return { error: error?.message ?? null };
+  }, []);
+
+  const signInWithOAuth = useCallback(async (provider: OAuthProvider) => {
+    const client = await loadSupabase();
+    if (!client) return { error: "Sign-in isn't configured yet." };
+    const { error } = await client.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/sign-in` },
+    });
+    return { error: error?.message ?? null };
+  }, []);
+
   const resetPasswordForEmail = useCallback(async (email: string) => {
     const client = await loadSupabase();
     if (!client) return { error: "Sign-in isn't configured yet." };
@@ -231,6 +272,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mfaPending,
       signInWithPassword,
       signUpWithPassword,
+      signInWithEmailLink,
+      verifyEmailCode,
+      signInWithOAuth,
       resetPasswordForEmail,
       updatePassword,
       signOut,
@@ -246,6 +290,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mfaPending,
       signInWithPassword,
       signUpWithPassword,
+      signInWithEmailLink,
+      verifyEmailCode,
+      signInWithOAuth,
       resetPasswordForEmail,
       updatePassword,
       signOut,
