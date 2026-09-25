@@ -56,6 +56,7 @@ function blankRow(): AccountSettingsRow {
     ambient_music_enabled: null,
     ambient_volume: null,
     ambient_track: null,
+    language: null,
   };
 }
 
@@ -64,6 +65,7 @@ beforeEach(() => {
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-cardback");
   document.documentElement.removeAttribute("data-colorblind");
+  document.documentElement.removeAttribute("data-lang");
 });
 
 afterEach(() => {
@@ -85,11 +87,14 @@ describe("applyAccountSettings", () => {
       show_whose_turn: false,
       ambient_music_enabled: true,
       ambient_volume: 0.2,
+      language: "de",
     });
 
     expect(document.documentElement.getAttribute("data-theme")).toBe("sakura");
     expect(document.documentElement.getAttribute("data-cardback")).toBe("noir");
     expect(document.documentElement.getAttribute("data-colorblind")).toBe("protanopia");
+    expect(document.documentElement.getAttribute("data-lang")).toBe("de");
+    expect(document.documentElement.lang).toBe("de");
     expect(window.localStorage.getItem("booksAndRuns:cardFace")).toBe("bold");
 
     const settings = JSON.parse(window.localStorage.getItem("booksAndRuns:settings")!);
@@ -283,6 +288,7 @@ describe("bootstrapMissingAccountSettings", () => {
       ambient_music_enabled: true,
       ambient_volume: 0.2,
       ambient_track: "bounce",
+      language: "de",
     });
     await Promise.resolve();
 
@@ -303,6 +309,7 @@ describe("pushAllDefaults", () => {
       card_back: "match",
       card_face: "classic",
       colorblind_mode: "off",
+      language: "en",
       sound_on: true,
       haptics_on: true,
     });

@@ -8,6 +8,7 @@ import { AccountSettingsSync } from "./AccountSettingsSync";
 import { AccountSwitchGuard } from "./AccountSwitchGuard";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
+import { LocaleProvider } from "./lib/i18n/LocaleProvider";
 import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
@@ -108,17 +109,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased">
         <ServiceWorkerRegistrar />
         <UpdateAvailableBanner />
-        <AuthProvider>
-          <AccountSwitchGuard />
-          <AccountSettingsSync />
-          <PlayerLevelProvider>
-            <PendingSaveSync />
-            <GameProvider>
-              <LocalSaveSync />
-              {children}
-            </GameProvider>
-          </PlayerLevelProvider>
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <AccountSwitchGuard />
+            <AccountSettingsSync />
+            <PlayerLevelProvider>
+              <PendingSaveSync />
+              <GameProvider>
+                <LocalSaveSync />
+                {children}
+              </GameProvider>
+            </PlayerLevelProvider>
+          </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -18,6 +18,7 @@
   var THEME_IDS = ["midnight","daylight","casino","pastel","arcade","sakura","noir","citrus","ember","frost","lagoon","meadow","sahara","coralsand","aurora","lilac","jade","champagne","verdigris","alabaster","valentines","sweetheart","stpatricks","cloverfield","springdusk","easter","july4th","starsandstripes","halloween","candycorn","thanksgiving","pumpkinspice","hanukkah","festivaloflights","christmas","candycane","newyears","confetti"];
   var THEME_BG = {"midnight":"#0a2b20","daylight":"#f4f1ea","pastel":"#eef1fb","casino":"#170a0a","arcade":"#14092b","noir":"#0d0d0d","sakura":"#fdf1f5","ember":"#0f0906","lagoon":"#04211f","sahara":"#2a1810","aurora":"#060b14","jade":"#0b1210","verdigris":"#0c1613","alabaster":"#f2f1ef","citrus":"#fff8ee","frost":"#f4f9fc","meadow":"#f9f8ec","coralsand":"#fdf3e7","lilac":"#f4f1f6","champagne":"#faf3e4","valentines":"#2b0a14","stpatricks":"#052e16","easter":"#fdf6fb","july4th":"#050e2e","halloween":"#0d0710","thanksgiving":"#2a1608","hanukkah":"#0a1230","festivaloflights":"#f2f6ff","christmas":"#0a2818","newyears":"#0a0a0c","sweetheart":"#fff0f4","cloverfield":"#f3fbf3","springdusk":"#1c1030","starsandstripes":"#f7f9fd","candycorn":"#fff8ec","pumpkinspice":"#fbf0e0","candycane":"#fef7f5","confetti":"#fffaf0"};
   var COLORBLIND_IDS = ["protanopia","deuteranopia","tritanopia"];
+  var LOCALE_IDS = ["en","zh","ja","ko","de","fr","es","pt-BR","ru","it"];
 
   // Applies a previously-chosen theme before first paint, so static
   // export's server-rendered (theme-less) HTML doesn't flash Midnight
@@ -62,6 +63,19 @@
     var cb = localStorage.getItem("booksAndRuns:cardBack");
     var effective = cb === "match" ? theme : THEME_IDS.indexOf(cb) !== -1 ? cb : theme;
     document.documentElement.setAttribute("data-cardback", effective);
+  } catch (e) {}
+
+  // Same reasoning again, for the display language (see
+  // app/lib/localeStore.ts) — sets both the CSS hook (data-lang) and the
+  // real <html lang> attribute before first paint, so a returning visitor
+  // never sees a flash of English before LocaleProvider.tsx (app/lib/i18n/)
+  // finishes loading their chosen locale's translated strings client-side.
+  try {
+    var lang = localStorage.getItem("booksAndRuns:locale");
+    if (LOCALE_IDS.indexOf(lang) !== -1) {
+      document.documentElement.lang = lang;
+      document.documentElement.setAttribute("data-lang", lang);
+    }
   } catch (e) {}
 
   // Arms the first-visit intro (see components/IntroSplash.tsx). Runs

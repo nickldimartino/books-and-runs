@@ -16,6 +16,7 @@ import {
   pushAllDefaults,
   pushColorblindMode,
   pushHouseSettingsPatch,
+  pushLocale,
   pushTextScale,
   resetLocalPreferencesToDefaults,
 } from "../lib/accountSettingsSync";
@@ -62,6 +63,9 @@ import {
   TEXT_SCALES,
   TextScale,
 } from "../lib/textScaleStore";
+import { DEFAULT_LOCALE, LocaleId, loadLocalLocale, LOCALES } from "../lib/localeStore";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
 import { supabase } from "../lib/supabaseClient";
 import { capitalize } from "../lib/text";
 import { THEME_SWATCHES } from "./themeSwatches";
@@ -82,11 +86,12 @@ const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "exper
 // do?" moves to an sr-only span so screen readers still get something to
 // announce beyond the label itself.
 function InfoDetails({ label, children }: { label: string; children: ReactNode }) {
+  const { t } = useT();
   return (
     <details>
       <summary
         className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden"
-        title="What does this do?"
+        title={t("settings.whatDoesThisDo")}
       >
         <span>{label}</span>
         <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[var(--faint)]" aria-hidden="true">
@@ -94,7 +99,7 @@ function InfoDetails({ label, children }: { label: string; children: ReactNode }
           <circle cx="8" cy="4.7" r="0.9" fill="currentColor" />
           <path d="M8 7.2v4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
         </svg>
-        <span className="sr-only">What does this do?</span>
+        <span className="sr-only">{t("settings.whatDoesThisDo")}</span>
       </summary>
       <p className="mt-1 text-xs text-[var(--faint)]">{children}</p>
     </details>
@@ -112,14 +117,15 @@ function BoolToggle({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const { t } = useT();
   return (
     <section className="flex flex-col gap-2">
       <InfoDetails label={label}>{description}</InfoDetails>
       <div className="flex gap-2">
         {(
           [
-            [true, "On"],
-            [false, "Off"],
+            [true, t("common.on")],
+            [false, t("common.off")],
           ] as [boolean, string][]
         ).map(([v, l]) => (
           <button
@@ -155,6 +161,34 @@ const COLORBLIND_SWATCHES: Record<ColorblindMode, { red: string; wildBg: string;
   tritanopia: { red: "#b91c1c", wildBg: "#f3d0ec", wildText: "#7a1f6b" },
 };
 
+// COLORBLIND_MODES/TEXT_SCALES (colorblindStore.ts/textScaleStore.ts) carry
+// their name/description in English only — only this page ever displays
+// them (layout.tsx and accountSettingsSync.ts only validate the id), so
+// translating them is just a local id → key lookup here rather than
+// threading t() through those stores.
+const COLORBLIND_LABEL_KEYS: Record<ColorblindMode, TranslationKey> = {
+  off: "settings.colorblind.off",
+  protanopia: "settings.colorblind.protanopia",
+  deuteranopia: "settings.colorblind.deuteranopia",
+  tritanopia: "settings.colorblind.tritanopia",
+};
+const COLORBLIND_DESCRIPTION_KEYS: Record<ColorblindMode, TranslationKey> = {
+  off: "settings.colorblind.offDescription",
+  protanopia: "settings.colorblind.protanopiaDescription",
+  deuteranopia: "settings.colorblind.deuteranopiaDescription",
+  tritanopia: "settings.colorblind.tritanopiaDescription",
+};
+const TEXT_SCALE_LABEL_KEYS: Record<TextScale, TranslationKey> = {
+  default: "settings.textScale.default",
+  large: "settings.textScale.large",
+  xlarge: "settings.textScale.xlarge",
+};
+const TEXT_SCALE_DESCRIPTION_KEYS: Record<TextScale, TranslationKey> = {
+  default: "settings.textScale.defaultDescription",
+  large: "settings.textScale.largeDescription",
+  xlarge: "settings.textScale.xlargeDescription",
+};
+
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-5">
@@ -170,9 +204,9 @@ function VolumeSlider({
   value,
   disabled,
   onChange,
-  label = "Volume",
-  description = "How loud the sound effects are. The Sound effects toggle above is the master on/off.",
-  ariaLabel = "Sound effects volume",
+  label,
+  description,
+  ariaLabel,
 }: {
   value: number;
   disabled: boolean;
@@ -181,9 +215,13 @@ function VolumeSlider({
   description?: string;
   ariaLabel?: string;
 }) {
+  const { t } = useT();
+  const resolvedLabel = label ?? t("settings.sound.volume");
+  const resolvedDescription = description ?? t("settings.sound.volumeDescription");
+  const resolvedAriaLabel = ariaLabel ?? t("settings.sound.volumeAriaLabel");
   return (
     <section className="flex flex-col gap-2">
-      <InfoDetails label={label}>{description}</InfoDetails>
+      <InfoDetails label={resolvedLabel}>{resolvedDescription}</InfoDetails>
       <div className="flex items-center gap-3">
         <input
           type="range"
@@ -193,7 +231,7 @@ function VolumeSlider({
           value={Math.round(value * 100)}
           disabled={disabled}
           onChange={(e) => onChange(Number(e.target.value) / 100)}
-          aria-label={ariaLabel}
+          aria-label={resolvedAriaLabel}
           className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--panel)] accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
         />
         <span className="w-10 shrink-0 text-right text-xs tabular-nums text-[var(--muted)]">
@@ -235,6 +273,7 @@ function SettingsLinkRow({
   disabled?: boolean;
   preview: ReactNode;
 }) {
+  const { t } = useT();
   return (
     <section className="flex flex-col gap-2">
       <label className="text-sm font-medium text-[var(--muted)]">{label}</label>
@@ -248,7 +287,7 @@ function SettingsLinkRow({
         {preview}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-[var(--heading)]">{name}</span>
-          <span className="block text-xs text-[var(--muted)]">Tap to change</span>
+          <span className="block text-xs text-[var(--muted)]">{t("settings.tapToChange")}</span>
         </span>
         <ChevronRightIcon />
       </Link>
@@ -290,9 +329,10 @@ function SwatchLinkRow({
 // drawing, not a color, so a real preview of it is more honest than a
 // swatch.
 function CardFaceLinkRow({ name, cardFace }: { name: string; cardFace: CardFaceId }) {
+  const { t } = useT();
   return (
     <SettingsLinkRow
-      label="Card face"
+      label={t("settings.cardFace")}
       href="/settings/card-face"
       name={name}
       preview={
@@ -311,9 +351,10 @@ function CardFaceLinkRow({ name, cardFace }: { name: string; cardFace: CardFaceI
 // music-note glyph instead of a swatch or a card preview — there's no
 // color or drawing to show off here.
 function AmbientSongLinkRow({ name, disabled }: { name: string; disabled: boolean }) {
+  const { t } = useT();
   return (
     <SettingsLinkRow
-      label="Ambient song"
+      label={t("settings.ambientSong")}
       href="/settings/ambient-song"
       name={name}
       disabled={disabled}
@@ -333,12 +374,14 @@ function AmbientSongLinkRow({ name, disabled }: { name: string; disabled: boolea
 
 export default function SettingsPage() {
   const { configured, user } = useAuth();
+  const { t, setLocale: setActiveLocale } = useT();
   const [settings, setSettings] = useState<HouseSettings>(DEFAULT_SETTINGS);
   const [theme, setTheme] = useState<ThemeId>("midnight");
   const [cardBack, setCardBack] = useState<CardBackId>(DEFAULT_CARD_BACK);
   const [cardFace, setCardFace] = useState<CardFaceId>(DEFAULT_CARD_FACE);
   const [colorblindMode, setColorblindMode] = useState<ColorblindMode>(DEFAULT_COLORBLIND_MODE);
   const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
+  const [locale, setLocale] = useState<LocaleId>(DEFAULT_LOCALE);
   const [loading, setLoading] = useState(true);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [tipsReset, setTipsReset] = useState(false);
@@ -357,6 +400,7 @@ export default function SettingsPage() {
     setCardFace(loadLocalCardFace());
     setColorblindMode(loadLocalColorblindMode());
     setTextScale(loadLocalTextScale());
+    setLocale(loadLocalLocale());
   }
 
   useEffect(() => {
@@ -383,6 +427,14 @@ export default function SettingsPage() {
     pushTextScale(supabase, user?.id ?? null, scale);
   }
 
+  function handleLocaleChange(id: LocaleId) {
+    setLocale(id);
+    // Persists + applies the <html lang>/data-lang attribute + loads the
+    // new dictionary — see LocaleProvider.tsx's own setLocale.
+    setActiveLocale(id);
+    pushLocale(supabase, user?.id ?? null, id);
+  }
+
   // Covers everything on this page that's local-only-but-account-synced —
   // theme and colorblind mode live in their own separate stores (see their
   // own handlers above), not HouseSettings, so a plain updateSettings(
@@ -400,6 +452,8 @@ export default function SettingsPage() {
     setCardFace(DEFAULT_CARD_FACE);
     setColorblindMode(DEFAULT_COLORBLIND_MODE);
     setTextScale(DEFAULT_TEXT_SCALE);
+    setLocale(DEFAULT_LOCALE);
+    setActiveLocale(DEFAULT_LOCALE);
     setConfirmingReset(false);
     pushAllDefaults(supabase, user?.id ?? null, DEFAULT_THEME);
   }
@@ -447,24 +501,21 @@ export default function SettingsPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
       <BackLink href="/" />
-      <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">Settings</h1>
+      <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">{t("home.settings")}</h1>
 
       {loading ? (
         <LoadingSpinner />
       ) : (
         <>
-          <PageTip id="settings" title="Carries over automatically when signed in">
-            Theme, card face, sound, AI difficulty, and every toggle below sync to your account —
-            sign in on another device (or a fresh &quot;Add to Home Screen&quot; install) and they show
-            up there too. Playing signed out keeps everything on this browser only. Not sure what
-            something does? Tap the ⓘ next to it.
+          <PageTip id="settings" title={t("settings.tip.title")}>
+            {t("settings.tip.body")}
           </PageTip>
 
-          <SettingsSection title="Appearance">
+          <SettingsSection title={t("settings.section.appearance")}>
           {activeThemeOption && (
             <SwatchLinkRow
               href="/settings/theme"
-              label="Theme"
+              label={t("settings.theme")}
               name={activeThemeOption.name}
               swatch={THEME_SWATCHES[activeThemeOption.id]}
             />
@@ -475,8 +526,8 @@ export default function SettingsPage() {
               this row shows. */}
           <SwatchLinkRow
             href="/settings/card-back"
-            label="Card back"
-            name={activeCardBackOption ? activeCardBackOption.name : "Match table theme"}
+            label={t("settings.cardBack")}
+            name={activeCardBackOption ? activeCardBackOption.name : t("settings.matchTableTheme")}
             swatch={THEME_SWATCHES[activeCardBackOption ? activeCardBackOption.id : theme]}
           />
 
@@ -486,10 +537,30 @@ export default function SettingsPage() {
           />
 
           <section className="flex flex-col gap-2">
-            <InfoDetails label="Colorblind-friendly cards">
-              Shifts red and/or wild card colors to be easier to tell apart, for the color blindness
-              type you pick. Suit symbols (♥ ♦ ♣ ♠) always show regardless of this setting.
-            </InfoDetails>
+            <InfoDetails label={t("settings.language.title")}>{t("settings.language.description")}</InfoDetails>
+            <div className="grid grid-cols-2 gap-2">
+              {LOCALES.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => handleLocaleChange(l.id)}
+                  aria-label={`${l.name} (${l.nativeName})`}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                    locale === l.id
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                      : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                  }`}
+                >
+                  <span aria-hidden="true" className="text-lg leading-none">
+                    {l.flag}
+                  </span>
+                  {l.nativeName}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <InfoDetails label={t("settings.colorblind.title")}>{t("settings.colorblind.description")}</InfoDetails>
             <div className="grid grid-cols-2 gap-2">
               {COLORBLIND_MODES.map((m) => {
                 const swatch = COLORBLIND_SWATCHES[m.id];
@@ -497,7 +568,7 @@ export default function SettingsPage() {
                   <button
                     key={m.id}
                     onClick={() => handleColorblindModeChange(m.id)}
-                    title={m.description}
+                    title={t(COLORBLIND_DESCRIPTION_KEYS[m.id])}
                     className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
                       colorblindMode === m.id
                         ? "bg-[var(--accent)] text-[var(--on-accent)]"
@@ -508,15 +579,15 @@ export default function SettingsPage() {
                       <span
                         className="h-3.5 w-3.5 rounded-full border border-black/10"
                         style={{ background: swatch.red }}
-                        title="Red card color"
+                        title={t("settings.colorblind.redSwatch")}
                       />
                       <span
                         className="h-3.5 w-3.5 rounded-full border border-black/10"
                         style={{ background: swatch.wildBg }}
-                        title="Wild card color"
+                        title={t("settings.colorblind.wildSwatch")}
                       />
                     </span>
-                    {m.name}
+                    {t(COLORBLIND_LABEL_KEYS[m.id])}
                   </button>
                 );
               })}
@@ -524,37 +595,32 @@ export default function SettingsPage() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <InfoDetails label="Text size">
-              Makes most of the site&apos;s text bigger, for easier reading — headings, body
-              copy, form labels, buttons. The game board itself is deliberately left alone, so
-              cards and in-game controls always stay their normal size and never overflow.
-              Works signed out too.
-            </InfoDetails>
+            <InfoDetails label={t("settings.textScale.title")}>{t("settings.textScale.description")}</InfoDetails>
             <div className="flex gap-2">
               {TEXT_SCALES.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => handleTextScaleChange(s.id)}
-                  title={s.description}
+                  title={t(TEXT_SCALE_DESCRIPTION_KEYS[s.id])}
                   className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
                     textScale === s.id
                       ? "bg-[var(--accent)] text-[var(--on-accent)]"
                       : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                   }`}
                 >
-                  {s.name}
+                  {t(TEXT_SCALE_LABEL_KEYS[s.id])}
                 </button>
               ))}
             </div>
           </section>
           </SettingsSection>
 
-          <SettingsSection title="Sound & haptics">
+          <SettingsSection title={t("settings.section.soundAndHaptics")}>
           <BoolToggle
-            label="Sound effects"
+            label={t("settings.soundEffects")}
             value={settings.soundEnabled}
             onChange={(v) => updateSettings({ soundEnabled: v })}
-            description="Short tap/slide/chime sounds for draws, discards, melds, and round/game wins."
+            description={t("settings.soundEffectsDescription")}
           />
           <VolumeSlider
             value={settings.soundVolume}
@@ -562,16 +628,16 @@ export default function SettingsPage() {
             onChange={(v) => updateSettings({ soundVolume: v })}
           />
           <BoolToggle
-            label="Haptics"
+            label={t("settings.haptics")}
             value={settings.hapticsEnabled}
             onChange={(v) => updateSettings({ hapticsEnabled: v })}
-            description="Short vibration taps at the same moments — independent of sound, so you can have one without the other."
+            description={t("settings.hapticsDescription")}
           />
           <BoolToggle
-            label="Ambient music"
+            label={t("settings.ambientMusic")}
             value={settings.ambientMusicEnabled}
             onChange={(v) => updateSettings({ ambientMusicEnabled: v })}
-            description="A soft generative background pad while a game screen is open — separate from sound effects, so you can have one without the other. Off by default."
+            description={t("settings.ambientMusicDescription")}
           />
           <VolumeSlider
             value={settings.ambientVolume}
@@ -580,113 +646,102 @@ export default function SettingsPage() {
               updateSettings({ ambientVolume: v });
               setAmbienceVolume(v);
             }}
-            label="Ambient volume"
-            description="How loud the background pad is. Kept subtle even at 100% — it's meant to sit behind everything else."
-            ariaLabel="Ambient music volume"
+            label={t("settings.ambientVolume")}
+            description={t("settings.ambientVolumeDescription")}
+            ariaLabel={t("settings.ambientVolumeAriaLabel")}
           />
           <AmbientSongLinkRow
-            name={settings.ambientTrack === "rotate" ? "All songs" : currentSongLabel}
+            name={settings.ambientTrack === "rotate" ? t("settings.allSongs") : currentSongLabel}
             disabled={!settings.ambientMusicEnabled}
           />
           </SettingsSection>
 
-          <SettingsSection title="Gameplay">
+          <SettingsSection title={t("settings.section.gameplay")}>
           <section className="flex flex-col gap-2">
-            <InfoDetails label="Default AI difficulty">
-              Used as the starting difficulty when you add an AI opponent on the New Game screen.
+            <InfoDetails label={t("settings.defaultAiDifficulty")}>
+              {t("settings.defaultAiDifficultyDescription")}
             </InfoDetails>
             <select
               value={settings.preferredAiDifficulty}
               onChange={(e) => updateSettings({ preferredAiDifficulty: e.target.value as Difficulty })}
-              aria-label="Default AI difficulty"
+              aria-label={t("settings.defaultAiDifficulty")}
               className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
             >
               {DIFFICULTIES.map((d) => (
                 <option key={d} value={d}>
-                  {capitalize(d)}
+                  {capitalize(t(`common.difficulty.${d}` as TranslationKey))}
                 </option>
               ))}
             </select>
           </section>
 
           <BoolToggle
-            label="Highlight possible lay-offs"
+            label={t("settings.highlightLayoffs")}
             value={settings.highlightLayoffs}
             onChange={(v) => updateSettings({ highlightLayoffs: v })}
-            description="Badge hand cards and the top discard-pile card that fit a meld already on the table, so you can plan ahead even before you've melded your own contract."
+            description={t("settings.highlightLayoffsDescription")}
           />
 
           <BoolToggle
-            label="“Whose turn is it?” button"
+            label={t("settings.showWhoseTurn")}
             value={settings.showWhoseTurn}
             onChange={(v) => updateSettings({ showWhoseTurn: v })}
-            description="Show a button on the game board that pops up a quick reminder of whose turn it is, for a few seconds."
+            description={t("settings.showWhoseTurnDescription")}
           />
 
           <BoolToggle
-            label="“Hint: Auto-meld” button"
+            label={t("settings.showMeldHint")}
             value={settings.showMeldHint}
             onChange={(v) => updateSettings({ showMeldHint: v })}
-            description="Show a button that lays your contract for you in one tap whenever your hand can complete it. Off by default — unlike the other assists above, this plays part of your turn for you."
+            description={t("settings.showMeldHintDescription")}
           />
           </SettingsSection>
 
           {configured && user && (
-            <SettingsSection title="Notifications">
+            <SettingsSection title={t("settings.section.notifications")}>
               <section className="flex flex-col gap-2">
-                <InfoDetails label="Turn notifications">
-                  A push notification when it&apos;s your move in a multiplayer game, and — if your
-                  Daily Deal streak is about to lapse — a reminder to play before you lose it.
-                  Works once this page is added to your home screen or installed as an app; your
-                  browser controls the actual permission. Off by default.
+                <InfoDetails label={t("settings.turnNotifications")}>
+                  {t("settings.turnNotificationsDescription")}
                 </InfoDetails>
                 <details>
                   <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
-                    <span>How do I add it to my home screen?</span>
+                    <span>{t("settings.howToAddToHomeScreen")}</span>
                     <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[var(--faint)]" aria-hidden="true">
                       <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </summary>
                   <div className="mt-2 flex flex-col gap-3 text-xs text-[var(--faint)]">
                     <div>
-                      <p className="font-semibold text-[var(--muted)]">Android (Chrome)</p>
+                      <p className="font-semibold text-[var(--muted)]">{t("settings.androidChrome")}</p>
                       <ol className="mt-0.5 list-decimal space-y-0.5 pl-4">
-                        <li>Tap the ⋮ menu (top right).</li>
-                        <li>Tap &quot;Add to Home screen.&quot;</li>
-                        <li>Tap &quot;Add&quot; to confirm.</li>
+                        <li>{t("settings.android.step1")}</li>
+                        <li>{t("settings.android.step2")}</li>
+                        <li>{t("settings.android.step3")}</li>
                       </ol>
                     </div>
                     <div>
-                      <p className="font-semibold text-[var(--muted)]">iPhone/iPad (Safari)</p>
+                      <p className="font-semibold text-[var(--muted)]">{t("settings.iosSafari")}</p>
                       <ol className="mt-0.5 list-decimal space-y-0.5 pl-4">
-                        <li>Tap the Share icon (square with an arrow, at the bottom).</li>
-                        <li>Scroll down and tap &quot;Add to Home Screen.&quot;</li>
-                        <li>Tap &quot;Add&quot; (top right) to confirm.</li>
+                        <li>{t("settings.ios.step1")}</li>
+                        <li>{t("settings.ios.step2")}</li>
+                        <li>{t("settings.ios.step3")}</li>
                       </ol>
                     </div>
-                    <p>
-                      Either way, open the game from the new icon on your home screen — not the
-                      browser — from then on.
-                    </p>
+                    <p>{t("settings.homeScreenNote")}</p>
                   </div>
                 </details>
                 {pushState === "unsupported" ? (
                   <p className="text-xs text-[var(--faint)]">
-                    {isIosSafariNonStandalone()
-                      ? "iPhone/iPad only supports this once the page is added to your Home Screen — tap the Share icon, then \"Add to Home Screen\", then open it from there."
-                      : "Not supported in this browser."}
+                    {isIosSafariNonStandalone() ? t("settings.push.iosUnsupported") : t("settings.push.unsupported")}
                   </p>
                 ) : pushState === "denied" ? (
-                  <p className="text-xs text-[var(--faint)]">
-                    Blocked in your browser&apos;s notification settings for this site — allow them
-                    there to turn this back on.
-                  </p>
+                  <p className="text-xs text-[var(--faint)]">{t("settings.push.blocked")}</p>
                 ) : (
                   <div className="flex gap-2">
                     {(
                       [
-                        [true, "On"],
-                        [false, "Off"],
+                        [true, t("common.on")],
+                        [false, t("common.off")],
                       ] as [boolean, string][]
                     ).map(([v, l]) => (
                       <button
@@ -709,13 +764,11 @@ export default function SettingsPage() {
             </SettingsSection>
           )}
 
-          <SettingsSection title="Help">
+          <SettingsSection title={t("settings.section.help")}>
             <section className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--heading)]">First-visit tips</p>
-                <p className="text-xs text-[var(--faint)]">
-                  Bring back the dismissed tips on Home, New Game, and a few other pages.
-                </p>
+                <p className="text-sm font-medium text-[var(--heading)]">{t("settings.firstVisitTips")}</p>
+                <p className="text-xs text-[var(--faint)]">{t("settings.firstVisitTipsDescription")}</p>
               </div>
               <button
                 onClick={() => {
@@ -724,57 +777,52 @@ export default function SettingsPage() {
                 }}
                 className="shrink-0 rounded-lg bg-[var(--panel)] px-3 py-2 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
               >
-                {tipsReset ? "Done ✓" : "Show again"}
+                {tipsReset ? t("settings.doneCheck") : t("settings.showAgain")}
               </button>
             </section>
 
             <section className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--heading)]">Found a bug? Have an idea?</p>
-                <p className="text-xs text-[var(--faint)]">Send a report or feature request.</p>
+                <p className="text-sm font-medium text-[var(--heading)]">{t("settings.foundBug")}</p>
+                <p className="text-xs text-[var(--faint)]">{t("settings.foundBugDescription")}</p>
               </div>
               <Link
                 href="/support"
                 className="shrink-0 rounded-lg bg-[var(--panel)] px-3 py-2 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
               >
-                Contact us
+                {t("settings.contactUs")}
               </Link>
             </section>
 
             <section className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--heading)]">Enjoying the game?</p>
-                <p className="text-xs text-[var(--faint)]">
-                  An optional one-time tip — never required, never changes anything about the game.
-                </p>
+                <p className="text-sm font-medium text-[var(--heading)]">{t("settings.enjoying")}</p>
+                <p className="text-xs text-[var(--faint)]">{t("settings.enjoyingDescription")}</p>
               </div>
               <Link
                 href="/tip"
                 className="shrink-0 rounded-lg bg-[var(--panel)] px-3 py-2 text-sm font-medium text-[var(--heading)] hover:bg-[var(--panel-soft)]"
               >
-                Support the developer
+                {t("settings.supportDeveloper")}
               </Link>
             </section>
           </SettingsSection>
 
           {confirmingReset ? (
             <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
-              <p className="text-sm text-[var(--muted)]">
-                Reset theme, card back, colorblind mode, and every toggle on this page back to their
-                defaults?
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("settings.resetConfirm")}</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmingReset(false)}
                   className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleResetToDefaults}
                   className="flex-1 rounded-lg border border-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-[var(--danger)] hover:bg-[var(--panel-soft)]"
                 >
-                  Yes, reset
+                  {t("settings.yesReset")}
                 </button>
               </div>
             </div>
@@ -783,14 +831,14 @@ export default function SettingsPage() {
               onClick={() => setConfirmingReset(true)}
               className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
             >
-              Reset to defaults
+              {t("settings.resetToDefaults")}
             </button>
           )}
         </>
       )}
 
       <Link href="/" className="text-center text-sm text-[var(--muted)] hover:text-[var(--text)]">
-        Back to Home
+        {t("common.backToHome")}
       </Link>
     </main>
   );

@@ -31,6 +31,7 @@ import {
   loadLocalColorblindMode,
   saveLocalColorblindMode,
 } from "./colorblindStore";
+import { applyLocale, DEFAULT_LOCALE, LocaleId, loadLocalLocale, LOCALES, saveLocalLocale } from "./localeStore";
 import { AmbientTrackChoice, DEFAULT_SETTINGS, HouseSettings, loadLocalSettings, saveLocalSettings } from "./settingsStore";
 import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TEXT_SCALES, TextScale } from "./textScaleStore";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "./themeStore";
@@ -51,6 +52,7 @@ export interface AccountSettingsRow {
   ambient_music_enabled: boolean | null;
   ambient_volume: number | null;
   ambient_track: string | null;
+  language: string | null;
 }
 
 /** Stand-in for "this account has no `settings` row at all yet" (a brand
@@ -74,10 +76,11 @@ export const EMPTY_ACCOUNT_SETTINGS_ROW: AccountSettingsRow = {
   ambient_music_enabled: null,
   ambient_volume: null,
   ambient_track: null,
+  language: null,
 };
 
 const SELECT_COLUMNS =
-  "theme, card_back, card_face, colorblind_mode, text_scale, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track";
+  "theme, card_back, card_face, colorblind_mode, text_scale, preferred_ai_difficulty_default, sound_on, haptics_on, sound_volume, highlight_layoffs, show_whose_turn, show_meld_hint, ambient_music_enabled, ambient_volume, ambient_track, language";
 
 const SYNCED_EVENT = "br:settings-synced";
 
@@ -145,6 +148,11 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
     saveLocalTextScale(scale);
     applyTextScale(scale);
   }
+  if (row.language && LOCALES.some((l) => l.id === row.language)) {
+    const locale = row.language as LocaleId;
+    saveLocalLocale(locale);
+    applyLocale(locale);
+  }
 
   const current = loadLocalSettings();
   saveLocalSettings({
@@ -198,6 +206,8 @@ export function resetLocalPreferencesToDefaults(): void {
   applyColorblindMode(DEFAULT_COLORBLIND_MODE);
   saveLocalTextScale(DEFAULT_TEXT_SCALE);
   applyTextScale(DEFAULT_TEXT_SCALE);
+  saveLocalLocale(DEFAULT_LOCALE);
+  applyLocale(DEFAULT_LOCALE);
 }
 
 /**
@@ -230,6 +240,7 @@ export function bootstrapMissingAccountSettings(
   if (row.card_face === null) patch.card_face = loadLocalCardFace();
   if (row.colorblind_mode === null) patch.colorblind_mode = loadLocalColorblindMode();
   if (row.text_scale === null) patch.text_scale = loadLocalTextScale();
+  if (row.language === null) patch.language = loadLocalLocale();
   if (row.preferred_ai_difficulty_default === null) patch.preferred_ai_difficulty_default = local.preferredAiDifficulty;
   if (row.sound_volume === null) patch.sound_volume = local.soundVolume;
   if (row.highlight_layoffs === null) patch.highlight_layoffs = local.highlightLayoffs;
@@ -250,6 +261,7 @@ type SettingsPatch = Partial<{
   card_face: string;
   colorblind_mode: string;
   text_scale: string;
+  language: string;
   preferred_ai_difficulty_default: string;
   sound_on: boolean;
   haptics_on: boolean;
@@ -335,6 +347,13 @@ export function pushTextScale(supabase: SupabaseClient | null, userId: string | 
   );
 }
 
+export function pushLocale(supabase: SupabaseClient | null, userId: string | null, locale: LocaleId): void {
+  if (!supabase || !userId) return;
+  upsertSettingsPatch(supabase, userId, { language: locale }).catch((err) =>
+    console.error("Failed to sync language to account:", err.message)
+  );
+}
+
 export function pushTheme(supabase: SupabaseClient | null, userId: string | null, theme: ThemeId): void {
   if (!supabase || !userId) return;
   upsertSettingsPatch(supabase, userId, { theme }).catch((err) =>
@@ -367,6 +386,7 @@ export function pushAllDefaults(supabase: SupabaseClient | null, userId: string 
     card_face: DEFAULT_CARD_FACE,
     colorblind_mode: DEFAULT_COLORBLIND_MODE,
     text_scale: DEFAULT_TEXT_SCALE,
+    language: DEFAULT_LOCALE,
     preferred_ai_difficulty_default: DEFAULT_SETTINGS.preferredAiDifficulty,
     sound_on: DEFAULT_SETTINGS.soundEnabled,
     haptics_on: DEFAULT_SETTINGS.hapticsEnabled,
