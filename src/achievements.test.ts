@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ACHIEVEMENT_FAMILIES,
@@ -16,9 +18,9 @@ describe("tierNumber", () => {
 });
 
 describe("ACHIEVEMENT_FAMILIES", () => {
-  it("has exactly 44 families, giving 220 achievements at 5 tiers each", () => {
-    expect(ACHIEVEMENT_FAMILIES).toHaveLength(44);
-    expect(allAchievements(EMPTY_PROGRESS_STATE)).toHaveLength(220);
+  it("has exactly 48 families, giving 240 achievements at 5 tiers each", () => {
+    expect(ACHIEVEMENT_FAMILIES).toHaveLength(48);
+    expect(allAchievements(EMPTY_PROGRESS_STATE)).toHaveLength(240);
   });
 
   it("has unique family ids", () => {
@@ -125,5 +127,32 @@ describe("allAchievements — locked/unlocked state", () => {
     const tiers = allAchievements(state).filter((a) => a.familyId === "turns_taken");
     expect(tiers.every((t) => t.progressFraction === 1)).toBe(true);
     expect(tiers.every((t) => t.unlocked)).toBe(true);
+  });
+});
+
+// achievement_thresholds (migration 0027 + later additions) drives
+// compute_total_xp()/category_mastered()/rarity server-side and is kept in
+// sync with ACHIEVEMENT_FAMILIES by hand — this catches drift in either one.
+describe("achievement_thresholds SQL parity", () => {
+  const dir = join(__dirname, "../supabase/migrations");
+  const sql = ["0027_premium_emoji_live_level.sql", "0057_daily_weekly_achievements.sql"]
+    .map((f) => readFileSync(join(dir, f), "utf8"))
+    .join("\n");
+  const rowRe =
+    /\(\s*'([a-z_0-9]+)',\s*'([A-Za-z]+)',\s*'([A-Za-z]+)',\s*(null|'[a-z_0-9]+'),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(true|false)\s*\)/g;
+  const rows = new Map<string, RegExpMatchArray>();
+  for (const m of sql.matchAll(rowRe)) rows.set(m[1], m);
+
+  it("has a row for every family with identical category, source key, thresholds and direction", () => {
+    for (const family of ACHIEVEMENT_FAMILIES) {
+      const row = rows.get(family.id);
+      expect(row, `missing SQL row for ${family.id}`).toBeTruthy();
+      const [, , category, , key, b, e, m, h, x, lower] = row!;
+      expect(category, family.id).toBe(family.category);
+      if (family.source.kind === "counter") expect(key, family.id).toBe(`'${family.source.key}'`);
+      expect([b, e, m, h, x].map(Number), family.id).toEqual(ACHIEVEMENT_TIERS.map((t) => family.thresholds[t]));
+      expect(lower === "true", family.id).toBe(!!family.lowerIsBetter);
+    }
+    expect(rows.size).toBe(ACHIEVEMENT_FAMILIES.length);
   });
 });

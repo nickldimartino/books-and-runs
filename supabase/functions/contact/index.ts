@@ -68,7 +68,11 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid request." }, 400);
   }
 
-  const type = payload.type === "feature" ? "feature" : payload.type === "bug" ? "bug" : null;
+  // "privacy" = a data / account request (the fallback path next to in-app
+  // account deletion) — same delivery, just labelled so it isn't lost among
+  // bug reports.
+  const type =
+    payload.type === "feature" ? "feature" : payload.type === "bug" ? "bug" : payload.type === "privacy" ? "privacy" : null;
   const subject = (payload.subject ?? "").trim().slice(0, MAX_SUBJECT);
   const description = (payload.description ?? "").trim().slice(0, MAX_DESCRIPTION);
   if (!type || !subject || !description) {
@@ -97,7 +101,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  const typeLabel = type === "bug" ? "Bug" : "Feature request";
+  const typeLabel = type === "bug" ? "Bug" : type === "privacy" ? "Privacy request" : "Feature request";
   const replyTo = payload.replyTo?.trim();
   const bodyLines = [
     `Type: ${typeLabel}`,

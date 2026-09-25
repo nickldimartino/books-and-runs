@@ -58,7 +58,11 @@ export type AchievementCategory =
   | "goingOut"
   | "contracts"
   | "tableComposition"
-  | "multiplayer";
+  | "multiplayer"
+  // Daily Deal / Weekly Challenge completions and streaks — counters the
+  // solo-verify Edge Function sets from its own ground-truth completion
+  // tables (migration 0057), not from anything a client reports.
+  | "challenges";
 
 interface AchievementFamily {
   id: string;
@@ -87,6 +91,11 @@ export interface AchievementProgressState {
   mpGamesPlayed: number;
   mpGamesWon: number;
   mpBestWinStreak: number;
+  /** Sum of the account's server-side `xp_ledger` (Daily Deal/Weekly
+   * Challenge completions, streak milestones, claimed quests — see
+   * src/dailyRewards.ts). Optional so callers/fixtures that predate it keep
+   * compiling; absent reads as 0. */
+  bonusXp?: number;
 }
 
 export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
@@ -98,6 +107,7 @@ export const EMPTY_PROGRESS_STATE: AchievementProgressState = {
   mpGamesPlayed: 0,
   mpGamesWon: 0,
   mpBestWinStreak: 0,
+  bonusXp: 0,
 };
 
 // A win-rate achievement with only 1-2 games played is meaningless (100%
@@ -496,6 +506,42 @@ export const ACHIEVEMENT_FAMILIES: AchievementFamily[] = [
     unitKey: "achievementFamily.turnsTaken.unit",
     source: { kind: "counter", key: "turns_taken" },
     thresholds: tierThresholds([50, 250, 750, 2000, 5000]),
+  },
+
+  // --- Daily Deal / Weekly Challenge. The counters are absolute values the
+  // server recomputes from daily_deal_completions / weekly_challenge_
+  // completions (see solo-verify), so they're idempotent under retries. ---
+  {
+    id: "daily_deals_completed",
+    category: "challenges",
+    titleKey: "achievementFamily.dailyDealsCompleted.title",
+    unitKey: "achievementFamily.dailyDealsCompleted.unit",
+    source: { kind: "counter", key: "daily_deals_completed" },
+    thresholds: tierThresholds([3, 10, 30, 100, 250]),
+  },
+  {
+    id: "daily_deal_best_streak",
+    category: "challenges",
+    titleKey: "achievementFamily.dailyDealBestStreak.title",
+    unitKey: "achievementFamily.dailyDealBestStreak.unit",
+    source: { kind: "counter", key: "daily_deal_best_streak" },
+    thresholds: tierThresholds([3, 7, 14, 30, 100]),
+  },
+  {
+    id: "weekly_challenges_completed",
+    category: "challenges",
+    titleKey: "achievementFamily.weeklyChallengesCompleted.title",
+    unitKey: "achievementFamily.weeklyChallengesCompleted.unit",
+    source: { kind: "counter", key: "weekly_challenges_completed" },
+    thresholds: tierThresholds([1, 4, 12, 26, 52]),
+  },
+  {
+    id: "weekly_challenge_best_streak",
+    category: "challenges",
+    titleKey: "achievementFamily.weeklyChallengeBestStreak.title",
+    unitKey: "achievementFamily.weeklyChallengeBestStreak.unit",
+    source: { kind: "counter", key: "weekly_challenge_best_streak" },
+    thresholds: tierThresholds([2, 4, 8, 12, 26]),
   },
 ];
 

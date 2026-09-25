@@ -97,6 +97,21 @@ flow through the same function the same way (`isWeeklyChallenge: true`,
 `weekly_challenge_completions` instead of `daily_deal_completions`. See
 migration 0039.
 
+**Bonus XP and quests** (migrations 0056/0057). A verified Daily Deal /
+Weekly Challenge completion additionally refreshes the account's daily/weekly
+achievement counters and credits fixed XP (25 / 100, plus Daily streak
+milestones at 7/30/100 days) through `xp_ledger`, whose `(user_id, ref)`
+primary key makes each credit idempotent — a retry or replay pays nothing more
+and the response only reports what *that* request newly credited (`xp`,
+`streakBonuses`). A regular game first ensures the account has this UTC
+day's / ISO week's `quest_baselines` snapshot (before its own deltas land),
+then auto-claims completed quests (`quests` in the response). A body of just
+`{ "action": "quests" }` does the baseline + auto-claim step alone (Home calls
+it on load, which is how multiplayer-earned progress gets paid). The logic
+lives in `src/challengeRewards.ts` (bundled into `_engine/`) and is unit-tested
+against an in-memory fake. Reward/quest steps are best-effort: they never fail
+the game/completion record itself. **Apply migration 0056 before deploying.**
+
 ### Deploy
 
 ```bash
@@ -246,3 +261,14 @@ curl -X POST "$NEXT_PUBLIC_SUPABASE_URL/functions/v1/contact" \
 ```
 
 Expect `{"ok":true}` and an email at `SUPPORT_EMAIL` within a minute.
+
+
+## Social / safety additions (migrations 0060–0064)
+
+**`mp`** gained routes: `nudge` (badge + localised push, rate-limited), `emote` (fixed presets, rate-limited, block-aware), `friend_push` (push for a friend request just made via SQL), `resign_all` (used by `delete-account`) and `sweep` (cron only). It now also enforces the **turn clock** lazily on every `state`/`move` (a stalled player's first miss auto-plays a safe move, the second in a row forfeits; the stalled player's own read never triggers it) and pushes in each recipient's language, honouring their per-category switches, quiet hours and an hourly cap (`_shared/push.ts`). Redeploy with `node scripts/bundle-mp-engine.mjs && npx supabase functions deploy mp`.
+
+Optional scheduled sweep (forfeits games nobody opens, 75% reminder, expires 7-day-old pending invites): set `CRON_SECRET` (same value as `daily-deal-reminder`) and run the `cron.schedule` block at the end of migration 0061 (needs your project ref + anon key; the secret goes in the `x-cron-secret` header). Without it everything still works lazily.
+
+**`delete-account`** (new): `npx supabase functions deploy delete-account`. Re-verifies the password server-side, calls `mp/resign_all`, `delete_account_prepare()`, removes the avatar object, then `auth.admin.deleteUser`.
+
+**`daily-deal-reminder`** now words each push in the recipient's saved language and skips accounts with streak reminders off / in quiet hours. Redeploy. **`contact`** accepts `type: "privacy"` (redeploy).

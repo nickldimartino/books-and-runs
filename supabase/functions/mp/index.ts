@@ -1,7 +1,9 @@
 // Books & Runs — multiplayer Edge Function.
 //
 // One deployed function, path-routed: /mp/create /mp/respond /mp/cancel
-// /mp/state /mp/move /mp/resign. It is the ONLY thing that reads or writes
+// /mp/state /mp/move /mp/resign, plus /mp/nudge /mp/emote (reactions),
+// /mp/resign_all (account deletion), /mp/friend_push and the cron-only
+// /mp/sweep (turn clock). It is the ONLY thing that reads or writes
 // mp_game_state (the sealed full state + deck) — every client gets back a
 // redacted view. All real game logic lives in ../../../src/mp/adapter.ts,
 // which is pure and unit-tested; this file is auth + DB + wiring.
@@ -17,6 +19,16 @@ import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerStats.ts";
+import {
+  buildPushPayload,
+  PUSH_CATEGORY,
+  PUSH_HOURLY_CAP,
+  PushKind,
+  PushPrefs,
+  PushVars,
+  shouldPush,
+  underFrequencyCap,
+} from "../_shared/push.ts";
 // ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
 // deploy bundler doesn't resolve the app's extension-less imports. Run
 // `node scripts/bundle-mp-engine.mjs` before every deploy.
@@ -32,6 +44,21 @@ import {
   redactFor,
 } from "./_engine/mp/adapter.ts";
 import { MpConfig, MpEngine } from "./_engine/mp/types.ts";
+import { autoPlayTurn } from "./_engine/mp/autoPlay.ts";
+import {
+  checkEmoteRate,
+  EMOTE_KEEP_PER_GAME,
+  EMOTE_PUSH_QUIET_MS,
+  EMOTE_EMOJI,
+  isEmoteId,
+} from "./_engine/mp/emotes.ts";
+import {
+  expiryAction,
+  NUDGE_COOLDOWN_HOURS,
+  normalizeTurnLimit,
+  PENDING_INVITE_TTL_HOURS,
+  timerState,
+} from "./_engine/mp/turnTimer.ts";
 import { splitMoveDeltas } from "./_engine/mp/credit.ts";
 import { layOffOptions } from "./_engine/meld.ts";
 import {
@@ -48,7 +75,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-// Push notifications ("your turn" etc. — see addEvent/sendPushForEvent
+// Push notifications ("your turn" etc. — see addEvent/sendPush
 // below) are entirely optional: unset either of these (a project that
 // hasn't run `supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...`
 // yet) and every push send is just skipped, same as a missing RPC elsewhere
@@ -125,21 +152,67 @@ async function activeCount(uid: string): Promise<number> {
   return count ?? 0;
 }
 
-// Only the kinds worth interrupting someone for over push — friend_request/
-// friend_accepted/game_cancelled/game_over stay inbox-only (useNotifications'
-// badge), same as before this existed. Keyed by kind → the {title, body}
-// shown in the notification; deliberately generic (no extra DB round trip
-// per send for a nicer "Zara melded 2 Books" — worth adding later, not
-// required for the notification to be useful now).
-const PUSH_COPY: Record<string, { title: string; body: string }> = {
-  your_turn: { title: "Your turn", body: "It's your move in Books & Runs." },
-  game_request: { title: "Game invite", body: "You've been invited to a multiplayer game." },
-  nudge: { title: "Nudge", body: "Someone's waiting on your move." },
-};
+async function isBlockedPair(a: string, b: string): Promise<boolean> {
+  if (!isUuid(a) || !isUuid(b)) return false;
+  const { data } = await admin
+    .from("user_blocks")
+    .select("blocker_id")
+    .in("blocker_id", [a, b])
+    .in("blocked_id", [a, b])
+    .limit(1);
+  // Table missing (0060 not run yet) → error → data null → not blocked.
+  return (data?.length ?? 0) > 0;
+}
 
-async function sendPushForEvent(userId: string, kind: string, gameId: string | null) {
-  const copy = PUSH_COPY[kind];
-  if (!PUSH_ENABLED || !copy) return;
+// ── push ─────────────────────────────────────────────────────────────────
+// Which kinds push, in whose language, with what name/round, and whether the
+// recipient's category switches / quiet hours / hourly cap allow it all live
+// in ../_shared/push.ts (pure + unit-tested). friend_accepted and the like
+// stay inbox-only unless a caller asks for them explicitly.
+
+const PUSH_KINDS = Object.keys(PUSH_CATEGORY);
+const SOCIAL_KINDS: PushKind[] = ["nudge", "emote", "game_request", "friend_request", "friend_accepted"];
+
+async function loadPushPrefs(userId: string): Promise<PushPrefs | null> {
+  const full = await admin
+    .from("settings")
+    .select("notify_turns, notify_invites, notify_nudges, notify_streaks, quiet_hours_start, quiet_hours_end, tz_offset_minutes, language")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!full.error) return (full.data as PushPrefs) ?? null;
+  // 0062 not applied yet — still localise by language if 0055 is.
+  const lang = await admin.from("settings").select("language").eq("user_id", userId).maybeSingle();
+  return (lang.data as PushPrefs) ?? null;
+}
+
+interface PushExtra {
+  round?: number | null;
+  hours?: number | null;
+  emote?: string | null;
+}
+
+async function sendPush(
+  userId: string,
+  kind: PushKind,
+  gameId: string | null,
+  actorId: string | null,
+  extra: PushExtra = {}
+): Promise<void> {
+  if (!PUSH_ENABLED) return;
+  // Social pushes respect blocks; gameplay ones (your_turn, clock warnings)
+  // don't — a block must never stop you learning it's your move.
+  if (actorId && SOCIAL_KINDS.includes(kind) && (await isBlockedPair(userId, actorId))) return;
+
+  const prefs = await loadPushPrefs(userId);
+  if (shouldPush(prefs, kind, Date.now()) !== "send") return;
+
+  const { count } = await admin
+    .from("mp_events")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .in("kind", PUSH_KINDS)
+    .gte("created_at", new Date(Date.now() - 3_600_000).toISOString());
+  if (!underFrequencyCap(count ?? 0, PUSH_HOURLY_CAP)) return;
 
   const { data: subs } = await admin
     .from("push_subscriptions")
@@ -147,12 +220,10 @@ async function sendPushForEvent(userId: string, kind: string, gameId: string | n
     .eq("user_id", userId);
   if (!subs || subs.length === 0) return;
 
-  const payload = JSON.stringify({
-    title: copy.title,
-    body: copy.body,
-    url: gameId ? `/multiplayer/play?g=${gameId}` : "/",
-    tag: gameId ? `mp-${gameId}` : kind,
-  });
+  const actorName = actorId ? (await resolveNames([actorId])).get(actorId) ?? null : null;
+  const payload = JSON.stringify(
+    buildPushPayload(kind, prefs?.language, { name: actorName, ...extra } as PushVars, gameId)
+  );
 
   await Promise.all(
     subs.map(async (s) => {
@@ -175,7 +246,13 @@ async function sendPushForEvent(userId: string, kind: string, gameId: string | n
   );
 }
 
-async function addEvent(userId: string, kind: string, gameId: string | null, actorId: string | null) {
+async function addEvent(
+  userId: string,
+  kind: string,
+  gameId: string | null,
+  actorId: string | null,
+  extra: PushExtra = {}
+) {
   await admin.from("mp_events").insert({ user_id: userId, kind, game_id: gameId, actor_id: actorId });
   // Keep each user's inbox bounded — it's only ever read as "recent unseen"
   // (see useNotifications). Trim to the newest ~40 per user on write; a
@@ -185,7 +262,11 @@ async function addEvent(userId: string, kind: string, gameId: string | null, act
     () => {}, // RPC not deployed yet → no-op, the cron sweep still covers it
   );
   // Best-effort, never blocks the caller's own response on a push failure.
-  await sendPushForEvent(userId, kind, gameId).catch((err) => console.error("sendPushForEvent failed:", err));
+  if (PUSH_KINDS.includes(kind)) {
+    await sendPush(userId, kind as PushKind, gameId, actorId, extra).catch((err) =>
+      console.error("sendPush failed:", err)
+    );
+  }
 }
 
 interface GameRow {
@@ -196,6 +277,11 @@ interface GameRow {
   seats: MpConfig["seats"];
   turn_user_id: string | null;
   updated_at: string;
+  created_at?: string;
+  // Migration 0061 — absent (undefined) until it has been applied.
+  turn_limit_hours?: number;
+  turn_started_at?: string | null;
+  turn_warned_at?: string | null;
 }
 
 function configOf(game: GameRow): MpConfig {
@@ -203,6 +289,15 @@ function configOf(game: GameRow): MpConfig {
 }
 
 async function loadGame(gameId: string): Promise<GameRow | null> {
+  const full = await admin
+    .from("mp_games")
+    .select(
+      "id, host_id, status, contract_rounds, seats, turn_user_id, updated_at, created_at, turn_limit_hours, turn_started_at, turn_warned_at"
+    )
+    .eq("id", gameId)
+    .maybeSingle();
+  if (!full.error) return (full.data as GameRow) ?? null;
+  // 0061 not applied yet — run without the turn clock rather than not at all.
   const { data } = await admin
     .from("mp_games")
     .select("id, host_id, status, contract_rounds, seats, turn_user_id, updated_at")
@@ -233,9 +328,14 @@ async function writeState(gameId: string, engine: MpEngine, fromVersion: number)
 
 async function syncPublicColumns(gameId: string, engine: MpEngine, config: MpConfig) {
   const cols = publicColumns(engine, config);
-  const patch: Record<string, unknown> = { ...cols, updated_at: new Date().toISOString() };
-  if (cols.status === "complete") patch.completed_at = new Date().toISOString();
-  await admin.from("mp_games").update(patch).eq("id", gameId);
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { ...cols, updated_at: now };
+  if (cols.status === "complete") patch.completed_at = now;
+  // Every state write is "activity": restart the turn clock for whoever is
+  // up now (and re-arm their reminder). See src/mp/turnTimer.ts.
+  const withClock = { ...patch, turn_started_at: now, turn_warned_at: null };
+  const { error } = await admin.from("mp_games").update(withClock).eq("id", gameId);
+  if (error) await admin.from("mp_games").update(patch).eq("id", gameId); // 0061 not applied yet
 }
 
 // ── shared-with-solo-verify-style stats crediting ───────────────────────
@@ -355,10 +455,17 @@ async function finalizeParticipants(gameId: string, engine: MpEngine, config: Mp
   }
 }
 
-async function notifyTurn(gameId: string, prevTurnUserId: string | null, engine: MpEngine, config: MpConfig) {
+async function notifyTurn(
+  gameId: string,
+  prevTurnUserId: string | null,
+  engine: MpEngine,
+  config: MpConfig,
+  actorId: string | null = null
+) {
   const cols = publicColumns(engine, config);
   if (cols.turn_user_id && cols.turn_user_id !== prevTurnUserId) {
-    await addEvent(cols.turn_user_id, "your_turn", gameId, null);
+    // actor = whoever just moved, so the push can say "Zara played — round 3".
+    await addEvent(cols.turn_user_id, "your_turn", gameId, actorId, { round: cols.round });
   }
 }
 
@@ -400,6 +507,7 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
   if (total < 2 || total > 8) return json({ error: "a game needs 2–8 players" }, 400);
 
   const names = await resolveNames([uid, ...uniqueHumans]);
+  const turnLimitHours = normalizeTurnLimit(body.turn_limit_hours);
 
   // Each invitee's friend/active-count check is independent of the others
   // (and of the host's own count below) — run them all concurrently rather
@@ -418,7 +526,9 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
     activeCount(uid),
   ]);
   for (const c of checks) {
-    if (!c.isFriend) {
+    // A block already removes the friendship; this is defence in depth, and
+    // deliberately reads as the same error so it doesn't reveal who blocked.
+    if (!c.isFriend || (await isBlockedPair(uid, c.userId))) {
       return json({ error: `${names.get(c.userId) ?? "That player"} isn't in your friends list` }, 400);
     }
     if (c.count >= MP_GAME_CAP) {
@@ -445,17 +555,22 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
     })),
   ] as MpConfig["seats"];
 
-  const { data: game, error } = await admin
+  const baseRow = {
+    host_id: uid,
+    status: "pending",
+    contract_rounds: cleanRounds,
+    seats,
+    round: 1,
+  };
+  let { data: game, error } = await admin
     .from("mp_games")
-    .insert({
-      host_id: uid,
-      status: "pending",
-      contract_rounds: cleanRounds,
-      seats,
-      round: 1,
-    })
+    .insert({ ...baseRow, turn_limit_hours: turnLimitHours })
     .select("id")
     .single();
+  if (error) {
+    // 0061 not applied yet — create the game without a clock.
+    ({ data: game, error } = await admin.from("mp_games").insert(baseRow).select("id").single());
+  }
   if (error || !game) return json({ error: "couldn't create the game" }, 500);
 
   const participants = seats
@@ -469,9 +584,9 @@ async function handleCreate(uid: string, body: Record<string, unknown>): Promise
     }));
   await admin.from("mp_participants").insert(participants);
 
-  await Promise.all(uniqueHumans.map((h) => addEvent(h, "game_request", game.id, uid)));
+  await Promise.all(uniqueHumans.map((h) => addEvent(h, "game_request", game!.id, uid)));
 
-  return json({ game_id: game.id });
+  return json({ game_id: game.id, turn_limit_hours: turnLimitHours });
 }
 
 /**
@@ -626,6 +741,7 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
       host_id: game.host_id,
       contract_rounds: game.contract_rounds,
       participants: parts ?? [],
+      turn_limit_hours: game.turn_limit_hours ?? 0,
     });
   }
 
@@ -634,6 +750,13 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
   // participant must still be able to see, to accept/decline it),
   // require actual acceptance here, matching handleMove/handleResign.
   if (mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
+
+  // Lazy turn-clock enforcement: whoever reads a stalled game moves it along —
+  // except the stalled player themselves (opening the game IS them coming
+  // back; see enforceTurnClock).
+  if (game.status === "active" && (await enforceTurnClock(game, uid))) {
+    game = (await loadGame(gameId)) ?? game;
+  }
 
   let stateRow = (
     await admin.from("mp_game_state").select("engine").eq("game_id", gameId).maybeSingle()
@@ -676,17 +799,31 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
 
   const engine = stateRow.engine as MpEngine;
   const view = redactFor(engine, configOf(game), mine.seat);
-  return json({ status: game.status, view, updated_at: game.updated_at });
+  return json({
+    status: game.status,
+    view,
+    updated_at: game.updated_at,
+    turn_limit_hours: game.turn_limit_hours ?? 0,
+    turn_started_at: game.turn_started_at ?? null,
+    your_missed_turns: game.turn_limit_hours ? await missedTurnsOf(gameId, uid) : 0,
+  });
 }
 
 async function handleMove(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
   const action = body.action as Record<string, unknown>;
-  const game = await loadGame(gameId);
+  let game = await loadGame(gameId);
   if (!game) return json({ error: "no such game" }, 404);
   if (game.status !== "active") return json({ error: "this game isn't active" }, 409);
   const mine = await myParticipant(gameId, uid);
   if (!mine || mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
+
+  // Someone else's clock may have run out before this move — settle that first
+  // (never the mover's own: a late move is still a move).
+  if (await enforceTurnClock(game, uid)) {
+    game = (await loadGame(gameId)) ?? game;
+    if (game.status !== "active") return json({ error: "this game isn't active" }, 409);
+  }
 
   const { data: stateRow } = await admin
     .from("mp_game_state")
@@ -799,11 +936,18 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
   }
   await syncPublicColumns(gameId, engine, config);
   await creditAchievementCounters(uid, counterDeltas);
+  // A real move clears the AFK strike count (no-op / harmless before 0061).
+  await admin
+    .from("mp_participants")
+    .update({ missed_turns: 0 })
+    .eq("game_id", gameId)
+    .eq("user_id", uid)
+    .gt("missed_turns", 0);
 
   if (engine.state.gameOver) {
     await finalizeParticipants(gameId, engine, config);
   } else {
-    await notifyTurn(gameId, prevTurnUserId, engine, config);
+    await notifyTurn(gameId, prevTurnUserId, engine, config, uid);
   }
 
   return json({
@@ -811,6 +955,46 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
     view: redactFor(engine, config, mine.seat),
     drawnCard,
   });
+}
+
+/** The resign write shared by handleResign, resign_all (account deletion) and
+ * the turn clock: resign `seat`, stamp the participant, sync, and finish the
+ * game if it can't continue. `actorId` is who to credit in the next player's
+ * "your turn" push (null when the system forfeits). */
+async function resignSeat(
+  game: GameRow,
+  uid: string,
+  seat: number,
+  actorId: string | null
+): Promise<{ ok: true; engine: MpEngine; config: MpConfig } | { ok: false; error: string; status: number }> {
+  const gameId = game.id;
+  const { data: stateRow } = await admin
+    .from("mp_game_state")
+    .select("engine, version")
+    .eq("game_id", gameId)
+    .maybeSingle();
+  if (!stateRow) return { ok: false, error: "game not ready", status: 409 };
+
+  const config = configOf(game);
+  const prevTurnUserId = game.turn_user_id;
+  const engine = applyResign(stateRow.engine as MpEngine, config, seat);
+
+  if (!(await writeState(gameId, engine, stateRow.version))) {
+    return { ok: false, error: "the game moved on — refresh", status: 409 };
+  }
+  await admin
+    .from("mp_participants")
+    .update({ outcome: "resigned", final_score: engine.state.players[seat]?.cumulativeScore ?? null })
+    .eq("game_id", gameId)
+    .eq("user_id", uid);
+  await syncPublicColumns(gameId, engine, config);
+
+  if (engine.state.gameOver) {
+    await finalizeParticipants(gameId, engine, config);
+  } else {
+    await notifyTurn(gameId, prevTurnUserId, engine, config, actorId);
+  }
+  return { ok: true, engine, config };
 }
 
 async function handleResign(uid: string, body: Record<string, unknown>): Promise<Response> {
@@ -821,43 +1005,324 @@ async function handleResign(uid: string, body: Record<string, unknown>): Promise
   const mine = await myParticipant(gameId, uid);
   if (!mine || mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
 
-  const { data: stateRow } = await admin
-    .from("mp_game_state")
-    .select("engine, version")
-    .eq("game_id", gameId)
-    .maybeSingle();
-  if (!stateRow) return json({ error: "game not ready" }, 409);
-
-  const config = configOf(game);
-  const prevTurnUserId = game.turn_user_id;
-  const engine = applyResign(stateRow.engine as MpEngine, config, mine.seat);
-
-  if (!(await writeState(gameId, engine, stateRow.version))) {
-    return json({ error: "the game moved on — refresh" }, 409);
-  }
-  await admin
-    .from("mp_participants")
-    .update({ outcome: "resigned", final_score: engine.state.players[mine.seat]?.cumulativeScore ?? null })
-    .eq("game_id", gameId)
-    .eq("user_id", uid);
-  await syncPublicColumns(gameId, engine, config);
-
-  if (engine.state.gameOver) {
-    await finalizeParticipants(gameId, engine, config);
-  } else {
-    await notifyTurn(gameId, prevTurnUserId, engine, config);
-  }
+  const res = await resignSeat(game, uid, mine.seat, uid);
+  if (!res.ok) return json({ error: res.error }, res.status);
 
   return json({
-    status: engine.state.gameOver ? "complete" : "active",
-    view: redactFor(engine, config, mine.seat),
+    status: res.engine.state.gameOver ? "complete" : "active",
+    view: redactFor(res.engine, res.config, mine.seat),
   });
+}
+
+// ── turn clock ───────────────────────────────────────────────────────────
+
+async function missedTurnsOf(gameId: string, uid: string): Promise<number> {
+  const { data } = await admin
+    .from("mp_participants")
+    .select("missed_turns")
+    .eq("game_id", gameId)
+    .eq("user_id", uid)
+    .maybeSingle();
+  return (data as { missed_turns?: number } | null)?.missed_turns ?? 0;
+}
+
+/**
+ * If the current player's clock has run out, move the game along: the first
+ * miss auto-plays a safe turn (draw + discard, see autoPlay.ts), the second
+ * miss in a row forfeits the seat with normal resign semantics. Returns true
+ * if it changed the game. `skipUserId` is never enforced against: a player
+ * opening/moving in their own stalled game has just come back.
+ */
+async function enforceTurnClock(game: GameRow, skipUserId: string | null): Promise<boolean> {
+  if (game.status !== "active" || !game.turn_limit_hours || !game.turn_started_at || !game.turn_user_id) return false;
+  const started = Date.parse(game.turn_started_at);
+  if (timerState(Date.now(), started, game.turn_limit_hours).phase !== "expired") return false;
+  const uid = game.turn_user_id;
+  if (skipUserId && uid === skipUserId) return false;
+
+  const mine = await myParticipant(game.id, uid);
+  if (!mine || mine.invite_status !== "accepted") return false;
+  const missed = await missedTurnsOf(game.id, uid);
+
+  if (expiryAction(missed) === "autoplay") {
+    const { data: stateRow } = await admin
+      .from("mp_game_state")
+      .select("engine, version")
+      .eq("game_id", game.id)
+      .maybeSingle();
+    if (!stateRow) return false;
+    const config = configOf(game);
+    const played = autoPlayTurn(stateRow.engine as MpEngine, mine.seat);
+    if (!played.error) {
+      if (!(await writeState(game.id, played.engine, stateRow.version))) return false; // raced with a real move
+      await syncPublicColumns(game.id, played.engine, config);
+      await admin.from("mp_participants").update({ missed_turns: missed + 1 }).eq("game_id", game.id).eq("user_id", uid);
+      await addEvent(uid, "auto_played", game.id, null);
+      if (played.engine.state.gameOver) await finalizeParticipants(game.id, played.engine, config);
+      else await notifyTurn(game.id, game.turn_user_id, played.engine, config, null);
+      return true;
+    }
+    // Couldn't build a legal auto-move (shouldn't happen) — fall through to the forfeit.
+  }
+
+  const res = await resignSeat(game, uid, mine.seat, null);
+  if (!res.ok) return false;
+  await admin.from("mp_participants").update({ missed_turns: missed + 1 }).eq("game_id", game.id).eq("user_id", uid);
+  await addEvent(uid, "forfeited", game.id, null);
+  return true;
+}
+
+// ── nudge / emotes / friend push / account deletion / sweep ──────────────
+
+async function handleNudge(uid: string, body: Record<string, unknown>): Promise<Response> {
+  const gameId = String(body.game_id ?? "");
+  if (!isUuid(gameId)) return json({ error: "no such game" }, 404);
+  const game = await loadGame(gameId);
+  if (!game) return json({ error: "no such game" }, 404);
+  const mine = await myParticipant(gameId, uid);
+  if (!mine || mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
+  if (game.status !== "active") return json({ error: "this game isn't active" }, 409);
+  const target = game.turn_user_id;
+  if (!target || target === uid) return json({ error: "nothing to nudge" }, 409);
+  if (await isBlockedPair(uid, target)) return json({ error: "nothing to nudge" }, 409);
+
+  // Same limits as mp_nudge (migration 0017): a few an hour per caller, one
+  // per game per NUDGE_COOLDOWN_HOURS regardless of who sent it.
+  const hourAgo = new Date(Date.now() - 3_600_000).toISOString();
+  const { count: mineLastHour } = await admin
+    .from("mp_events")
+    .select("id", { count: "exact", head: true })
+    .eq("actor_id", uid)
+    .eq("kind", "nudge")
+    .gte("created_at", hourAgo);
+  if ((mineLastHour ?? 0) >= 8) return json({ error: "Too many attempts — try again later." }, 429);
+  const { count: recent } = await admin
+    .from("mp_events")
+    .select("id", { count: "exact", head: true })
+    .eq("game_id", gameId)
+    .eq("kind", "nudge")
+    .gte("created_at", new Date(Date.now() - NUDGE_COOLDOWN_HOURS * 3_600_000).toISOString());
+  if ((recent ?? 0) > 0) return json({ error: "already nudged recently" }, 429);
+
+  await addEvent(target, "nudge", gameId, uid);
+  return json({ ok: true });
+}
+
+async function handleEmote(uid: string, body: Record<string, unknown>): Promise<Response> {
+  const gameId = String(body.game_id ?? "");
+  if (!isUuid(gameId)) return json({ error: "no such game" }, 404);
+  if (!isEmoteId(body.emote)) return json({ error: "unknown emote" }, 400);
+  const game = await loadGame(gameId);
+  if (!game) return json({ error: "no such game" }, 404);
+  const mine = await myParticipant(gameId, uid);
+  if (!mine || mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
+  if (game.status !== "active" && game.status !== "complete") return json({ error: "this game isn't active" }, 409);
+
+  const since = new Date(Date.now() - 10 * 60_000).toISOString();
+  const { data: recentRows, error: recentErr } = await admin
+    .from("mp_emotes")
+    .select("created_at")
+    .eq("game_id", gameId)
+    .eq("sender_id", uid)
+    .gte("created_at", since);
+  if (recentErr) return json({ error: "something went wrong" }, 400); // 0061 not applied yet
+  const rate = checkEmoteRate(
+    (recentRows ?? []).map((r) => Date.parse(r.created_at as string)),
+    Date.now()
+  );
+  if (!rate.ok) return json({ error: "Too many attempts — try again later." }, 429);
+
+  const { error } = await admin.from("mp_emotes").insert({ game_id: gameId, sender_id: uid, emote: body.emote });
+  if (error) return json({ error: "something went wrong" }, 400);
+
+  // Keep the per-game log short.
+  const { data: old } = await admin
+    .from("mp_emotes")
+    .select("id")
+    .eq("game_id", gameId)
+    .order("created_at", { ascending: false })
+    .range(EMOTE_KEEP_PER_GAME, EMOTE_KEEP_PER_GAME + 200);
+  if (old && old.length > 0) {
+    await admin.from("mp_emotes").delete().in("id", old.map((r) => r.id));
+  }
+
+  // One push per burst: skip it if this sender already reacted recently (the
+  // rows in the last EMOTE_PUSH_QUIET_MS other than the one just written).
+  const quietSince = new Date(Date.now() - EMOTE_PUSH_QUIET_MS).toISOString();
+  const { count: earlier } = await admin
+    .from("mp_emotes")
+    .select("id", { count: "exact", head: true })
+    .eq("game_id", gameId)
+    .eq("sender_id", uid)
+    .gte("created_at", quietSince);
+  if ((earlier ?? 0) <= 1 && game.status === "active") {
+    const { data: others } = await admin
+      .from("mp_participants")
+      .select("user_id")
+      .eq("game_id", gameId)
+      .eq("invite_status", "accepted")
+      .neq("user_id", uid);
+    await Promise.all(
+      (others ?? []).map((o) =>
+        sendPush(o.user_id, "emote", gameId, uid, { emote: EMOTE_EMOJI[body.emote as keyof typeof EMOTE_EMOJI] }).catch(
+          () => {}
+        )
+      )
+    );
+  }
+  return json({ ok: true });
+}
+
+/** Called by the client right after sending a friend request / adding by
+ * code: those are written by SQL RPCs (no push hook), so the client asks the
+ * server to push. Idempotent and unforgeable: it only fires for a real,
+ * fresh, not-yet-pushed inbox event from the caller to that target. */
+async function handleFriendPush(uid: string, body: Record<string, unknown>): Promise<Response> {
+  const target = String(body.target_id ?? "");
+  if (!isUuid(target) || target === uid) return json({ error: "invalid target" }, 400);
+  const { data: ev } = await admin
+    .from("mp_events")
+    .select("id, kind, payload, created_at")
+    .eq("user_id", target)
+    .eq("actor_id", uid)
+    .in("kind", ["friend_request", "friend_accepted"])
+    .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ev || (ev.payload as { pushed?: boolean } | null)?.pushed) return json({ ok: true, sent: false });
+  await admin
+    .from("mp_events")
+    .update({ payload: { ...((ev.payload as object) ?? {}), pushed: true } })
+    .eq("id", ev.id);
+  await sendPush(target, ev.kind as PushKind, null, uid).catch(() => {});
+  return json({ ok: true, sent: true });
+}
+
+/** Resigns every active game the caller is in — step one of account deletion
+ * (the delete-account function forwards the user's own JWT here). */
+async function handleResignAll(uid: string): Promise<Response> {
+  const { data: parts } = await admin
+    .from("mp_participants")
+    .select("game_id, seat")
+    .eq("user_id", uid)
+    .eq("invite_status", "accepted");
+  let resigned = 0;
+  for (const p of parts ?? []) {
+    const game = await loadGame(p.game_id);
+    if (!game || game.status !== "active") continue;
+    const res = await resignSeat(game, uid, p.seat, null);
+    if (res.ok) resigned++;
+  }
+  // Pending games the caller is in: host cancels, invitee declines → cancelled.
+  const { data: pend } = await admin
+    .from("mp_participants")
+    .select("game_id")
+    .eq("user_id", uid)
+    .in("invite_status", ["invited", "accepted"]);
+  for (const p of pend ?? []) {
+    const game = await loadGame(p.game_id);
+    if (!game || game.status !== "pending") continue;
+    await admin
+      .from("mp_games")
+      .update({ status: "cancelled", completed_at: new Date().toISOString() })
+      .eq("id", game.id)
+      .eq("status", "pending");
+  }
+  return json({ resigned });
+}
+
+/** Cron entry (pg_cron → /mp/sweep, see migration 0061): enforce every
+ * expired clock, send the 75% reminder, and expire stale pending invites. */
+async function handleSweep(): Promise<Response> {
+  let enforced = 0;
+  let warned = 0;
+  let expired = 0;
+
+  const { data: active } = await admin
+    .from("mp_games")
+    .select(
+      "id, host_id, status, contract_rounds, seats, turn_user_id, updated_at, created_at, turn_limit_hours, turn_started_at, turn_warned_at"
+    )
+    .eq("status", "active")
+    .gt("turn_limit_hours", 0)
+    .not("turn_started_at", "is", null)
+    .order("turn_started_at", { ascending: true })
+    .limit(200);
+  for (const g of (active ?? []) as GameRow[]) {
+    try {
+      const st = timerState(Date.now(), Date.parse(g.turn_started_at!), g.turn_limit_hours ?? 0);
+      if (st.phase === "expired") {
+        if (await enforceTurnClock(g, null)) enforced++;
+      } else if (st.phase === "warn" && g.turn_user_id && !g.turn_warned_at) {
+        const { data: claimed } = await admin
+          .from("mp_games")
+          .update({ turn_warned_at: new Date().toISOString() })
+          .eq("id", g.id)
+          .is("turn_warned_at", null)
+          .select("id");
+        if ((claimed?.length ?? 0) > 0) {
+          await sendPush(g.turn_user_id, "turn_warning", g.id, null, { hours: st.remainingMs / 3_600_000 });
+          warned++;
+        }
+      }
+    } catch (err) {
+      console.error("sweep failed for game", g.id, err);
+    }
+  }
+
+  const cutoff = new Date(Date.now() - PENDING_INVITE_TTL_HOURS * 3_600_000).toISOString();
+  const { data: stale } = await admin
+    .from("mp_games")
+    .select("id")
+    .eq("status", "pending")
+    .lt("created_at", cutoff)
+    .limit(200);
+  for (const g of stale ?? []) {
+    const { data: cancelled } = await admin
+      .from("mp_games")
+      .update({ status: "cancelled", completed_at: new Date().toISOString() })
+      .eq("id", g.id)
+      .eq("status", "pending")
+      .select("id");
+    if ((cancelled?.length ?? 0) === 0) continue;
+    expired++;
+    const { data: parts } = await admin.from("mp_participants").select("user_id").eq("game_id", g.id);
+    for (const p of parts ?? []) await addEvent(p.user_id, "game_cancelled", g.id, null);
+  }
+
+  return json({ enforced, warned, expired });
+}
+
+/** Fixed-time compare, same idea as daily-deal-reminder's. */
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const digest = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
+  const [da, db] = await Promise.all([digest(a), digest(b)]);
+  let diff = 0;
+  for (let i = 0; i < da.length; i++) diff |= da[i] ^ db[i];
+  return diff === 0;
 }
 
 // ── entrypoint ───────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const route = new URL(req.url).pathname.split("/").filter(Boolean).pop();
+
+  // Cron entry: no user, authenticated by the shared CRON_SECRET instead
+  // (x-cron-secret, or a Bearer token when deployed without the JWT gate).
+  if (route === "sweep") {
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+    const presented = req.headers.get("x-cron-secret") ?? (req.headers.get("Authorization") ?? "").replace(/^Bearer /, "");
+    if (!cronSecret || !(await timingSafeEqual(presented, cronSecret))) return json({ error: "unauthorized" }, 401);
+    try {
+      return await handleSweep();
+    } catch (e) {
+      console.error("mp sweep error:", e);
+      return json({ error: "something went wrong" }, 400);
+    }
+  }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return json({ error: "sign in first" }, 401);
@@ -871,7 +1336,6 @@ Deno.serve(async (req) => {
   } = await userClient.auth.getUser();
   if (authErr || !user) return json({ error: "sign in first" }, 401);
 
-  const route = new URL(req.url).pathname.split("/").filter(Boolean).pop();
   let body: Record<string, unknown> = {};
   try {
     body = (await req.json()) as Record<string, unknown>;
@@ -893,6 +1357,14 @@ Deno.serve(async (req) => {
         return await handleMove(user.id, body);
       case "resign":
         return await handleResign(user.id, body);
+      case "nudge":
+        return await handleNudge(user.id, body);
+      case "emote":
+        return await handleEmote(user.id, body);
+      case "friend_push":
+        return await handleFriendPush(user.id, body);
+      case "resign_all":
+        return await handleResignAll(user.id);
       default:
         return json({ error: "unknown route" }, 404);
     }

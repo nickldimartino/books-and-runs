@@ -89,6 +89,29 @@ describe("computeTotalXp", () => {
   });
 });
 
+describe("computeTotalXp — server-credited bonus XP", () => {
+  it("adds the xp_ledger sum on top of the derived XP", () => {
+    const base: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, gamesPlayed: 1 };
+    expect(computeTotalXp({ ...base, bonusXp: 125 })).toBe(computeTotalXp(base) + 125);
+  });
+  it("treats a missing bonusXp (older state shapes) as 0", () => {
+    const legacy = { ...EMPTY_PROGRESS_STATE } as Partial<AchievementProgressState>;
+    delete legacy.bonusXp;
+    expect(computeTotalXp(legacy as AchievementProgressState)).toBe(0);
+  });
+  it("can lift the level", () => {
+    const state: AchievementProgressState = { ...EMPTY_PROGRESS_STATE, bonusXp: xpForLevel(3) };
+    expect(levelProgress(state).level).toBe(3);
+  });
+  it("daily/weekly achievements pay the usual tier XP", () => {
+    const state: AchievementProgressState = {
+      ...EMPTY_PROGRESS_STATE,
+      counters: { daily_deals_completed: 3, weekly_challenges_completed: 1 },
+    };
+    expect(computeTotalXp(state)).toBe(10 + 10); // beginner tier of each
+  });
+});
+
 describe("levelProgress", () => {
   it("reports 0 progress and level 0 for a brand-new account", () => {
     const progress = levelProgress(EMPTY_PROGRESS_STATE);

@@ -14,6 +14,9 @@
 //   4. Every unlocked achievement tier grants XP, scaled beginner -> expert
 //      the same way (a Hard-tier unlock is worth more than a Beginner-tier
 //      unlock of the same family).
+//   5. Server-credited bonus XP (Daily Deal/Weekly Challenge completions,
+//      streak milestones, claimed quests) — the account's `xp_ledger` sum,
+//      carried on the progress state as `bonusXp`. See src/dailyRewards.ts.
 
 import { AchievementProgressState, AchievementTier, allAchievements } from "./achievements";
 
@@ -64,7 +67,7 @@ export function computeTotalXp(state: AchievementProgressState): number {
     if (achievement.unlocked) xp += ACHIEVEMENT_TIER_XP[achievement.tier];
   }
 
-  return xp;
+  return xp + (state.bonusXp ?? 0);
 }
 
 export interface LevelProgress {

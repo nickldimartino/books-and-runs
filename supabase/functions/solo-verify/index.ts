@@ -21,6 +21,7 @@ import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerSt
 // ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
 // deploy bundler doesn't resolve the app's extension-less imports. Run
 // `node scripts/bundle-solo-verify-engine.mjs` before every deploy.
+import { claimCompletedQuests, creditChallengeCompletion, ensureQuestBaselines } from "./_engine/challengeRewards.ts";
 import { PlayerConfig } from "./_engine/gameEngine.ts";
 import { MoveLogEntry } from "./_engine/moveLog.ts";
 import { finalGameDeltas, mergeDeltas, tableCompositionDeltas } from "./_engine/replayStats.ts";
@@ -216,7 +217,8 @@ async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: 
     .from("daily_deal_completions")
     .upsert({ user_id: uid, date: dailyDealDateKey }, { onConflict: "user_id,date", ignoreDuplicates: true });
   if (error) return json({ ok: false, error: "couldn't record the completion" }, 500);
-  return json({ ok: true, dailyDeal: true });
+  const reward = await creditChallengeCompletion(admin, uid, "daily", dailyDealDateKey);
+  return json({ ok: true, dailyDeal: true, ...reward });
 }
 
 // ── Weekly Challenge streak integrity ───────────────────────────────────
@@ -261,7 +263,25 @@ async function handleWeeklyChallengeCompletion(uid: string, seed: number, rawWee
     .from("weekly_challenge_completions")
     .upsert({ user_id: uid, week: weekKey }, { onConflict: "user_id,week", ignoreDuplicates: true });
   if (error) return json({ ok: false, error: "couldn't record the completion" }, 500);
-  return json({ ok: true, weeklyChallenge: true });
+  const reward = await creditChallengeCompletion(admin, uid, "weekly", weekKey);
+  return json({ ok: true, weeklyChallenge: true, ...reward });
+}
+
+// ── Daily/Weekly rewards + quests ───────────────────────────────────────
+// The database logic (idempotent XP ledger credits, absolute achievement
+// counters, quest baselines/claims) lives in src/challengeRewards.ts — same
+// code the unit tests run against an in-memory fake — and is bundled into
+// ./_engine. See that file's header for the idempotency guarantees, and
+// migration 0056 for the tables.
+
+/** `{ action: "quests" }` — no game attached. Snapshots the baselines if the
+ * account has none for the live periods, then auto-claims anything already
+ * complete (e.g. progress made in multiplayer, which credits the same
+ * counters). Called by Home on load. */
+async function handleQuests(uid: string): Promise<Response> {
+  await ensureQuestBaselines(admin, uid);
+  const claimed = await claimCompletedQuests(admin, uid);
+  return json({ ok: true, quests: claimed });
 }
 
 // ── stats derivation + writes ───────────────────────────────────────────
@@ -311,6 +331,15 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
   }
 
   if (!trackStats) return json({ ok: true, tracked: false });
+
+  // Quest baselines must exist BEFORE this game's deltas land, so the game
+  // itself counts toward today's/this week's quests. Best-effort: a quest
+  // hiccup must never fail recording the game.
+  try {
+    await ensureQuestBaselines(admin, uid);
+  } catch (e) {
+    console.error("solo-verify quest baseline error:", e);
+  }
 
   const lowestScore = Math.min(...state.players.map((p) => p.cumulativeScore));
   const winners = state.players.filter((p) => p.cumulativeScore === lowestScore);
@@ -408,7 +437,14 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
     if (countersUpsertError) return json({ ok: false, error: "couldn't save achievement progress" }, 500);
   }
 
-  return json({ ok: true, tracked: true, won, tied });
+  let quests: Awaited<ReturnType<typeof claimCompletedQuests>> = [];
+  try {
+    quests = await claimCompletedQuests(admin, uid);
+  } catch (e) {
+    console.error("solo-verify quest claim error:", e);
+  }
+
+  return json({ ok: true, tracked: true, won, tied, quests });
 }
 
 // ── entrypoint ───────────────────────────────────────────────────────────
@@ -436,6 +472,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (body.action === "quests") return await handleQuests(user.id);
     return await handleVerify(user.id, body);
   } catch (e) {
     // Same reasoning as mp/index.ts's own catch-all — log in full

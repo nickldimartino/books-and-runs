@@ -1,7 +1,7 @@
 // Books & Runs — Daily Deal AND Weekly Challenge streak-at-risk reminders.
 //
 // Push notifications previously only ever fired for multiplayer events
-// (your_turn/game_request/nudge, see mp/index.ts's PUSH_COPY) — this was
+// (your_turn/game_request/nudge, see mp/index.ts's sendPush) — this was
 // the first one for anything else, and Weekly Challenge's own reminder
 // (added later) rides the same daily firing rather than getting a second
 // deployed function, Vault secret, and cron schedule for what's otherwise
@@ -27,6 +27,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // hand-rolled implementation.
 import webpush from "npm:web-push@3.6.7";
 import { corsHeaders, json } from "../_shared/cors.ts";
+import { buildPushPayload, PushKind, PushPrefs, shouldPush } from "../_shared/push.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -81,28 +82,44 @@ interface AtRiskRow {
 }
 
 /** Shared by both checks below: looks up push subscriptions for exactly
- * these accounts and fires one notification each, using `buildPayload` for
- * the copy/tag (the two reminders need different wording and a different
- * `tag` so a device holding both keeps them as two distinct notifications,
- * not one overwriting the other). Same cleanup-vs-log split on a failed
- * send as mp/index.ts's sendPushForEvent. */
-async function notifyAtRisk(
-  rows: AtRiskRow[],
-  buildPayload: (streak: number) => Record<string, string>,
-  logLabel: string
-): Promise<number> {
+ * these accounts and fires one notification each — worded in each
+ * recipient's own saved language (settings.language) and skipped for anyone
+ * who turned streak reminders off or is inside their quiet hours (migration
+ * 0062; see ../_shared/push.ts). Same cleanup-vs-log split on a failed send
+ * as mp/index.ts's sendPush. */
+async function notifyAtRisk(rows: AtRiskRow[], kind: PushKind, logLabel: string): Promise<number> {
   if (rows.length === 0) return 0;
   const ids = rows.map((r) => r.user_id);
+
+  // Prefs are optional — a project that hasn't run 0062 (or 0055) just gets
+  // the defaults: on, English, no quiet hours.
+  const prefsByUser = new Map<string, PushPrefs>();
+  let prefRows = await admin
+    .from("settings")
+    .select("user_id, notify_streaks, quiet_hours_start, quiet_hours_end, tz_offset_minutes, language")
+    .in("user_id", ids);
+  if (prefRows.error) {
+    prefRows = await admin.from("settings").select("user_id, language").in("user_id", ids);
+  }
+  for (const r of prefRows.data ?? []) prefsByUser.set(r.user_id, r as PushPrefs);
+
+  const allowed = new Set(
+    ids.filter((id) => shouldPush(prefsByUser.get(id) ?? null, kind, Date.now()) === "send")
+  );
+  if (allowed.size === 0) return 0;
+
   const { data: subs } = await admin
     .from("push_subscriptions")
     .select("id, user_id, endpoint, p256dh, auth_key")
-    .in("user_id", ids);
+    .in("user_id", [...allowed]);
 
   let sent = 0;
   await Promise.all(
     (subs ?? []).map(async (s) => {
       const streak = rows.find((r) => r.user_id === s.user_id)?.streak ?? 0;
-      const payload = JSON.stringify(buildPayload(streak));
+      const payload = JSON.stringify(
+        buildPushPayload(kind, prefsByUser.get(s.user_id)?.language, { streak }, null)
+      );
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } },
@@ -145,16 +162,7 @@ async function checkDailyDeal(): Promise<number> {
     return 0;
   }
   const rows: AtRiskRow[] = (atRisk ?? []).map((r) => ({ user_id: r.user_id, streak: r.daily_deal_streak }));
-  return notifyAtRisk(
-    rows,
-    (streak) => ({
-      title: "Your streak is at risk!",
-      body: `Play today's Daily Deal to keep your ${streak}-day streak going.`,
-      url: "/",
-      tag: "daily-deal-reminder",
-    }),
-    "daily-deal-reminder"
-  );
+  return notifyAtRisk(rows, "streak_daily", "daily-deal-reminder");
 }
 
 /** Same "at risk" shape as Daily Deal — weekly_challenge_streak > 0 and
@@ -183,16 +191,7 @@ async function checkWeeklyChallenge(): Promise<number> {
     return 0;
   }
   const rows: AtRiskRow[] = (atRisk ?? []).map((r) => ({ user_id: r.user_id, streak: r.weekly_challenge_streak }));
-  return notifyAtRisk(
-    rows,
-    (streak) => ({
-      title: "Your weekly streak is at risk!",
-      body: `Play this week's Weekly Challenge to keep your ${streak}-week streak going.`,
-      url: "/",
-      tag: "weekly-challenge-reminder",
-    }),
-    "weekly-challenge-reminder"
-  );
+  return notifyAtRisk(rows, "streak_weekly", "weekly-challenge-reminder");
 }
 
 Deno.serve(async (req) => {
