@@ -18,7 +18,7 @@ import { bookCandidates, layOffOptions, rankPositions, runCandidates, solveContr
 import { cardPenalty } from "../scorer";
 import { Card, GameState, Meld, Player, Rank } from "../types";
 
-export interface LayOffMove {
+interface LayOffMove {
   cardId: string;
   meldId: string;
   // Which end of a run to extend — only meaningful for a wild laid onto a
@@ -214,7 +214,7 @@ export function handWantsCard(hand: Card[], card: Card): boolean {
  * a state anyone's still choosing a discard against) or, in a hand-built
  * test fixture, simply never had a hand set at all — neither should read as
  * "about to win." */
-export const CLOSE_TO_OUT_HAND_SIZE = 3;
+const CLOSE_TO_OUT_HAND_SIZE = 3;
 
 export function isCloseToOut(p: Player): boolean {
   return p.hasMeldedContract || (p.hand.length > 0 && p.hand.length <= CLOSE_TO_OUT_HAND_SIZE);

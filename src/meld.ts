@@ -44,7 +44,7 @@ export function runCardRank(meld: Meld, index: number): Rank | undefined {
   return RUN_ORDER[meld.runStartIndex + index];
 }
 
-export interface Candidate {
+interface Candidate {
   type: "book" | "run";
   key: string; // rank for books, "suit:startIndex" for runs
   naturalCards: Card[];
@@ -465,7 +465,7 @@ export function solveWholeHandContract(
   return null;
 }
 
-export interface GroupValidation {
+interface GroupValidation {
   valid: boolean;
   type?: "book" | "run";
   runStartIndex?: number;

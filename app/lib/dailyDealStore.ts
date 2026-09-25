@@ -16,7 +16,7 @@ const KEY = "booksAndRuns:dailyDeal";
 // weeks" glance without the record growing forever in localStorage.
 const HISTORY_LIMIT = 30;
 
-export interface DailyDealResult {
+interface DailyDealResult {
   date: string; // "YYYY-MM-DD", local calendar day — see localDateKey
   won: boolean;
   yourScore: number;

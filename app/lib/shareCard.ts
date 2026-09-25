@@ -45,7 +45,7 @@ const RARITY_BADGE_ICON_ELEMENTS: Partial<Record<string, IconElement[]>> = {
   "📈": STREAK_ELEMENTS,
 };
 
-export interface ShareRow {
+interface ShareRow {
   rank: number;
   /** "Lv15" — the account level for you, the theoretical level for an AI. */
   level: string;
@@ -55,7 +55,7 @@ export interface ShareRow {
   isWinner: boolean;
 }
 
-export interface ShareCardInput {
+interface ShareCardInput {
   headline: string;
   rows: ShareRow[];
 }
@@ -148,7 +148,7 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob | nul
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }
 
-export interface ShareTrophy {
+interface ShareTrophy {
   category: AchievementCategory;
   tier: AchievementTier;
   familyTitle: string;

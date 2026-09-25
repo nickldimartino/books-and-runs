@@ -13,7 +13,7 @@ const QUEUE_KEY = "booksAndRuns:pendingSaves";
  * actually happened, so queuing the full payload and retrying it later is
  * exactly as sound as verifying it immediately would have been.
  */
-export interface PendingSave {
+interface PendingSave {
   id: string;
   userId: string;
   payload: SoloVerifyPayload;

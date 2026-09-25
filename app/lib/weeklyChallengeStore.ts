@@ -19,7 +19,7 @@ import { YOU_PLAYER_ID } from "./recordGameResult";
 const KEY = "booksAndRuns:weeklyChallenge";
 const HISTORY_LIMIT = 12; // ~3 months of weeks — plenty for a small glance
 
-export interface WeeklyChallengeResult {
+interface WeeklyChallengeResult {
   week: string; // "YYYY-Www", ISO week — see isoWeekKey
   won: boolean;
   yourScore: number;

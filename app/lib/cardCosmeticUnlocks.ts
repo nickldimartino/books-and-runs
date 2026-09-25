@@ -53,7 +53,7 @@ export function cardCosmeticRequirementLabel(unlock: CosmeticUnlockRule): string
   return cosmeticRequirementLabel(unlock);
 }
 
-export interface CardUnlockContext {
+interface CardUnlockContext {
   level: number;
   isCreator: boolean;
 }

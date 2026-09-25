@@ -10,7 +10,7 @@ import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 
 export type LocaleId = "en" | "zh" | "ja" | "ko" | "de" | "fr" | "es" | "pt-BR" | "ru" | "it";
 
-export interface LocaleOption {
+interface LocaleOption {
   id: LocaleId;
   /** English name, for contexts where the UI itself hasn't switched yet
    * (e.g. a signed-out visitor's browser-language guess before they've
@@ -55,6 +55,3 @@ export function applyLocale(locale: LocaleId): void {
   document.documentElement.setAttribute("data-lang", locale);
 }
 
-export function findLocale(id: string | null | undefined): LocaleOption | null {
-  return LOCALES.find((l) => l.id === id) ?? null;
-}

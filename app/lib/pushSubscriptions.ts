@@ -94,7 +94,7 @@ export async function isPushSubscribed(): Promise<boolean> {
   }
 }
 
-export interface SubscribeResult {
+interface SubscribeResult {
   ok: boolean;
   /** "denied" | "unsupported" | a short message — for the Settings page to
    * show something more useful than a generic failure. */

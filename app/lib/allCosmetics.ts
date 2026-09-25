@@ -24,7 +24,7 @@ export interface AnyCosmeticOption {
   unlock: CosmeticUnlockRule;
 }
 
-export const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
+const ALL_GATED_COSMETICS: readonly AnyCosmeticOption[] = [
   ...PREMIUM_EMOJI_OPTIONS.filter((o) => o.unlock && o.source !== "boutique").map((o) => ({
     kind: "badge" as const,
     id: o.emoji,

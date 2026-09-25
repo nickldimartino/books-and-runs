@@ -539,7 +539,7 @@ export interface SeasonSnapshot {
  * lookup against season_snapshots for this value always hits this month's
  * baseline. Computed from UTC (not local time) so this always agrees with
  * the server regardless of the visitor's own timezone. */
-export function currentSeasonStart(): string {
+function currentSeasonStart(): string {
   const now = new Date();
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }

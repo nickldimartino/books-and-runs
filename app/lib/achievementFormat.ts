@@ -9,7 +9,7 @@ import type { Vars } from "./i18n/LocaleProvider";
 
 type T = (key: TranslationKey, vars?: Vars) => string;
 
-export function formatAchievementValue(value: number | null): string {
+function formatAchievementValue(value: number | null): string {
   if (value === null) return "—";
   return Number.isInteger(value) ? value.toString() : value.toFixed(1);
 }

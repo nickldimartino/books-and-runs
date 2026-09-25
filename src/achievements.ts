@@ -27,7 +27,7 @@ export function tierNumber(tier: AchievementTier): number {
   return ACHIEVEMENT_TIERS.indexOf(tier) + 1;
 }
 
-export type AchievementSource =
+type AchievementSource =
   | { kind: "counter"; key: string }
   | { kind: "gamesPlayed" }
   | { kind: "gamesWon" }
@@ -60,7 +60,7 @@ export type AchievementCategory =
   | "tableComposition"
   | "multiplayer";
 
-export interface AchievementFamily {
+interface AchievementFamily {
   id: string;
   /** A translation key (app/lib/i18n/dictionaries/en.ts's "achievementFamily.*"
    * namespace) rather than literal text — this file stays free of any

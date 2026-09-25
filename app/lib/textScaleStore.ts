@@ -28,7 +28,7 @@ import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 
 export type TextScale = "default" | "large" | "xlarge";
 
-export interface TextScaleOption {
+interface TextScaleOption {
   id: TextScale;
   name: string;
   description: string;

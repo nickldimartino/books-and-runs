@@ -15,7 +15,7 @@
 import { CosmeticRarity } from "./cosmeticRarity";
 import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 
-export interface AvatarFrameOption {
+interface AvatarFrameOption {
   id: string;
   label: string;
   /** Absent for a free pick — only "grandmaster", the Epic/Mythic/
@@ -159,7 +159,7 @@ export function findAvatarFrameOption(id: string | null): AvatarFrameOption | nu
   return AVATAR_FRAME_OPTIONS.find((f) => f.id === id) ?? null;
 }
 
-export interface TitleOption {
+interface TitleOption {
   id: string;
   label: string;
   /** Absent for a free pick — every gated title, including Boutique items,

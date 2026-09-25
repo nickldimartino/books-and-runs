@@ -14,7 +14,7 @@ export interface ScorecardPlayer {
   name: string;
 }
 
-export interface SavedScorecard {
+interface SavedScorecard {
   phase: "setup" | "scoring";
   players: ScorecardPlayer[];
   roundMode: RoundMode;

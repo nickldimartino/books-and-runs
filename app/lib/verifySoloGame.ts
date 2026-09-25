@@ -51,7 +51,7 @@ export interface SoloVerifyPayload {
   weeklyChallengeWeekKey?: string;
 }
 
-export interface SoloVerifyResult {
+interface SoloVerifyResult {
   ok: boolean;
   tracked?: boolean;
   won?: boolean;

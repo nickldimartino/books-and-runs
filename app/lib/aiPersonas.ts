@@ -20,7 +20,7 @@ type T = (key: TranslationKey, vars?: Vars) => string;
  * app); `blurbKey` points at the translated flavor line, resolved at
  * render time by personaBlurbFor(name, t) rather than baked in here.
  */
-export interface AiPersona {
+interface AiPersona {
   name: string;
   avatar: string;
   blurbKey: TranslationKey;

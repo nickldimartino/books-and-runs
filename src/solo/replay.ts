@@ -40,7 +40,7 @@ import {
 } from "../replayStats";
 import { ContractRequirement, GameState, YOU_PLAYER_ID } from "../types";
 
-export type ReplayResult =
+type ReplayResult =
   | { ok: true; state: GameState; counterDeltas: CounterDeltas }
   | { ok: false; error: string };
 

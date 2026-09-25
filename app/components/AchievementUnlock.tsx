@@ -23,7 +23,7 @@ export interface AchievementUnlockItem {
  * shows, so "what did I just unlock, and what did it take" is always one
  * tap away, not something you have to go find on a different page.
  */
-export function AchievementUnlockList({ items }: { items: AchievementUnlockItem[] }) {
+function AchievementUnlockList({ items }: { items: AchievementUnlockItem[] }) {
   const { t } = useT();
   if (items.length === 0) return null;
   return (

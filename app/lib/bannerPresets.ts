@@ -9,7 +9,7 @@
 import { CosmeticRarity } from "./cosmeticRarity";
 import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 
-export interface BannerOption {
+interface BannerOption {
   id: string;
   label: string;
   /** A CSS `background` value — solid gradients only, no images, so this

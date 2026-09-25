@@ -23,7 +23,7 @@ export function setErrorUser(id: string | null) {
   currentUserId = id;
 }
 
-export interface ReportInput {
+interface ReportInput {
   message: string;
   stack?: string | null;
   source: string;

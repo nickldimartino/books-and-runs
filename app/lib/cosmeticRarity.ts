@@ -19,9 +19,7 @@ import { CosmeticUnlockRule } from "./cosmeticUnlocks";
 
 export type CosmeticRarity = "common" | "uncommon" | "rare" | "epic" | "mythic" | "apex";
 
-export const RARITY_ORDER: readonly CosmeticRarity[] = ["common", "uncommon", "rare", "epic", "mythic", "apex"];
-
-export interface RarityVisual {
+interface RarityVisual {
   /** Applied to whatever renders the item's own art (a frame's ring, a
    * banner's swatch, a badge's icon wrapper). */
   ringClass: string;

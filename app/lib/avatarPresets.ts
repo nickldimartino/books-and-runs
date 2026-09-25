@@ -26,7 +26,7 @@ export const EMOJI_OPTIONS: readonly string[] = [
 /** Kept as its own name (rather than importing CosmeticUnlockRule directly
  * everywhere) since this file predates the shared cosmeticUnlocks.ts —
  * same type either way. */
-export type PremiumEmojiUnlock = CosmeticUnlockRule;
+type PremiumEmojiUnlock = CosmeticUnlockRule;
 
 export interface PremiumEmojiOption {
   emoji: string;
@@ -152,7 +152,7 @@ export function findPremiumEmojiOption(emoji: string): PremiumEmojiOption | null
   return PREMIUM_EMOJI_OPTIONS.find((o) => o.emoji === emoji) ?? null;
 }
 
-export interface ColorOption {
+interface ColorOption {
   hex: string;
   label: string;
 }

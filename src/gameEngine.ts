@@ -387,7 +387,7 @@ const MAX_LAYOFF_BATCH = 6;
  * same shape a manual one-at-a-time lay-off of the same cards would have
  * produced.
  */
-export interface LayOffStep {
+interface LayOffStep {
   cardId: string;
   direction: "low" | "high";
   // Whether *this* card had a genuine low-vs-high choice at the moment it

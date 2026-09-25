@@ -28,7 +28,7 @@ type TPlural = (key: string, count: number, vars?: Vars) => string;
 const KEY = "booksAndRuns:favoriteGame";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
-export type RoundMode = "all" | "short" | "custom";
+type RoundMode = "all" | "short" | "custom";
 
 export interface FavoriteGameConfig {
   humanCount: number;
@@ -102,7 +102,7 @@ export async function pushFavoriteGameConfig(
 
 /** Read the signed-in account's cloud favorite config, or null if it's never
  * been saved from any device (or migration 0019 hasn't been run). */
-export async function pullFavoriteGameConfig(
+async function pullFavoriteGameConfig(
   supabase: SupabaseClient,
   userId: string
 ): Promise<FavoriteGameConfig | null> {

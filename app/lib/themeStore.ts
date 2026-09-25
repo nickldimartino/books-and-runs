@@ -163,7 +163,7 @@ export const THEME_BG: Record<ThemeId, string> = {
  * normally does. Keep in sync with globals.css's [data-theme] blocks by hand
  * when adding or re-coloring a theme.
  */
-export interface ThemeErrorColors {
+interface ThemeErrorColors {
   bg: string;
   panel: string;
   border: string;

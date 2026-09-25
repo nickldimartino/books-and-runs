@@ -17,7 +17,7 @@
 
 import type { TranslationKey } from "./i18n/keys";
 
-export type TutorialGate =
+type TutorialGate =
   | { type: "tap" }
   | { type: "drawn" }
   | { type: "grouped"; meldType: "book" | "run" }

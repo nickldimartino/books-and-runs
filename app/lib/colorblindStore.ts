@@ -11,7 +11,7 @@ import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 
 export type ColorblindMode = "off" | "protanopia" | "deuteranopia" | "tritanopia";
 
-export interface ColorblindOption {
+interface ColorblindOption {
   id: ColorblindMode;
   name: string;
   description: string;

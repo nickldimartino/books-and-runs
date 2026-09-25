@@ -35,7 +35,7 @@ export interface Card {
   isWild: boolean; // true for 2s and jokers
 }
 
-export type MeldType = "book" | "run";
+type MeldType = "book" | "run";
 
 export interface Meld {
   id: string;

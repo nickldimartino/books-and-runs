@@ -112,11 +112,6 @@ export const SIGNATURE_CARD_BACKS: readonly SignatureCardBackOption[] = [
   },
 ];
 
-export function findSignatureCardBack(id: string | null): SignatureCardBackOption | null {
-  if (!id) return null;
-  return SIGNATURE_CARD_BACKS.find((s) => s.id === id) ?? null;
-}
-
 export function isSignatureCardBack(id: CardBackId): id is SignatureCardBackId {
   return SIGNATURE_CARD_BACKS.some((s) => s.id === id);
 }

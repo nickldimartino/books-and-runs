@@ -53,7 +53,7 @@ export function isTutorialAudioOverride(): boolean {
   return tutorialOverride;
 }
 
-export function soundEnabled(): boolean {
+function soundEnabled(): boolean {
   return tutorialOverride || loadLocalSettings().soundEnabled;
 }
 

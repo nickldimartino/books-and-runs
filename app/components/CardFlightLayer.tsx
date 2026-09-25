@@ -27,7 +27,7 @@ interface Point {
   y: number;
 }
 
-export interface FlightSpec {
+interface FlightSpec {
   card: Card;
   /** Element (or its rect) the card leaves from. */
   from: HTMLElement | DOMRect | null;

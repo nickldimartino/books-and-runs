@@ -74,7 +74,7 @@ import {
   useState,
 } from "react";
 
-export interface BuyOffer {
+interface BuyOffer {
   playerId: string;
   playerName: string;
   card: Card;
@@ -87,13 +87,13 @@ export interface BuyOffer {
  * row. Purely a presentation hint — carries no game-state authority, and a
  * consumer that ignores it changes nothing.
  */
-export type FlightInput =
+type FlightInput =
   | { kind: "draw"; card: Card; fromDiscard: boolean; byId: string }
   | { kind: "discard"; card: Card; byId: string; isAI: boolean; note?: string }
   | { kind: "meld"; cards: Card[]; byId: string; isAI: boolean; note?: string }
   | { kind: "layoff"; card: Card; meldId: string; byId: string; isAI: boolean };
 
-export type FlightEvent = FlightInput & { id: number };
+type FlightEvent = FlightInput & { id: number };
 
 interface GameContextValue {
   state: GameState | null;

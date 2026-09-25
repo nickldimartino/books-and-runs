@@ -9,7 +9,7 @@ import { buildDeck, shuffle } from "./deck";
 import { CONTRACTS, Card, GameState, Player } from "./types";
 
 export const TUTORIAL_HUMAN_ID = "human-0";
-export const TUTORIAL_AI_ID = "tutorial-ai";
+const TUTORIAL_AI_ID = "tutorial-ai";
 
 // A natural book (3 sevens, different suits) and a natural run (3-4-5-6 of
 // spades) — no wilds involved, and no rank in common between them, so the
@@ -17,8 +17,8 @@ export const TUTORIAL_AI_ID = "tutorial-ai";
 // obviously-correct answer. (An earlier version ran the spades up to 7,
 // which put a 4th "7" in the run — asking a player to "tap your three 7s"
 // with a spade 7 sitting right there was a real trap, caught in testing.)
-export const TUTORIAL_BOOK_IDS = ["h-7-0", "d-7-0", "c-7-0"];
-export const TUTORIAL_RUN_IDS = ["s-3-0", "s-4-0", "s-5-0", "s-6-0"];
+const TUTORIAL_BOOK_IDS = ["h-7-0", "d-7-0", "c-7-0"];
+const TUTORIAL_RUN_IDS = ["s-3-0", "s-4-0", "s-5-0", "s-6-0"];
 
 // Six filler cards, deliberately picked (not randomly dealt) so there's no
 // chance they accidentally form a second book or run, or share a rank with

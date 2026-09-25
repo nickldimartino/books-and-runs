@@ -23,7 +23,7 @@ function writeWins(n: number): void {
   writeLocalStorage(WINS_SINCE_SHOWN_KEY, String(n));
 }
 
-export function hasRespondedToReviewPrompt(): boolean {
+function hasRespondedToReviewPrompt(): boolean {
   // Deliberately not just "readLocalStorage(...) === '1'": a genuinely
   // absent key (never responded) and a read that failed outright (private
   // browsing, storage disabled) both come back as null from
