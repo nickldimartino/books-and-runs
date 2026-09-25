@@ -7,7 +7,7 @@
 // Game/Tournament forms), so a solo-vs-AI shortcut isn't actually
 // available here. Every human seat needs its own signed-in client, keyed
 // by seat number (0 is always the game's creator — see handleCreate's own
-// seat assignment); AI seats need no entry at all — applyCommit's
+// seat assignment); AI seats need no entry at all — applyDiscard's
 // advanceThroughAi (src/mp/adapter.ts) resolves every AI turn inline,
 // synchronously, within the same HTTP call, only ever stopping at the next
 // *active human* turn or gameOver. Each move response reports whose turn
@@ -70,12 +70,17 @@ export async function playOneTurn(client: SupabaseClient, gameId: string): Promi
   // use for anything smarter.
   const discardCard = leftover.length > 0 ? (leftover.find((c) => !c.isWild) ?? leftover[0]) : null;
 
-  return submitMpMove(client, gameId, {
-    type: "commit",
-    groups: meld?.groups,
-    preferredRunStarts: meld?.runStarts,
-    discardCardId: discardCard?.id,
-  });
+  // The real client's flow: Confirm Meld is its own (immediate) action,
+  // then a separate discard — or a card-less discard to go out when the
+  // meld emptied the hand — ends the turn.
+  if (meld) {
+    await submitMpMove(client, gameId, {
+      type: "meld",
+      groups: meld.groups,
+      preferredRunStarts: meld.runStarts,
+    });
+  }
+  return submitMpMove(client, gameId, { type: "discard", discardCardId: discardCard?.id });
 }
 
 /**

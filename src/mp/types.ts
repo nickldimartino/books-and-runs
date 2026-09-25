@@ -3,7 +3,7 @@ import { Card, DiscardEvent, Difficulty, GameState, Meld } from "../types";
 /**
  * Multiplayer adapter types. The adapter (adapter.ts) is pure, like the rest
  * of src/ — it wraps the existing engine into the few operations the
- * server-side game needs: deal, draw, commit a whole turn, resign, run the
+ * server-side game needs: deal, draw, meld / lay off / discard as separate actions, resign, run the
  * AI seats, and redact the state down to one player's view. The Supabase
  * Edge Function is a thin shell over these; all the real logic and all the
  * tests live here.
@@ -45,6 +45,16 @@ export interface RoundResult {
 
 export type MpAction =
   | { type: "draw"; from: "stock" | "discard" }
+  /** Lay down this round's contract (solo's "Confirm Meld"). Immediate;
+   * the turn stays open. */
+  | { type: "meld"; groups: string[][]; preferredRunStarts?: (number | undefined)[] }
+  /** Lay one card off onto a table meld. Immediate; the turn stays open. */
+  | { type: "layoff"; cardId: string; meldId: string; position?: "low" | "high" }
+  /** End the turn by discarding one card; omit the card to go out with an
+   * already-empty hand (after melding / laying off everything). */
+  | { type: "discard"; discardCardId?: string }
+  /** Legacy all-in-one turn — the UI no longer sends this; the server keeps
+   * accepting it for older clients. */
   | {
       type: "commit";
       /** Card-id groups to meld as this round's contract, one array per

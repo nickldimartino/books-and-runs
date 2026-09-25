@@ -2,10 +2,11 @@
 
 // End-to-end-ish test of the multiplayer play screen against a mocked Edge
 // Function (`fetch`): the "I staged my whole contract but couldn't meld"
-// report. Nothing is real in multiplayer until commitTurn, so the screen has
-// to (a) say a staged contract still needs a discard, (b) offer one clear
-// "Meld & discard" action, and (c) show a server rejection *inside the hand
-// drawer* — where the user is — and keep it (and the draft) on screen.
+// report. The turn is individual actions mirroring solo: "Group selected
+// cards" stages, a separate "Confirm Meld" commits it for real (visible to
+// everyone at once), then "Discard selected card" is its own action that ends
+// the turn. A server rejection must show *inside the hand drawer* — where the
+// user is — and stay (with the staged draft) on screen.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -135,42 +136,80 @@ async function openDrawerAndStageContract() {
   return dialog;
 }
 
-describe("multiplayer play screen — meld & discard", () => {
-  it("tells you a staged contract still needs a discard, and commits meld + discard in one move", async () => {
-    moveResponse = () => ({ status: 200, body: { status: "active", view: { ...VIEW, yourTurn: false, currentSeat: 1, youHaveDrawn: false } } });
+const MELDED_VIEW: RedactedView = {
+  ...VIEW,
+  yourHand: [HAND[6], HAND[7]],
+  players: VIEW.players.map((p) => (p.seat === 0 ? { ...p, hasMeldedContract: true, handCount: 2 } : p)),
+  melds: [
+    { id: "seat-0-meld-0-book", type: "book", ownerId: "seat-0", cards: [HAND[0], HAND[1], HAND[2]] },
+    { id: "seat-0-meld-1-book", type: "book", ownerId: "seat-0", cards: [HAND[3], HAND[4], HAND[5]] },
+  ],
+};
+
+describe("multiplayer play screen — individual actions like solo", () => {
+  it("stage -> Confirm Meld (immediate, real) -> then a separate discard ends the turn", async () => {
+    const responses: (() => { status: number; body: unknown })[] = [
+      () => ({ status: 200, body: { status: "active", view: MELDED_VIEW } }),
+      () => ({ status: 200, body: { status: "active", view: { ...MELDED_VIEW, yourTurn: false, currentSeat: 1, youHaveDrawn: false, yourHand: [HAND[7]] } } }),
+    ];
+    moveResponse = () => responses.shift()!();
     const dialog = await openDrawerAndStageContract();
 
     expect(within(dialog).getByText(/Contract: 2\/2 books · 0\/0 runs/)).toBeTruthy();
-    expect(within(dialog).getByTestId("contract-ready-hint").textContent).toMatch(/discard/i);
+    // No combined flow any more.
+    expect(within(dialog).queryByRole("button", { name: "Meld & discard" })).toBeNull();
 
-    const meldBtn = within(dialog).getByRole("button", { name: "Meld & discard" });
-    expect((meldBtn as HTMLButtonElement).disabled).toBe(true); // no card chosen yet
-
-    pick("King of spades");
-    expect((meldBtn as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(meldBtn);
-    expect(within(dialog).getByText(/Lay down your meld and discard/)).toBeTruthy();
-
+    const confirmMeld = within(dialog).getByRole("button", { name: "Confirm Meld" }) as HTMLButtonElement;
+    expect(confirmMeld.disabled).toBe(false);
     await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: "Confirm" }));
+      fireEvent.click(confirmMeld);
     });
 
     await waitFor(() => expect(moveBodies).toHaveLength(1));
     expect(moveBodies[0].action).toMatchObject({
-      type: "commit",
+      type: "meld",
       groups: [["j1", "j2", "j3"], ["e1", "e2", "w1"]],
-      discardCardId: "k1",
     });
+    expect(moveBodies[0].action).not.toHaveProperty("discardCardId");
+
+    // The meld is now real: on the table for everyone, and it is still my turn.
+    await waitFor(() => expect(document.querySelectorAll("[data-meld-id]").length).toBe(2));
+    expect(screen.queryByRole("button", { name: "Confirm Meld" })).toBeNull(); // melded — builder gone
+
+    // Discard is its own action (reopen the drawer — melding closes it, as in solo).
+    fireEvent.click(await screen.findByRole("button", { name: "Jump to your hand" }));
+    const dialog2 = await screen.findByRole("dialog");
+    pick("King of spades");
+    fireEvent.click(within(dialog2).getByRole("button", { name: "Discard selected card" }));
+    expect(within(dialog2).getByRole("button", { name: "Confirm" })).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(within(dialog2).getByRole("button", { name: "Confirm" }));
+    });
+    await waitFor(() => expect(moveBodies).toHaveLength(2));
+    expect(moveBodies[1].action).toEqual({ type: "discard", discardCardId: "k1" });
+  });
+
+  it("Confirm Meld stays disabled until the staged groups complete the contract", async () => {
+    moveResponse = () => ({ status: 200, body: { status: "active", view: VIEW } });
+    render(<Page />);
+    fireEvent.click(await screen.findByRole("button", { name: "Jump to your hand" }));
+    const dialog = await screen.findByRole("dialog");
+    for (const l of ["Jack of hearts", "Jack of spades", "Jack of clubs"]) pick(l);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Group selected cards" }));
+
+    expect((within(dialog).getByRole("button", { name: "Confirm Meld" }) as HTMLButtonElement).disabled).toBe(true);
+    // Discarding is a separate, always-available action (not held back).
+    pick("King of spades");
+    expect((within(dialog).getByRole("button", { name: "Discard selected card" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(moveBodies).toHaveLength(0);
   });
 
   it("shows a server rejection inside the drawer and keeps it (and the staged groups) on screen", async () => {
     moveResponse = () => ({ status: 409, body: { error: "that meld doesn't complete this round's contract" } });
     const dialog = await openDrawerAndStageContract();
 
-    pick("King of spades");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Meld & discard" }));
     await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: "Confirm" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "Confirm Meld" }));
     });
 
     const alert = await within(dialog).findByRole("alert");
@@ -183,18 +222,6 @@ describe("multiplayer play screen — meld & discard", () => {
     expect(within(dialog).getByRole("alert").textContent).toMatch(/contract/);
     // …nor the staged draft, so the player can fix and retry.
     expect(within(dialog).getByText(/Contract: 2\/2 books/)).toBeTruthy();
-  });
-
-  it("holds back the discard step while staged groups don't match the contract yet", async () => {
-    moveResponse = () => ({ status: 200, body: { status: "active", view: VIEW } });
-    render(<Page />);
-    fireEvent.click(await screen.findByRole("button", { name: "Jump to your hand" }));
-    const dialog = await screen.findByRole("dialog");
-    for (const l of ["Jack of hearts", "Jack of spades", "Jack of clubs"]) pick(l);
-    fireEvent.click(within(dialog).getByRole("button", { name: "Group selected cards" }));
-    pick("King of spades");
-
-    expect(within(dialog).getByText(/don't match this round's contract yet/)).toBeTruthy();
-    expect((within(dialog).getByRole("button", { name: "Discard selected card" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(dialog).getByRole("button", { name: "Confirm Meld" }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

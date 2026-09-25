@@ -236,10 +236,16 @@ describe("useMpGame — staging and committing a turn", () => {
     expect(result.current.groupError).toBeTruthy();
   });
 
-  it("commitTurn with a staged meld plays the meld sound, not the tap sound", async () => {
+  it("confirmMeld sends a standalone meld action (null-safe run starts), plays the meld sound and clears the draft", async () => {
+    const meldedView: RedactedView = {
+      ...BASE_VIEW,
+      yourHand: [card("c4", "K", "hearts")],
+      melds: [{ id: "seat-0-meld-0-book", type: "book", ownerId: "seat-0", cards: [card("c1", "7"), card("c2", "7", "diamonds"), card("c3", "7", "spades")] }],
+      players: BASE_VIEW.players.map((p) => (p.seat === 0 ? { ...p, hasMeldedContract: true, handCount: 1 } : p)),
+    };
     const calls = installFetch({
       state: () => ({ body: { status: "active", view: BASE_VIEW } }),
-      move: () => ({ body: { status: "active", view: { ...BASE_VIEW, melds: [] } } }),
+      move: () => ({ body: { status: "active", view: meldedView } }),
     });
     const { result } = renderHook(() => useMpGame("game-1"));
     await waitFor(() => expect(result.current.status).toBe("active"));
@@ -250,37 +256,81 @@ describe("useMpGame — staging and committing a turn", () => {
       result.current.toggleCard("c3");
     });
     act(() => result.current.stageGroup());
+    expect(result.current.contractStaged).toBe(true);
 
+    let ok = false;
     await act(async () => {
-      await result.current.commitTurn();
+      ok = await result.current.confirmMeld();
     });
+    expect(ok).toBe(true);
 
     const moveCall = calls.find((c) => c.path === "move");
     expect(moveCall?.body).toMatchObject({
       game_id: "game-1",
-      action: { type: "commit", groups: [["c1", "c2", "c3"]] },
+      action: { type: "meld", groups: [["c1", "c2", "c3"]] },
     });
     expect(playMeld).toHaveBeenCalled();
     expect(hapticMedium).toHaveBeenCalled();
     expect(playCardTap).not.toHaveBeenCalled();
+    // Real now: on the table, off the draft, turn still yours and drawn.
+    expect(result.current.draft.groups).toHaveLength(0);
+    expect(result.current.view!.melds).toHaveLength(1);
+    expect(result.current.visibleHand.map((c) => c.id)).toEqual(["c4"]);
+    expect(result.current.myTurn).toBe(true);
+    expect(result.current.youHaveDrawn).toBe(true);
+    expect(result.current.flightEvent).toMatchObject({ kind: "meld" });
   });
 
-  it("commitTurn with only a discard plays the tap sound, not the meld sound", async () => {
-    installFetch({
+  it("layOff sends an immediate layoff action", async () => {
+    const calls = installFetch({
       state: () => ({ body: { status: "active", view: BASE_VIEW } }),
       move: () => ({ body: { status: "active", view: BASE_VIEW } }),
     });
     const { result } = renderHook(() => useMpGame("game-1"));
     await waitFor(() => expect(result.current.status).toBe("active"));
-
-    act(() => result.current.setDiscard("c4"));
     await act(async () => {
-      await result.current.commitTurn();
+      await result.current.layOff("c4", "seat-0-meld-0-book", "high");
     });
+    expect(calls.find((c) => c.path === "move")?.body).toMatchObject({
+      action: { type: "layoff", cardId: "c4", meldId: "seat-0-meld-0-book", position: "high" },
+    });
+    expect(playCardTap).toHaveBeenCalled();
+    expect(playMeld).not.toHaveBeenCalled();
+  });
 
+  it("discard sends a discard action, plays the tap sound and flies the card", async () => {
+    const calls = installFetch({
+      state: () => ({ body: { status: "active", view: BASE_VIEW } }),
+      move: () => ({ body: { status: "active", view: { ...BASE_VIEW, yourTurn: false, currentSeat: 1, youHaveDrawn: false } } }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+
+    await act(async () => {
+      await result.current.discard("c4");
+    });
+    expect(calls.find((c) => c.path === "move")?.body).toMatchObject({
+      action: { type: "discard", discardCardId: "c4" },
+    });
     expect(playCardTap).toHaveBeenCalled();
     expect(hapticLight).toHaveBeenCalled();
     expect(playMeld).not.toHaveBeenCalled();
+    expect(result.current.flightEvent).toMatchObject({ kind: "discard", discard: { id: "c4" } });
+    expect(result.current.myTurn).toBe(false);
+  });
+
+  it("goOut sends a discard action with no card", async () => {
+    const calls = installFetch({
+      state: () => ({ body: { status: "active", view: BASE_VIEW } }),
+      move: () => ({ body: { status: "active", view: BASE_VIEW } }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    await act(async () => {
+      await result.current.goOut();
+    });
+    const action = calls.find((c) => c.path === "move")!.body.action as Record<string, unknown>;
+    expect(action).toEqual({ type: "discard" });
   });
 });
 
@@ -464,7 +514,7 @@ describe("useMpGame — stable, ordered state (multiplayer smoothness)", () => {
     expect(result.current.contractStaged).toBe(true);
   });
 
-  it("surfaces a rejected commit and keeps it (and the draft) through the reconciling refresh", async () => {
+  it("surfaces a rejected meld and keeps it (and the draft) through the reconciling refresh", async () => {
     installFetch({
       state: () => ({ body: { status: "active", view: BASE_VIEW } }),
       move: () => ({ status: 409, body: { error: "that meld doesn't complete this round's contract" } }),
@@ -479,7 +529,7 @@ describe("useMpGame — stable, ordered state (multiplayer smoothness)", () => {
     act(() => result.current.stageGroup());
 
     await act(async () => {
-      await result.current.commitTurn({ discardCardId: "c4" });
+      await result.current.confirmMeld();
     });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 30)); // let the reconcile refresh land

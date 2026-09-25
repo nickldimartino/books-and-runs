@@ -4,13 +4,17 @@ import { CONTRACTS } from "../types";
 import {
   advanceThroughAi,
   applyCommit,
+  applyDiscard,
   applyDraw,
+  applyLayoff,
+  applyMeld,
   applyResign,
   dealGame,
   publicColumns,
   redactFor,
   RESIGN_PENALTY,
 } from "./adapter";
+import { splitMoveDeltas } from "./credit";
 import { MpConfig, MpEngine } from "./types";
 
 function humanConfig(n: number): MpConfig {
@@ -444,5 +448,294 @@ describe("applyCommit — the reported 'couldn't meld' hand", () => {
       )
     );
     expect(r.error).toBeUndefined();
+  });
+});
+
+describe("split actions: applyMeld / applyLayoff / applyDiscard", () => {
+  // Round 1 "2 Books". Extra 7♠ can be laid off onto the 7-book; K♠ is the
+  // discard; 4♥ keeps the hand non-empty.
+  function splitEngine(extra: [string, string][] = []) {
+    const hand = makeHand([
+      ["7", "hearts"], ["7", "diamonds"], ["7", "clubs"],
+      ["9", "hearts"], ["9", "diamonds"], ["9", "clubs"],
+      ["K", "spades"], ["4", "hearts"], ["7", "spades"],
+      ...(extra as never[]),
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 1,
+        players: [
+          makePlayer({ id: "seat-0", hand }),
+          makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) }),
+        ],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    return { eng, hand };
+  }
+  const groupsOf = (h: { id: string }[]) => [
+    [h[0].id, h[1].id, h[2].id],
+    [h[3].id, h[4].id, h[5].id],
+  ];
+
+  it("a valid meld is real immediately but keeps the turn open and doesn't advance", () => {
+    const { eng, hand } = splitEngine();
+    const r = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+    expect(r.error).toBeUndefined();
+    expect(r.meldedThisAction).toHaveLength(2);
+    const s = r.engine.state;
+    expect(s.players[0].hasMeldedContract).toBe(true);
+    expect(s.melds).toHaveLength(2);
+    expect(s.players[0].hand).toHaveLength(3);
+    expect(s.currentPlayerIndex).toBe(0);
+    expect(r.engine.turnDrawn).toBe(true);
+    expect(s.discardPile).toHaveLength(eng.state.discardPile.length);
+    // pure: input untouched
+    expect(eng.state.players[0].hasMeldedContract).toBe(false);
+  });
+
+  it("survives a JSON round trip with null preferredRunStarts (the original bug)", () => {
+    const { eng, hand } = splitEngine();
+    const payload = JSON.parse(
+      JSON.stringify({ type: "meld", groups: groupsOf(hand), preferredRunStarts: [undefined, undefined] })
+    );
+    expect(payload.preferredRunStarts).toEqual([null, null]);
+    const r = applyMeld(eng, 0, payload);
+    expect(r.error).toBeUndefined();
+    expect(r.engine.state.players[0].hasMeldedContract).toBe(true);
+  });
+
+  it("melds an ambiguous run with an explicit start, null for the book", () => {
+    const hand = makeHand([
+      ["3", "hearts"], ["4", "hearts"], ["5", "hearts"], ["2", "clubs"],
+      ["9", "hearts"], ["9", "spades"], ["9", "clubs"],
+      ["K", "spades"], ["4", "clubs"],
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 2,
+        players: [makePlayer({ id: "seat-0", hand }), makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) })],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    const payload = JSON.parse(
+      JSON.stringify({
+        type: "meld",
+        groups: [[hand[4].id, hand[5].id, hand[6].id], [hand[0].id, hand[1].id, hand[2].id, hand[3].id]],
+        preferredRunStarts: [undefined, 1],
+      })
+    );
+    expect(applyMeld(eng, 0, payload).error).toBeUndefined();
+  });
+
+  it("rejects a meld that doesn't complete the contract, leaving the engine untouched", () => {
+    const { eng, hand } = splitEngine();
+    const r = applyMeld(eng, 0, { type: "meld", groups: [[hand[0].id, hand[1].id, hand[2].id]] });
+    expect(r.error).toMatch(/contract/);
+    expect(r.engine).toBe(eng);
+  });
+
+  it("rejects a second meld in the same round", () => {
+    const { eng, hand } = splitEngine();
+    const first = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+    const again = applyMeld(first.engine, 0, { type: "meld", groups: [[hand[6].id]] });
+    expect(again.error).toMatch(/already melded/);
+    expect(again.engine).toBe(first.engine);
+  });
+
+  it("rejects meld out of turn / before drawing / empty / oversized", () => {
+    const { eng, hand } = splitEngine();
+    expect(applyMeld(eng, 1, { type: "meld", groups: groupsOf(hand) }).error).toMatch(/isn't your turn/);
+    expect(applyMeld({ ...eng, turnDrawn: false }, 0, { type: "meld", groups: groupsOf(hand) }).error).toMatch(/draw a card first/);
+    expect(applyMeld(eng, 0, { type: "meld", groups: [] }).error).toBeDefined();
+    const huge = Array.from({ length: 21 }, (_, i) => [`x${i}`]);
+    expect(applyMeld(eng, 0, { type: "meld", groups: huge }).error).toMatch(/too many/);
+    expect(applyMeld(eng, 0, { type: "meld", groups: [Array.from({ length: 21 }, (_, i) => `y${i}`)] }).error).toMatch(/too many/);
+  });
+
+  it("a lay-off before melding is refused; after melding it's immediate and keeps the turn", () => {
+    const { eng, hand } = splitEngine();
+    const meldId = "seat-0-meld-0-book";
+    const early = applyLayoff(eng, 0, { type: "layoff", cardId: hand[8].id, meldId });
+    expect(early.error).toBeDefined();
+
+    const melded = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+    const r = applyLayoff(melded.engine, 0, { type: "layoff", cardId: hand[8].id, meldId });
+    expect(r.error).toBeUndefined();
+    const s = r.engine.state;
+    expect(s.melds.find((m) => m.id === meldId)!.cards).toHaveLength(4);
+    expect(s.players[0].hand.some((c) => c.id === hand[8].id)).toBe(false);
+    expect(s.currentPlayerIndex).toBe(0);
+    expect(r.engine.turnDrawn).toBe(true);
+
+    const bad = applyLayoff(r.engine, 0, { type: "layoff", cardId: hand[7].id, meldId });
+    expect(bad.error).toBeDefined();
+    expect(bad.engine).toBe(r.engine);
+    expect(applyLayoff(r.engine, 1, { type: "layoff", cardId: hand[7].id, meldId }).error).toMatch(/isn't your turn/);
+  });
+
+  it("discard ends the turn and advances; requires a card in hand", () => {
+    const { eng, hand } = splitEngine();
+    const melded = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+
+    const none = applyDiscard(melded.engine, 0, { type: "discard" });
+    expect(none.error).toMatch(/choose a card/);
+    expect(applyDiscard(melded.engine, 0, { type: "discard", discardCardId: "nope" }).error).toMatch(/isn't in your hand/);
+    expect(applyDiscard({ ...melded.engine, turnDrawn: false }, 0, { type: "discard", discardCardId: hand[6].id }).error).toMatch(/draw/);
+
+    const r = applyDiscard(melded.engine, 0, { type: "discard", discardCardId: hand[6].id });
+    expect(r.error).toBeUndefined();
+    expect(r.discarded).toBe(true);
+    expect(r.wentOutThisAction).toBe(false);
+    expect(r.engine.state.currentPlayerIndex).toBe(1);
+    expect(r.engine.turnDrawn).toBe(false);
+    expect(r.engine.state.discardPile.at(-1)!.id).toBe(hand[6].id);
+  });
+
+  it("a discard with no meld at all is a normal turn", () => {
+    const { eng, hand } = splitEngine();
+    const r = applyDiscard(eng, 0, { type: "discard", discardCardId: hand[6].id });
+    expect(r.error).toBeUndefined();
+    expect(r.engine.state.currentPlayerIndex).toBe(1);
+  });
+
+  it("goes out with an explicit no-card discard after melding + laying off everything", () => {
+    const hand = makeHand([
+      ["7", "hearts"], ["7", "diamonds"], ["7", "clubs"],
+      ["9", "hearts"], ["9", "diamonds"], ["9", "clubs"],
+      ["7", "spades"],
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 1,
+        players: [makePlayer({ id: "seat-0", hand }), makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) })],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    const m = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+    const l = applyLayoff(m.engine, 0, { type: "layoff", cardId: hand[6].id, meldId: "seat-0-meld-0-book" });
+    expect(l.engine.state.players[0].hand).toHaveLength(0);
+    expect(l.engine.state.roundOver).toBe(false); // nothing ends until the explicit action
+    const out = applyDiscard(l.engine, 0, { type: "discard" });
+    expect(out.error).toBeUndefined();
+    expect(out.wentOutThisAction).toBe(true);
+    expect(out.discarded).toBe(false);
+    expect(out.engine.roundResults).toHaveLength(1);
+  });
+
+  it("a whole-hand meld round: meld empties the hand, then go out", () => {
+    const hand = makeHand([
+      ["7", "hearts"], ["7", "diamonds"], ["7", "clubs"],
+      ["9", "hearts"], ["9", "diamonds"], ["9", "clubs"],
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: [{ ...CONTRACTS[0], wholeHandMeld: true }],
+        round: 1,
+        players: [makePlayer({ id: "seat-0", hand }), makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) })],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    const m = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+    expect(m.error).toBeUndefined();
+    expect(m.engine.state.players[0].hand).toHaveLength(0);
+    expect(applyDiscard(m.engine, 0, { type: "discard" }).wentOutThisAction).toBe(true);
+  });
+
+  it("the legacy commit action still works after the same setup", () => {
+    const { eng, hand } = splitEngine();
+    const r = applyCommit(eng, humanConfig(2), 0, {
+      type: "commit",
+      groups: groupsOf(hand),
+      discardCardId: hand[6].id,
+    });
+    expect(r.error).toBeUndefined();
+    expect(r.engine.state.currentPlayerIndex).toBe(1);
+  });
+
+  it("a meld then a legacy commit (no groups) also works (mixed-client safety)", () => {
+    const { eng, hand } = splitEngine();
+    const m = applyMeld(eng, 0, { type: "meld", groups: groupsOf(hand) });
+    const r = applyCommit(m.engine, humanConfig(2), 0, { type: "commit", discardCardId: hand[6].id });
+    expect(r.error).toBeUndefined();
+  });
+});
+
+describe("splitMoveDeltas — server-side counter crediting across split actions", () => {
+  it("credits melds on meld, lay-off on layoff, and the round win on a go-out", () => {
+    const hand = makeHand([
+      ["7", "hearts"], ["7", "diamonds"], ["7", "clubs"],
+      ["9", "hearts"], ["9", "diamonds"], ["9", "clubs"],
+      ["7", "spades"],
+    ]);
+    let eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 1,
+        players: [makePlayer({ id: "seat-0", hand }), makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) })],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    const g = [[hand[0].id, hand[1].id, hand[2].id], [hand[3].id, hand[4].id, hand[5].id]];
+
+    const meld = { type: "meld" as const, groups: g };
+    const mr = applyMeld(eng, 0, meld);
+    const md = splitMoveDeltas(eng.state, 0, meld, mr);
+    expect(Object.keys(md).length).toBeGreaterThan(0);
+    expect(md.cards_discarded).toBeUndefined();
+    expect(md.rounds_won).toBeUndefined();
+    eng = mr.engine;
+
+    const lo = { type: "layoff" as const, cardId: hand[6].id, meldId: "seat-0-meld-0-book" };
+    const lr = applyLayoff(eng, 0, lo);
+    const ld = splitMoveDeltas(eng.state, 0, lo, {});
+    expect(Object.keys(ld).length).toBeGreaterThan(0);
+    expect(ld.rounds_won).toBeUndefined();
+    eng = lr.engine;
+
+    const out = { type: "discard" as const };
+    const or = applyDiscard(eng, 0, out);
+    const od = splitMoveDeltas(eng.state, 0, out, or);
+    expect(od.cards_discarded).toBeUndefined();
+    expect(od.rounds_won).toBe(1);
+    expect(od.rounds_won_no_discard).toBe(1);
+  });
+
+  it("a plain discard credits cards_discarded and no round win", () => {
+    const hand = makeHand([["K", "spades"], ["4", "hearts"]]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 1,
+        players: [makePlayer({ id: "seat-0", hand }), makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) })],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    const mv = { type: "discard" as const, discardCardId: hand[0].id };
+    const r = applyDiscard(eng, 0, mv);
+    const d = splitMoveDeltas(eng.state, 0, mv, r);
+    expect(d.cards_discarded).toBe(1);
+    expect(d.rounds_won).toBeUndefined();
   });
 });

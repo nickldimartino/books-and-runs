@@ -2,8 +2,11 @@
 
 // The multiplayer play-screen hook — everything /multiplayer/play needs to
 // render and drive one game. Fetches the redacted view, exposes a local
-// turn draft (select cards, group them, stage lay-offs and a discard),
-// and submits a turn as two calls: `draw` then `commitTurn`. Stats and
+// draft of the group(s) being built (select cards, "Group selected cards"),
+// and plays a turn as individual server actions that mirror solo:
+// `draw`, `confirmMeld` (commits the staged groups — real immediately),
+// `layOff` (one card, immediate), then `discard` / `goOut` (ends the turn).
+// Each is validated by the real engine server-side. Stats and
 // achievement-counter crediting both happen server-side now (mp/index.ts,
 // derived from whatever it just verified — see its own doc for why this
 // moved off the client) — this hook just diffs a progress snapshot (taken
@@ -46,19 +49,13 @@ export interface StagedGroup {
   runStartIndex?: number;
 }
 
-export interface StagedLayoff {
-  cardId: string;
-  meldId: string;
-  position?: "low" | "high";
-}
-
+/** Only the group(s) being built are local; a meld, lay-off or discard is a
+ * real server action the moment it's confirmed. */
 interface Draft {
   groups: StagedGroup[];
-  layoffs: StagedLayoff[];
-  discardCardId: string | null;
 }
 
-const EMPTY_DRAFT: Draft = { groups: [], layoffs: [], discardCardId: null };
+const EMPTY_DRAFT: Draft = { groups: [] };
 
 /** A run whose wild could stand in at more than one spot — the player picks
  * (same prompt solo shows; see game/page.tsx's pendingGroupChoice). */
@@ -73,7 +70,9 @@ export interface PendingRunChoice {
  * only; the page derives opponents' from view changes. */
 export type MpFlightEvent =
   | { id: number; kind: "draw"; card: Card; fromDiscard: boolean }
-  | { id: number; kind: "commit"; discard: Card | null; melded: Card[]; layoffs: { card: Card; meldId: string }[] };
+  | { id: number; kind: "meld"; melded: Card[] }
+  | { id: number; kind: "layoff"; card: Card; meldId: string }
+  | { id: number; kind: "discard"; discard: Card | null };
 
 /** What the server-held state looks like once reconciled: the raw response
  * plus its validated view, both structurally shared with the previous one so
@@ -96,7 +95,7 @@ export interface UseMpGame {
   pending: MpStateResponse | null; // populated while status === "pending"
   error: string | null;
   /** Clears a surfaced action error (the play screen shows it inside the
-   * hand drawer too, where the user is when a commit is rejected). */
+   * hand drawer too, where the user is when a move is rejected). */
   dismissError: () => void;
   /** A background refresh failed while a game is on screen — the board keeps
    * showing the last known state; the screen shows a soft notice. */
@@ -140,15 +139,16 @@ export interface UseMpGame {
   clearSelection: () => void;
   stageGroup: (preferredRunStart?: number) => void;
   unstageGroup: (id: string) => void;
-  stageLayoff: (cardId: string, meldId: string, position?: "low" | "high") => void;
-  unstageLayoff: (cardId: string) => void;
-  setDiscard: (cardId: string | null) => void;
-  /** `discardCardId` lets a caller commit with a discard chosen in the same
-   * tap as the confirmation, without waiting for a prior `setDiscard` to
-   * flush through a re-render first (this reads `draft` from a closure, so
-   * a `setDiscard` immediately followed by `commitTurn()` in one handler
-   * would still see the pre-update draft). */
-  commitTurn: (overrides?: { discardCardId?: string | null }) => Promise<void>;
+  /** Commit the staged group(s) as this round's contract — immediate, the
+   * turn stays open. Resolves true on success. */
+  confirmMeld: () => Promise<boolean>;
+  /** Lay one card off onto a table meld — immediate, the turn stays open. */
+  layOff: (cardId: string, meldId: string, position?: "low" | "high") => Promise<boolean>;
+  /** Discard one card — ends the turn. */
+  discard: (cardId: string) => Promise<boolean>;
+  /** Go out with an already-empty hand (after melding / laying off
+   * everything) — ends the round. */
+  goOut: () => Promise<boolean>;
   resign: () => Promise<void>;
   /** Withdraws a game you're hosting that's still waiting on invitees —
    * only meaningful while `status === "pending"` and you're the host.
@@ -292,10 +292,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
     if (!yourHand) return;
     const ids = new Set(yourHand.map((c) => c.id));
     setDraft((prev) => {
-      const ok =
-        prev.groups.every((g) => g.cardIds.every((id) => ids.has(id))) &&
-        prev.layoffs.every((l) => ids.has(l.cardId)) &&
-        (!prev.discardCardId || ids.has(prev.discardCardId));
+      const ok = prev.groups.every((g) => g.cardIds.every((id) => ids.has(id)));
       return ok ? prev : EMPTY_DRAFT;
     });
     setSelectedIds((prev) => (prev.every((id) => ids.has(id)) ? prev : prev.filter((id) => ids.has(id))));
@@ -395,8 +392,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const stagedCardIds = useMemo(() => {
     const s = new Set<string>();
     draft.groups.forEach((g) => g.cardIds.forEach((id) => s.add(id)));
-    draft.layoffs.forEach((l) => s.add(l.cardId));
-    if (draft.discardCardId) s.add(draft.discardCardId);
     return s;
   }, [draft]);
 
@@ -546,67 +541,72 @@ export function useMpGame(gameId: string | null): UseMpGame {
     setDraft((prev) => ({ ...prev, groups: prev.groups.filter((g) => g.id !== id) }));
   }, []);
 
-  const stageLayoff = useCallback((cardId: string, meldId: string, position?: "low" | "high") => {
-    setDraft((prev) => ({
-      ...prev,
-      layoffs: [...prev.layoffs.filter((l) => l.cardId !== cardId), { cardId, meldId, position }],
-    }));
-  }, []);
+  const cardOf = useCallback((id: string) => view?.yourHand.find((c) => c.id === id), [view?.yourHand]);
 
-  const unstageLayoff = useCallback((cardId: string) => {
-    setDraft((prev) => ({ ...prev, layoffs: prev.layoffs.filter((l) => l.cardId !== cardId) }));
-  }, []);
-
-  const setDiscard = useCallback((cardId: string | null) => {
-    setDraft((prev) => ({ ...prev, discardCardId: cardId }));
-  }, []);
-
-  const commitTurn = useCallback(async (overrides?: { discardCardId?: string | null }) => {
-    if (!supabase || !gameId || !view || !contract) return;
-    const preDraft =
-      overrides && "discardCardId" in overrides
-        ? { ...draft, discardCardId: overrides.discardCardId ?? null }
-        : draft;
-    const cardOf = (id: string) => view.yourHand.find((c) => c.id === id);
-    const flight = {
-      discard: preDraft.discardCardId ? cardOf(preDraft.discardCardId) ?? null : null,
-      melded: preDraft.groups.flatMap((g) => g.cardIds).map(cardOf).filter((c): c is Card => !!c),
-      layoffs: preDraft.layoffs
-        .map((l) => ({ card: cardOf(l.cardId), meldId: l.meldId }))
-        .filter((l): l is { card: Card; meldId: string } => !!l.card),
-    };
-
+  const confirmMeld = useCallback(async (): Promise<boolean> => {
+    if (!supabase || !gameId || !view || draft.groups.length === 0) return false;
+    const melded = draft.groups.flatMap((g) => g.cardIds).map(cardOf).filter((c): c is Card => !!c);
     const res = await run(() =>
       submitMpMove(supabase!, gameId, {
-        type: "commit",
-        groups: preDraft.groups.length ? preDraft.groups.map((g) => g.cardIds) : undefined,
+        type: "meld",
+        groups: draft.groups.map((g) => g.cardIds),
         // JSON has no `undefined`: an unset entry arrives server-side as
         // null (the server normalises that back to "no preference").
-        preferredRunStarts: preDraft.groups.length ? preDraft.groups.map((g) => g.runStartIndex) : undefined,
-        layoffs: preDraft.layoffs.length ? preDraft.layoffs : undefined,
-        discardCardId: preDraft.discardCardId ?? undefined,
+        preferredRunStarts: draft.groups.map((g) => g.runStartIndex),
       })
     );
-    if (!res) return; // failed — nothing applied server-side; the draft is kept so it can be fixed
+    if (!res) return false; // rejected — nothing applied server-side; the staged group stays so it can be fixed
+    setDraft(EMPTY_DRAFT);
+    setSelectedIds([]);
+    setGroupError(null);
+    setFlightEvent({ id: ++flightSeq.current, kind: "meld", melded });
+    playMeld();
+    hapticMedium();
+    return true;
+  }, [gameId, view, draft.groups, cardOf, run]);
 
-    setFlightEvent({ id: ++flightSeq.current, kind: "commit", ...flight });
-    setDrawnCardId(null);
-
-    // The round/game-over chime is handled by its own transition effect
-    // above (it needs to fire from a realtime refresh too, not just your
-    // own commit) — this is just the per-turn "you melded / played a card"
-    // feedback, same split local play's confirmMeld/layOff/discard use.
-    // Achievement-counter crediting for this move now happens server-side
-    // (mp/index.ts's handleMove, derived from what it just verified) —
-    // see this file's own top-of-file doc.
-    if (preDraft.groups.length > 0) {
-      playMeld();
-      hapticMedium();
-    } else {
+  const layOff = useCallback(
+    async (cardId: string, meldId: string, position?: "low" | "high"): Promise<boolean> => {
+      if (!supabase || !gameId) return false;
+      const card = cardOf(cardId);
+      const res = await run(() => submitMpMove(supabase!, gameId, { type: "layoff", cardId, meldId, position }));
+      if (!res) return false;
+      setSelectedIds((prev) => prev.filter((id) => id !== cardId));
+      if (card) setFlightEvent({ id: ++flightSeq.current, kind: "layoff", card, meldId });
       playCardTap();
       hapticLight();
-    }
-  }, [gameId, draft, view, contract, run]);
+      return true;
+    },
+    [gameId, cardOf, run]
+  );
+
+  const discard = useCallback(
+    async (cardId: string): Promise<boolean> => {
+      if (!supabase || !gameId) return false;
+      const card = cardOf(cardId) ?? null;
+      const res = await run(() => submitMpMove(supabase!, gameId, { type: "discard", discardCardId: cardId }));
+      if (!res) return false;
+      setSelectedIds([]);
+      setDrawnCardId(null);
+      setFlightEvent({ id: ++flightSeq.current, kind: "discard", discard: card });
+      playCardTap();
+      hapticLight();
+      return true;
+    },
+    [gameId, cardOf, run]
+  );
+
+  const goOut = useCallback(async (): Promise<boolean> => {
+    if (!supabase || !gameId) return false;
+    const res = await run(() => submitMpMove(supabase!, gameId, { type: "discard" }));
+    if (!res) return false;
+    setSelectedIds([]);
+    setDrawnCardId(null);
+    // The round/game-over chime is handled by its own transition effect
+    // above (it must also fire from a realtime refresh after an opponent
+    // goes out), so there is nothing more to play here.
+    return true;
+  }, [gameId, run]);
 
   const resign = useCallback(async () => {
     if (!supabase || !gameId) return;
@@ -727,10 +727,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
     clearSelection,
     stageGroup,
     unstageGroup,
-    stageLayoff,
-    unstageLayoff,
-    setDiscard,
-    commitTurn,
+    confirmMeld,
+    layOff,
+    discard,
+    goOut,
     resign,
     cancelPending,
     respondPending,

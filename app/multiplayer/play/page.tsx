@@ -2,18 +2,18 @@
 
 // The multiplayer game screen (`?g=<id>`). Driven by `useMpGame`, which
 // talks to the Edge Function and only ever holds this player's redacted
-// view. A turn is two round trips: draw (server returns the card), stage
-// the whole turn locally in the meld builder, then commit (groups +
-// lay-offs + discard, atomic). Shows "waiting for X" when it's not your
+// view. A turn is a sequence of individual server actions that mirror solo:
+// draw, then (optionally) "Group selected cards" + "Confirm Meld" (real and
+// visible to everyone immediately), lay-offs (each immediate), and finally
+// "Discard selected card" (or "Go out") which ends the turn. Shows "waiting for X" when it's not your
 // turn, the round summary between rounds, and standings + achievement
 // unlocks at game over. Manual resign only.
 //
 // The board (piles, table melds, and the hand drawer — DraggableHand plus
 // Sort by suit/rank) mirrors solo/pass-and-play's game screen (see
-// game/page.tsx) as closely as this mode's different turn model allows: a
-// turn here is staged then committed as one atomic move, so the drawer's
-// meld-builder panel reflects useMpGame's draft/commitTurn instead of
-// GameContext's immediate confirmMeld/layOff/discard. Hand sort/reorder is
+// game/page.tsx): the drawer's meld-builder panel reflects useMpGame's
+// staged group(s) and its confirmMeld/layOff/discard/goOut, the server-backed
+// equivalents of GameContext's actions of the same names. Hand sort/reorder is
 // purely local display order (see handSort.ts) — there's no MP move to
 // persist it as, and the server's own card order isn't meaningful here.
 
@@ -221,7 +221,7 @@ export default function MultiplayerPlayPage() {
   );
   const yourMelds = view?.melds;
   const meldedAlready = !!view?.players.find((p) => p.userId === user?.id)?.hasMeldedContract;
-  const canLayOffNow = meldedAlready || g.draft.groups.length > 0;
+  const canLayOffNow = meldedAlready;
   const layoffEligibleIds = useMemo(() => {
     if (!canLayOffNow || !yourMelds) return undefined;
     return new Set(
@@ -262,14 +262,23 @@ export default function MultiplayerPlayPage() {
       ]);
       return;
     }
-    ownDiscardIdRef.current = flightEvent.discard?.id ?? null;
-    const handRect = document.querySelector('[data-tutorial="hand"]')?.getBoundingClientRect() ?? null;
-    if (flightEvent.discard) {
-      fl?.fly([{ card: flightEvent.discard, from: handTarget, to: discardPileElRef.current }]);
+    if (flightEvent.kind === "discard") {
+      ownDiscardIdRef.current = flightEvent.discard?.id ?? null;
+      if (flightEvent.discard) {
+        fl?.fly([{ card: flightEvent.discard, from: handTarget, to: discardPileElRef.current }]);
+      }
+      return;
     }
+    if (flightEvent.kind === "layoff") {
+      const meldEl = document.querySelector<HTMLElement>(`[data-meld-id="${flightEvent.meldId}"]`) ?? tableMeldsElRef.current;
+      fl?.fly([{ card: flightEvent.card, from: handTarget, to: meldEl }]);
+      return;
+    }
+    // kind === "meld": same as solo — close the drawer so the fresh melds
+    // are visible, then fly the cards onto Table melds once that layout has
+    // settled.
+    const handRect = document.querySelector('[data-tutorial="hand"]')?.getBoundingClientRect() ?? null;
     if (flightEvent.melded.length > 0) {
-      // Same as solo: close the drawer so the fresh melds are visible, then
-      // fly the cards onto Table melds once that layout has settled.
       setHandDrawerOpen(false);
       const cards = flightEvent.melded;
       requestAnimationFrame(() =>
@@ -284,10 +293,6 @@ export default function MultiplayerPlayPage() {
           cardFlightRef.current?.fly(cards.map((c, i) => ({ card: c, from: handRect, to: dest, delay: i * 55 })));
         })
       );
-    }
-    for (const lo of flightEvent.layoffs) {
-      const meldEl = document.querySelector<HTMLElement>(`[data-meld-id="${lo.meldId}"]`) ?? tableMeldsElRef.current;
-      fl?.fly([{ card: lo.card, from: handTarget, to: meldEl }]);
     }
   }, [flightEvent, handDrawerOpen]);
 
@@ -599,15 +604,9 @@ export default function MultiplayerPlayPage() {
   const canLayOff = canLayOffNow;
 
   const { stagedBooks, stagedRuns, contractStaged } = g;
-  // Groups are staged but they aren't (yet) exactly this round's contract:
-  // committing now would only be refused by the server, so the discard step
-  // is held back and the player is told why.
-  const stagedIncomplete = !alreadyMelded && g.draft.groups.length > 0 && !contractStaged;
-  const goingOut = g.visibleHand.length === 0 && (alreadyMelded || contractStaged);
-  // The only remaining caller of this is the "Go out" button — a normal
-  // turn now ends through the discard-confirm dialog's own commitTurn call
-  // (see the drawer below), which sends its discard straight to commitTurn
-  // instead of staging it via g.setDiscard first.
+  // Hand emptied by melding / laying off: nothing to discard, so the turn
+  // ends with an explicit "Go out" (solo does the same once the hand is empty).
+  const goingOut = view.yourHand.length === 0 && alreadyMelded;
   const canEndTurn = acting && goingOut && !g.busy;
   const oneSelected = g.selectedIds.length === 1;
 
@@ -641,9 +640,8 @@ export default function MultiplayerPlayPage() {
     if (!layoffArmed || !selectedCard) return;
     const opts = layOffOptions(selectedCard, meld);
     if (opts.length === 0) return;
-    g.stageLayoff(selectedCard.id, meld.id, opts.length === 1 ? opts[0] : "low");
-    g.clearSelection();
     setLayoffArmed(false);
+    void g.layOff(selectedCard.id, meld.id, opts.length === 1 ? opts[0] : "low");
   }
 
   // Arming a lay-off means tapping a meld on the page *behind* the drawer's
@@ -953,16 +951,9 @@ export default function MultiplayerPlayPage() {
             {/* Same three-part shape as solo/pass-and-play's drawer (see
                 game/page.tsx's buildMeldSection/discardSection/handSection):
                 a build-meld card, a lay-off/discard row, then the hand
-                itself. The one structural difference this mode can't drop —
-                see this file's own top-of-file comment — is that nothing
-                here is real until commitTurn: "Group selected cards" only
-                stages a group (solo's matching button does too, but solo
-                also has a separate "Confirm Meld" that immediately commits
-                it — there's no atomic-turn model to wait for), and
-                "Discard selected card" 's confirm step below sends the
-                whole staged turn (groups + lay-offs + the chosen discard)
-                in the one commit that ends it, rather than solo's discard
-                alone (solo's meld/lay-offs are already real by that point). */}
+                itself. Every button is its own server action, like solo's:
+                Confirm Meld lays the contract down for everyone at once,
+                lay-offs are immediate, Discard/Go out ends the turn. */}
             {isMyTurn && !alreadyMelded && (
               <section
                 data-tutorial="build-meld"
@@ -1038,6 +1029,14 @@ export default function MultiplayerPlayPage() {
                   >
                     {t("game.buildMeld.groupSelected")}
                   </button>
+                  <button
+                    data-tutorial="confirm-meld"
+                    onClick={() => void g.confirmMeld()}
+                    disabled={!drawn || !contractStaged || !!g.pendingRunChoice || g.busy}
+                    className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {t("game.buildMeld.confirmMeld")}
+                  </button>
                 </div>
               </section>
             )}
@@ -1057,39 +1056,10 @@ export default function MultiplayerPlayPage() {
                     </span>
                   </p>
                 )}
-                {acting && contractStaged && !goingOut && (
-                  <p
-                    data-testid="contract-ready-hint"
-                    className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-center text-xs font-medium text-[var(--heading)]"
-                  >
-                    {t("multiplayer.contractReadyHint")}
-                  </p>
-                )}
-                {acting && stagedIncomplete && (
-                  <p className="text-center text-xs text-[var(--danger)]">{t("multiplayer.stagedIncomplete")}</p>
-                )}
-                {g.draft.layoffs.length > 0 && (
-                  <ul className="flex flex-wrap justify-center gap-2">
-                    {g.draft.layoffs.map((lo) => {
-                      const c = view.yourHand.find((x) => x.id === lo.cardId);
-                      return (
-                        <li key={lo.cardId}>
-                          <button
-                            onClick={() => g.unstageLayoff(lo.cardId)}
-                            className="rounded-md border border-[var(--accent)]/50 px-2 py-1 text-xs text-[var(--accent)]"
-                          >
-                            {c ? label(c, t("card.jokerAbbr")) : t("multiplayer.card")} ✕
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-
                 {confirmingDiscard ? (
                   <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
                     <span className="text-sm text-[var(--muted)]">
-                      {t(contractStaged ? "multiplayer.meldConfirmPrompt" : "game.discard.confirmPrompt", {
+                      {t("game.discard.confirmPrompt", {
                         card: label(view.yourHand.find((c) => c.id === confirmingDiscard)!, t("card.jokerAbbr")),
                       })}
                     </span>
@@ -1097,9 +1067,8 @@ export default function MultiplayerPlayPage() {
                       onClick={async () => {
                         const cardId = confirmingDiscard;
                         if (!cardId) return;
-                        await g.commitTurn({ discardCardId: cardId });
-                        setConfirmingDiscard(null);
-                        g.clearSelection();
+                        const ok = await g.discard(cardId);
+                        if (ok) setConfirmingDiscard(null);
                       }}
                       disabled={g.busy}
                       className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-40"
@@ -1127,19 +1096,15 @@ export default function MultiplayerPlayPage() {
                     {!goingOut && (
                       <button
                         onClick={() => oneSelected && setConfirmingDiscard(g.selectedIds[0])}
-                        disabled={!drawn || !oneSelected || stagedIncomplete}
-                        className={
-                          contractStaged
-                            ? "rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
-                            : "rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
-                        }
+                        disabled={!drawn || !oneSelected || g.busy}
+                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {contractStaged ? t("multiplayer.meldAndDiscard") : t("game.discard.discardSelected")}
+                        {t("game.discard.discardSelected")}
                       </button>
                     )}
                     {goingOut && (
                       <button
-                        onClick={() => g.commitTurn()}
+                        onClick={() => void g.goOut()}
                         disabled={!canEndTurn}
                         className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
                       >

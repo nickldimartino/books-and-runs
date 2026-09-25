@@ -410,20 +410,17 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
       if ((await b.getAttribute("aria-pressed")) === "true") await b.click();
     }
 
-    // ── (A) staged contract: hint, primary button, rejection, commit ────
+    // ── (A) staged contract: Confirm Meld, rejection, real meld, discard ──
     const stageSet = async (names: string[]) => {
       for (const name of names) await dialog.getByRole("button", { name, exact: true }).click();
       await dialog.getByRole("button", { name: /group selected cards/i }).click();
     };
     await stageSet(["9 of clubs", "9 of spades", "9 of diamonds"]);
     await stageSet(["5 of hearts", "6 of hearts", "7 of hearts", "8 of hearts"]);
-    const hint = dialog.getByTestId("contract-ready-hint");
-    await expect(hint).toBeVisible();
-    await expect(hint).toContainText(/contract is staged/i);
-    const meldBtn = dialog.getByRole("button", { name: /^meld & discard$/i });
+    // The combined flow is gone: melding and discarding are separate actions.
+    await expect(dialog.getByRole("button", { name: /^meld & discard$/i })).toHaveCount(0);
+    const meldBtn = dialog.getByRole("button", { name: /^confirm meld$/i });
     await expect(meldBtn).toBeVisible();
-    await expect(meldBtn).toBeDisabled(); // no discard picked yet
-    await dialog.getByRole("button", { name: "3 of clubs", exact: true }).click();
     await expect(meldBtn).toBeEnabled();
     await testInfo.attach("04-contract-staged.png", { body: await pageA.screenshot(), contentType: "image/png" });
 
@@ -436,32 +433,42 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
       await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: REJECT }) });
     });
     await meldBtn.click();
-    await dialog.getByRole("button", { name: /^confirm$/i }).click();
     const alert = dialog.getByRole("alert");
     await expect(alert).toContainText(REJECT);
     await pageA.waitForTimeout(3000);
     await expect(alert).toContainText(REJECT); // persists (no auto-dismiss)
-    await expect(hint).toBeVisible(); // staged contract kept
+    await expect(meldBtn).toBeEnabled(); // staged contract kept
     expect(rejected).toBe(1);
     await testInfo.attach("05-rejection.png", { body: await pageA.screenshot(), contentType: "image/png" });
     await pageA.unroute("**/functions/v1/mp/move");
 
-    // Retry for real: the commit succeeds and the turn passes.
-    await dialog.getByRole("button", { name: "3 of clubs", exact: true }).click();
+    // Retry for real: Confirm Meld succeeds immediately — the melds are
+    // real and visible on the table, and it is still A's turn.
     await begin(pageA);
     await meldBtn.click();
-    await dialog.getByRole("button", { name: /^confirm$/i }).click();
-    await expect(alert).toHaveCount(0, { timeout: 20_000 });
-    const commit = await measure(pageA, "mp: meld & discard commit", results, 1500);
+    await expect(pageA.locator("[data-meld-id]")).toHaveCount(2, { timeout: 20_000 });
+    const commit = await measure(pageA, "mp: confirm meld", results, 1500);
     expect(commit.remounted).toEqual([]);
     expect(commit.gained.length).toBe(0);
-    const afterCommit = (await getMpState(clientA, gameId)).view!;
-    expect(afterCommit.melds.length).toBe(2);
+    const afterMeld = (await getMpState(clientA, gameId)).view!;
+    expect(afterMeld.melds.length).toBe(2);
+    expect(afterMeld.currentSeat).toBe(afterMeld.yourSeat); // turn stays open
+
+    // Then the discard is its own action that ends the turn. (A successful
+    // meld closes the drawer on purpose — see the flight effect in
+    // multiplayer/play/page.tsx — so reopen it.)
+    await pageA.getByRole("button", { name: /jump to your hand/i }).click();
+    await dialog.getByRole("button", { name: "3 of clubs", exact: true }).click();
+    await dialog.getByRole("button", { name: /discard selected card/i }).click();
+    await begin(pageA);
+    await dialog.getByRole("button", { name: /^confirm$/i }).click();
+    await expect(alert).toHaveCount(0, { timeout: 20_000 });
+    const discardM = await measure(pageA, "mp: discard after meld", results, 1500);
+    expect(discardM.remounted).toEqual([]);
+    const afterDiscard = (await getMpState(clientA, gameId)).view!;
+    expect(afterDiscard.currentSeat).not.toBe(afterDiscard.yourSeat);
 
     // ── (i) opponent (B, then the AI seat) moves while A watches ─────────
-    // (A successful meld closes the drawer on purpose — see the flight effect
-    // in multiplayer/play/page.tsx — so reopen it to watch the hand.)
-    await pageA.getByRole("button", { name: /jump to your hand/i }).click();
     await expect(handCards).toHaveCount(6);
     await pageA.waitForTimeout(900);
     await begin(pageA);

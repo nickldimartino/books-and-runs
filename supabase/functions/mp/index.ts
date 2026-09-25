@@ -22,13 +22,17 @@ import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerSt
 // `node scripts/bundle-mp-engine.mjs` before every deploy.
 import {
   applyCommit,
+  applyDiscard,
   applyDraw,
+  applyLayoff,
+  applyMeld,
   applyResign,
   dealGame,
   publicColumns,
   redactFor,
 } from "./_engine/mp/adapter.ts";
 import { MpConfig, MpEngine } from "./_engine/mp/types.ts";
+import { splitMoveDeltas } from "./_engine/mp/credit.ts";
 import { layOffOptions } from "./_engine/meld.ts";
 import {
   CounterDeltas,
@@ -750,6 +754,42 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
     if (res.wentOutThisCommit) {
       mergeDeltas(counterDeltas, roundWonDeltas(contract, !!discardCardId));
     }
+  } else if (action?.type === "meld") {
+    // Split-turn actions: meld / layoff are immediate and leave the turn
+    // open (turnDrawn stays true, no AI runs, turn_user_id is unchanged so
+    // notifyTurn below sends nothing); discard ends the turn.
+    const move = {
+      type: "meld" as const,
+      groups: Array.isArray(action.groups) ? (action.groups as string[][]) : [],
+      preferredRunStarts: Array.isArray(action.preferredRunStarts)
+        ? (action.preferredRunStarts as (number | undefined)[])
+        : undefined,
+    };
+    const res = applyMeld(engine, mine.seat, move);
+    if (res.error) return json({ error: res.error }, 409);
+    engine = res.engine;
+    mergeDeltas(counterDeltas, splitMoveDeltas(preState, mine.seat, move, res));
+  } else if (action?.type === "layoff") {
+    const pos = action.position === "low" || action.position === "high" ? action.position : undefined;
+    const move = {
+      type: "layoff" as const,
+      cardId: String(action.cardId ?? ""),
+      meldId: String(action.meldId ?? ""),
+      position: pos,
+    };
+    const res = applyLayoff(engine, mine.seat, move);
+    if (res.error) return json({ error: res.error }, 409);
+    engine = res.engine;
+    mergeDeltas(counterDeltas, splitMoveDeltas(preState, mine.seat, move, res));
+  } else if (action?.type === "discard") {
+    const move = {
+      type: "discard" as const,
+      discardCardId: typeof action.discardCardId === "string" ? action.discardCardId : undefined,
+    };
+    const res = applyDiscard(engine, mine.seat, move);
+    if (res.error) return json({ error: res.error }, 409);
+    engine = res.engine;
+    mergeDeltas(counterDeltas, splitMoveDeltas(preState, mine.seat, move, res));
   } else {
     return json({ error: "unknown action" }, 400);
   }

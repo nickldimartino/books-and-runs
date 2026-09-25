@@ -9,8 +9,15 @@
 // results). Operations:
 //   - dealGame        — build the initial engine from an MpConfig.
 //   - applyDraw       — the first half of a turn; returns the drawn card.
-//   - applyCommit     — the second half: melds + lay-offs + discard, atomic,
-//                       then advanceThroughAi runs any AI seats that follow.
+//   - applyMeld       — lay down this round's contract (mirrors solo's
+//                       "Confirm Meld"): real immediately, turn stays open.
+//   - applyLayoff     — lay one card off onto a table meld; same, immediate.
+//   - applyDiscard    — the turn-ending action: discard one card (or go out
+//                       when the hand is already empty), then
+//                       advanceThroughAi runs any AI seats that follow.
+//   - applyCommit     — legacy all-in-one turn (melds + lay-offs + discard,
+//                       atomic). No longer used by the UI; kept so an older
+//                       deployed client keeps working.
 //   - applyResign     — drop a seat (RESIGN_PENALTY); force-finish if <2 humans.
 //   - redactFor(seat) — strip the state down to what one seat may see: own
 //                       hand, everyone's counts, public melds/discard — never
@@ -267,6 +274,113 @@ export function applyCommit(
 
   eng.turnDrawn = false;
   return { engine: advanceThroughAi(eng), wentOutThisCommit, meldedThisCommit };
+}
+
+/** Shared preconditions for the mid-turn actions: game live, your turn,
+ * you've drawn. */
+function turnGuard(eng: MpEngine, seat: number): string | undefined {
+  const s = eng.state;
+  if (s.roundOver || s.gameOver) return "the round is over";
+  if (s.currentPlayerIndex !== seat) return "it isn't your turn";
+  if (!eng.turnDrawn) return "draw a card first";
+  return undefined;
+}
+
+/**
+ * Lay down this round's contract as its own action (solo's "Confirm Meld").
+ * Validated by the real engine; on success the melds are on the table and
+ * out of your hand, but the turn stays open (`turnDrawn` remains true, no AI
+ * advances) — lay off and/or discard next. All-or-nothing.
+ */
+export function applyMeld(
+  engIn: MpEngine,
+  seat: number,
+  action: Extract<MpAction, { type: "meld" }>
+): { engine: MpEngine; error?: string; meldedThisAction?: Meld[] } {
+  const bad = turnGuard(engIn, seat);
+  if (bad) return { engine: engIn, error: bad };
+  if (!Array.isArray(action.groups) || action.groups.length === 0) {
+    return { engine: engIn, error: "choose the cards to meld" };
+  }
+  if (action.groups.length > MAX_GROUPS_PER_COMMIT || action.groups.some((g) => !Array.isArray(g) || g.length > MAX_CARDS_PER_GROUP)) {
+    return { engine: engIn, error: "too many cards to meld at once" };
+  }
+  if (engIn.state.players[seat].hasMeldedContract) {
+    return { engine: engIn, error: "you've already melded this round" };
+  }
+
+  const eng = clone(engIn);
+  // A JSON round trip turns `undefined` entries into `null`; the engine only
+  // understands "no preference" as undefined, so normalise (see applyCommit).
+  const preferred = action.preferredRunStarts?.map((n) =>
+    typeof n === "number" && Number.isInteger(n) ? n : undefined
+  );
+  const melds = meldChosenGroups(eng.state, action.groups, preferred);
+  if (!melds) return { engine: engIn, error: "that meld doesn't complete this round's contract" };
+  return { engine: eng, meldedThisAction: melds };
+}
+
+/**
+ * Lay one card off onto a meld already on the table. Immediate; the turn
+ * stays open. Requires having melded your own contract (engine rule).
+ */
+export function applyLayoff(
+  engIn: MpEngine,
+  seat: number,
+  action: Extract<MpAction, { type: "layoff" }>
+): { engine: MpEngine; error?: string } {
+  const bad = turnGuard(engIn, seat);
+  if (bad) return { engine: engIn, error: bad };
+  if (typeof action.cardId !== "string" || typeof action.meldId !== "string") {
+    return { engine: engIn, error: "one of those lay-offs isn't valid" };
+  }
+  const position = action.position === "low" || action.position === "high" ? action.position : undefined;
+  const eng = clone(engIn);
+  if (!layOffCard(eng.state, action.cardId, action.meldId, position)) {
+    return { engine: engIn, error: "that lay-off isn't valid" };
+  }
+  return { engine: eng };
+}
+
+/**
+ * The turn-ending action. With a card: discards it (and ends the round if
+ * that was your last card after melding). With no card: goes out, only valid
+ * once you've melded and your hand is empty. Then advanceThroughAi runs any
+ * AI seats that follow, exactly as applyCommit does.
+ */
+export function applyDiscard(
+  engIn: MpEngine,
+  seat: number,
+  action: Extract<MpAction, { type: "discard" }>
+): { engine: MpEngine; error?: string; wentOutThisAction?: boolean; discarded?: boolean } {
+  const bad = turnGuard(engIn, seat);
+  if (bad) return { engine: engIn, error: bad };
+
+  const eng = clone(engIn);
+  const s = eng.state;
+  const player = s.players[seat];
+  const handEmpty = player.hasMeldedContract && player.hand.length === 0;
+
+  let discarded = false;
+  if (handEmpty) {
+    discardAndAdvance(s, ""); // went out — no discard
+  } else {
+    if (player.hand.length === 0) return { engine: engIn, error: "choose a card to discard" };
+    if (typeof action.discardCardId !== "string" || !action.discardCardId) {
+      return { engine: engIn, error: "choose a card to discard" };
+    }
+    const before = s.currentPlayerIndex;
+    const ended = discardAndAdvance(s, action.discardCardId);
+    if (!ended && s.currentPlayerIndex === before) {
+      return { engine: engIn, error: "that card isn't in your hand" };
+    }
+    discarded = true;
+  }
+
+  // Captured before advanceThroughAi (see applyCommit's note on the same).
+  const wentOutThisAction = s.roundOver;
+  eng.turnDrawn = false;
+  return { engine: advanceThroughAi(eng), wentOutThisAction, discarded };
 }
 
 /**
