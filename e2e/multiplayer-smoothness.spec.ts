@@ -342,7 +342,7 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
     // Stage the book (three 9s), then unstage it: the hand keeps its rank order.
     await begin(pageA);
     for (const name of ["9 of clubs", "9 of spades", "9 of diamonds"]) {
-      await dialog.getByRole("button", { name, exact: true }).click();
+      await dialog.getByRole("button", { name, exact: true }).first().click();
     }
     await dialog.getByRole("button", { name: /group selected cards/i }).click();
     await expect(handCards).toHaveCount(11);
@@ -409,7 +409,7 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
 
     // ── (A) staged contract: Confirm Meld, rejection, real meld, discard ──
     const stageSet = async (names: string[]) => {
-      for (const name of names) await dialog.getByRole("button", { name, exact: true }).click();
+      for (const name of names) await dialog.getByRole("button", { name, exact: true }).first().click();
       await dialog.getByRole("button", { name: /group selected cards/i }).click();
     };
     await stageSet(["9 of clubs", "9 of spades", "9 of diamonds"]);
