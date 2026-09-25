@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
+import { useT } from "../../lib/i18n/LocaleProvider";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pushTheme } from "../../lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "../../lib/cardBackStore";
@@ -25,6 +26,7 @@ import { SwatchPicker } from "../SwatchPicker";
  * end — it could never actually stick.
  */
 export default function ThemeSettingsPage() {
+  const { t } = useT();
   const { configured, loading: authLoading, user } = useAuth();
   const [theme, setTheme, loading] = useSyncedLocalPreference(loadLocalTheme);
 
@@ -44,7 +46,7 @@ export default function ThemeSettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <BackLink href="/settings#display" label="Settings" />
+      <BackLink href="/settings#display" label={t("home.settings")} />
       <h1 className="-mt-2 text-2xl font-bold text-[var(--heading)]">Theme</h1>
 
       {loading || authLoading ? (

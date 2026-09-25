@@ -650,7 +650,7 @@ export default function SettingsPage() {
           <div id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`} className="flex flex-col gap-8">
           {tab === "general" && (
             <>
-              <SettingsSection title={t("settings.language.title")}>
+              <SettingsSection title={t("settings.tab.general")}>
           <section className="flex flex-col gap-2">
             <InfoDetails label={t("settings.language.title")}>{t("settings.language.description")}</InfoDetails>
             <div className="grid grid-cols-2 gap-2">

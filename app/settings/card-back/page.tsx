@@ -2,6 +2,7 @@
 
 import { useAuth } from "../../AuthContext";
 import { BackLink } from "../../components/BackLink";
+import { useT } from "../../lib/i18n/LocaleProvider";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pushCardBack } from "../../lib/accountSettingsSync";
 import {
@@ -26,6 +27,7 @@ import { SwatchPicker } from "../SwatchPicker";
  * to flip a toggle should have to scroll through.
  */
 export default function CardBackSettingsPage() {
+  const { t } = useT();
   const { user } = useAuth();
   // theme rides along read-only — needed only to resolve "match" into a
   // real id when applying a card back, not something this page ever
@@ -47,7 +49,7 @@ export default function CardBackSettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <BackLink href="/settings#display" label="Settings" />
+      <BackLink href="/settings#display" label={t("home.settings")} />
       <div className="-mt-2">
         <h1 className="text-2xl font-bold text-[var(--heading)]">Card back</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
