@@ -11,7 +11,7 @@
 // (see REQUIRED_ENV_MESSAGE) — this file has no side effects on import, so
 // requiring it never crashes a spec run that's missing the env vars.
 
-import type { Browser, Page } from "@playwright/test";
+import type { Browser, BrowserContextOptions, Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -99,8 +99,13 @@ export async function seedFriendship(userAId: string, userBId: string): Promise<
  * storage) so two "users" can be live in the same test run without
  * colliding — the same reason a real multiplayer game needs two actual
  * browser sessions to prove anything. */
-export async function signIn(browser: Browser, email: string, password: string): Promise<Page> {
-  const context = await browser.newContext();
+export async function signIn(
+  browser: Browser,
+  email: string,
+  password: string,
+  contextOptions?: BrowserContextOptions
+): Promise<Page> {
+  const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   await page.addInitScript(() => {
     try {

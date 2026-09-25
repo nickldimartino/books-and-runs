@@ -47,7 +47,7 @@ function decideMeld(hand: Card[], contract: ContractRequirement): { groups: stri
   };
 }
 
-async function playOneTurn(client: SupabaseClient, gameId: string): Promise<MpMoveResponse> {
+export async function playOneTurn(client: SupabaseClient, gameId: string): Promise<MpMoveResponse> {
   const drawRes = await submitMpMove(client, gameId, { type: "draw", from: "stock" });
   if (drawRes.status === "complete") return drawRes;
 

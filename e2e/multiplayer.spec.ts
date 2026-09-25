@@ -81,7 +81,7 @@ test("create → accept → one full turn between two real accounts", async ({ b
   const gameUrl = pageA.url();
 
   // A's full turn: draw, select a card, set it as the discard, end turn.
-  const drawButton = pageA.getByRole("button", { name: /draw from the pile/i });
+  const drawButton = pageA.getByRole("button", { name: /draw from (the )?pile/i });
   await expect(drawButton).toBeEnabled({ timeout: 20_000 });
   await drawButton.click();
   // The draw button disables the instant the click fires (it's gated by
