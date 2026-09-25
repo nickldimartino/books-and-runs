@@ -4,6 +4,7 @@ import { CONTRACTS, GameState } from "@/types";
 import { AI_PERSONAS } from "./aiPersonas";
 import { dateSeed } from "./dailyDealStore";
 import { YOU_PLAYER_ID } from "./recordGameResult";
+import { stepShieldStreak, weekIndex, WEEKLY_SHIELD_CONFIG } from "@/streakShield";
 
 // The Weekly Challenge — Daily Deal's bigger, harder sibling (audit item:
 // "no rotating challenge beyond Daily Deal"). Where Daily Deal is a quick
@@ -30,9 +31,29 @@ export interface WeeklyChallengeState {
   bestStreak: number;
   lastPlayedWeek: string | null;
   history: WeeklyChallengeResult[];
+  // The weekly streak shield (src/streakShield.ts, WEEKLY_SHIELD_CONFIG):
+  // one, earned at every 4-week streak, covers one missed week. Cached copy
+  // of the account's cloud record plus a local estimate.
+  /** Shields currently held (0-1). */
+  shields: number;
+  /** Lifetime shields granted. */
+  shieldsEarned: number;
+  /** Week keys a shield covered (newest 30). */
+  coveredWeeks: string[];
+  /** Completion week on which the latest shield was earned. */
+  lastShieldEarnedOn: string | null;
 }
 
-const EMPTY_STATE: WeeklyChallengeState = { streak: 0, bestStreak: 0, lastPlayedWeek: null, history: [] };
+const EMPTY_STATE: WeeklyChallengeState = {
+  streak: 0,
+  bestStreak: 0,
+  lastPlayedWeek: null,
+  history: [],
+  shields: 0,
+  shieldsEarned: 0,
+  coveredWeeks: [],
+  lastShieldEarnedOn: null,
+};
 
 /** "YYYY-Www" (ISO 8601 week) for the given Date's own local calendar day —
  * same local-not-UTC reasoning as dailyDealStore.ts's localDateKey: every
@@ -142,6 +163,10 @@ export function mergeCloudWeeklyChallengeState(cloud: {
   streak: number;
   bestStreak: number;
   lastPlayedWeek: string | null;
+  shields?: number;
+  shieldsEarned?: number;
+  covered?: string[];
+  lastShieldEarnedOn?: string | null;
 }): WeeklyChallengeState {
   const local = loadWeeklyChallengeState();
   const localIsNewer =
@@ -153,6 +178,10 @@ export function mergeCloudWeeklyChallengeState(cloud: {
         bestStreak: Math.max(cloud.bestStreak, local.bestStreak),
         lastPlayedWeek: cloud.lastPlayedWeek,
         history: local.history,
+        shields: cloud.shields ?? 0,
+        shieldsEarned: cloud.shieldsEarned ?? 0,
+        coveredWeeks: cloud.covered ?? [],
+        lastShieldEarnedOn: cloud.lastShieldEarnedOn ?? null,
       };
   saveWeeklyChallengeState(next);
   return next;
@@ -171,12 +200,33 @@ export function recordWeeklyChallengeResult(state: GameState): WeeklyChallengeSt
   const won = !!you && you.cumulativeScore === lowest;
   const yourScore = you?.cumulativeScore ?? 0;
 
-  const streak = current.lastPlayedWeek === weekKeyMinusOneWeek(thisWeek) ? current.streak + 1 : 1;
+  // Same rule as migration 0081 (src/streakShield.ts): consecutive week -> +1;
+  // exactly one missed week with the shield held -> covered, streak continues;
+  // anything else restarts at 1.
+  const step = stepShieldStreak(
+    {
+      current: current.streak,
+      best: current.bestStreak,
+      shields: current.shields,
+      earned: current.shieldsEarned,
+      used: 0,
+      lastEarnedIndex: null,
+    },
+    current.lastPlayedWeek ? weekIndex(current.lastPlayedWeek) : null,
+    weekIndex(thisWeek),
+    WEEKLY_SHIELD_CONFIG
+  );
+  const streak = step.current;
   const next: WeeklyChallengeState = {
     streak,
     bestStreak: Math.max(current.bestStreak, streak),
     lastPlayedWeek: thisWeek,
     history: [{ week: thisWeek, won, yourScore }, ...current.history].slice(0, HISTORY_LIMIT),
+    shields: step.shields,
+    shieldsEarned: step.earned,
+    coveredWeeks:
+      step.covered !== null ? [...current.coveredWeeks, weekKeyMinusOneWeek(thisWeek)].slice(-30) : current.coveredWeeks,
+    lastShieldEarnedOn: step.earned > current.shieldsEarned ? thisWeek : current.lastShieldEarnedOn,
   };
   saveWeeklyChallengeState(next);
   return next;

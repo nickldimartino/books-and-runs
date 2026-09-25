@@ -296,9 +296,8 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
     // Open the drawer first; drive the draw pile with a DOM click since the
     // modal backdrop covers it (a real player draws first, then opens it —
     // the measured window is the same either way).
-    await pageA.getByRole("button", { name: /jump to your hand/i }).click();
-    const dialog = pageA.getByRole("dialog", { name: /manage your hand/i });
-    await expect(dialog).toBeVisible();
+    // (Wide screens: the always-visible hand dock; phones: the drawer.)
+    const dialog = await openHand(pageA);
     const handCards = dialog.locator('[data-tutorial="hand"] [role="button"][aria-pressed]');
     await expect(handCards).toHaveCount(13);
     await pageA.waitForTimeout(900); // let the card-enter animation finish
@@ -455,7 +454,7 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
     // Then the discard is its own action that ends the turn. (A successful
     // meld closes the drawer on purpose — see the flight effect in
     // multiplayer/play/page.tsx — so reopen it.)
-    await pageA.getByRole("button", { name: /jump to your hand/i }).click();
+    await openHand(pageA);
     await dialog.getByRole("button", { name: "3 of clubs", exact: true }).click();
     await dialog.getByRole("button", { name: /discard selected card/i }).click();
     await begin(pageA);
@@ -476,11 +475,14 @@ test("multiplayer: meld flow + smoothness with two live accounts", async ({ brow
     const opp = await measure(pageA, "mp: opponent+AI move arrives", results, 1000);
     expect(opp.remounted).toEqual([]);
     expect(opp.cardAdded + opp.cardRemoved).toBe(0);
-    expect(opp.maxCardStep).toBe(0);
-    // The hand itself must not move (maxCardStep 0 above). Page content behind
-    // the drawer legitimately shifts a little when the "your turn" banner and
-    // the opponents' table changes appear: hold it under the Web Vitals "good"
-    // CLS bar (0.1) rather than zero.
+    // In the phone drawer (a fixed overlay) the hand itself must not move at
+    // all. In the wide-screen dock the hand sits under the dock's own
+    // "your turn" status block, which legitimately appears on this event and
+    // nudges the cards down a little: only bound it there. Page content
+    // legitimately shifts a little too: hold CLS under the Web Vitals "good"
+    // bar (0.1) rather than zero.
+    if (await pageA.getByTestId("hand-dock").isVisible().catch(() => false)) expect(opp.maxCardStep).toBeLessThan(120);
+    else expect(opp.maxCardStep).toBe(0);
     expect(opp.cls).toBeLessThan(0.1);
     await testInfo.attach("06-after-opponent.png", { body: await pageA.screenshot(), contentType: "image/png" });
 

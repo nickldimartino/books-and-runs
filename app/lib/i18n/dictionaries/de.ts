@@ -431,6 +431,7 @@ const de = {
   "multiplayer.playerWon": "{name} hat gewonnen",
   "multiplayer.nobody": "Niemand",
   "multiplayer.left": "(hat das Spiel verlassen)",
+  "multiplayer.leftPending": "Hat das Spiel verlassen · +{penalty} am Rundenende",
   "multiplayer.recordedToStats": "In deiner Statistik und deiner Mehrspieler-Bilanz erfasst.",
   "multiplayer.achievementUnlocked.one": "Erfolg freigeschaltet",
   "multiplayer.achievementUnlocked.other": "Erfolge freigeschaltet",
@@ -447,6 +448,7 @@ const de = {
   "multiplayer.playingAsyncBody":
     "Du musst nicht zur selben Zeit online sein wie die anderen. Mach deinen Zug, dann ist der nächste Spieler dran — schau auf der Startseite vorbei oder aktiviere Benachrichtigungen in den Einstellungen, um zu erfahren, wann du wieder an der Reihe bist.",
   "multiplayer.roundSummary.heading": "Runde {round} · {label}",
+  "multiplayer.roundSummary.leftPenalty": "verlassen · +{penalty} Strafe",
   "multiplayer.seatN": "Platz {seat}",
   "multiplayer.roundSummary.nextRound": "Runde {round} läuft bereits — mach deinen Zug unten, sobald du dran bist.",
   "multiplayer.waitingForTurn.prefix": "Warten auf",
@@ -562,6 +564,10 @@ const de = {
   "gameOver.weekStreak.one": "{count}-Woche-Serie",
   "gameOver.weekStreak.other": "{count}-Wochen-Serie",
   "gameOver.bestStreakWeekly": "Beste Serie: {best}. Nächste Woche gibt es eine neue Challenge.",
+  "gameOver.shieldEarned": "Du hast ein Serien-Schild verdient! Es deckt einen verpassten Tag ab, falls du es mal brauchst.",
+  "gameOver.shieldUsed": "Ein Schild hat gestern abgedeckt – deine Serie läuft weiter.",
+  "gameOver.shieldEarnedWeekly": "Du hast ein Wochen-Schild verdient! Es deckt eine verpasste Woche ab, falls du es mal brauchst.",
+  "gameOver.shieldUsedWeekly": "Ein Schild hat letzte Woche abgedeckt – deine Serie läuft weiter.",
   "gameOver.friendsHeading": "Heutiger Deal · Freunde",
   "gameOver.you": "Du",
   "gameOver.notSaved": "Dieses Spiel wurde nicht gespeichert",
@@ -663,6 +669,7 @@ const de = {
   "home.dailyDeal.streak": "🔥 {count}-Tage-Serie",
   "home.dailyDeal.oneSeeded": "Eine vorgegebene Runde — heute für alle derselbe Deal.",
   "home.dailyDeal.streakProtected": "Serie für heute gesichert.",
+  "home.dailyDeal.shieldCovering": "Dein Schild deckt deine Serie ab.",
   "home.dailyDeal.continue": "Heutigen Deal fortsetzen",
   "home.dailyDeal.play": "Heutigen Deal spielen",
   "home.leftInProgress": "Du hast dieses Spiel unterbrochen.",
@@ -674,6 +681,7 @@ const de = {
   "home.weeklyChallenge.streak": "🏆 {count}-Wochen-Serie",
   "home.weeklyChallenge.description": "Das vollständige 7-Runden-Spiel gegen 3 schwere KIs — diese Woche für alle derselbe Tisch.",
   "home.weeklyChallenge.streakProtected": "Serie für diese Woche gesichert.",
+  "home.weeklyChallenge.shieldCovering": "Dein Schild deckt deine Serie ab.",
   "home.weeklyChallenge.continue": "Diese Wochen-Challenge fortsetzen",
   "home.weeklyChallenge.play": "Diese Wochen-Challenge spielen",
 
@@ -718,6 +726,12 @@ const de = {
   "welcomeBack.streak": "Deine Tages-Deal-Serie von {count} Tagen läuft weiter – der heutige Deal ist bereit.",
   "welcomeBack.dailyReady": "Der heutige Tages-Deal ist bereit, wann immer du es bist.",
   "welcomeBack.quests": "Neue Quests warten auf dich.",
+  "streakShield.label": "Serien-Schilde: {count} von {max}",
+  "streakShield.dailyExplainer": "Für je 7 Tage in Folge bekommst du ein Schild (bis zu 2). Es deckt ganz von selbst einen verpassten Tag ab.",
+  "streakShield.weeklyExplainer": "Für je 4 Wochen in Folge bekommst du ein Schild. Es deckt ganz von selbst eine verpasste Woche ab.",
+  "streakShield.savedTitle": "Dein Schild hat deine Serie gerettet",
+  "streakShield.savedBody": "Ein Tag ist durchgerutscht, also ist ein Schild eingesprungen. Deine Serie von {count} Tagen läuft weiter.",
+  "welcomeBack.shieldSaved": "Ein Schild hat einen verpassten Tag abgedeckt, deine Serie von {count} Tagen ist sicher.",
 
   "home.more": "Mehr",
   "home.playWithFriends": "Mit Freunden spielen",
@@ -1239,7 +1253,7 @@ const de = {
   "safety.block.confirmTitle":
     "{name} blockieren?",
   "safety.block.confirmBody":
-    "Ihr seid danach keine Freunde mehr und für einander unsichtbar – keine Freundschaftsanfragen, Spieleinladungen, Reaktionen oder Bestenlisten-Einträge in beide Richtungen. Die Person erfährt nichts davon. Du kannst die Sperre jederzeit auf deiner Kontoseite aufheben.",
+    "Ihr seid danach keine Freunde mehr und für einander unsichtbar – keine Freundschaftsanfragen, Spieleinladungen oder Bestenlisten-Einträge in beide Richtungen. Die Person erfährt nichts davon. Du kannst die Sperre jederzeit auf deiner Kontoseite aufheben.",
   "safety.block.error":
     "Blockieren fehlgeschlagen – versuch es nochmal.",
   "safety.block.done":
@@ -1370,28 +1384,6 @@ const de = {
     "{n} Std.",
   "turnTimer.unit.days":
     "{n} Tg.",
-  "emotes.heading":
-    "Schnelle Reaktionen",
-  "emotes.error":
-    "Konnte nicht gesendet werden – versuch es gleich nochmal.",
-  "emotes.bubble":
-    "{name}: {emoji} {text}",
-  "emote.hello":
-    "Hallo!",
-  "emote.nice_meld":
-    "Schöner Satz!",
-  "emote.your_turn":
-    "Du bist dran!",
-  "emote.oops":
-    "Ups!",
-  "emote.thanks":
-    "Danke!",
-  "emote.wow":
-    "Wow!",
-  "emote.lucky":
-    "Glückliches Ziehen!",
-  "emote.good_game":
-    "Gutes Spiel",
   "settings.notify.heading":
     "Welche Benachrichtigungen",
   "settings.notify.turns":
@@ -1403,9 +1395,9 @@ const de = {
   "settings.notify.invitesHint":
     "Spieleinladungen und neue Freundschaftsanfragen.",
   "settings.notify.nudges":
-    "Anstupser & Reaktionen",
+    "Anstupser",
   "settings.notify.nudgesHint":
-    "Wenn dich jemand anstupst oder in einem Spiel reagiert.",
+    "Wenn dich jemand in einem Spiel anstupst.",
   "settings.notify.streaks":
     "Serien-Erinnerungen",
   "settings.notify.streaksHint":
@@ -1503,11 +1495,9 @@ const de = {
   "privacy.account.item.clubs":
     "Clubs und Turniere, die Sie erstellen oder denen Sie beitreten: der Club- oder Turniername (für Mitglieder bzw. Teilnehmer sichtbar), wer Inhaber oder Gastgeber ist und wer die Mitglieder und Teilnehmer sind.",
   "privacy.account.item.push":
-    "Wenn Sie Benachrichtigungen einschalten, speichern wir das Push-Abo Ihres Browsers (eine Adresse und Verschlüsselungsschlüssel des Push-Dienstes Ihres Browsers), um Ihnen „Du bist dran“-, Spieleinladungs-, Freundschaftsanfrage-, Anstupser-, Reaktions- und Serien-Erinnerungen in Ihrer gewählten Sprache zu senden. Sie wählen, welche Arten Sie erhalten, und können Ruhezeiten festlegen; um sie einzuhalten, speichern wir diese Auswahl und den UTC-Zeitversatz Ihres Geräts. Das ist aus, solange Sie nicht zustimmen, und lässt sich jederzeit in der App oder in den Browser- bzw. Geräteeinstellungen ausschalten.",
+    "Wenn Sie Benachrichtigungen einschalten, speichern wir das Push-Abo Ihres Browsers (eine Adresse und Verschlüsselungsschlüssel des Push-Dienstes Ihres Browsers), um Ihnen „Du bist dran“-, Spieleinladungs-, Freundschaftsanfrage-, Anstupser- und Serien-Erinnerungen in Ihrer gewählten Sprache zu senden. Sie wählen, welche Arten Sie erhalten, und können Ruhezeiten festlegen; um sie einzuhalten, speichern wir diese Auswahl und den UTC-Zeitversatz Ihres Geräts. Das ist aus, solange Sie nicht zustimmen, und lässt sich jederzeit in der App oder in den Browser- bzw. Geräteeinstellungen ausschalten.",
   "privacy.account.item.safety":
     "Sicherheitsdaten: die Spieler, die Sie blockieren (Sie sind füreinander unsichtbar), und Meldungen, die Sie über andere Spieler einreichen (wer wen gemeldet hat, der Grund, eine optionale kurze Notiz, wo gemeldet wurde und Name und Bio der gemeldeten Person zu diesem Zeitpunkt). Meldungen sieht nur der Entwickler; sie werden so lange aufbewahrt, wie zur Prüfung nötig. Die gemeldete Person erfährt nicht, wer sie gemeldet hat. Anzeigenamen, Bios und Clubnamen werden außerdem automatisch anhand einer Liste gesperrter Wörter und Regeln gegen Identitätsvortäuschung geprüft.",
-  "privacy.account.item.emotes":
-    "Schnelle Reaktionen, die Sie in einem Mehrspielerspiel senden (eines von festen Vorgaben – nie freier Text); sie werden den anderen Spielern dieses Spiels angezeigt und nur für die jeweils letzten pro Spiel aufbewahrt.",
   "privacy.account.item.support":
     "Wenn Sie über die Seite „Den Entwickler unterstützen“ ein Trinkgeld senden, wird die Zahlung vollständig von Stripe abgewickelt, und wir sehen Ihre Kartendaten nie. Wir speichern nur, dass eine Zahlung erfolgt ist (die Stripe-Sitzungsreferenz, den Betrag und die Währung), damit wir Ihnen das Unterstützer-Abzeichen geben können.",
   "privacy.account.item.security":

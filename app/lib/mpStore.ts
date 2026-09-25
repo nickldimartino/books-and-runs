@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { callEdgeFunction } from "./callEdgeFunction";
 import type { MpAction, RedactedView } from "@/mp/types";
-import { EmoteId, isEmoteId } from "@/mp/emotes";
 
 /**
  * Client side of multiplayer. The Edge Function (`mp`) is the authority — it
@@ -28,7 +27,7 @@ export class MpError extends Error {
 
 async function callMp<T>(
   supabase: SupabaseClient,
-  path: "create" | "respond" | "cancel" | "state" | "move" | "resign" | "nudge" | "emote" | "friend_push",
+  path: "create" | "respond" | "cancel" | "state" | "move" | "resign" | "nudge" | "friend_push",
   payload: Record<string, unknown>
 ): Promise<T> {
   return callEdgeFunction<T>(supabase, `${FN_BASE}/${path}`, payload, MpError);
@@ -157,34 +156,6 @@ export async function nudgeMpGame(supabase: SupabaseClient, gameId: string): Pro
     }
     throw err;
   }
-}
-
-// ── emotes (migration 0061) ──────────────────────────────────────────────
-
-export interface MpEmote {
-  id: string;
-  game_id: string;
-  sender_id: string;
-  emote: EmoteId;
-  created_at: string;
-}
-
-/** Sends one of the fixed quick reactions (src/mp/emotes.ts). Throws MpError
- * — status 429 when rate-limited. */
-export async function sendMpEmote(supabase: SupabaseClient, gameId: string, emote: EmoteId): Promise<void> {
-  await callMp(supabase, "emote", { game_id: gameId, emote });
-}
-
-/** The newest emotes in a game (RLS hides ones from accounts you've blocked). */
-export async function getMpEmotes(supabase: SupabaseClient, gameId: string, limit = 30): Promise<MpEmote[]> {
-  const { data, error } = await supabase
-    .from("mp_emotes")
-    .select("id, game_id, sender_id, emote, created_at")
-    .eq("game_id", gameId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return ((data as MpEmote[]) ?? []).filter((e) => isEmoteId(e.emote));
 }
 
 /** Asks the server to push about a friend request / acceptance you just made

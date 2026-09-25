@@ -1110,6 +1110,14 @@ export default function MultiplayerPlayPage() {
               )}
               <span className="truncate">
                 {p.name}: <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore}</span>
+                {p.resigned && p.pendingResignPenalty != null && (
+                  <span className="ml-1 text-[11px] text-[var(--faint)]">
+                    {t("multiplayer.leftPending", { penalty: p.pendingResignPenalty })}
+                  </span>
+                )}
+                {p.resigned && p.pendingResignPenalty == null && (
+                  <span className="ml-1 text-[11px] text-[var(--faint)]">{t("multiplayer.left")}</span>
+                )}
               </span>
             </li>
           ))}
@@ -1173,7 +1181,10 @@ export default function MultiplayerPlayPage() {
                       {view.players.find((p) => p.seat === s.seat)?.name ?? t("multiplayer.seatN", { seat: s.seat })}
                     </span>
                     <span className="text-[var(--heading)]">
-                      +{s.penalty} <span className="text-[var(--faint)]">({s.cumulative})</span>
+                      {s.resignPenalty != null
+                        ? t("multiplayer.roundSummary.leftPenalty", { penalty: s.resignPenalty })
+                        : `+${s.penalty}`}{" "}
+                      <span className="text-[var(--faint)]">({s.cumulative})</span>
                     </span>
                   </li>
                 ))}
@@ -1278,8 +1289,6 @@ export default function MultiplayerPlayPage() {
           gameId={gameId}
           players={view.players}
           myUserId={user?.id}
-          emoteTick={g.emoteTick}
-          canEmote
         />
       )}
 

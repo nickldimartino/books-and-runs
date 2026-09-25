@@ -117,8 +117,6 @@ export interface UseMpGame {
   turnStartedAt: string | null;
   /** Consecutive turns the viewer has let expire — at 1, the next miss forfeits. */
   yourMissedTurns: number;
-  /** Changes whenever a new emote arrives over realtime (see useMpEmotes). */
-  emoteTick: number;
 
   visibleHand: Card[]; // your hand minus anything staged
   selectedIds: string[];
@@ -221,8 +219,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const [newlyUnlockedCosmetics, setNewlyUnlockedCosmetics] = useState<AnyCosmeticOption[]>([]);
   const clearNewlyUnlockedCosmetics = useCallback(() => setNewlyUnlockedCosmetics([]), []);
   const [nudgeState, setNudgeState] = useState<"idle" | "sent" | "error">("idle");
-  // Bumped by the realtime mp_emotes subscription so the emote hook refetches.
-  const [emoteTick, setEmoteTick] = useState(0);
   const loadedFor = useRef<string | null>(null);
 
   // The validated view (defense in depth — a malformed response becomes a
@@ -392,11 +388,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
           "postgres_changes",
           { event: "*", schema: "public", table: "mp_games", filter: `id=eq.${gameId}` },
           () => refresh()
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "mp_emotes", filter: `game_id=eq.${gameId}` },
-          () => setEmoteTick((n) => n + 1)
         )
         .subscribe((status: string) => {
           if (status !== "SUBSCRIBED") return;
@@ -760,7 +751,6 @@ export function useMpGame(gameId: string | null): UseMpGame {
     turnLimitHours: state?.turn_limit_hours ?? 0,
     turnStartedAt: state?.turn_started_at ?? null,
     yourMissedTurns: state?.your_missed_turns ?? 0,
-    emoteTick,
     visibleHand,
     selectedIds,
     draft,

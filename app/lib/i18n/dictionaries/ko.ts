@@ -419,6 +419,7 @@ const ko = {
   "multiplayer.playerWon": "{name}님이 승리했어요",
   "multiplayer.nobody": "아무도 없음",
   "multiplayer.left": "(나감)",
+  "multiplayer.leftPending": "게임을 나감 · 라운드 종료 시 +{penalty}",
   "multiplayer.recordedToStats": "내 통계와 멀티플레이어 기록에 반영됐어요.",
   "multiplayer.achievementUnlocked.one": "업적 달성",
   "multiplayer.achievementUnlocked.other": "업적 달성",
@@ -434,6 +435,7 @@ const ko = {
   "multiplayer.playingAsyncBody":
     "동시에 접속해 있을 필요는 없어요. 차례를 마치면 다음 플레이어 차례가 돼요 — 홈에서 확인하거나, 설정에서 알림을 켜면 내 차례가 됐을 때 알 수 있어요.",
   "multiplayer.roundSummary.heading": "{round}라운드 · {label}",
+  "multiplayer.roundSummary.leftPenalty": "나감 · +{penalty} 페널티",
   "multiplayer.seatN": "{seat}번 자리",
   "multiplayer.roundSummary.nextRound": "{round}라운드가 진행 중이에요 — 내 차례가 되면 아래에서 진행하세요.",
   "multiplayer.waitingForTurn.prefix": "기다리는 중:",
@@ -545,6 +547,10 @@ const ko = {
   "gameOver.weekStreak.one": "{count}주 연속",
   "gameOver.weekStreak.other": "{count}주 연속",
   "gameOver.bestStreakWeekly": "최고 기록: {best}. 다음 주에 새 챌린지가 열려요.",
+  "gameOver.shieldEarned": "연속 기록 방패를 얻었어요! 놓친 하루를 필요할 때 채워 줄 거예요.",
+  "gameOver.shieldUsed": "방패가 어제를 채워 줘서 연속 기록이 이어졌어요.",
+  "gameOver.shieldEarnedWeekly": "주간 방패를 얻었어요! 놓친 한 주를 필요할 때 채워 줄 거예요.",
+  "gameOver.shieldUsedWeekly": "방패가 지난주를 채워 줘서 연속 기록이 이어졌어요.",
   "gameOver.friendsHeading": "오늘의 딜 · 친구",
   "gameOver.you": "나",
   "gameOver.notSaved": "이 게임은 저장되지 않았어요",
@@ -648,6 +654,7 @@ const ko = {
   "home.dailyDeal.streak": "🔥 {count}일 연속",
   "home.dailyDeal.oneSeeded": "단 하나의 시드 라운드예요 — 오늘은 모두에게 같은 판이 주어져요.",
   "home.dailyDeal.streakProtected": "오늘의 연속 기록이 보호됐어요.",
+  "home.dailyDeal.shieldCovering": "방패가 연속 기록을 지켜 주고 있어요.",
   "home.dailyDeal.continue": "오늘의 딜 이어하기",
   "home.dailyDeal.play": "오늘의 딜 플레이",
   "home.leftInProgress": "이 게임을 진행 중에 나갔어요.",
@@ -658,6 +665,7 @@ const ko = {
   "home.weeklyChallenge.streak": "🏆 {count}주 연속",
   "home.weeklyChallenge.description": "어려움 AI 3명과 겨루는 7라운드 풀 게임이에요 — 이번 주는 모두에게 같은 테이블이 주어져요.",
   "home.weeklyChallenge.streakProtected": "이번 주 연속 기록이 보호됐어요.",
+  "home.weeklyChallenge.shieldCovering": "방패가 연속 기록을 지켜 주고 있어요.",
   "home.weeklyChallenge.continue": "이번 주 챌린지 이어하기",
   "home.weeklyChallenge.play": "이번 주 챌린지 플레이",
 
@@ -702,6 +710,12 @@ const ko = {
   "welcomeBack.streak": "데일리 딜 {count}일 연속 기록이 이어지고 있어요. 오늘의 딜이 준비되어 있어요.",
   "welcomeBack.dailyReady": "오늘의 데일리 딜은 언제든 플레이할 수 있어요.",
   "welcomeBack.quests": "새 퀘스트가 준비되어 있어요.",
+  "streakShield.label": "연속 기록 방패: {count}/{max}",
+  "streakShield.dailyExplainer": "7일 연속할 때마다 방패를 1개 얻어요(최대 2개). 하루를 놓쳐도 조용히 채워 줘요.",
+  "streakShield.weeklyExplainer": "4주 연속할 때마다 방패를 1개 얻어요. 한 주를 놓쳐도 조용히 채워 줘요.",
+  "streakShield.savedTitle": "방패가 연속 기록을 지켜 줬어요",
+  "streakShield.savedBody": "하루를 놓쳤지만 방패가 나서서 {count}일 연속 기록이 그대로 이어지고 있어요.",
+  "welcomeBack.shieldSaved": "방패가 놓친 하루를 채워 줘서 {count}일 연속 기록이 안전해요.",
 
   "home.more": "더보기",
   "home.playWithFriends": "친구와 플레이",
@@ -1182,7 +1196,7 @@ const ko = {
   "safety.block.confirmTitle":
     "{name}님을 차단할까요?",
   "safety.block.confirmBody":
-    "친구 관계가 해제되고 서로에게 보이지 않게 돼요. 친구 요청, 게임 초대, 반응, 순위표 표시가 양쪽 모두 막혀요. 상대에게는 알림이 가지 않아요. 계정 페이지에서 언제든 차단을 해제할 수 있어요.",
+    "친구 관계가 해제되고 서로에게 보이지 않게 돼요. 친구 요청, 게임 초대, 순위표 표시가 양쪽 모두 막혀요. 상대에게는 알림이 가지 않아요. 계정 페이지에서 언제든 차단을 해제할 수 있어요.",
   "safety.block.error":
     "차단하지 못했어요. 다시 시도해 주세요.",
   "safety.block.done":
@@ -1313,28 +1327,6 @@ const ko = {
     "{n}시간",
   "turnTimer.unit.days":
     "{n}일",
-  "emotes.heading":
-    "빠른 반응",
-  "emotes.error":
-    "보내지 못했어요. 잠시 후 다시 시도해 주세요.",
-  "emotes.bubble":
-    "{name}: {emoji} {text}",
-  "emote.hello":
-    "안녕하세요!",
-  "emote.nice_meld":
-    "멋진 멜드!",
-  "emote.your_turn":
-    "네 차례야!",
-  "emote.oops":
-    "앗!",
-  "emote.thanks":
-    "고마워요!",
-  "emote.wow":
-    "와!",
-  "emote.lucky":
-    "운이 좋네요!",
-  "emote.good_game":
-    "좋은 게임이었어요",
   "settings.notify.heading":
     "알림 종류",
   "settings.notify.turns":
@@ -1346,9 +1338,9 @@ const ko = {
   "settings.notify.invitesHint":
     "게임 초대와 새 친구 요청.",
   "settings.notify.nudges":
-    "콕 찌르기와 반응",
+    "콕 찌르기",
   "settings.notify.nudgesHint":
-    "누군가 콕 찌르거나 게임에서 반응을 보낼 때.",
+    "게임에서 누군가 콕 찌를 때.",
   "settings.notify.streaks":
     "연속 기록 알림",
   "settings.notify.streaksHint":
@@ -1417,11 +1409,9 @@ const ko = {
   "privacy.account.item.saves": "어느 기기에서든 이어서 할 수 있도록 하는 진행 상황: 계정에 저장된 진행 중인 솔로 게임, 데일리 딜과 위클리 챌린지 완료 기록 및 점수, 월간 시즌 합계, 저장해 둔 즐겨찾는 게임 설정.",
   "privacy.account.item.clubs": "만들거나 참여한 클럽과 토너먼트: 클럽 또는 토너먼트 이름(구성원과 참가자에게 보임), 소유자 또는 주최자, 그리고 구성원과 참가자가 누구인지.",
   "privacy.account.item.push":
-    "알림을 켜면 브라우저의 푸시 구독 정보(브라우저 푸시 서비스가 제공하는 주소와 암호화 키)를 저장해 '내 차례', 게임 초대, 친구 요청, 콕 찌르기, 반응, 연속 기록 알림을 선택한 언어로 보내드려요. 받을 알림 종류를 고르고 방해 금지 시간을 설정할 수 있어요. 이를 지키기 위해 해당 설정과 기기의 UTC 시차를 저장해요. 직접 켜기 전에는 꺼져 있고, 앱이나 브라우저·기기 설정에서 언제든 끌 수 있어요.",
+    "알림을 켜면 브라우저의 푸시 구독 정보(브라우저 푸시 서비스가 제공하는 주소와 암호화 키)를 저장해 '내 차례', 게임 초대, 친구 요청, 콕 찌르기, 연속 기록 알림을 선택한 언어로 보내드려요. 받을 알림 종류를 고르고 방해 금지 시간을 설정할 수 있어요. 이를 지키기 위해 해당 설정과 기기의 UTC 시차를 저장해요. 직접 켜기 전에는 꺼져 있고, 앱이나 브라우저·기기 설정에서 언제든 끌 수 있어요.",
   "privacy.account.item.safety":
     "안전 기록: 내가 차단한 플레이어(서로에게 보이지 않게 돼요)와 다른 플레이어에 대해 제출한 신고(누가 누구를, 사유, 선택 메모, 신고한 위치, 신고 당시 상대방의 이름과 소개). 신고는 개발자만 볼 수 있고 검토에 필요한 기간 동안 보관돼요. 신고당한 플레이어는 누가 신고했는지 알 수 없어요. 표시 이름, 소개, 클럽 이름은 금지어 목록과 사칭 규칙으로 자동 검사도 해요.",
-  "privacy.account.item.emotes":
-    "멀티플레이 게임 중 보내는 빠른 반응(정해진 프리셋 중 하나이며 자유 입력은 없어요). 같은 게임의 다른 플레이어에게 보이고, 게임마다 최근 것만 보관해요.",
   "privacy.account.item.support": "개발자 후원하기 페이지에서 팁을 보내면 결제는 전적으로 Stripe가 처리하며, 우리는 카드 정보를 볼 수 없습니다. 후원자 배지를 드리기 위해 결제가 이루어졌다는 사실(Stripe 세션 참조 정보, 금액, 통화)만 저장합니다.",
   "privacy.account.item.security": "단기 기술 기록: 앱 내 알림과 남용 방지에 사용하는 요청 횟수 카운터(길어야 몇 주간 보관), 그리고 로그인한 사용자의 경우 문제를 조사할 수 있도록 오류 보고서가 계정에 연결될 수 있습니다.",
   "privacy.account.item.friendsPrefix": "계정별",

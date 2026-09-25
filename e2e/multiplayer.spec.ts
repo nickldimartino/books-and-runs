@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openHand } from "./helpers/hand";
 import {
   canRunLiveMpTests,
   createTestUser,
@@ -100,11 +101,9 @@ test("create → accept → one full turn between two real accounts", async ({ b
   // this effect keys off.
   await expect(pageA.getByText(/draw a card to start/i)).not.toBeVisible({ timeout: 15_000 });
 
-  // The interactive hand — the "Your hand" heading, the card buttons, and
-  // the meld/discard/end-turn controls — only exists once "Manage your
-  // hand" is open (it's a bottom-sheet dialog, not part of the base page).
-  await pageA.getByRole("button", { name: /jump to your hand/i }).click();
-  const handSection = pageA.locator("section", { has: pageA.getByRole("heading", { name: /your hand/i }) });
+  // The interactive hand + meld/discard controls live in the always-visible
+  // dock on wide screens, or in the "Manage your hand" drawer on phones.
+  const handSection = await openHand(pageA);
   // Not just "the first button in the section" — that same section also
   // has "Sort by suit"/"Sort by rank" buttons ahead of the actual cards in
   // DOM order. Every real card's own accessible name is "<rank> of <suit>"

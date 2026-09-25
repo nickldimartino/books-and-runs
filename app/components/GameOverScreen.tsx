@@ -35,6 +35,7 @@ import { shouldShowReviewPromptAfterWin } from "../lib/reviewPromptStore";
 import {
   DailyDealState,
   localDateKey,
+  markShieldNoticeSeen,
   mergeCloudDailyDealState,
   recordDailyDealResult,
 } from "../lib/dailyDealStore";
@@ -46,6 +47,7 @@ import {
 import {
   WeeklyChallengeState,
   isoWeekKey,
+  weekKeyMinusOneWeek,
   mergeCloudWeeklyChallengeState,
   recordWeeklyChallengeResult,
 } from "../lib/weeklyChallengeStore";
@@ -84,6 +86,13 @@ interface XpLineItem {
 // visual label) — a plain "books-and-runs.vercel.app" isn't reliably
 // auto-linkified as tappable by every share target, "https://…" is.
 const SITE_URL = "https://books-and-runs.vercel.app";
+
+/** Yesterday's local calendar day key — calendar arithmetic, DST-safe. */
+function yesterdayDayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return localDateKey(d);
+}
 
 /** The "+25 XP" (and streak-bonus / level-up) lines on the Daily Deal and
  * Weekly Challenge result cards. Renders nothing until the server reports a
@@ -400,7 +409,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
       } catch (err) {
         console.error("Failed to record a verified Daily Deal/Weekly Challenge completion:", err);
         const status = err instanceof SoloVerifyError ? err.status : undefined;
-        if (!(typeof status === "number" && status >= 400 && status < 500)) {
+        // 429 (completion landed too soon after the previous one) is a
+        // pacing limit, not a rejection of this payload — keep it queued.
+        if (!(typeof status === "number" && status >= 400 && status < 500 && status !== 429)) {
           upsertPendingSave({ id: gameId, userId: uid, payload });
         }
         return;
@@ -475,6 +486,9 @@ export function GameOverScreen({ state }: { state: GameState }) {
       }
       const result = recordDailyDealResult(state);
       setDailyDealState(result);
+      // A shield covering yesterday is announced right here on the streak
+      // card, so Home shouldn't announce the same save again next.
+      if (result.coveredDays.includes(yesterdayDayKey())) markShieldNoticeSeen();
       if (result.lastPlayedDate) {
         syncDailyDealStreak(client, uid, result.streak, result.bestStreak, result.lastPlayedDate).catch((err) => {
           console.error("Failed to sync Daily Deal streak:", err);
@@ -749,6 +763,18 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="mt-1 text-xs text-[var(--faint)]">
             {t("gameOver.bestStreakDaily", { best: dailyDealState.bestStreak })}
           </p>
+          {dailyDealState.lastShieldEarnedOn !== null && dailyDealState.lastShieldEarnedOn === localDateKey() && (
+            <p className="mt-2 text-sm font-medium text-[var(--accent)]" data-testid="shield-earned">
+              <span aria-hidden="true">🛡️ </span>
+              {t("gameOver.shieldEarned")}
+            </p>
+          )}
+          {dailyDealState.coveredDays.includes(yesterdayDayKey()) && (
+            <p className="mt-2 text-sm text-[var(--muted)]" data-testid="shield-used">
+              <span aria-hidden="true">🛡️ </span>
+              {t("gameOver.shieldUsed")}
+            </p>
+          )}
           <ChallengeRewardLines reward={challengeReward} label={t("gameOver.dailyXp", { xp: challengeReward?.xp ?? 0 })} />
         </div>
       )}
@@ -774,6 +800,18 @@ export function GameOverScreen({ state }: { state: GameState }) {
           <p className="mt-1 text-xs text-[var(--faint)]">
             {t("gameOver.bestStreakWeekly", { best: weeklyChallengeState.bestStreak })}
           </p>
+          {weeklyChallengeState.lastShieldEarnedOn !== null && weeklyChallengeState.lastShieldEarnedOn === isoWeekKey() && (
+            <p className="mt-2 text-sm font-medium text-[var(--accent)]" data-testid="shield-earned-weekly">
+              <span aria-hidden="true">🛡️ </span>
+              {t("gameOver.shieldEarnedWeekly")}
+            </p>
+          )}
+          {weeklyChallengeState.coveredWeeks.includes(weekKeyMinusOneWeek(isoWeekKey())) && (
+            <p className="mt-2 text-sm text-[var(--muted)]" data-testid="shield-used-weekly">
+              <span aria-hidden="true">🛡️ </span>
+              {t("gameOver.shieldUsedWeekly")}
+            </p>
+          )}
           <ChallengeRewardLines reward={challengeReward} label={t("gameOver.weeklyXp", { xp: challengeReward?.xp ?? 0 })} />
         </div>
       )}

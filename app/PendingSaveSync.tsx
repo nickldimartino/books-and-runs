@@ -49,7 +49,7 @@ export function PendingSaveSync() {
         // will fail again identically), so drop it rather than retrying
         // forever — only a genuinely transient failure stays queued.
         const status = err instanceof SoloVerifyError ? err.status : undefined;
-        const permanentRejection = typeof status === "number" && status >= 400 && status < 500;
+        const permanentRejection = typeof status === "number" && status >= 400 && status < 500 && status !== 429;
         if (permanentRejection) {
           removePendingSave(entry.id);
         } else {

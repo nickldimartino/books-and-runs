@@ -31,6 +31,8 @@ import {
   loadDailyDealState,
   localDateKey,
   mergeCloudDailyDealState,
+  markShieldNoticeSeen,
+  unseenShieldSave,
   playedToday,
 } from "./lib/dailyDealStore";
 import { useQuests } from "./lib/useQuests";
@@ -40,9 +42,13 @@ import { clearJustSignedUp, hasJustSignedUp } from "./lib/onboardingStore";
 import {
   WeeklyChallengeState,
   loadWeeklyChallengeState,
+  isoWeekKey,
   mergeCloudWeeklyChallengeState,
   playedThisWeek,
 } from "./lib/weeklyChallengeStore";
+import { dailyDisplayStreak, weeklyDisplayStreak } from "@/streakShield";
+import { StreakShields } from "./components/home/StreakShields";
+import { ShieldSavedCard } from "./components/home/ShieldSavedCard";
 import { playerProfileHref, pullDailyDealStreak, pullWeeklyChallengeStreak } from "./lib/leaderboardStore";
 import { applyCloudSave, loadCloudSave, loadDailyDealSave, loadSavedGame, loadWeeklyChallengeSave } from "./lib/localSave";
 import { loadSupabase, supabase } from "./lib/supabaseClient";
@@ -86,12 +92,22 @@ function summarizeSavedGame(state: GameState, t: T, tPlural: TPlural): string {
   return `${t("game.roundOf", { round: state.round, total: state.selectedContracts.length })}${parts.length ? " · " + parts.join(" ") : ""}`;
 }
 
-/** A Daily Deal streak still worth mentioning: last played today or
- * yesterday (anything older has already lapsed, whatever the stored
- * number says). */
+/** The Daily Deal streak worth showing right now: last played today or
+ * yesterday, or — with a streak shield in hand — the day before that (the
+ * shield covers the one missed day as soon as the deal is played). Anything
+ * older has lapsed, whatever the stored number says. */
+function displayedDailyStreak(state: DailyDealState | null): number {
+  if (!state) return 0;
+  return dailyDisplayStreak(state.streak, state.lastPlayedDate, state.shields, localDateKey());
+}
+
 function dailyStreakAlive(state: DailyDealState | null): boolean {
-  if (!state || state.streak <= 0 || !state.lastPlayedDate) return false;
-  return state.lastPlayedDate === localDateKey() || state.lastPlayedDate === localDateKey(new Date(Date.now() - 86_400_000));
+  return displayedDailyStreak(state) > 0;
+}
+
+function displayedWeeklyStreak(state: WeeklyChallengeState | null): number {
+  if (!state) return 0;
+  return weeklyDisplayStreak(state.streak, state.lastPlayedWeek, state.shields, isoWeekKey());
 }
 
 function StatsIcon() {
@@ -745,6 +761,16 @@ export default function HomePage() {
 
   const dailyDealPlayedToday = dailyDeal ? playedToday(dailyDeal) : false;
   const weeklyChallengePlayedThisWeek = weeklyChallenge ? playedThisWeek(weeklyChallenge) : false;
+  const dailyShownStreak = displayedDailyStreak(dailyDeal);
+  const weeklyShownStreak = displayedWeeklyStreak(weeklyChallenge);
+  // The streak is alive only because a shield will cover the one missed day.
+  const dailyShieldCovering =
+    dailyShownStreak > 0 && !dailyDealPlayedToday && dailyDeal?.lastPlayedDate !== localDateKey(new Date(Date.now() - 86_400_000));
+  const weeklyShieldCovering =
+    weeklyShownStreak > 0 && !weeklyChallengePlayedThisWeek && weeklyChallenge?.lastPlayedWeek !== isoWeekKey(new Date(Date.now() - 7 * 86_400_000));
+  // A shield covered a missed day since the player last looked. Signed in
+  // only (the streak belongs to the account).
+  const shieldSaveDay = configured && user && dailyDeal ? unseenShieldSave(dailyDeal) : null;
   const closest = configured && user ? closestAchievement(withSessionCounters(progress, pendingSessionCounters)) : null;
 
   return (
@@ -783,10 +809,18 @@ export default function HomePage() {
                 (g) => g.invite_status === "accepted" && g.status === "active" && g.turn_user_id === user?.id
               ).length
             }
-            dailyStreak={dailyStreakAlive(dailyDeal) ? dailyDeal!.streak : 0}
+            dailyStreak={dailyStreakAlive(dailyDeal) ? displayedDailyStreak(dailyDeal) : 0}
+            shieldSaved={!!shieldSaveDay}
             showQuests={!isFirstSession}
-            onDismiss={() => setReturning(false)}
+            onDismiss={() => {
+              if (shieldSaveDay) setDailyDeal(markShieldNoticeSeen());
+              setReturning(false);
+            }}
           />
+        )}
+
+        {!returning && shieldSaveDay && dailyDeal && (
+          <ShieldSavedCard streak={dailyDeal.streak} onDismiss={() => setDailyDeal(markShieldNoticeSeen())} />
         )}
 
         {/* One-tap "play my usual" — only with nothing in progress (dealing
@@ -836,12 +870,23 @@ export default function HomePage() {
             <p className="mt-0.5 text-xs text-[var(--muted)]">
               {!configured || !user
                 ? t("home.dailyDeal.signInHint")
-                : dailyDeal && dailyDeal.streak > 0
-                ? t("home.dailyDeal.streak", { count: dailyDeal.streak })
+                : dailyShownStreak > 0
+                ? t("home.dailyDeal.streak", { count: dailyShownStreak })
                 : t("home.dailyDeal.oneSeeded")}
             </p>
             {dailyDealPlayedToday && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.dailyDeal.streakProtected")}</p>
+            )}
+            {dailyShieldCovering && (
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.dailyDeal.shieldCovering")}</p>
+            )}
+            {configured && user && dailyDeal && (dailyDeal.shields > 0 || dailyShownStreak > 0) && (
+              <StreakShields
+                count={dailyDeal.shields}
+                max={2}
+                explainer={t("streakShield.dailyExplainer")}
+                testId="daily-shields"
+              />
             )}
             {!dailyDealPlayedToday && hasDailyDealSave && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.leftInProgress")}</p>
@@ -876,12 +921,23 @@ export default function HomePage() {
             <p className="mt-0.5 text-xs text-[var(--muted)]">
               {!configured || !user
                 ? t("home.weeklyChallenge.signInHint")
-                : weeklyChallenge && weeklyChallenge.streak > 0
-                ? t("home.weeklyChallenge.streak", { count: weeklyChallenge.streak })
+                : weeklyShownStreak > 0
+                ? t("home.weeklyChallenge.streak", { count: weeklyShownStreak })
                 : t("home.weeklyChallenge.description")}
             </p>
             {weeklyChallengePlayedThisWeek && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.weeklyChallenge.streakProtected")}</p>
+            )}
+            {weeklyShieldCovering && (
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.weeklyChallenge.shieldCovering")}</p>
+            )}
+            {configured && user && weeklyChallenge && (weeklyChallenge.shields > 0 || weeklyShownStreak > 0) && (
+              <StreakShields
+                count={weeklyChallenge.shields}
+                max={1}
+                explainer={t("streakShield.weeklyExplainer")}
+                testId="weekly-shields"
+              />
             )}
             {!weeklyChallengePlayedThisWeek && hasWeeklyChallengeSave && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.leftInProgress")}</p>

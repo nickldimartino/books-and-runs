@@ -113,6 +113,18 @@ export async function signIn(
     } catch {
       /* ignore */
     }
+    // A just-created throwaway account is "fresh", so sign-in flags it and Home
+    // opens the WelcomeOnboarding dialog, which is modal and swallows clicks.
+    // Real users dismiss it; tests simply never let the flag be set.
+    try {
+      const set = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === "booksAndRuns:justSignedUp") return;
+        return set.call(this, key, value);
+      };
+    } catch {
+      /* ignore */
+    }
   });
   await page.goto("/sign-in");
   await page.getByPlaceholder("Email").fill(email);

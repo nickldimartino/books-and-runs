@@ -4,8 +4,8 @@ import type { TranslationKey } from "./i18n/keys";
 
 /**
  * Block / report / content-rejection helpers (migration 0060). Blocking hides
- * an account from you and you from them (friends, invites, leaderboard,
- * emotes) without telling them; reports land in `user_reports` for the
+ * an account from you and you from them (friends, invites, leaderboard)
+ * without telling them; reports land in `user_reports` for the
  * developer to review — there's deliberately no in-app read path for those.
  */
 

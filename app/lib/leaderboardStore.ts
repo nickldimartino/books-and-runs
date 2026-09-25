@@ -9,6 +9,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AchievementProgressState, allAchievements } from "@/achievements";
+import { dailyShieldStats, weeklyShieldStats } from "@/streakShield";
 import { levelProgress } from "@/leveling";
 import { isValidBadge, isValidColor, isValidEmoji } from "./avatarPresets";
 import { loadBonusXp } from "./loadAchievementProgress";
@@ -729,10 +730,33 @@ export async function syncDailyDealStreak(
   if (error) throw error;
 }
 
+/** The streak-shield half of a cloud streak record (migration 0081). All
+ * server-derived from the completion history; zero/empty on a project that
+ * hasn't run 0081 yet. */
+export interface CloudShieldInfo {
+  /** Shields currently held. */
+  shields: number;
+  /** Shields granted over the account's lifetime. */
+  shieldsEarned: number;
+  /** Unit keys (days for Daily, ISO weeks for Weekly) a shield covered, ascending. */
+  covered: string[];
+  /** Completion key on which the latest shield was earned, if known. */
+  lastShieldEarnedOn: string | null;
+}
+
+export interface DailyDealCloud extends CloudShieldInfo {
+  streak: number;
+  bestStreak: number;
+  lastPlayedDate: string | null;
+}
+
 interface DailyDealCloudRow {
   daily_deal_streak: number;
   daily_deal_best_streak: number;
   daily_deal_last_played: string | null;
+  daily_deal_shields?: number | null;
+  daily_deal_shields_earned?: number | null;
+  daily_deal_covered_days?: string[] | null;
 }
 
 /**
@@ -747,22 +771,69 @@ interface DailyDealCloudRow {
  * played a Daily Deal or finished a real game on any device) — callers
  * treat that as "nothing to merge," not an error.
  */
-export async function pullDailyDealStreak(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<{ streak: number; bestStreak: number; lastPlayedDate: string | null } | null> {
-  const { data, error } = await supabase
+export async function pullDailyDealStreak(supabase: SupabaseClient, userId: string): Promise<DailyDealCloud | null> {
+  // The shield columns exist from migration 0081; on a project that hasn't
+  // run it yet the wider select errors, so fall back to the original three.
+  let { data, error } = await supabase
     .from("leaderboard_entries")
-    .select("daily_deal_streak, daily_deal_best_streak, daily_deal_last_played")
+    .select(
+      "daily_deal_streak, daily_deal_best_streak, daily_deal_last_played, daily_deal_shields, daily_deal_shields_earned, daily_deal_covered_days"
+    )
     .eq("user_id", userId)
     .maybeSingle<DailyDealCloudRow>();
+  if (error) {
+    ({ data, error } = await supabase
+      .from("leaderboard_entries")
+      .select("daily_deal_streak, daily_deal_best_streak, daily_deal_last_played")
+      .eq("user_id", userId)
+      .maybeSingle<DailyDealCloudRow>());
+  }
   if (error) throw error;
-  if (!data) return null;
-  return {
-    streak: data.daily_deal_streak,
-    bestStreak: data.daily_deal_best_streak,
-    lastPlayedDate: data.daily_deal_last_played,
-  };
+  const fromRow: DailyDealCloud | null = data
+    ? {
+        streak: data.daily_deal_streak,
+        bestStreak: data.daily_deal_best_streak,
+        lastPlayedDate: data.daily_deal_last_played,
+        shields: data.daily_deal_shields ?? 0,
+        shieldsEarned: data.daily_deal_shields_earned ?? 0,
+        covered: data.daily_deal_covered_days ?? [],
+        lastShieldEarnedOn: null,
+      }
+    : null;
+  // The leaderboard row is a denormalised copy of daily_deal_completions and
+  // (before migration 0080's completion triggers) could lag it: a completion
+  // recorded by solo-verify never touched the row, so a device that read only
+  // the row saw "hasn't played today". The completions table is the ground
+  // truth (owner-readable), so prefer it whenever it is at least as recent.
+  // The shield-aware walk (src/streakShield.ts — the TS twin of migration
+  // 0081's SQL) derives streak AND shields from it. Best-effort — a failure
+  // here just falls back to the row.
+  try {
+    const { data: rows, error: rowsError } = await supabase
+      .from("daily_deal_completions")
+      .select("date")
+      .eq("user_id", userId)
+      .order("date", { ascending: false })
+      .limit(1000);
+    if (!rowsError && rows && rows.length > 0) {
+      const truth = dailyShieldStats(rows.map((r: { date: string }) => r.date));
+      const last = rows[0].date as string;
+      if (!fromRow || !fromRow.lastPlayedDate || last >= fromRow.lastPlayedDate) {
+        return {
+          streak: truth.current,
+          bestStreak: Math.max(truth.best, fromRow?.bestStreak ?? 0),
+          lastPlayedDate: last,
+          shields: truth.shields,
+          shieldsEarned: truth.earned,
+          covered: truth.covered,
+          lastShieldEarnedOn: truth.lastEarnedOn,
+        };
+      }
+    }
+  } catch {
+    // fall through to the row
+  }
+  return fromRow;
 }
 
 /** Same shape/reasoning as syncDailyDealStreak — the Weekly Challenge's own
@@ -784,10 +855,18 @@ export async function syncWeeklyChallengeStreak(
   if (error) throw error;
 }
 
+export interface WeeklyChallengeCloud extends CloudShieldInfo {
+  streak: number;
+  bestStreak: number;
+  lastPlayedWeek: string | null;
+}
+
 interface WeeklyChallengeCloudRow {
   weekly_challenge_streak: number;
   weekly_challenge_best_streak: number;
   weekly_challenge_last_played: string | null;
+  weekly_challenge_shields?: number | null;
+  weekly_challenge_covered_weeks?: string[] | null;
 }
 
 /** Same shape/reasoning as pullDailyDealStreak — the Weekly Challenge's own
@@ -795,19 +874,61 @@ interface WeeklyChallengeCloudRow {
 export async function pullWeeklyChallengeStreak(
   supabase: SupabaseClient,
   userId: string
-): Promise<{ streak: number; bestStreak: number; lastPlayedWeek: string | null } | null> {
-  const { data, error } = await supabase
+): Promise<WeeklyChallengeCloud | null> {
+  let { data, error } = await supabase
     .from("leaderboard_entries")
-    .select("weekly_challenge_streak, weekly_challenge_best_streak, weekly_challenge_last_played")
+    .select(
+      "weekly_challenge_streak, weekly_challenge_best_streak, weekly_challenge_last_played, weekly_challenge_shields, weekly_challenge_covered_weeks"
+    )
     .eq("user_id", userId)
     .maybeSingle<WeeklyChallengeCloudRow>();
+  if (error) {
+    ({ data, error } = await supabase
+      .from("leaderboard_entries")
+      .select("weekly_challenge_streak, weekly_challenge_best_streak, weekly_challenge_last_played")
+      .eq("user_id", userId)
+      .maybeSingle<WeeklyChallengeCloudRow>());
+  }
   if (error) throw error;
-  if (!data) return null;
-  return {
-    streak: data.weekly_challenge_streak,
-    bestStreak: data.weekly_challenge_best_streak,
-    lastPlayedWeek: data.weekly_challenge_last_played,
-  };
+  const fromRow: WeeklyChallengeCloud | null = data
+    ? {
+        streak: data.weekly_challenge_streak,
+        bestStreak: data.weekly_challenge_best_streak,
+        lastPlayedWeek: data.weekly_challenge_last_played,
+        shields: data.weekly_challenge_shields ?? 0,
+        shieldsEarned: 0,
+        covered: data.weekly_challenge_covered_weeks ?? [],
+        lastShieldEarnedOn: null,
+      }
+    : null;
+  // Same reasoning as pullDailyDealStreak: weekly_challenge_completions is the
+  // ground truth and the leaderboard row could lag it before migration 0080.
+  try {
+    const { data: rows, error: rowsError } = await supabase
+      .from("weekly_challenge_completions")
+      .select("week")
+      .eq("user_id", userId)
+      .order("week", { ascending: false })
+      .limit(500);
+    if (!rowsError && rows && rows.length > 0) {
+      const truth = weeklyShieldStats(rows.map((r: { week: string }) => r.week));
+      const last = rows[0].week as string;
+      if (!fromRow || !fromRow.lastPlayedWeek || last >= fromRow.lastPlayedWeek) {
+        return {
+          streak: truth.current,
+          bestStreak: Math.max(truth.best, fromRow?.bestStreak ?? 0),
+          lastPlayedWeek: last,
+          shields: truth.shields,
+          shieldsEarned: truth.earned,
+          covered: truth.covered,
+          lastShieldEarnedOn: truth.lastEarnedOn,
+        };
+      }
+    }
+  } catch {
+    // fall through to the row
+  }
+  return fromRow;
 }
 
 /** Max stored report reason length (migration 0025). */

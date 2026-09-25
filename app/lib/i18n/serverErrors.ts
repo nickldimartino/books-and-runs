@@ -16,7 +16,6 @@ const EXACT: Array<[string, TranslationKey]> = [
   // Guard/validation messages from the mp / delete-account Edge Functions and
   // the 0056-0064 RPCs that a normal UI path never triggers; they still map
   // to the translated generic line rather than leaking English.
-  ["unknown emote", "err.generic"],
   ["invalid target", "err.generic"],
   ["no such user", "err.generic"],
   ["cannot report yourself", "err.generic"],

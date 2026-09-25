@@ -56,7 +56,6 @@ export function PrivacyContent() {
             <li>{t("privacy.account.item.aiDifficulty")}</li>
             <li>{t("privacy.account.item.push")}</li>
             <li>{t("privacy.account.item.safety")}</li>
-            <li>{t("privacy.account.item.emotes")}</li>
             <li>{t("privacy.account.item.support")}</li>
             <li>{t("privacy.account.item.security")}</li>
           </ul>

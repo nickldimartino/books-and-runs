@@ -423,6 +423,7 @@ const es = {
   "multiplayer.playerWon": "{name} ganó",
   "multiplayer.nobody": "Nadie",
   "multiplayer.left": "(se fue)",
+  "multiplayer.leftPending": "Dejó la partida · +{penalty} al final de la ronda",
   "multiplayer.recordedToStats": "Registrado en tus estadísticas y tu historial multijugador.",
   "multiplayer.achievementUnlocked.one": "Logro desbloqueado",
   "multiplayer.achievementUnlocked.other": "Logros desbloqueados",
@@ -439,6 +440,7 @@ const es = {
   "multiplayer.playingAsyncBody":
     "No necesitas estar conectado al mismo tiempo que los demás. Juega tu turno y luego será el del siguiente jugador: revisa desde Inicio, o activa las notificaciones en Ajustes para saber cuándo vuelve a ser tu turno.",
   "multiplayer.roundSummary.heading": "Ronda {round} · {label}",
+  "multiplayer.roundSummary.leftPenalty": "se fue · +{penalty} de penalización",
   "multiplayer.seatN": "Asiento {seat}",
   "multiplayer.roundSummary.nextRound": "La ronda {round} está en curso: juega tu turno abajo cuando te toque.",
   "multiplayer.waitingForTurn.prefix": "Esperando a",
@@ -553,6 +555,10 @@ const es = {
   "gameOver.weekStreak.one": "racha de {count} semana",
   "gameOver.weekStreak.other": "racha de {count} semanas",
   "gameOver.bestStreakWeekly": "Mejor racha: {best}. Un nuevo desafío llega la próxima semana.",
+  "gameOver.shieldEarned": "¡Has ganado un escudo de racha! Cubrirá un día perdido si alguna vez lo necesitas.",
+  "gameOver.shieldUsed": "Un escudo cubrió ayer y tu racha siguió.",
+  "gameOver.shieldEarnedWeekly": "¡Has ganado un escudo semanal! Cubrirá una semana perdida si alguna vez lo necesitas.",
+  "gameOver.shieldUsedWeekly": "Un escudo cubrió la semana pasada y tu racha siguió.",
   "gameOver.friendsHeading": "Reparto de hoy · amigos",
   "gameOver.you": "Tú",
   "gameOver.notSaved": "Esta partida no se guardó",
@@ -653,6 +659,7 @@ const es = {
   "home.dailyDeal.streak": "🔥 racha de {count} días",
   "home.dailyDeal.oneSeeded": "Una ronda con semilla fija: el mismo reparto para todos hoy.",
   "home.dailyDeal.streakProtected": "Racha protegida por hoy.",
+  "home.dailyDeal.shieldCovering": "Tu escudo tiene cubierta tu racha.",
   "home.dailyDeal.continue": "Continuar el reparto de hoy",
   "home.dailyDeal.play": "Jugar el reparto de hoy",
   "home.leftInProgress": "Dejaste esta partida en progreso.",
@@ -663,6 +670,7 @@ const es = {
   "home.weeklyChallenge.streak": "🏆 racha de {count} semanas",
   "home.weeklyChallenge.description": "La partida completa de 7 rondas contra 3 IA de dificultad difícil: la misma mesa para todos esta semana.",
   "home.weeklyChallenge.streakProtected": "Racha protegida por esta semana.",
+  "home.weeklyChallenge.shieldCovering": "Tu escudo tiene cubierta tu racha.",
   "home.weeklyChallenge.continue": "Continuar el desafío de esta semana",
   "home.weeklyChallenge.play": "Jugar el desafío de esta semana",
 
@@ -707,6 +715,12 @@ const es = {
   "welcomeBack.streak": "Tu racha de {count} días en el Reparto Diario sigue en marcha: el de hoy está listo.",
   "welcomeBack.dailyReady": "El Reparto Diario de hoy está listo cuando quieras.",
   "welcomeBack.quests": "Hay misiones nuevas listas.",
+  "streakShield.label": "Escudos de racha: {count} de {max}",
+  "streakShield.dailyExplainer": "Ganas un escudo cada 7 días seguidos (hasta 2). Cubre en silencio un día que te saltes.",
+  "streakShield.weeklyExplainer": "Ganas un escudo cada 4 semanas seguidas. Cubre en silencio una semana que te saltes.",
+  "streakShield.savedTitle": "Tu escudo salvó tu racha",
+  "streakShield.savedBody": "Se te pasó un día, así que un escudo entró en acción. Tu racha de {count} días sigue en marcha.",
+  "welcomeBack.shieldSaved": "Un escudo cubrió un día perdido, así que tu racha de {count} días está a salvo.",
 
   "home.more": "Más",
   "home.playWithFriends": "Jugar con amigos",
@@ -1130,7 +1144,7 @@ const es = {
   "safety.block.confirmTitle":
     "¿Bloquear a {name}?",
   "safety.block.confirmBody":
-    "Dejaréis de ser amigos y os ocultaréis mutuamente: sin solicitudes de amistad, invitaciones, reacciones ni filas en la clasificación, en ambos sentidos. No se le avisará. Puedes desbloquear cuando quieras desde tu página de Cuenta.",
+    "Dejaréis de ser amigos y os ocultaréis mutuamente: sin solicitudes de amistad, invitaciones ni filas en la clasificación, en ambos sentidos. No se le avisará. Puedes desbloquear cuando quieras desde tu página de Cuenta.",
   "safety.block.error":
     "No se pudo bloquear; inténtalo de nuevo.",
   "safety.block.done":
@@ -1261,28 +1275,6 @@ const es = {
     "{n} h",
   "turnTimer.unit.days":
     "{n} d",
-  "emotes.heading":
-    "Reacciones rápidas",
-  "emotes.error":
-    "No se pudo enviar; inténtalo en un momento.",
-  "emotes.bubble":
-    "{name}: {emoji} {text}",
-  "emote.hello":
-    "¡Hola!",
-  "emote.nice_meld":
-    "¡Buena combinación!",
-  "emote.your_turn":
-    "¡Tu turno!",
-  "emote.oops":
-    "¡Ups!",
-  "emote.thanks":
-    "¡Gracias!",
-  "emote.wow":
-    "¡Guau!",
-  "emote.lucky":
-    "¡Qué suerte!",
-  "emote.good_game":
-    "Buena partida",
   "settings.notify.heading":
     "Qué notificaciones",
   "settings.notify.turns":
@@ -1294,9 +1286,9 @@ const es = {
   "settings.notify.invitesHint":
     "Invitaciones a partidas y nuevas solicitudes de amistad.",
   "settings.notify.nudges":
-    "Recordatorios y reacciones",
+    "Recordatorios",
   "settings.notify.nudgesHint":
-    "Cuando alguien te recuerda o reacciona en una partida.",
+    "Cuando alguien te recuerda que juegues en una partida.",
   "settings.notify.streaks":
     "Recordatorios de racha",
   "settings.notify.streaksHint":
@@ -1370,11 +1362,9 @@ const es = {
   "privacy.account.item.multiplayer": "Datos de partidas multijugador: en cualquier partida por turnos que inicie o a la que se una, los demás participantes, la disposición de asientos, de quién es el turno, el tamaño de las manos, los puntajes y el resultado final. El estado completo de la partida (incluido el mazo barajado y la mano de cada jugador) se guarda en el servidor y solo se revela a cada jugador como su propia vista: usted nunca ve la mano de otro jugador.",
   "privacy.account.item.aiDifficulty": "Sus preferencias, para que lo acompañen a un dispositivo o instalación nuevos: tema, reverso y anverso de las cartas, modo para daltónicos, tamaño del texto, idioma, ajustes de sonido y vibración, ajustes de música ambiental, opciones de sugerencias y resaltado, su dificultad de IA predeterminada y sus opciones de reglas de la casa. Se sincronizan con su cuenta solo mientras tiene la sesión iniciada; si no inicia sesión, permanecen únicamente en su dispositivo y nunca se nos envían.",
   "privacy.account.item.push":
-    "Si activa las notificaciones, la suscripción push de su navegador (una dirección y claves de cifrado que aporta el servicio push del navegador) para enviarle avisos de «su turno», invitaciones, solicitudes de amistad, recordatorios, reacciones y recordatorios de racha, redactados en el idioma que elija. Usted decide qué tipos recibe y puede fijar horas de silencio; para respetarlas guardamos esas elecciones y el desfase UTC de su dispositivo. Está desactivado salvo que lo active, y puede desactivarlo en cualquier momento en la app o en los ajustes del navegador o dispositivo.",
+    "Si activa las notificaciones, la suscripción push de su navegador (una dirección y claves de cifrado que aporta el servicio push del navegador) para enviarle avisos de «su turno», invitaciones, solicitudes de amistad, recordatorios y recordatorios de racha, redactados en el idioma que elija. Usted decide qué tipos recibe y puede fijar horas de silencio; para respetarlas guardamos esas elecciones y el desfase UTC de su dispositivo. Está desactivado salvo que lo active, y puede desactivarlo en cualquier momento en la app o en los ajustes del navegador o dispositivo.",
   "privacy.account.item.safety":
     "Registros de seguridad: los jugadores que bloquea (se ocultan mutuamente) y las denuncias que presenta sobre otros jugadores (quién denunció a quién, el motivo, una nota breve opcional, desde dónde se hizo y el nombre y la bio del jugador denunciado en ese momento). Las denuncias solo las ve el desarrollador y se conservan el tiempo necesario para revisarlas; el jugador denunciado no sabe quién lo denunció. Los nombres visibles, bios y nombres de clubes también se comprueban automáticamente con una lista de palabras bloqueadas y reglas contra la suplantación.",
-  "privacy.account.item.emotes":
-    "Reacciones rápidas que envía durante una partida multijugador (una de un conjunto fijo de preajustes, nunca texto libre), mostradas a los demás jugadores de esa partida y conservadas solo las más recientes de cada partida.",
   "privacy.account.item.support": "Si envía una propina a través de la página Apoyar al desarrollador, el pago lo gestiona íntegramente Stripe y nunca vemos los datos de su tarjeta. Solo guardamos que se realizó un pago (la referencia de sesión de Stripe, el importe y la moneda) para poder otorgarle la insignia de colaborador.",
   "privacy.account.item.security": "Registros técnicos de corta duración: notificaciones dentro de la app y contadores de solicitudes usados para prevenir abusos (conservados unas pocas semanas como máximo) y, para los usuarios con sesión iniciada, los informes de errores pueden vincularse a su cuenta para que podamos investigar un problema.",
   "privacy.account.outro": "No exigimos su nombre real y no recopilamos su ubicación, sus contactos ni ningún permiso del dispositivo, salvo las notificaciones si usted las autoriza. No hay anuncios ni SDK de analítica o rastreo de terceros en esta app.",

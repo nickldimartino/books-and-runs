@@ -36,6 +36,7 @@ const redactedPlayer = z.object({
   hasMeldedContract: z.boolean(),
   cumulativeScore: z.number(),
   resigned: z.boolean(),
+  pendingResignPenalty: z.number().optional(),
 });
 
 export const redactedViewSchema = z
@@ -72,7 +73,12 @@ export const redactedViewSchema = z
         round: z.number(),
         label: z.string(),
         scores: z.array(
-          z.object({ seat: z.number(), penalty: z.number(), cumulative: z.number() })
+          z.object({
+            seat: z.number(),
+            penalty: z.number(),
+            cumulative: z.number(),
+            resignPenalty: z.number().optional(),
+          })
         ),
       })
     ),

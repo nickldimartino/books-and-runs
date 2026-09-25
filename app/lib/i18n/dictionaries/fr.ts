@@ -423,6 +423,7 @@ const fr = {
   "multiplayer.playerWon": "{name} a gagné",
   "multiplayer.nobody": "Personne",
   "multiplayer.left": "(parti)",
+  "multiplayer.leftPending": "A quitté la partie · +{penalty} en fin de manche",
   "multiplayer.recordedToStats": "Enregistré dans tes statistiques et ton historique multijoueur.",
   "multiplayer.achievementUnlocked.one": "Succès débloqué",
   "multiplayer.achievementUnlocked.other": "Succès débloqués",
@@ -439,6 +440,7 @@ const fr = {
   "multiplayer.playingAsyncBody":
     "Vous n'avez pas besoin d'être en ligne en même temps. Joue ton tour, puis ce sera au joueur suivant — reviens vérifier depuis l'Accueil, ou active les notifications dans les Réglages pour savoir quand ce sera à nouveau ton tour.",
   "multiplayer.roundSummary.heading": "Manche {round} · {label}",
+  "multiplayer.roundSummary.leftPenalty": "parti · +{penalty} de pénalité",
   "multiplayer.seatN": "Place {seat}",
   "multiplayer.roundSummary.nextRound": "La manche {round} est en cours — joue ton tour ci-dessous quand ce sera à toi.",
   "multiplayer.waitingForTurn.prefix": "En attente que",
@@ -553,6 +555,10 @@ const fr = {
   "gameOver.weekStreak.one": "série de {count} semaine",
   "gameOver.weekStreak.other": "série de {count} semaines",
   "gameOver.bestStreakWeekly": "Meilleure série : {best}. Un nouveau défi arrive la semaine prochaine.",
+  "gameOver.shieldEarned": "Tu as gagné un bouclier de série ! Il couvrira un jour manqué si tu en as besoin.",
+  "gameOver.shieldUsed": "Un bouclier a couvert hier : ta série continue.",
+  "gameOver.shieldEarnedWeekly": "Tu as gagné un bouclier hebdomadaire ! Il couvrira une semaine manquée si tu en as besoin.",
+  "gameOver.shieldUsedWeekly": "Un bouclier a couvert la semaine dernière : ta série continue.",
   "gameOver.friendsHeading": "Défi du jour · amis",
   "gameOver.you": "Toi",
   "gameOver.notSaved": "Cette partie n'a pas été enregistrée",
@@ -653,6 +659,7 @@ const fr = {
   "home.dailyDeal.streak": "🔥 série de {count} jours",
   "home.dailyDeal.oneSeeded": "Une manche à graine fixe — la même donne pour tout le monde aujourd'hui.",
   "home.dailyDeal.streakProtected": "Série protégée pour aujourd'hui.",
+  "home.dailyDeal.shieldCovering": "Ton bouclier couvre ta série.",
   "home.dailyDeal.continue": "Continuer le défi du jour",
   "home.dailyDeal.play": "Jouer le défi du jour",
   "home.leftInProgress": "Tu as laissé celle-ci en cours.",
@@ -663,6 +670,7 @@ const fr = {
   "home.weeklyChallenge.streak": "🏆 série de {count} semaines",
   "home.weeklyChallenge.description": "La partie complète en 7 manches contre 3 IA Difficile — la même table pour tout le monde cette semaine.",
   "home.weeklyChallenge.streakProtected": "Série protégée pour cette semaine.",
+  "home.weeklyChallenge.shieldCovering": "Ton bouclier couvre ta série.",
   "home.weeklyChallenge.continue": "Continuer le défi de la semaine",
   "home.weeklyChallenge.play": "Jouer le défi de la semaine",
 
@@ -707,6 +715,12 @@ const fr = {
   "welcomeBack.streak": "Ta série de {count} jours au Défi du jour continue – celui d'aujourd'hui est prêt.",
   "welcomeBack.dailyReady": "Le Défi du jour t'attend, quand tu veux.",
   "welcomeBack.quests": "De nouvelles quêtes sont prêtes.",
+  "streakShield.label": "Boucliers de série : {count} sur {max}",
+  "streakShield.dailyExplainer": "Gagne un bouclier tous les 7 jours d'affilée (2 maximum). Il couvre discrètement un jour manqué.",
+  "streakShield.weeklyExplainer": "Gagne un bouclier toutes les 4 semaines d'affilée. Il couvre discrètement une semaine manquée.",
+  "streakShield.savedTitle": "Ton bouclier a sauvé ta série",
+  "streakShield.savedBody": "Un jour t'a échappé, alors un bouclier est intervenu. Ta série de {count} jours continue.",
+  "welcomeBack.shieldSaved": "Un bouclier a couvert un jour manqué : ta série de {count} jours est en sécurité.",
 
   "home.more": "Plus",
   "home.playWithFriends": "Jouer avec des amis",
@@ -1184,7 +1198,7 @@ const fr = {
   "safety.block.confirmTitle":
     "Bloquer {name} ?",
   "safety.block.confirmBody":
-    "Vous ne serez plus amis et vous serez masqués l'un pour l'autre : ni demandes d'ami, ni invitations, ni réactions, ni lignes de classement, dans les deux sens. La personne n'en sera pas informée. Tu peux débloquer à tout moment depuis ta page Compte.",
+    "Vous ne serez plus amis et vous serez masqués l'un pour l'autre : ni demandes d'ami, ni invitations, ni lignes de classement, dans les deux sens. La personne n'en sera pas informée. Tu peux débloquer à tout moment depuis ta page Compte.",
   "safety.block.error":
     "Blocage impossible — réessaie.",
   "safety.block.done":
@@ -1315,28 +1329,6 @@ const fr = {
     "{n} h",
   "turnTimer.unit.days":
     "{n} j",
-  "emotes.heading":
-    "Réactions rapides",
-  "emotes.error":
-    "Envoi impossible — réessaie dans un instant.",
-  "emotes.bubble":
-    "{name} : {emoji} {text}",
-  "emote.hello":
-    "Salut !",
-  "emote.nice_meld":
-    "Belle combinaison !",
-  "emote.your_turn":
-    "À toi !",
-  "emote.oops":
-    "Oups !",
-  "emote.thanks":
-    "Merci !",
-  "emote.wow":
-    "Waouh !",
-  "emote.lucky":
-    "Belle pioche !",
-  "emote.good_game":
-    "Bien joué",
   "settings.notify.heading":
     "Quelles notifications",
   "settings.notify.turns":
@@ -1348,9 +1340,9 @@ const fr = {
   "settings.notify.invitesHint":
     "Invitations à jouer et nouvelles demandes d'ami.",
   "settings.notify.nudges":
-    "Relances et réactions",
+    "Relances",
   "settings.notify.nudgesHint":
-    "Quand quelqu'un te relance ou réagit dans une partie.",
+    "Quand quelqu'un te relance dans une partie.",
   "settings.notify.streaks":
     "Rappels de série",
   "settings.notify.streaksHint":
@@ -1419,11 +1411,9 @@ const fr = {
   "privacy.account.item.saves": "Votre progression pour pouvoir continuer sur n'importe quel appareil : une partie solo en cours enregistrée sur votre compte, les Défis du jour et Défis de la semaine accomplis et leurs scores, les totaux mensuels de saison, et la configuration de partie favorite que vous avez enregistrée.",
   "privacy.account.item.clubs": "Les clubs et tournois que vous créez ou rejoignez : le nom du club ou du tournoi (visible de ses membres et participants), la personne qui en est propriétaire ou hôte, et la liste de ses membres et participants.",
   "privacy.account.item.push":
-    "Si vous activez les notifications, l'abonnement push de votre navigateur (une adresse et des clés de chiffrement fournies par le service push de votre navigateur) afin de vous envoyer des notifications « à vous de jouer », d'invitation, de demande d'ami, de relance, de réaction et de rappel de série, rédigées dans la langue choisie. Vous choisissez les types reçus et pouvez définir des heures calmes ; pour les respecter, nous conservons ces choix et le décalage UTC de votre appareil. C'est désactivé sauf si vous l'activez, et vous pouvez le couper à tout moment dans l'app ou dans les réglages du navigateur ou de l'appareil.",
+    "Si vous activez les notifications, l'abonnement push de votre navigateur (une adresse et des clés de chiffrement fournies par le service push de votre navigateur) afin de vous envoyer des notifications « à vous de jouer », d'invitation, de demande d'ami, de relance et de rappel de série, rédigées dans la langue choisie. Vous choisissez les types reçus et pouvez définir des heures calmes ; pour les respecter, nous conservons ces choix et le décalage UTC de votre appareil. C'est désactivé sauf si vous l'activez, et vous pouvez le couper à tout moment dans l'app ou dans les réglages du navigateur ou de l'appareil.",
   "privacy.account.item.safety":
     "Données de sécurité : les joueurs que vous bloquez (vous êtes masqués l'un pour l'autre) et les signalements que vous déposez sur d'autres joueurs (qui a signalé qui, le motif, une courte note facultative, l'endroit du signalement, ainsi que le nom et la bio du joueur signalé à ce moment-là). Les signalements ne sont visibles que du développeur et conservés le temps nécessaire à leur examen ; le joueur signalé ne sait pas qui l'a signalé. Les noms d'affichage, bios et noms de clubs sont aussi vérifiés automatiquement à l'aide d'une liste de mots interdits et de règles contre l'usurpation d'identité.",
-  "privacy.account.item.emotes":
-    "Réactions rapides que vous envoyez pendant une partie multijoueur (l'une d'un ensemble fixe de préréglages, jamais du texte libre), affichées aux autres joueurs de cette partie et conservées uniquement pour les plus récentes de chaque partie.",
   "privacy.account.item.support": "Si vous envoyez un pourboire via la page Soutenir le développeur, le paiement est traité entièrement par Stripe, et nous ne voyons jamais les données de votre carte. Nous stockons uniquement le fait qu'un paiement a eu lieu (la référence de session Stripe, le montant et la devise) afin de pouvoir vous attribuer le badge de supporter.",
   "privacy.account.item.security": "Des enregistrements techniques de courte durée : notifications dans l'appli et compteurs de requêtes servant à prévenir les abus (conservés quelques semaines au plus) et, pour les utilisateurs connectés, les rapports d'erreur peuvent être liés à votre compte afin que nous puissions examiner un problème.",
   "privacy.account.item.friendsPrefix": "Un",

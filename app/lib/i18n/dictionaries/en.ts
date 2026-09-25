@@ -434,6 +434,7 @@ const en = {
   "multiplayer.playerWon": "{name} won",
   "multiplayer.nobody": "Nobody",
   "multiplayer.left": "(left)",
+  "multiplayer.leftPending": "Left the game · +{penalty} at round end",
   "multiplayer.recordedToStats": "Recorded to your stats and multiplayer record.",
   "multiplayer.achievementUnlocked.one": "Achievement unlocked",
   "multiplayer.achievementUnlocked.other": "Achievements unlocked",
@@ -450,6 +451,7 @@ const en = {
   "multiplayer.playingAsyncBody":
     "You don't need to be online at the same time. Take your turn, then it's the next player's — check back from Home, or turn on notifications in Settings to know when it's yours again.",
   "multiplayer.roundSummary.heading": "Round {round} · {label}",
+  "multiplayer.roundSummary.leftPenalty": "left · +{penalty} penalty",
   "multiplayer.seatN": "Seat {seat}",
   "multiplayer.roundSummary.nextRound": "Round {round} is underway — take your turn below when it's yours.",
   "multiplayer.waitingForTurn.prefix": "Waiting for",
@@ -564,6 +566,10 @@ const en = {
   "gameOver.weekStreak.one": "{count}-week streak",
   "gameOver.weekStreak.other": "{count}-week streak",
   "gameOver.bestStreakWeekly": "Best streak: {best}. A new challenge lands next week.",
+  "gameOver.shieldEarned": "You earned a streak shield! It will cover a missed day if you ever need it.",
+  "gameOver.shieldUsed": "A shield covered yesterday, so your streak kept going.",
+  "gameOver.shieldEarnedWeekly": "You earned a weekly shield! It will cover a missed week if you ever need it.",
+  "gameOver.shieldUsedWeekly": "A shield covered last week, so your streak kept going.",
   "gameOver.friendsHeading": "Today's deal · friends",
   "gameOver.you": "You",
   "gameOver.notSaved": "This game wasn't saved",
@@ -667,6 +673,7 @@ const en = {
   "home.dailyDeal.streak": "🔥 {count}-day streak",
   "home.dailyDeal.oneSeeded": "One seeded round — the same deal for everyone today.",
   "home.dailyDeal.streakProtected": "Streak protected for today.",
+  "home.dailyDeal.shieldCovering": "Your shield has your streak covered.",
   "home.dailyDeal.continue": "Continue today's deal",
   "home.dailyDeal.play": "Play today's deal",
   "home.leftInProgress": "You left this one in progress.",
@@ -677,6 +684,7 @@ const en = {
   "home.weeklyChallenge.streak": "🏆 {count}-week streak",
   "home.weeklyChallenge.description": "The full 7-round game vs. 3 Hard AIs — the same table for everyone this week.",
   "home.weeklyChallenge.streakProtected": "Streak protected for this week.",
+  "home.weeklyChallenge.shieldCovering": "Your shield has your streak covered.",
   "home.weeklyChallenge.continue": "Continue this week's challenge",
   "home.weeklyChallenge.play": "Play this week's challenge",
 
@@ -721,6 +729,12 @@ const en = {
   "welcomeBack.streak": "Your {count}-day Daily Deal streak is still going — today's deal is ready.",
   "welcomeBack.dailyReady": "Today's Daily Deal is ready whenever you are.",
   "welcomeBack.quests": "Fresh quests are ready.",
+  "streakShield.label": "Streak shields: {count} of {max}",
+  "streakShield.dailyExplainer": "Earn a shield every 7 days in a row (hold up to 2). It quietly covers one missed day.",
+  "streakShield.weeklyExplainer": "Earn a shield every 4 weeks in a row. It quietly covers one missed week.",
+  "streakShield.savedTitle": "Your shield saved your streak",
+  "streakShield.savedBody": "A day slipped by, so a shield stepped in. Your {count}-day streak is still going strong.",
+  "welcomeBack.shieldSaved": "A shield covered a missed day, so your {count}-day streak is safe.",
 
   "home.more": "More",
   "home.playWithFriends": "Play with friends",
@@ -1230,7 +1244,7 @@ const en = {
   "safety.block.confirmTitle":
     "Block {name}?",
   "safety.block.confirmBody":
-    "You'll be unfriended and hidden from each other — no friend requests, game invites, reactions or leaderboard rows either way. They won't be told. You can unblock them any time on your Account page.",
+    "You'll be unfriended and hidden from each other — no friend requests, game invites or leaderboard rows either way. They won't be told. You can unblock them any time on your Account page.",
   "safety.block.error":
     "Couldn't block — try again.",
   "safety.block.done":
@@ -1361,28 +1375,6 @@ const en = {
     "{n}h",
   "turnTimer.unit.days":
     "{n}d",
-  "emotes.heading":
-    "Quick reactions",
-  "emotes.error":
-    "Couldn't send that — try again in a moment.",
-  "emotes.bubble":
-    "{name}: {emoji} {text}",
-  "emote.hello":
-    "Hello!",
-  "emote.nice_meld":
-    "Nice meld!",
-  "emote.your_turn":
-    "Your turn!",
-  "emote.oops":
-    "Oops!",
-  "emote.thanks":
-    "Thanks!",
-  "emote.wow":
-    "Wow!",
-  "emote.lucky":
-    "Lucky draw!",
-  "emote.good_game":
-    "Good game",
   "settings.notify.heading":
     "Which notifications",
   "settings.notify.turns":
@@ -1394,9 +1386,9 @@ const en = {
   "settings.notify.invitesHint":
     "Game invites and new friend requests.",
   "settings.notify.nudges":
-    "Nudges & reactions",
+    "Nudges",
   "settings.notify.nudgesHint":
-    "When someone nudges you or reacts in a game.",
+    "When someone nudges you in a game.",
   "settings.notify.streaks":
     "Streak reminders",
   "settings.notify.streaksHint":
@@ -1494,11 +1486,9 @@ const en = {
   "privacy.account.item.clubs":
     "Clubs and tournaments you create or join: the club or tournament name (visible to its members and participants), who owns or hosts it, and who its members and participants are.",
   "privacy.account.item.push":
-    "If you turn on notifications, your browser's push subscription (an address and encryption keys supplied by your browser's push service) so we can send you “your turn”, game invite, friend request, nudge, reaction and streak reminder notifications, worded in your chosen language. You choose which kinds you get and can set quiet hours; to respect them we store those choices and your device's UTC time offset. This is off unless you opt in, and you can turn it off at any time in the app or in your browser or device settings.",
+    "If you turn on notifications, your browser's push subscription (an address and encryption keys supplied by your browser's push service) so we can send you “your turn”, game invite, friend request, nudge and streak reminder notifications, worded in your chosen language. You choose which kinds you get and can set quiet hours; to respect them we store those choices and your device's UTC time offset. This is off unless you opt in, and you can turn it off at any time in the app or in your browser or device settings.",
   "privacy.account.item.safety":
     "Safety records: the players you block (so you're hidden from each other), and reports you file about other players (who reported whom, the reason, an optional short note, where it was filed, and the reported player's name and bio at that moment). Reports are visible only to the developer and kept for as long as needed to review them; the reported player is not told who reported them. Display names, bios and club names are also checked automatically against a list of blocked words and impersonation rules.",
-  "privacy.account.item.emotes":
-    "Quick reactions you send during a multiplayer game (one of a fixed set of presets — never free text), shown to the other players in that game and kept only for the most recent ones per game.",
   "privacy.account.item.support":
     "If you send a tip through the Support the developer page, payment is handled entirely by Stripe, and we never see your card details. We store only that a payment happened (the Stripe session reference, amount, and currency) so we can give you the supporter badge.",
   "privacy.account.item.security":

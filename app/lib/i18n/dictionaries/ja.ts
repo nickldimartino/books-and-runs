@@ -419,6 +419,7 @@ const ja = {
   "multiplayer.playerWon": "{name}の勝ちです",
   "multiplayer.nobody": "誰もいません",
   "multiplayer.left": "（退出）",
+  "multiplayer.leftPending": "ゲームを退出 · ラウンド終了時に +{penalty}",
   "multiplayer.recordedToStats": "統計とマルチプレイヤー記録に記録しました。",
   "multiplayer.achievementUnlocked.one": "実績を獲得しました",
   "multiplayer.achievementUnlocked.other": "実績を獲得しました",
@@ -434,6 +435,7 @@ const ja = {
   "multiplayer.playingAsyncBody":
     "全員が同時にオンラインである必要はありません。自分の番をプレイすれば、次は相手の番です。ホーム画面から様子を確認するか、設定で通知をオンにすると自分の番が来たときにわかります。",
   "multiplayer.roundSummary.heading": "ラウンド {round} ・ {label}",
+  "multiplayer.roundSummary.leftPenalty": "退出 · +{penalty} ペナルティ",
   "multiplayer.seatN": "席 {seat}",
   "multiplayer.roundSummary.nextRound": "ラウンド {round} が進行中です。自分の番になったら下でプレイしてください。",
   "multiplayer.waitingForTurn.prefix": "現在",
@@ -546,6 +548,10 @@ const ja = {
   "gameOver.weekStreak.one": "{count}週連続",
   "gameOver.weekStreak.other": "{count}週連続",
   "gameOver.bestStreakWeekly": "最高記録：{best}。来週、新しいチャレンジが登場します。",
+  "gameOver.shieldEarned": "連続記録シールドを獲得しました！お休みした日があっても1日分カバーしてくれます。",
+  "gameOver.shieldUsed": "シールドが昨日をカバーして、連続記録が続きました。",
+  "gameOver.shieldEarnedWeekly": "週間シールドを獲得しました！お休みした週があっても1週分カバーしてくれます。",
+  "gameOver.shieldUsedWeekly": "シールドが先週をカバーして、連続記録が続きました。",
   "gameOver.friendsHeading": "今日のディール・フレンド",
   "gameOver.you": "あなた",
   "gameOver.notSaved": "このゲームは保存されていません",
@@ -646,6 +652,7 @@ const ja = {
   "home.dailyDeal.streak": "🔥 {count}日連続",
   "home.dailyDeal.oneSeeded": "1つのシード付きラウンド — 今日は誰でも同じディールです。",
   "home.dailyDeal.streakProtected": "本日分の連続記録は確保済みです。",
+  "home.dailyDeal.shieldCovering": "シールドが連続記録を守っています。",
   "home.dailyDeal.continue": "今日のディールを続ける",
   "home.dailyDeal.play": "今日のディールをプレイ",
   "home.leftInProgress": "このゲームは途中で中断しています。",
@@ -656,6 +663,7 @@ const ja = {
   "home.weeklyChallenge.streak": "🏆 {count}週連続",
   "home.weeklyChallenge.description": "難しいAI3人と対戦するフル7ラウンドのゲームです。今週は誰でも同じテーブルです。",
   "home.weeklyChallenge.streakProtected": "今週分の連続記録は確保済みです。",
+  "home.weeklyChallenge.shieldCovering": "シールドが連続記録を守っています。",
   "home.weeklyChallenge.continue": "今週のチャレンジを続ける",
   "home.weeklyChallenge.play": "今週のチャレンジをプレイ",
 
@@ -700,6 +708,12 @@ const ja = {
   "welcomeBack.streak": "デイリーディールの{count}日連続記録は継続中です。今日のディールが待っています。",
   "welcomeBack.dailyReady": "今日のデイリーディールはいつでもプレイできます。",
   "welcomeBack.quests": "新しいクエストが用意されています。",
+  "streakShield.label": "連続記録シールド：{count}/{max}",
+  "streakShield.dailyExplainer": "7日連続するごとにシールドを1枚獲得（最大2枚）。1日お休みしても自動でカバーしてくれます。",
+  "streakShield.weeklyExplainer": "4週連続するごとにシールドを1枚獲得。1週お休みしても自動でカバーしてくれます。",
+  "streakShield.savedTitle": "シールドが連続記録を守りました",
+  "streakShield.savedBody": "1日空いてしまいましたが、シールドが働いて{count}日連続記録は継続中です。",
+  "welcomeBack.shieldSaved": "シールドがお休みした1日をカバーしたので、{count}日連続記録は安心です。",
 
   "home.more": "その他",
   "home.playWithFriends": "フレンドとプレイ",
@@ -1176,7 +1190,7 @@ const ja = {
   "safety.block.confirmTitle":
     "{name}をブロックしますか？",
   "safety.block.confirmBody":
-    "フレンドが解除され、お互いに表示されなくなります。フレンド申請・ゲーム招待・リアクション・ランキング表示も双方向で止まります。相手には通知されません。アカウントページでいつでも解除できます。",
+    "フレンドが解除され、お互いに表示されなくなります。フレンド申請・ゲーム招待・ランキング表示も双方向で止まります。相手には通知されません。アカウントページでいつでも解除できます。",
   "safety.block.error":
     "ブロックできませんでした。もう一度お試しください。",
   "safety.block.done":
@@ -1307,28 +1321,6 @@ const ja = {
     "{n}時間",
   "turnTimer.unit.days":
     "{n}日",
-  "emotes.heading":
-    "クイックリアクション",
-  "emotes.error":
-    "送信できませんでした。しばらくしてからお試しください。",
-  "emotes.bubble":
-    "{name}：{emoji} {text}",
-  "emote.hello":
-    "こんにちは！",
-  "emote.nice_meld":
-    "ナイスメルド！",
-  "emote.your_turn":
-    "あなたの番だよ！",
-  "emote.oops":
-    "おっと！",
-  "emote.thanks":
-    "ありがとう！",
-  "emote.wow":
-    "わあ！",
-  "emote.lucky":
-    "ラッキー！",
-  "emote.good_game":
-    "グッドゲーム",
   "settings.notify.heading":
     "通知の種類",
   "settings.notify.turns":
@@ -1340,9 +1332,9 @@ const ja = {
   "settings.notify.invitesHint":
     "ゲームへの招待と新しいフレンド申請。",
   "settings.notify.nudges":
-    "催促とリアクション",
+    "催促",
   "settings.notify.nudgesHint":
-    "誰かに催促されたり、ゲーム中にリアクションが届いたとき。",
+    "ゲーム中に誰かから催促されたとき。",
   "settings.notify.streaks":
     "連続記録のリマインダー",
   "settings.notify.streaksHint":
@@ -1415,11 +1407,9 @@ const ja = {
   "privacy.account.item.saves": "別のデバイスでも続きから遊べるようにするための進捗：アカウントに保存されたひとり用の進行中のゲーム、デイリーディールとウィークリーチャレンジの達成状況とスコア、月ごとのシーズン合計、保存したお気に入りのゲーム設定。",
   "privacy.account.item.clubs": "お客様が作成または参加したクラブとトーナメント：クラブ名またはトーナメント名（そのメンバーや参加者に表示されます）、所有者または主催者、そしてメンバーや参加者。",
   "privacy.account.item.push":
-    "通知をオンにすると、ブラウザのプッシュ登録（ブラウザのプッシュサービスが提供するアドレスと暗号鍵）を保存し、「あなたの番」、ゲームへの招待、フレンド申請、催促、リアクション、連続記録のリマインダーを、選択した言語でお送りします。受け取る種類を選び、おやすみ時間を設定できます。これらを守るため、その設定と端末のUTCとの時差を保存します。オプトインしない限りオフで、アプリまたはブラウザ／端末の設定でいつでもオフにできます。",
+    "通知をオンにすると、ブラウザのプッシュ登録（ブラウザのプッシュサービスが提供するアドレスと暗号鍵）を保存し、「あなたの番」、ゲームへの招待、フレンド申請、催促、連続記録のリマインダーを、選択した言語でお送りします。受け取る種類を選び、おやすみ時間を設定できます。これらを守るため、その設定と端末のUTCとの時差を保存します。オプトインしない限りオフで、アプリまたはブラウザ／端末の設定でいつでもオフにできます。",
   "privacy.account.item.safety":
     "安全に関する記録：ブロックしたプレイヤー（互いに表示されなくなります）と、他のプレイヤーについて提出した報告（誰が誰を、理由、任意の短いメモ、報告した場所、報告時点での相手の名前と自己紹介）。報告は開発者だけが閲覧でき、確認に必要な期間保持されます。報告された相手には誰が報告したかは伝わりません。表示名・自己紹介・クラブ名は、禁止語リストやなりすまし対策のルールで自動的にも確認されます。",
-  "privacy.account.item.emotes":
-    "マルチプレイ中に送るクイックリアクション（決まったプリセットのいずれかで、自由入力はありません）。同じゲームの他のプレイヤーに表示され、ゲームごとに直近のものだけを保持します。",
   "privacy.account.item.support": "「開発者を応援する」ページからチップを送る場合、支払いはすべてStripeが処理し、当社がお客様のカード情報を目にすることはありません。サポーターバッジをお付けするために、支払いが行われたという事実（Stripeのセッション参照情報、金額、通貨）のみを保存します。",
   "privacy.account.item.aiDifficulty": "お客様の設定。新しいデバイスやインストールにも引き継がれます：テーマ、カード裏面とカード表面、色覚モード、文字サイズ、言語、サウンドと触覚の設定、環境音楽の設定、ヒントとハイライトのオプション、デフォルトのAI難易度、ハウスルールの選択。これらは、サインインしている間のみアカウントに同期されます。サインインしない場合は、お使いのデバイスにのみ保存され、当社に送信されることはありません。",
   "privacy.account.item.security": "短期間だけ保持される技術的な記録：アプリ内通知と、不正利用を防ぐためのリクエストカウンター（長くても数週間保持）。また、サインイン済みのユーザーについては、問題を調査できるよう、エラー報告がアカウントに関連付けられる場合があります。",

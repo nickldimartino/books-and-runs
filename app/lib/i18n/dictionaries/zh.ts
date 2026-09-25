@@ -414,6 +414,7 @@ const zh = {
   "multiplayer.playerWon": "{name} 获胜",
   "multiplayer.nobody": "无人",
   "multiplayer.left": "（已离开）",
+  "multiplayer.leftPending": "已离开游戏 · 回合结束时 +{penalty}",
   "multiplayer.recordedToStats": "已记录到你的统计数据和多人对战战绩中。",
   "multiplayer.achievementUnlocked.one": "解锁了成就",
   "multiplayer.achievementUnlocked.other": "解锁了成就",
@@ -429,6 +430,7 @@ const zh = {
   "multiplayer.playingAsyncBody":
     "无需同时在线。完成你的回合后即轮到下一位玩家 — 从主页查看进度，或在设置中开启通知，以便及时知道轮到你了。",
   "multiplayer.roundSummary.heading": "第 {round} 回合 · {label}",
+  "multiplayer.roundSummary.leftPenalty": "已离开 · +{penalty} 罚分",
   "multiplayer.seatN": "座位 {seat}",
   "multiplayer.roundSummary.nextRound": "第 {round} 回合正在进行中 — 轮到你时请在下方完成你的回合。",
   "multiplayer.waitingForTurn.prefix": "等待",
@@ -541,6 +543,10 @@ const zh = {
   "gameOver.weekStreak.one": "连续 {count} 周",
   "gameOver.weekStreak.other": "连续 {count} 周",
   "gameOver.bestStreakWeekly": "最佳纪录：{best}。下周会有新的挑战。",
+  "gameOver.shieldEarned": "你获得了一个连胜护盾！需要时它会补上漏掉的一天。",
+  "gameOver.shieldUsed": "护盾补上了昨天，你的连胜得以延续。",
+  "gameOver.shieldEarnedWeekly": "你获得了一个每周护盾！需要时它会补上漏掉的一周。",
+  "gameOver.shieldUsedWeekly": "护盾补上了上周，你的连胜得以延续。",
   "gameOver.friendsHeading": "今日挑战 · 好友",
   "gameOver.you": "你",
   "gameOver.notSaved": "本局游戏未被保存",
@@ -644,6 +650,7 @@ const zh = {
   "home.dailyDeal.streak": "🔥 连续 {count} 天",
   "home.dailyDeal.oneSeeded": "同一固定牌局 — 今天所有人的牌局都相同。",
   "home.dailyDeal.streakProtected": "今天的连胜已受保护。",
+  "home.dailyDeal.shieldCovering": "护盾正守着你的连胜。",
   "home.dailyDeal.continue": "继续今日挑战",
   "home.dailyDeal.play": "游玩今日挑战",
   "home.leftInProgress": "你上次中途离开了这局游戏。",
@@ -654,6 +661,7 @@ const zh = {
   "home.weeklyChallenge.streak": "🏆 连续 {count} 周",
   "home.weeklyChallenge.description": "对战 3 个困难 AI 的完整 7 回合游戏 — 本周所有人的牌局都相同。",
   "home.weeklyChallenge.streakProtected": "本周的连胜已受保护。",
+  "home.weeklyChallenge.shieldCovering": "护盾正守着你的连胜。",
   "home.weeklyChallenge.continue": "继续本周挑战",
   "home.weeklyChallenge.play": "游玩本周挑战",
 
@@ -698,6 +706,12 @@ const zh = {
   "welcomeBack.streak": "你的每日挑战已连续 {count} 天——今天的挑战已就绪。",
   "welcomeBack.dailyReady": "今天的每日挑战随时可玩。",
   "welcomeBack.quests": "新的任务已经准备好了。",
+  "streakShield.label": "连胜护盾：{count}/{max}",
+  "streakShield.dailyExplainer": "连续 7 天获得 1 个护盾（最多持有 2 个），它会悄悄补上漏掉的一天。",
+  "streakShield.weeklyExplainer": "连续 4 周获得 1 个护盾，它会悄悄补上漏掉的一周。",
+  "streakShield.savedTitle": "护盾保住了你的连胜",
+  "streakShield.savedBody": "有一天错过了，护盾自动出手，你的 {count} 天连胜依然继续。",
+  "welcomeBack.shieldSaved": "护盾补上了漏掉的一天，你的 {count} 天连胜安然无恙。",
 
   "home.more": "更多",
   "home.playWithFriends": "与好友一起游玩",
@@ -1203,7 +1217,7 @@ const zh = {
   "safety.block.confirmTitle":
     "要屏蔽{name}吗？",
   "safety.block.confirmBody":
-    "你们将互相解除好友关系并彼此隐藏——双方都无法发送好友请求、游戏邀请、表情，也不会出现在对方的排行榜上。对方不会收到通知。你可以随时在账号页面解除屏蔽。",
+    "你们将互相解除好友关系并彼此隐藏——双方都无法发送好友请求、游戏邀请，也不会出现在对方的排行榜上。对方不会收到通知。你可以随时在账号页面解除屏蔽。",
   "safety.block.error":
     "无法屏蔽，请重试。",
   "safety.block.done":
@@ -1334,28 +1348,6 @@ const zh = {
     "{n}小时",
   "turnTimer.unit.days":
     "{n}天",
-  "emotes.heading":
-    "快捷表情",
-  "emotes.error":
-    "无法发送，请稍后再试。",
-  "emotes.bubble":
-    "{name}：{emoji} {text}",
-  "emote.hello":
-    "你好！",
-  "emote.nice_meld":
-    "漂亮的组牌！",
-  "emote.your_turn":
-    "轮到你了！",
-  "emote.oops":
-    "哎呀！",
-  "emote.thanks":
-    "谢谢！",
-  "emote.wow":
-    "哇！",
-  "emote.lucky":
-    "好运气！",
-  "emote.good_game":
-    "打得好",
   "settings.notify.heading":
     "通知类型",
   "settings.notify.turns":
@@ -1367,9 +1359,9 @@ const zh = {
   "settings.notify.invitesHint":
     "游戏邀请和新的好友请求。",
   "settings.notify.nudges":
-    "提醒和表情",
+    "提醒",
   "settings.notify.nudgesHint":
-    "有人提醒你或在对局中发送表情时。",
+    "有人在对局中提醒你时。",
   "settings.notify.streaks":
     "连续纪录提醒",
   "settings.notify.streaksHint":
@@ -1472,11 +1464,9 @@ const zh = {
   "privacy.account.item.aiDifficulty":
     "您的偏好设置，使其跟随您到新设备或新安装：主题、牌背和牌面、色盲模式、文字大小、语言、声音和震动设置、环境音乐设置、提示和高亮选项、您的默认 AI 难度，以及您选择的家规。这些设置仅在您登录期间才会同步到您的账号；如果您不登录，它们只保留在您的设备上，绝不会发送给我们。",
   "privacy.account.item.push":
-    "如果您开启通知，我们会保存您浏览器的推送订阅（由浏览器推送服务提供的地址和加密密钥），以便向您发送“轮到您了”、游戏邀请、好友请求、提醒、表情和连续纪录提醒通知，并使用您选择的语言。您可以选择接收哪些类型并设置免打扰时段；为遵守这些设置，我们会保存这些选择以及您设备的 UTC 时差。此功能默认关闭，仅在您选择开启后生效，您可随时在应用内或浏览器/设备设置中关闭。",
+    "如果您开启通知，我们会保存您浏览器的推送订阅（由浏览器推送服务提供的地址和加密密钥），以便向您发送“轮到您了”、游戏邀请、好友请求、提醒和连续纪录提醒通知，并使用您选择的语言。您可以选择接收哪些类型并设置免打扰时段；为遵守这些设置，我们会保存这些选择以及您设备的 UTC 时差。此功能默认关闭，仅在您选择开启后生效，您可随时在应用内或浏览器/设备设置中关闭。",
   "privacy.account.item.safety":
     "安全记录：您屏蔽的玩家（使您们彼此不可见），以及您针对其他玩家提交的举报（谁举报了谁、原因、可选的简短说明、举报来源，以及被举报玩家当时的名称和简介）。举报仅开发者可见，并在审核所需的时间内保留；被举报的玩家不会知道是谁举报的。显示名称、简介和俱乐部名称还会根据屏蔽词列表和冒充规则自动检查。",
-  "privacy.account.item.emotes":
-    "您在多人对战中发送的快捷表情（固定预设之一，绝不是自由文本），会显示给该对局中的其他玩家，每局仅保留最近的若干条。",
   "privacy.account.item.support":
     "如果您通过“支持开发者”页面发送打赏，付款完全由 Stripe 处理，我们绝不会看到您的银行卡信息。我们只存储一笔付款已发生这一事实（Stripe 会话编号、金额和币种），以便向您授予支持者徽章。",
   "privacy.account.item.security":

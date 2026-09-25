@@ -3,6 +3,7 @@ import { createGame, PlayerConfig } from "@/gameEngine";
 import { CONTRACTS, ContractRequirement, GameState } from "@/types";
 import { AI_PERSONAS } from "./aiPersonas";
 import { YOU_PLAYER_ID } from "./recordGameResult";
+import { dayIndex, DAILY_SHIELD_CONFIG, stepShieldStreak } from "@/streakShield";
 
 // The Daily Deal — a single seeded round (see dateSeed below) that's the
 // same fixed table and shuffle for everyone playing it on a given calendar
@@ -27,9 +28,32 @@ export interface DailyDealState {
   bestStreak: number;
   lastPlayedDate: string | null;
   history: DailyDealResult[];
+  // Streak shields (src/streakShield.ts; the account's cloud record is the
+  // truth, this is the device's cached copy plus a local estimate — the same
+  // rule applied incrementally when a deal is finished).
+  /** Shields currently held (0-2). */
+  shields: number;
+  /** Lifetime shields granted. */
+  shieldsEarned: number;
+  /** Days a shield covered, ascending (newest 30). */
+  coveredDays: string[];
+  /** Completion day on which the latest shield was earned. */
+  lastShieldEarnedOn: string | null;
+  /** Newest covered day the player has already been told about (device-only). */
+  shieldNoticeSeen: string | null;
 }
 
-const EMPTY_STATE: DailyDealState = { streak: 0, bestStreak: 0, lastPlayedDate: null, history: [] };
+const EMPTY_STATE: DailyDealState = {
+  streak: 0,
+  bestStreak: 0,
+  lastPlayedDate: null,
+  history: [],
+  shields: 0,
+  shieldsEarned: 0,
+  coveredDays: [],
+  lastShieldEarnedOn: null,
+  shieldNoticeSeen: null,
+};
 
 /** "YYYY-MM-DD" for the given Date's own local calendar day — deliberately
  * not `toISOString()`, which is UTC-based and would flip to the next day up
@@ -201,6 +225,10 @@ export function mergeCloudDailyDealState(cloud: {
   streak: number;
   bestStreak: number;
   lastPlayedDate: string | null;
+  shields?: number;
+  shieldsEarned?: number;
+  covered?: string[];
+  lastShieldEarnedOn?: string | null;
 }): DailyDealState {
   const local = loadDailyDealState();
   const localIsNewer =
@@ -212,9 +240,34 @@ export function mergeCloudDailyDealState(cloud: {
         bestStreak: Math.max(cloud.bestStreak, local.bestStreak),
         lastPlayedDate: cloud.lastPlayedDate,
         history: local.history,
+        shields: cloud.shields ?? 0,
+        shieldsEarned: cloud.shieldsEarned ?? 0,
+        coveredDays: cloud.covered ?? [],
+        lastShieldEarnedOn: cloud.lastShieldEarnedOn ?? null,
+        shieldNoticeSeen: local.shieldNoticeSeen,
       };
   saveDailyDealState(next);
   return next;
+}
+
+/** Remembers that the player has been told about every shield-covered day so
+ * far (the Home "your shield saved your streak" card, the game-over line). */
+export function markShieldNoticeSeen(): DailyDealState {
+  const current = loadDailyDealState();
+  const newest = current.coveredDays.length ? current.coveredDays[current.coveredDays.length - 1] : null;
+  if (newest === current.shieldNoticeSeen) return current;
+  const next = { ...current, shieldNoticeSeen: newest };
+  saveDailyDealState(next);
+  return next;
+}
+
+/** The newest shield-covered day the player hasn't been told about yet, or
+ * null. Only a recent cover is worth announcing (within two weeks). */
+export function unseenShieldSave(state: DailyDealState): string | null {
+  const newest = state.coveredDays.length ? state.coveredDays[state.coveredDays.length - 1] : null;
+  if (!newest || newest === state.shieldNoticeSeen) return null;
+  if (dayIndex(localDateKey()) - dayIndex(newest) > 14) return null;
+  return newest;
 }
 
 /**
@@ -247,12 +300,34 @@ export function recordDailyDealResult(state: GameState): DailyDealState {
   const won = !!you && you.cumulativeScore === lowest;
   const yourScore = you?.cumulativeScore ?? 0;
 
-  const streak = current.lastPlayedDate === dateKeyMinusOneDay(today) ? current.streak + 1 : 1;
+  // The same rule migration 0081 applies server-side (see src/streakShield.ts):
+  // consecutive day -> +1; exactly one missed day with a shield held -> the
+  // shield covers it and the streak continues; anything else restarts at 1.
+  const prevIndex = current.lastPlayedDate ? dayIndex(current.lastPlayedDate) : null;
+  const step = stepShieldStreak(
+    {
+      current: current.streak,
+      best: current.bestStreak,
+      shields: current.shields,
+      earned: current.shieldsEarned,
+      used: 0,
+      lastEarnedIndex: null,
+    },
+    prevIndex,
+    dayIndex(today),
+    DAILY_SHIELD_CONFIG
+  );
+  const streak = step.current;
   const next: DailyDealState = {
     streak,
     bestStreak: Math.max(current.bestStreak, streak),
     lastPlayedDate: today,
     history: [{ date: today, won, yourScore }, ...current.history].slice(0, HISTORY_LIMIT),
+    shields: step.shields,
+    shieldsEarned: step.earned,
+    coveredDays: step.covered !== null ? [...current.coveredDays, dateKeyMinusOneDay(today)].slice(-30) : current.coveredDays,
+    lastShieldEarnedOn: step.earned > current.shieldsEarned ? today : current.lastShieldEarnedOn,
+    shieldNoticeSeen: current.shieldNoticeSeen,
   };
   saveDailyDealState(next);
   return next;

@@ -10,6 +10,7 @@ import { useT } from "../../lib/i18n/LocaleProvider";
 export function WelcomeBackCard({
   gamesWaiting,
   dailyStreak,
+  shieldSaved = false,
   showQuests,
   onDismiss,
 }: {
@@ -17,6 +18,8 @@ export function WelcomeBackCard({
   gamesWaiting: number;
   /** A live (today-or-yesterday) Daily Deal streak, or 0. */
   dailyStreak: number;
+  /** A streak shield covered a missed day since the last visit. */
+  shieldSaved?: boolean;
   showQuests: boolean;
   onDismiss: () => void;
 }) {
@@ -31,7 +34,13 @@ export function WelcomeBackCard({
       </h2>
       <ul className="mt-1 flex flex-col gap-0.5 text-xs text-[var(--muted)]">
         {gamesWaiting > 0 && <li>{tPlural("welcomeBack.gamesWaiting", gamesWaiting)}</li>}
-        <li>{dailyStreak > 0 ? t("welcomeBack.streak", { count: dailyStreak }) : t("welcomeBack.dailyReady")}</li>
+        <li>
+          {dailyStreak > 0
+            ? shieldSaved
+              ? t("welcomeBack.shieldSaved", { count: dailyStreak })
+              : t("welcomeBack.streak", { count: dailyStreak })
+            : t("welcomeBack.dailyReady")}
+        </li>
         {showQuests && <li>{t("welcomeBack.quests")}</li>}
       </ul>
       <button
