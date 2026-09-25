@@ -65,6 +65,19 @@ describe("checkDisplayName — rejects", () => {
   });
 });
 
+describe("spaced / separator-obfuscated words", () => {
+  it("catches spelled-out profanity, with or without a glued leading article", () => {
+    for (const t of ["f u c k", "f.u.c.k", "f-u-c-k", "f_u_c_k", "you are a f u c k", "i f-u-c-k", "a s h i t", "what a f.u.c.k.i.n.g mess"]) {
+      expect(checkBio(t), t).toEqual({ ok: false, issue: "profanity" });
+    }
+  });
+  it("does not flag initials, short names or innocent spaced letters", () => {
+    for (const t of ["J. R. R. Tolkien fan", "A. J. Smith", "I am a big fan", "a b c d", "Q. E. D.", "I O U", "Ms. A. B. Chen", "a s s ociate"]) {
+      expect(checkBio(t).ok, t).toBe(true);
+    }
+  });
+});
+
 describe("checkBio / checkTitle", () => {
   it("allows empty bios (clearing) and normal text, even 'admin' talk", () => {
     expect(checkBio("")).toEqual({ ok: true });

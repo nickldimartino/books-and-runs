@@ -55,7 +55,7 @@ describe("copy table", () => {
   it("never leaves an unfilled placeholder in the rendered text", () => {
     for (const l of PUSH_LOCALES) {
       for (const k of KINDS) {
-        const t = pushText(k, l, { name: "Zara", round: 3, hours: 14, emote: "👏", streak: 5 });
+        const t = pushText(k, l, { name: "Zara", round: 3, hours: 14, streak: 5 });
         expect(t.title + t.body, `${l}.${k}`).not.toMatch(/\{\w+\}/);
         const bare = pushText(k, l, {});
         expect(bare.title + bare.body, `bare ${l}.${k}`).not.toMatch(/\{\w+\}/);

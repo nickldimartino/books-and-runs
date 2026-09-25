@@ -348,6 +348,71 @@ describe("applyResign", () => {
   });
 });
 
+describe("resign penalty timing (deferred to round end)", () => {
+  it("does not touch any shown score at resign time — the penalty is pending and labelled", () => {
+    const config = humanConfig(3);
+    const eng = applyResign(dealGame(config), config, 1);
+    expect(eng.state.gameOver).toBe(false);
+    expect(eng.state.players.map((p) => p.cumulativeScore)).toEqual([0, 0, 0]);
+    expect(publicColumns(eng, config).cumulative_scores).toEqual({ 0: 0, 1: 0, 2: 0 });
+    const view = redactFor(eng, config, 0);
+    expect(view.players[1]).toMatchObject({ resigned: true, cumulativeScore: 0, pendingResignPenalty: RESIGN_PENALTY });
+    expect(view.players[0].pendingResignPenalty).toBeUndefined();
+  });
+
+  it("charges the penalty when the round ends, exactly once, and records it in the round result", () => {
+    const config = humanConfig(3);
+    let eng = applyResign(dealGame(config), config, 1);
+    eng.state.roundOver = true; // round 1 ends (e.g. someone went out)
+    eng = advanceThroughAi(eng);
+    expect(eng.state.players[1].cumulativeScore).toBe(RESIGN_PENALTY);
+    expect(eng.pendingResignPenalty).toEqual([]);
+    const r1 = eng.roundResults.find((r) => r.round === 1)!;
+    expect(r1.scores[1]).toMatchObject({ resignPenalty: RESIGN_PENALTY, cumulative: RESIGN_PENALTY });
+    expect(r1.scores[0].resignPenalty).toBeUndefined();
+    expect(redactFor(eng, config, 0).players[1].pendingResignPenalty).toBeUndefined();
+    // a later round ending does not charge it again
+    const before = eng.state.players[1].cumulativeScore;
+    eng.state.players[1].hand = [];
+    eng.state.roundOver = true;
+    eng = advanceThroughAi(eng);
+    expect(eng.state.players[1].cumulativeScore).toBe(before);
+  });
+
+  it("a resigner can't win the game just because their empty hand scored 0 — the penalty lands before the winner is decided", () => {
+    const config = humanConfig(3);
+    let eng = applyResign(dealGame(config), config, 1);
+    eng.state.players[0].cumulativeScore = 40;
+    eng.state.players[2].cumulativeScore = 30;
+    eng.state.roundOver = true;
+    eng.state.gameOver = true;
+    eng.state.winnerId = "seat-1"; // what the engine would pick from 0/40/30
+    eng = advanceThroughAi(eng);
+    expect(eng.state.players[1].cumulativeScore).toBe(RESIGN_PENALTY);
+    expect(eng.state.winnerId).toBe("seat-2");
+  });
+
+  it("an engine stored before the deferral (penalty already applied, nothing pending) isn't charged twice", () => {
+    const config = humanConfig(3);
+    const eng = dealGame(config);
+    eng.resignedSeats = [1];
+    eng.state.players[1].hand = [];
+    eng.state.players[1].cumulativeScore = RESIGN_PENALTY;
+    eng.state.roundOver = true;
+    const after = advanceThroughAi(eng);
+    expect(after.state.players[1].cumulativeScore).toBe(RESIGN_PENALTY);
+  });
+
+  it("force-finishing the game (fewer than 2 humans left) charges the pending penalty", () => {
+    const config = humanConfig(2);
+    const after = applyResign(dealGame(config), config, 1);
+    expect(after.state.gameOver).toBe(true);
+    expect(after.state.players[1].cumulativeScore).toBeGreaterThanOrEqual(RESIGN_PENALTY);
+    expect(after.state.winnerId).toBe("seat-0");
+    expect(after.pendingResignPenalty).toEqual([]);
+  });
+});
+
 describe("publicColumns", () => {
   it("exposes hand counts and whose turn, never any card", () => {
     const config = humanConfig(3);

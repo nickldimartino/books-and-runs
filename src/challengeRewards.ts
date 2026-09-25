@@ -23,10 +23,10 @@ import {
   dailyLedgerRef,
   reachedStreakMilestones,
   streakLedgerRef,
-  streakStats,
   WEEKLY_CHALLENGE_XP,
   weeklyLedgerRef,
 } from "./dailyRewards";
+import { dailyShieldStats, weeklyShieldStats } from "./streakShield";
 import { buildMetricSnapshot, currentPeriodKey, MetricSnapshot, questLedgerRef, QuestPeriod, questProgress, questsForPeriod } from "./quests";
 
 /** The slice of a Supabase client these helpers use. Deliberately loose
@@ -71,10 +71,11 @@ export async function creditChallengeCompletion(
       .eq("user_id", uid)
       .limit(5000);
     if (selectError || !rows) return none;
-    const stats = streakStats(
-      (rows as Record<string, string>[]).map((r) => String(r[column])),
-      kind === "daily" ? "day" : "week"
-    );
+    // Shield-aware (src/streakShield.ts): `best` includes single-unit gaps a
+    // shield covered, `count` is real completions only (covered units are not
+    // plays). Milestone XP stays once-per-milestone via the ledger ref.
+    const keys = (rows as Record<string, string>[]).map((r) => String(r[column]));
+    const stats = kind === "daily" ? dailyShieldStats(keys) : weeklyShieldStats(keys);
 
     await db.rpc("solo_verify_set_counters", {
       p_user_id: uid,

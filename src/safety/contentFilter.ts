@@ -10,6 +10,7 @@
 //      5→s 7→t @→a $→s)
 //   3. split into words on anything that isn't a letter/number; runs of 3+
 //      single letters ("f u c k", "f.u.c.k") are joined back into one word
+//      (also without a leading "a"/"i": "a f u c k")
 //   4. "squash" = all words joined; runs of 3+ identical a-z letters are
 //      cut to 2 (fuuuuck → fuuck) and, for the looser second pass, every
 //      run to 1 (fuuck → fuck), so stretched spellings still match.
@@ -90,8 +91,12 @@ function mergeSpelledOut(words: string[]): string[] {
   const out: string[] = [];
   let buf: string[] = [];
   const flush = () => {
-    if (buf.length >= 3) out.push(buf.join(""));
-    else out.push(...buf);
+    if (buf.length >= 3) {
+      out.push(buf.join(""));
+      // "you are a f u c k": the real one-letter word "a"/"i" glued onto the
+      // front of the run must not hide it, so also try the run without it.
+      if ((buf[0] === "a" || buf[0] === "i") && buf.length >= 4) out.push(buf.slice(1).join(""));
+    } else out.push(...buf);
     buf = [];
   };
   for (const w of words) {

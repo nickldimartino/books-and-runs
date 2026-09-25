@@ -3,6 +3,8 @@ import {
   DAILY_DEAL_XP,
   DAILY_STREAK_MILESTONE_XP,
   dailyLedgerRef,
+  isBelievableDayKey,
+  isBelievableWeekKey,
   nextUtcMidnight,
   nextUtcWeekStart,
   reachedStreakMilestones,
@@ -97,5 +99,36 @@ describe("UTC period keys", () => {
     expect(new Date(nextUtcWeekStart(sunday)).toISOString()).toBe("2026-09-28T00:00:00.000Z");
     const monday = new Date("2026-09-28T00:00:00Z");
     expect(new Date(nextUtcWeekStart(monday)).toISOString()).toBe("2026-10-05T00:00:00.000Z");
+  });
+});
+
+describe("isBelievableDayKey / isBelievableWeekKey (timezone tolerance)", () => {
+  const at = (iso: string) => Date.parse(iso);
+  it("accepts a US-evening completion whose local day is already 'yesterday' in UTC (the regression)", () => {
+    // 9pm EDT on 2026-09-24 is 01:00Z on the 25th — 25h after 2026-09-24T00:00Z.
+    expect(isBelievableDayKey("2026-09-24", at("2026-09-25T01:00:00Z"))).toBe(true);
+    // 11:30pm PDT on the 24th is 06:30Z on the 25th (30.5h after).
+    expect(isBelievableDayKey("2026-09-24", at("2026-09-25T06:30:00Z"))).toBe(true);
+  });
+  it("accepts an early-morning completion far ahead of UTC (UTC+14)", () => {
+    expect(isBelievableDayKey("2026-09-25", at("2026-09-24T10:30:00Z"))).toBe(true);
+  });
+  it("still rejects dates no timezone could be showing", () => {
+    expect(isBelievableDayKey("2026-09-23", at("2026-09-25T06:30:00Z"))).toBe(false); // too old
+    expect(isBelievableDayKey("2026-09-26", at("2026-09-25T06:30:00Z"))).toBe(false); // tomorrow, not yet anywhere
+    expect(isBelievableDayKey("2026-10-01", at("2026-09-25T12:00:00Z"))).toBe(false);
+    expect(isBelievableDayKey("2026-13-45", at("2026-09-25T12:00:00Z"))).toBe(false);
+    expect(isBelievableDayKey("garbage", at("2026-09-25T12:00:00Z"))).toBe(false);
+  });
+  it("accepts a Sunday-evening US completion for the ISO week that already ended in UTC", () => {
+    // 2026-W39 is Mon 09-21..Sun 09-27; 9pm EDT Sunday = 01:00Z Monday 09-28.
+    expect(isBelievableWeekKey("2026-W39", at("2026-09-28T01:00:00Z"))).toBe(true);
+    expect(isBelievableWeekKey("2026-W40", at("2026-09-27T12:00:00Z"))).toBe(true); // Monday-morning UTC+14 already there
+  });
+  it("rejects weeks that aren't current anywhere", () => {
+    expect(isBelievableWeekKey("2026-W38", at("2026-09-29T00:00:00Z"))).toBe(false);
+    expect(isBelievableWeekKey("2026-W41", at("2026-09-25T00:00:00Z"))).toBe(false);
+    expect(isBelievableWeekKey("2026-W54", at("2026-09-25T00:00:00Z"))).toBe(false);
+    expect(isBelievableWeekKey("2026-39", at("2026-09-25T00:00:00Z"))).toBe(false);
   });
 });

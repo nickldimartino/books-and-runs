@@ -1,7 +1,7 @@
 // Books & Runs — multiplayer Edge Function.
 //
 // One deployed function, path-routed: /mp/create /mp/respond /mp/cancel
-// /mp/state /mp/move /mp/resign, plus /mp/nudge /mp/emote (reactions),
+// /mp/state /mp/move /mp/resign, plus /mp/nudge,
 // /mp/resign_all (account deletion), /mp/friend_push and the cron-only
 // /mp/sweep (turn clock). It is the ONLY thing that reads or writes
 // mp_game_state (the sealed full state + deck) — every client gets back a
@@ -42,16 +42,10 @@ import {
   dealGame,
   publicColumns,
   redactFor,
+  RESIGN_PENALTY,
 } from "./_engine/mp/adapter.ts";
 import { MpConfig, MpEngine } from "./_engine/mp/types.ts";
 import { autoPlayTurn } from "./_engine/mp/autoPlay.ts";
-import {
-  checkEmoteRate,
-  EMOTE_KEEP_PER_GAME,
-  EMOTE_PUSH_QUIET_MS,
-  EMOTE_EMOJI,
-  isEmoteId,
-} from "./_engine/mp/emotes.ts";
 import {
   expiryAction,
   NUDGE_COOLDOWN_HOURS,
@@ -171,7 +165,7 @@ async function isBlockedPair(a: string, b: string): Promise<boolean> {
 // stay inbox-only unless a caller asks for them explicitly.
 
 const PUSH_KINDS = Object.keys(PUSH_CATEGORY);
-const SOCIAL_KINDS: PushKind[] = ["nudge", "emote", "game_request", "friend_request", "friend_accepted"];
+const SOCIAL_KINDS: PushKind[] = ["nudge", "game_request", "friend_request", "friend_accepted"];
 
 async function loadPushPrefs(userId: string): Promise<PushPrefs | null> {
   const full = await admin
@@ -188,7 +182,6 @@ async function loadPushPrefs(userId: string): Promise<PushPrefs | null> {
 interface PushExtra {
   round?: number | null;
   hours?: number | null;
-  emote?: string | null;
 }
 
 async function sendPush(
@@ -642,7 +635,8 @@ async function handleRespond(uid: string, body: Record<string, unknown>): Promis
   if (!game) return json({ error: "no such game" }, 404);
 
   const mine = await myParticipant(gameId, uid);
-  if (!mine || mine.invite_status !== "invited") {
+  // A cancelled game (host withdrew, or a block cancelled it) is no invite.
+  if (!mine || mine.invite_status !== "invited" || game.status !== "pending") {
     return json({ error: "no pending invite for you here" }, 400);
   }
 
@@ -664,6 +658,25 @@ async function handleRespond(uid: string, body: Record<string, unknown>): Promis
       .neq("user_id", uid);
     for (const o of others ?? []) await addEvent(o.user_id, "game_cancelled", gameId, uid);
     return json({ status: "cancelled" });
+  }
+
+  // A block cancels invites between the pair (block_user(), migration 0082),
+  // but an invite that predates that — or slips in around a block — must not
+  // start a game with someone who has blocked you (or whom you blocked).
+  const { data: others } = await admin
+    .from("mp_participants")
+    .select("user_id")
+    .eq("game_id", gameId)
+    .neq("user_id", uid);
+  for (const o of others ?? []) {
+    if (o.user_id && (await isBlockedPair(uid, o.user_id as string))) {
+      await admin
+        .from("mp_games")
+        .update({ status: "cancelled", completed_at: new Date().toISOString() })
+        .eq("id", gameId)
+        .eq("status", "pending");
+      return json({ error: "no pending invite for you here" }, 400);
+    }
   }
 
   const { data: accepted } = await admin
@@ -984,7 +997,15 @@ async function resignSeat(
   }
   await admin
     .from("mp_participants")
-    .update({ outcome: "resigned", final_score: engine.state.players[seat]?.cumulativeScore ?? null })
+    // The resign penalty is charged to the scoreboard at round end (see the
+    // adapter's settleResignPenalties), so add what's still pending here to
+    // keep the stored interim final_score what the seat will finish with.
+    .update({
+      outcome: "resigned",
+      final_score:
+        (engine.state.players[seat]?.cumulativeScore ?? 0) +
+        (engine.pendingResignPenalty?.includes(seat) ? RESIGN_PENALTY : 0),
+    })
     .eq("game_id", gameId)
     .eq("user_id", uid);
   await syncPublicColumns(gameId, engine, config);
@@ -1072,7 +1093,7 @@ async function enforceTurnClock(game: GameRow, skipUserId: string | null): Promi
   return true;
 }
 
-// ── nudge / emotes / friend push / account deletion / sweep ──────────────
+// ── nudge / friend push / account deletion / sweep ──────────────
 
 async function handleNudge(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
@@ -1105,71 +1126,6 @@ async function handleNudge(uid: string, body: Record<string, unknown>): Promise<
   if ((recent ?? 0) > 0) return json({ error: "already nudged recently" }, 429);
 
   await addEvent(target, "nudge", gameId, uid);
-  return json({ ok: true });
-}
-
-async function handleEmote(uid: string, body: Record<string, unknown>): Promise<Response> {
-  const gameId = String(body.game_id ?? "");
-  if (!isUuid(gameId)) return json({ error: "no such game" }, 404);
-  if (!isEmoteId(body.emote)) return json({ error: "unknown emote" }, 400);
-  const game = await loadGame(gameId);
-  if (!game) return json({ error: "no such game" }, 404);
-  const mine = await myParticipant(gameId, uid);
-  if (!mine || mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
-  if (game.status !== "active" && game.status !== "complete") return json({ error: "this game isn't active" }, 409);
-
-  const since = new Date(Date.now() - 10 * 60_000).toISOString();
-  const { data: recentRows, error: recentErr } = await admin
-    .from("mp_emotes")
-    .select("created_at")
-    .eq("game_id", gameId)
-    .eq("sender_id", uid)
-    .gte("created_at", since);
-  if (recentErr) return json({ error: "something went wrong" }, 400); // 0061 not applied yet
-  const rate = checkEmoteRate(
-    (recentRows ?? []).map((r) => Date.parse(r.created_at as string)),
-    Date.now()
-  );
-  if (!rate.ok) return json({ error: "Too many attempts — try again later." }, 429);
-
-  const { error } = await admin.from("mp_emotes").insert({ game_id: gameId, sender_id: uid, emote: body.emote });
-  if (error) return json({ error: "something went wrong" }, 400);
-
-  // Keep the per-game log short.
-  const { data: old } = await admin
-    .from("mp_emotes")
-    .select("id")
-    .eq("game_id", gameId)
-    .order("created_at", { ascending: false })
-    .range(EMOTE_KEEP_PER_GAME, EMOTE_KEEP_PER_GAME + 200);
-  if (old && old.length > 0) {
-    await admin.from("mp_emotes").delete().in("id", old.map((r) => r.id));
-  }
-
-  // One push per burst: skip it if this sender already reacted recently (the
-  // rows in the last EMOTE_PUSH_QUIET_MS other than the one just written).
-  const quietSince = new Date(Date.now() - EMOTE_PUSH_QUIET_MS).toISOString();
-  const { count: earlier } = await admin
-    .from("mp_emotes")
-    .select("id", { count: "exact", head: true })
-    .eq("game_id", gameId)
-    .eq("sender_id", uid)
-    .gte("created_at", quietSince);
-  if ((earlier ?? 0) <= 1 && game.status === "active") {
-    const { data: others } = await admin
-      .from("mp_participants")
-      .select("user_id")
-      .eq("game_id", gameId)
-      .eq("invite_status", "accepted")
-      .neq("user_id", uid);
-    await Promise.all(
-      (others ?? []).map((o) =>
-        sendPush(o.user_id, "emote", gameId, uid, { emote: EMOTE_EMOJI[body.emote as keyof typeof EMOTE_EMOJI] }).catch(
-          () => {}
-        )
-      )
-    );
-  }
   return json({ ok: true });
 }
 
@@ -1359,8 +1315,6 @@ Deno.serve(async (req) => {
         return await handleResign(user.id, body);
       case "nudge":
         return await handleNudge(user.id, body);
-      case "emote":
-        return await handleEmote(user.id, body);
       case "friend_push":
         return await handleFriendPush(user.id, body);
       case "resign_all":

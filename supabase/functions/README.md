@@ -265,7 +265,7 @@ Expect `{"ok":true}` and an email at `SUPPORT_EMAIL` within a minute.
 
 ## Social / safety additions (migrations 0060–0064)
 
-**`mp`** gained routes: `nudge` (badge + localised push, rate-limited), `emote` (fixed presets, rate-limited, block-aware), `friend_push` (push for a friend request just made via SQL), `resign_all` (used by `delete-account`) and `sweep` (cron only). It now also enforces the **turn clock** lazily on every `state`/`move` (a stalled player's first miss auto-plays a safe move, the second in a row forfeits; the stalled player's own read never triggers it) and pushes in each recipient's language, honouring their per-category switches, quiet hours and an hourly cap (`_shared/push.ts`). Redeploy with `node scripts/bundle-mp-engine.mjs && npx supabase functions deploy mp`.
+**`mp`** gained routes: `nudge` (badge + localised push, rate-limited), `friend_push` (push for a friend request just made via SQL), `resign_all` (used by `delete-account`) and `sweep` (cron only). It now also enforces the **turn clock** lazily on every `state`/`move` (a stalled player's first miss auto-plays a safe move, the second in a row forfeits; the stalled player's own read never triggers it) and pushes in each recipient's language, honouring their per-category switches, quiet hours and an hourly cap (`_shared/push.ts`). Redeploy with `node scripts/bundle-mp-engine.mjs && npx supabase functions deploy mp`.
 
 Optional scheduled sweep (forfeits games nobody opens, 75% reminder, expires 7-day-old pending invites): set `CRON_SECRET` (same value as `daily-deal-reminder`) and run the `cron.schedule` block at the end of migration 0061 (needs your project ref + anon key; the secret goes in the `x-cron-secret` header). Without it everything still works lazily.
 

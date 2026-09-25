@@ -33,6 +33,13 @@ export interface MpEngine {
   /** Seats that have resigned. Their turns are skipped; their score carries a
    * flat penalty so they finish last. */
   resignedSeats: number[];
+  /** Resigned seats whose flat RESIGN_PENALTY hasn't been added to their
+   * cumulativeScore yet — it lands when the round in progress ends (or the
+   * game is force-finished), so no score shown mid-round includes a penalty
+   * that hasn't been "earned" by a round ending. Optional: engines stored
+   * before this field existed applied the penalty at resign time and have
+   * nothing pending. */
+  pendingResignPenalty?: number[];
   /** One snapshot per completed round, for the round-summary UI. */
   roundResults: RoundResult[];
 }
@@ -40,7 +47,10 @@ export interface MpEngine {
 export interface RoundResult {
   round: number;
   label: string;
-  scores: { seat: number; penalty: number; cumulative: number }[];
+  /** `resignPenalty` is set (to RESIGN_PENALTY) on the seat whose flat
+   * resign penalty was applied as part of this round ending — `penalty` stays
+   * the seat's hand penalty, and `cumulative` includes both. */
+  scores: { seat: number; penalty: number; cumulative: number; resignPenalty?: number }[];
 }
 
 export type MpAction =
@@ -82,6 +92,10 @@ export interface RedactedPlayer {
   hasMeldedContract: boolean;
   cumulativeScore: number;
   resigned: boolean;
+  /** Flat resign penalty this (resigned) seat will be charged when the round
+   * ends — NOT yet included in cumulativeScore. Absent once applied / for
+   * seats that haven't resigned. */
+  pendingResignPenalty?: number;
 }
 
 export interface RedactedView {

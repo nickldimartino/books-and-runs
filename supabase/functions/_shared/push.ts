@@ -30,7 +30,6 @@ export type PushKind =
   | "turn_warning"
   | "auto_played"
   | "forfeited"
-  | "emote"
   | "friend_request"
   | "friend_accepted"
   | "streak_daily"
@@ -47,7 +46,6 @@ export const PUSH_CATEGORY: Record<PushKind, PushCategory> = {
   friend_request: "invites",
   friend_accepted: "invites",
   nudge: "nudges",
-  emote: "nudges",
   streak_daily: "streaks",
   streak_weekly: "streaks",
 };
@@ -119,7 +117,6 @@ const en: CopyTable = {
   turn_warning: { title: "Time is running out", body: "You have {time} left to play your turn." },
   auto_played: { title: "A turn was played for you", body: "Your time ran out, so a move was made for you. Play soon to avoid forfeiting." },
   forfeited: { title: "Game forfeited", body: "You ran out of time and forfeited a game." },
-  emote: { title: "{name} sent a reaction", body: "{emote}" },
   friend_request: { title: "Friend request", body: "Someone wants to be your friend.", named: "{name} wants to be your friend." },
   friend_accepted: { title: "New friend", body: "Your friend request was accepted.", named: "{name} accepted your friend request." },
   streak_daily: { title: "Your streak is at risk!", body: "Play today's Daily Deal to keep your streak going. 🔥 {streak}" },
@@ -133,7 +130,6 @@ const zh: CopyTable = {
   turn_warning: { title: "时间快到了", body: "你还有{time}来完成本回合。" },
   auto_played: { title: "已替你出牌", body: "你超时了,系统已替你走了一步。请尽快回来,以免被判弃权。" },
   forfeited: { title: "对局已弃权", body: "你因超时而退出了一场对局。" },
-  emote: { title: "{name}发来了表情", body: "{emote}" },
   friend_request: { title: "好友请求", body: "有人想加你为好友。", named: "{name}想加你为好友。" },
   friend_accepted: { title: "新好友", body: "你的好友请求已被接受。", named: "{name}接受了你的好友请求。" },
   streak_daily: { title: "你的连续纪录有中断风险!", body: "今天玩一局每日挑战,保住你的连续纪录。🔥 {streak}" },
@@ -147,7 +143,6 @@ const ja: CopyTable = {
   turn_warning: { title: "もうすぐ時間切れです", body: "あなたの番の残り時間は{time}です。" },
   auto_played: { title: "代わりに手を打ちました", body: "時間切れのため、代わりに1手打ちました。棄権にならないよう早めにプレイしてください。" },
   forfeited: { title: "ゲームを棄権しました", body: "時間切れのため、ゲームを棄権しました。" },
-  emote: { title: "{name}さんからリアクション", body: "{emote}" },
   friend_request: { title: "フレンド申請", body: "フレンド申請が届いています。", named: "{name}さんからフレンド申請が届きました。" },
   friend_accepted: { title: "新しいフレンド", body: "フレンド申請が承認されました。", named: "{name}さんがフレンド申請を承認しました。" },
   streak_daily: { title: "連続記録が途切れそうです!", body: "今日のデイリーディールをプレイして連続記録を守りましょう。🔥 {streak}" },
@@ -161,7 +156,6 @@ const ko: CopyTable = {
   turn_warning: { title: "시간이 얼마 안 남았어요", body: "내 차례를 진행할 시간이 {time} 남았어요." },
   auto_played: { title: "대신 한 수를 뒀어요", body: "시간이 지나 대신 한 수를 뒀어요. 기권 처리되지 않도록 빨리 플레이하세요." },
   forfeited: { title: "게임 기권 처리", body: "시간이 초과되어 게임에서 기권 처리됐어요." },
-  emote: { title: "{name}님이 반응을 보냈어요", body: "{emote}" },
   friend_request: { title: "친구 요청", body: "누군가 친구가 되고 싶어 해요.", named: "{name}님이 친구가 되고 싶어 해요." },
   friend_accepted: { title: "새 친구", body: "친구 요청이 수락됐어요.", named: "{name}님이 친구 요청을 수락했어요." },
   streak_daily: { title: "연속 기록이 끊길 위기예요!", body: "오늘의 데일리 딜을 플레이해서 연속 기록을 이어가세요. 🔥 {streak}" },
@@ -175,7 +169,6 @@ const de: CopyTable = {
   turn_warning: { title: "Die Zeit läuft ab", body: "Dir bleiben noch {time} für deinen Zug." },
   auto_played: { title: "Für dich wurde gespielt", body: "Deine Zeit ist abgelaufen, daher wurde ein Zug für dich gemacht. Spiel bald weiter, sonst gibst du auf." },
   forfeited: { title: "Spiel aufgegeben", body: "Deine Zeit ist abgelaufen und du hast ein Spiel aufgegeben." },
-  emote: { title: "{name} hat reagiert", body: "{emote}" },
   friend_request: { title: "Freundschaftsanfrage", body: "Jemand möchte mit dir befreundet sein.", named: "{name} möchte mit dir befreundet sein." },
   friend_accepted: { title: "Neuer Freund", body: "Deine Freundschaftsanfrage wurde angenommen.", named: "{name} hat deine Freundschaftsanfrage angenommen." },
   streak_daily: { title: "Deine Serie ist in Gefahr!", body: "Spiel den heutigen Tages-Deal, um deine Serie zu halten. 🔥 {streak}" },
@@ -189,7 +182,6 @@ const fr: CopyTable = {
   turn_warning: { title: "Le temps presque écoulé", body: "Il te reste {time} pour jouer ton tour." },
   auto_played: { title: "Un tour a été joué pour toi", body: "Ton temps est écoulé, un coup a donc été joué à ta place. Reviens vite pour ne pas déclarer forfait." },
   forfeited: { title: "Partie abandonnée", body: "Ton temps est écoulé et tu as abandonné une partie." },
-  emote: { title: "{name} a envoyé une réaction", body: "{emote}" },
   friend_request: { title: "Demande d'ami", body: "Quelqu'un veut devenir ton ami.", named: "{name} veut devenir ton ami." },
   friend_accepted: { title: "Nouvel ami", body: "Ta demande d'ami a été acceptée.", named: "{name} a accepté ta demande d'ami." },
   streak_daily: { title: "Ta série est en danger !", body: "Joue le défi du jour pour garder ta série. 🔥 {streak}" },
@@ -203,7 +195,6 @@ const es: CopyTable = {
   turn_warning: { title: "Se acaba el tiempo", body: "Te quedan {time} para jugar tu turno." },
   auto_played: { title: "Se jugó un turno por ti", body: "Se acabó tu tiempo, así que se hizo una jugada por ti. Juega pronto para no perder por abandono." },
   forfeited: { title: "Partida abandonada", body: "Se acabó tu tiempo y abandonaste una partida." },
-  emote: { title: "{name} envió una reacción", body: "{emote}" },
   friend_request: { title: "Solicitud de amistad", body: "Alguien quiere ser tu amigo.", named: "{name} quiere ser tu amigo." },
   friend_accepted: { title: "Nuevo amigo", body: "Tu solicitud de amistad fue aceptada.", named: "{name} aceptó tu solicitud de amistad." },
   streak_daily: { title: "¡Tu racha está en peligro!", body: "Juega el Reparto Diario de hoy para mantener tu racha. 🔥 {streak}" },
@@ -217,7 +208,6 @@ const ptBR: CopyTable = {
   turn_warning: { title: "O tempo está acabando", body: "Você tem {time} para jogar sua vez." },
   auto_played: { title: "Uma jogada foi feita por você", body: "Seu tempo acabou, então uma jogada foi feita por você. Jogue logo para não perder por abandono." },
   forfeited: { title: "Partida abandonada", body: "Seu tempo acabou e você abandonou uma partida." },
-  emote: { title: "{name} enviou uma reação", body: "{emote}" },
   friend_request: { title: "Pedido de amizade", body: "Alguém quer ser seu amigo.", named: "{name} quer ser seu amigo." },
   friend_accepted: { title: "Novo amigo", body: "Seu pedido de amizade foi aceito.", named: "{name} aceitou seu pedido de amizade." },
   streak_daily: { title: "Sua sequência está em risco!", body: "Jogue a Rodada Diária de hoje para manter sua sequência. 🔥 {streak}" },
@@ -231,7 +221,6 @@ const ru: CopyTable = {
   turn_warning: { title: "Время на исходе", body: "На твой ход осталось {time}." },
   auto_played: { title: "Ход сделан за тебя", body: "Время вышло, поэтому за тебя сделали ход. Возвращайся скорее, иначе засчитают сдачу." },
   forfeited: { title: "Игра сдана", body: "Время вышло, и ты сдал игру." },
-  emote: { title: "{name} отправил реакцию", body: "{emote}" },
   friend_request: { title: "Заявка в друзья", body: "Кто-то хочет добавить тебя в друзья.", named: "{name} хочет добавить тебя в друзья." },
   friend_accepted: { title: "Новый друг", body: "Твою заявку в друзья приняли.", named: "{name} принял(а) твою заявку в друзья." },
   streak_daily: { title: "Твоя серия под угрозой!", body: "Сыграй «Расклад дня», чтобы не потерять серию. 🔥 {streak}" },
@@ -245,7 +234,6 @@ const it: CopyTable = {
   turn_warning: { title: "Il tempo sta per scadere", body: "Ti restano {time} per giocare il tuo turno." },
   auto_played: { title: "Un turno è stato giocato per te", body: "Il tuo tempo è scaduto, quindi è stata fatta una mossa al posto tuo. Gioca presto per non perdere a tavolino." },
   forfeited: { title: "Partita abbandonata", body: "Il tuo tempo è scaduto e hai abbandonato una partita." },
-  emote: { title: "{name} ha inviato una reazione", body: "{emote}" },
   friend_request: { title: "Richiesta di amicizia", body: "Qualcuno vuole essere tuo amico.", named: "{name} vuole essere tuo amico." },
   friend_accepted: { title: "Nuovo amico", body: "La tua richiesta di amicizia è stata accettata.", named: "{name} ha accettato la tua richiesta di amicizia." },
   streak_daily: { title: "La tua striscia è a rischio!", body: "Gioca la Partita del giorno per mantenere la tua striscia. 🔥 {streak}" },
@@ -259,7 +247,6 @@ export interface PushVars {
   round?: number | null;
   /** Hours left, for turn_warning. */
   hours?: number | null;
-  emote?: string | null;
   streak?: number | null;
 }
 
@@ -295,7 +282,6 @@ export function pushText(kind: PushKind, localeRaw: string | null | undefined, v
     name,
     round: vars.round != null ? String(vars.round) : "",
     time: vars.hours != null ? formatHoursLeft(vars.hours, locale) : "",
-    emote: vars.emote ?? "",
     streak: vars.streak != null ? String(vars.streak) : "",
   };
   // A named body needs every placeholder it uses; degrade to the generic one.
@@ -320,7 +306,7 @@ export function buildPushPayload(
   gameId: string | null
 ): PushPayload {
   const { title, body } = pushText(kind, localeRaw, vars);
-  const gameKinds: PushKind[] = ["your_turn", "game_request", "nudge", "turn_warning", "auto_played", "forfeited", "emote"];
+  const gameKinds: PushKind[] = ["your_turn", "game_request", "nudge", "turn_warning", "auto_played", "forfeited"];
   const isGame = !!gameId && gameKinds.includes(kind);
   return {
     title: title || "Books & Runs",

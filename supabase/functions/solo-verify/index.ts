@@ -21,6 +21,7 @@ import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerSt
 // ./_engine is a copy of src/ with explicit .ts extensions — the Supabase
 // deploy bundler doesn't resolve the app's extension-less imports. Run
 // `node scripts/bundle-solo-verify-engine.mjs` before every deploy.
+import { isBelievableDayKey, isBelievableWeekKey } from "./_engine/dailyRewards.ts";
 import { claimCompletedQuests, creditChallengeCompletion, ensureQuestBaselines } from "./_engine/challengeRewards.ts";
 import { PlayerConfig } from "./_engine/gameEngine.ts";
 import { MoveLogEntry } from "./_engine/moveLog.ts";
@@ -186,20 +187,13 @@ function dateSeed(dateKey: string): number {
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Not a precise check — "local calendar day" is inherently a client-side
- * concept, and dateSeed can't be reversed to recover the date it came from
- * — just generous enough tolerance (timezone skew plus the local-vs-UTC
- * day boundary) to reject a wildly different claimed date (last month,
- * next year) while never falsely rejecting a real player's actual today.
- * Deliberately ±1 day, not ±2 — every extra day of tolerance is one more
- * *future* date whose seed is public and precomputable offline today (see
- * tooSoonSinceLastCompletion's own doc for why that matters). */
+/** Tolerance (timezone skew plus the local-vs-UTC day boundary) lives in
+ * src/dailyRewards.ts's isBelievableDayKey — accepts any date that is
+ * "today" in SOME timezone right now, rejects everything else. The previous
+ * inline ±24h-from-UTC-midnight check falsely rejected US players in their
+ * local evening (see that function's doc). */
 function isBelievableDailyDealDate(dateKey: string): boolean {
-  if (!DATE_KEY_RE.test(dateKey)) return false;
-  const claimed = new Date(`${dateKey}T00:00:00Z`).getTime();
-  if (Number.isNaN(claimed)) return false;
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  return Math.abs(Date.now() - claimed) <= ONE_DAY_MS;
+  return DATE_KEY_RE.test(dateKey) && isBelievableDayKey(dateKey);
 }
 
 async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: unknown): Promise<Response> {
@@ -227,23 +221,9 @@ async function handleDailyDealCompletion(uid: string, seed: number, rawDateKey: 
 
 const WEEK_KEY_RE = /^\d{4}-W\d{2}$/;
 
-/** Same generous-tolerance reasoning as isBelievableDailyDealDate — one
- * week either side, not two, for the same "less tolerance means fewer
- * precomputable future weeks" reasoning. */
+/** Same reasoning as isBelievableDailyDealDate — see isBelievableWeekKey. */
 function isBelievableWeeklyChallengeWeek(weekKey: string): boolean {
-  if (!WEEK_KEY_RE.test(weekKey)) return false;
-  const [y, w] = weekKey.split("-W").map(Number);
-  if (w < 1 || w > 53) return false;
-  // Approximate the week's start (good enough for a tolerance check, not
-  // used for anything exact) from the ISO year/week number.
-  const jan4 = new Date(Date.UTC(y, 0, 4));
-  const jan4IsoDay = jan4.getUTCDay() === 0 ? 7 : jan4.getUTCDay();
-  const week1Monday = new Date(jan4);
-  week1Monday.setUTCDate(jan4.getUTCDate() - (jan4IsoDay - 1));
-  const claimedWeekStart = new Date(week1Monday);
-  claimedWeekStart.setUTCDate(week1Monday.getUTCDate() + (w - 1) * 7);
-  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-  return Math.abs(Date.now() - claimedWeekStart.getTime()) <= ONE_WEEK_MS;
+  return WEEK_KEY_RE.test(weekKey) && isBelievableWeekKey(weekKey);
 }
 
 async function handleWeeklyChallengeCompletion(uid: string, seed: number, rawWeekKey: unknown): Promise<Response> {
@@ -290,6 +270,30 @@ interface AchievementCountersRow {
   counters: Record<string, number>;
 }
 
+/** SHA-256 (hex) of everything that determines a solo game: the seed, the
+ * seating (names are cosmetic and excluded, so renaming can't dodge it), the
+ * contracts and the move log. */
+async function hashGame(
+  seed: number,
+  seats: PlayerConfig[],
+  contracts: ContractRequirement[],
+  moveLog: MoveLogEntry[]
+): Promise<string> {
+  const canonical = JSON.stringify([
+    seed,
+    seats.map((x) => [x.id, x.isAI, x.difficulty ?? null]),
+    contracts.map((c) => [c.round, c.books, c.runs, c.bookSize, c.runSize, c.wholeHandMeld ?? false]),
+    // Only the fields a replay reads — an extra junk field on an entry must
+    // not turn the same game into a "new" one.
+    moveLog.map((m) => {
+      const e = m as unknown as Record<string, unknown>;
+      return [e.seat, e.type, e.fromDiscard, e.groups, e.preferredRunStarts, e.cardId, e.meldId, e.position];
+    }),
+  ]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function handleVerify(uid: string, body: Record<string, unknown>): Promise<Response> {
   const seed = Number(body.seed);
   const seats = cleanSeats(body.seats);
@@ -331,6 +335,21 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
   }
 
   if (!trackStats) return json({ ok: true, tracked: false });
+
+  // The same verified game must never be credited twice: a resubmitted log
+  // (after the pacing floor below has long passed) is a harmless no-op.
+  // Seeds are random per game, so distinct games never share a hash. Fails
+  // open if the table isn't there yet (migration 0084 not applied).
+  const gameHash = await hashGame(seed, seats, selectedContracts, moveLog);
+  {
+    const { data: seen } = await admin
+      .from("solo_game_hashes")
+      .select("game_hash")
+      .eq("user_id", uid)
+      .eq("game_hash", gameHash)
+      .maybeSingle();
+    if (seen) return json({ ok: true, tracked: false, duplicate: true });
+  }
 
   // Quest baselines must exist BEFORE this game's deltas land, so the game
   // itself counts toward today's/this week's quests. Best-effort: a quest
@@ -437,6 +456,10 @@ async function handleVerify(uid: string, body: Record<string, unknown>): Promise
     if (countersUpsertError) return json({ ok: false, error: "couldn't save achievement progress" }, 500);
   }
 
+  // Remember this game so a replay of the same log can't count again.
+  const { error: hashError } = await admin.from("solo_game_hashes").insert({ user_id: uid, game_hash: gameHash });
+  if (hashError) console.error("solo-verify game hash error:", hashError.message);
+
   let quests: Awaited<ReturnType<typeof claimCompletedQuests>> = [];
   try {
     quests = await claimCompletedQuests(admin, uid);
@@ -472,8 +495,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (body.action === "quests") return await handleQuests(user.id);
-    return await handleVerify(user.id, body);
+    const res = body.action === "quests" ? await handleQuests(user.id) : await handleVerify(user.id, body);
+    // Server-credited XP (ledger, stats) must show on the leaderboard now, not
+    // whenever the client next writes its row. Best-effort (migration 0084).
+    if (res.status === 200) {
+      const { error } = await admin.rpc("refresh_leaderboard_truth", { p_user: user.id });
+      if (error) console.error("solo-verify leaderboard refresh error:", error.message);
+    }
+    return res;
   } catch (e) {
     // Same reasoning as mp/index.ts's own catch-all — log in full
     // server-side, never echo a caught exception's message to the client.

@@ -18,7 +18,7 @@
 //   - applyCommit     — legacy all-in-one turn (melds + lay-offs + discard,
 //                       atomic). No longer used by the UI; kept so an older
 //                       deployed client keeps working.
-//   - applyResign     — drop a seat (RESIGN_PENALTY); force-finish if <2 humans.
+//   - applyResign     — drop a seat (RESIGN_PENALTY, charged at round end); force-finish if <2 humans.
 //   - redactFor(seat) — strip the state down to what one seat may see: own
 //                       hand, everyone's counts, public melds/discard — never
 //                       another hand or the draw pile.
@@ -39,7 +39,8 @@ import { handPenalty } from "../scorer";
 import { Card, CONTRACTS, ContractRequirement, GameState, Meld } from "../types";
 import { MpAction, MpConfig, MpEngine, RedactedView, RoundResult } from "./types";
 
-/** Flat penalty added to a resigner's score so they always finish last. */
+/** Flat penalty added to a resigner's score so they always finish last —
+ * charged when the round in progress ends (see settleResignPenalties). */
 export const RESIGN_PENALTY = 200;
 
 // Sanity caps on a commit payload, checked before any real validation work.
@@ -69,7 +70,7 @@ function clone<T>(v: T): T {
   return structuredClone(v);
 }
 
-function snapshotRound(state: GameState): RoundResult {
+function snapshotRound(state: GameState, resignPenaltySeats: number[] = []): RoundResult {
   const contract = state.selectedContracts[state.round - 1];
   return {
     round: state.round,
@@ -78,19 +79,41 @@ function snapshotRound(state: GameState): RoundResult {
       seat: i,
       penalty: handPenalty(p.hand),
       cumulative: p.cumulativeScore,
+      ...(resignPenaltySeats.includes(i) ? { resignPenalty: RESIGN_PENALTY } : {}),
     })),
   };
 }
 
+/** Charge every seat that resigned since the last round ended its flat
+ * RESIGN_PENALTY (deferred from applyResign so a mid-round scoreboard never
+ * shows a penalty no round has produced). Returns the seats charged. If that
+ * changes the standings of an already-decided game, the winner is
+ * recomputed — a resigner's empty hand scores 0 each round, which without
+ * the penalty could otherwise "win". */
+function settleResignPenalties(eng: MpEngine): number[] {
+  const seats = eng.pendingResignPenalty ?? [];
+  if (seats.length === 0) return [];
+  for (const seat of seats) eng.state.players[seat].cumulativeScore += RESIGN_PENALTY;
+  eng.pendingResignPenalty = [];
+  if (eng.state.gameOver) {
+    const standings = [...eng.state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
+    eng.state.winnerId = standings[0].id;
+  }
+  return seats;
+}
+
 /** Force-end a game that can't continue (everyone but one human has left).
- * Scores the current round for anyone still holding cards. */
-function finalizeGame(state: GameState): void {
+ * Scores the current round for anyone still holding cards, then charges any
+ * pending resign penalties (the game ending is the round ending). */
+function finalizeGame(eng: MpEngine): void {
+  const state = eng.state;
   if (state.gameOver) return;
   if (!state.roundOver) {
     for (const p of state.players) p.cumulativeScore += handPenalty(p.hand);
   }
   state.roundOver = true;
   state.gameOver = true;
+  settleResignPenalties(eng); // recomputes the winner (gameOver is set)
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   state.winnerId = standings[0].id;
 }
@@ -139,7 +162,8 @@ export function advanceThroughAi(engIn: MpEngine): MpEngine {
       // on an already-finished game can't double-record it), then either
       // stop (game over) or deal the next round.
       if (!eng.roundResults.some((r) => r.round === s.round)) {
-        eng.roundResults.push(snapshotRound(s));
+        const charged = settleResignPenalties(eng);
+        eng.roundResults.push(snapshotRound(s, charged));
       }
       if (s.gameOver) break;
       eng.state = startNextRound(s);
@@ -395,7 +419,9 @@ export function applyResign(engIn: MpEngine, config: MpConfig, seat: number): Mp
     eng.resignedSeats.push(seat);
     const p = eng.state.players[seat];
     p.hand = [];
-    p.cumulativeScore += RESIGN_PENALTY;
+    // The penalty is charged when the round ends, not now — see
+    // settleResignPenalties. redactFor exposes it separately meanwhile.
+    eng.pendingResignPenalty = [...(eng.pendingResignPenalty ?? []), seat];
   }
 
   const activeHumans = config.seats
@@ -403,7 +429,7 @@ export function applyResign(engIn: MpEngine, config: MpConfig, seat: number): Mp
     .length;
 
   if (activeHumans < 2) {
-    finalizeGame(eng.state);
+    finalizeGame(eng);
     return eng;
   }
 
@@ -450,6 +476,7 @@ export function redactFor(eng: MpEngine, config: MpConfig, viewerSeat: number | 
         hasMeldedContract: p.hasMeldedContract,
         cumulativeScore: p.cumulativeScore,
         resigned: eng.resignedSeats.includes(i),
+        ...(eng.pendingResignPenalty?.includes(i) ? { pendingResignPenalty: RESIGN_PENALTY } : {}),
       };
     }),
     yourSeat: viewerSeat,

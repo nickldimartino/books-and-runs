@@ -97,6 +97,49 @@ export function streakStats(keys: readonly string[], kind: "day" | "week"): Stre
   return { count: sorted.length, best, current };
 }
 
+// ── Believability of a client-claimed period key ────────────────────────
+// Daily Deal / Weekly Challenge completions are keyed by the player's LOCAL
+// calendar day / ISO week, which the server can't know exactly. These check
+// that a claimed key is one some timezone on Earth could be showing right
+// now. The old ±1 day / ±1 week check measured only from the key's UTC
+// midnight, so it wrongly rejected every player west of UTC in their local
+// evening (a US player after ~7pm EDT: local day D is already D+1 in UTC,
+// >24h past D 00:00Z) — the completion was refused with a 400 that is never
+// retried, and the streak silently never advanced. Real local time spans
+// UTC-12..UTC+14, so local day D is live for now ∈ [D 00:00Z - 14h, D+1
+// 00:00Z + 12h); an hour of slack on each side covers DST and clock skew.
+
+const HOUR_MS = 3_600_000;
+const SLACK_MS = HOUR_MS;
+const MAX_UTC_OFFSET_AHEAD_MS = 14 * HOUR_MS; // UTC+14 (Line Islands)
+const MAX_UTC_OFFSET_BEHIND_MS = 12 * HOUR_MS; // UTC-12 (Baker Island)
+
+function believableWindow(startUtcMs: number, lengthMs: number, now: number): boolean {
+  return (
+    now >= startUtcMs - MAX_UTC_OFFSET_AHEAD_MS - SLACK_MS &&
+    now < startUtcMs + lengthMs + MAX_UTC_OFFSET_BEHIND_MS + SLACK_MS
+  );
+}
+
+/** True iff "YYYY-MM-DD" is a real date that is "today" somewhere on Earth at `now`. */
+export function isBelievableDayKey(key: string, now: number = Date.now()): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+  const start = Date.parse(`${key}T00:00:00Z`);
+  if (Number.isNaN(start)) return false;
+  return believableWindow(start, 24 * HOUR_MS, now);
+}
+
+/** True iff "YYYY-Www" is an ISO week that is "this week" somewhere on Earth at `now`. */
+export function isBelievableWeekKey(key: string, now: number = Date.now()): boolean {
+  if (!/^\d{4}-W\d{2}$/.test(key)) return false;
+  const [y, w] = key.split("-W").map(Number);
+  if (w < 1 || w > 53) return false;
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  const isoDay = jan4.getUTCDay() === 0 ? 7 : jan4.getUTCDay();
+  const start = Date.UTC(y, 0, 4 - (isoDay - 1) + (w - 1) * 7);
+  return believableWindow(start, 7 * 24 * HOUR_MS, now);
+}
+
 // ── UTC period keys (daily / weekly quests) ─────────────────────────────
 // Quests reset on the UTC day / ISO week so every client and the server
 // agree on which set of quests is live — unlike Daily Deal's local calendar

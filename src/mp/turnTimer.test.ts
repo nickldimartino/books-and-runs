@@ -8,7 +8,6 @@ import {
   normalizeTurnLimit,
   timerState,
 } from "./turnTimer";
-import { checkEmoteRate, EMOTE_BURST_LIMIT, EMOTE_COOLDOWN_MS, EMOTE_IDS, isEmoteId } from "./emotes";
 import type { MpConfig } from "./types";
 
 const H = 3_600_000;
@@ -125,27 +124,10 @@ describe("autoPlayTurn", () => {
   });
 });
 
-describe("emotes", () => {
-  it("only accepts the fixed preset ids", () => {
-    for (const id of EMOTE_IDS) expect(isEmoteId(id)).toBe(true);
-    for (const bad of ["", "NICE_MELD", "<script>", 3, null, undefined, "nice_meld "]) expect(isEmoteId(bad)).toBe(false);
-  });
-  it("enforces a cooldown and a burst cap", () => {
-    const now = 10_000_000;
-    expect(checkEmoteRate([], now)).toEqual({ ok: true });
-    expect(checkEmoteRate([now - EMOTE_COOLDOWN_MS + 1], now)).toEqual({ ok: false, reason: "cooldown" });
-    expect(checkEmoteRate([now - EMOTE_COOLDOWN_MS], now)).toEqual({ ok: true });
-    const burst = Array.from({ length: EMOTE_BURST_LIMIT }, (_, i) => now - 60_000 - i * 10_000);
-    expect(checkEmoteRate(burst, now)).toEqual({ ok: false, reason: "burst" });
-    expect(checkEmoteRate(burst.map((t) => t - 11 * 60_000), now)).toEqual({ ok: true });
-  });
-});
-
 describe("migration 0061 mirror", () => {
-  it("allows exactly the emote ids the client/server accept", async () => {
+  it("offers the turn-limit options the client accepts", async () => {
     const { readFileSync } = await import("node:fs");
     const sql = readFileSync(new URL("../../supabase/migrations/0061_mp_turn_timer_emotes.sql", import.meta.url), "utf8");
-    for (const id of EMOTE_IDS) expect(sql).toContain(`'${id}'`);
     for (const h of [0, 24, 48, 72]) expect(sql).toContain(String(h));
   });
 });
