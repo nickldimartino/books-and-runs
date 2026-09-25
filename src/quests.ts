@@ -119,10 +119,44 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** The live quests for a period: a seeded shuffle of that period's pool,
- * first QUESTS_PER_PERIOD. Pure — same key, same quests, on any client. */
-export function questsForPeriod(period: QuestPeriod, periodKey: string): QuestDef[] {
-  const pool = QUEST_CATALOG.filter((q) => q.period === period);
+const DAY_MS = 86_400_000;
+// The rotation chain starts here: quest sets are computed forward from this
+// day / ISO week so each period can avoid the previous period's set exactly
+// (see questsForPeriod). Never change these — it would re-roll every period.
+const CHAIN_EPOCH_DAY = Date.UTC(2026, 0, 1);
+const CHAIN_MAX = 20_000; // ~55 years of days; beyond this, fall back to an unconstrained pick
+
+function isoWeekMonday(year: number, week: number): number {
+  const jan4 = Date.UTC(year, 0, 4);
+  const dow = new Date(jan4).getUTCDay() || 7;
+  return jan4 - (dow - 1) * DAY_MS + (week - 1) * 7 * DAY_MS;
+}
+const CHAIN_EPOCH_WEEK = isoWeekMonday(2026, 1);
+
+/** Position of a period key on the rotation chain, or -1 if it's malformed
+ * or before the chain's start. */
+function chainIndex(period: QuestPeriod, periodKey: string): number {
+  if (period === "daily") {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(periodKey);
+    if (!m) return -1;
+    const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    return Number.isFinite(t) ? Math.round((t - CHAIN_EPOCH_DAY) / DAY_MS) : -1;
+  }
+  const m = /^(\d{4})-W(\d{2})$/.exec(periodKey);
+  if (!m) return -1;
+  return Math.round((isoWeekMonday(+m[1], +m[2]) - CHAIN_EPOCH_WEEK) / (7 * DAY_MS));
+}
+
+function keyForChainIndex(period: QuestPeriod, i: number): string {
+  return period === "daily"
+    ? utcDayKey(new Date(CHAIN_EPOCH_DAY + i * DAY_MS))
+    : utcIsoWeekKey(new Date(CHAIN_EPOCH_WEEK + i * 7 * DAY_MS));
+}
+
+/** A seeded shuffle of the period's pool (minus `exclude`), first
+ * QUESTS_PER_PERIOD. */
+function pickQuests(period: QuestPeriod, periodKey: string, exclude: ReadonlySet<string>): QuestDef[] {
+  const pool = QUEST_CATALOG.filter((q) => q.period === period && !exclude.has(q.id));
   const rand = mulberry32(hashString(`${period}:${periodKey}`));
   const shuffled = [...pool];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -130,6 +164,25 @@ export function questsForPeriod(period: QuestPeriod, periodKey: string): QuestDe
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled.slice(0, QUESTS_PER_PERIOD);
+}
+
+// Memoised chain of quest sets per period: chain[i] avoids chain[i - 1].
+const chains: Record<QuestPeriod, QuestDef[][]> = { daily: [], weekly: [] };
+
+/** The live quests for a period: a seeded shuffle of that period's pool that
+ * never repeats any quest from the immediately preceding period (so a
+ * player never sees yesterday's quest again today). Pure — same key, same
+ * quests, on any client and on the server. */
+export function questsForPeriod(period: QuestPeriod, periodKey: string): QuestDef[] {
+  const idx = chainIndex(period, periodKey);
+  if (idx < 0 || idx > CHAIN_MAX) return pickQuests(period, periodKey, new Set());
+  const chain = chains[period];
+  while (chain.length <= idx) {
+    const i = chain.length;
+    const prev = i === 0 ? new Set<string>() : new Set(chain[i - 1].map((q) => q.id));
+    chain.push(pickQuests(period, keyForChainIndex(period, i), prev));
+  }
+  return chain[idx];
 }
 
 export function currentPeriodKey(period: QuestPeriod, now: Date = new Date()): string {

@@ -67,6 +67,38 @@ describe("questsForPeriod — deterministic selection", () => {
   });
 });
 
+describe("questsForPeriod — no repeats from the previous period", () => {
+  const dayKey = (i: number) => new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString().slice(0, 10);
+
+  it("never shares a daily quest with the day before, across two years", () => {
+    for (let i = 1; i < 730; i++) {
+      const prev = new Set(questsForPeriod("daily", dayKey(i - 1)).map((q) => q.id));
+      const today = questsForPeriod("daily", dayKey(i)).map((q) => q.id);
+      expect(today.some((id) => prev.has(id))).toBe(false);
+      expect(new Set(today).size).toBe(3);
+    }
+  });
+
+  it("never shares a weekly quest with the week before", () => {
+    for (let w = 2; w <= 52; w++) {
+      const key = (n: number) => `2026-W${String(n).padStart(2, "0")}`;
+      const prev = new Set(questsForPeriod("weekly", key(w - 1)).map((q) => q.id));
+      expect(questsForPeriod("weekly", key(w)).some((q) => prev.has(q.id))).toBe(false);
+    }
+  });
+
+  it("is stable regardless of the order periods are asked for (chain is pure)", () => {
+    const later = questsForPeriod("daily", "2027-03-04").map((q) => q.id);
+    questsForPeriod("daily", "2026-02-01");
+    expect(questsForPeriod("daily", "2027-03-04").map((q) => q.id)).toEqual(later);
+  });
+
+  it("still returns 3 distinct quests for malformed or pre-launch keys", () => {
+    expect(questsForPeriod("daily", "nonsense")).toHaveLength(3);
+    expect(questsForPeriod("daily", "2020-01-01")).toHaveLength(3);
+  });
+});
+
 describe("period keys", () => {
   it("uses the UTC day for daily and the ISO week for weekly", () => {
     const now = new Date("2026-09-25T23:30:00Z");
