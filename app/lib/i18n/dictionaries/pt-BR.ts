@@ -32,11 +32,16 @@ const ptBR = {
   "settings.tip.body":
     "Tema, frente da carta, som, dificuldade da IA e todas as opções abaixo sincronizam com sua conta — entre em outro dispositivo (ou uma instalação nova via \"Adicionar à tela de início\") e elas aparecem lá também. Jogar sem estar conectado mantém tudo apenas neste navegador. Não sabe o que algo faz? Toque no ⓘ ao lado.",
 
-  "settings.section.appearance": "Aparência",
-  "settings.section.soundAndHaptics": "Som e vibração",
-  "settings.section.gameplay": "Jogabilidade",
   "settings.section.notifications": "Notificações",
   "settings.section.help": "Ajuda",
+  "settings.tab.general": "Geral",
+  "settings.tab.display": "Tela",
+  "settings.tab.audio": "Áudio",
+  "settings.tab.gameplay": "Jogabilidade",
+  "settings.tab.accessibility": "Acessibilidade",
+  "settings.tabsLabel": "Seções das configurações",
+  "settings.resetSection": "Redefinir esta seção",
+  "settings.resetSectionConfirm": "Redefinir as configurações desta seção para os padrões?",
 
   "settings.colorblind.title": "Cartas para daltônicos",
   "settings.colorblind.description":

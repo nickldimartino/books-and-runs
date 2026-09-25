@@ -46,11 +46,16 @@ const en = {
   "settings.tip.body":
     "Theme, card face, sound, AI difficulty, and every toggle below sync to your account — sign in on another device (or a fresh “Add to Home Screen” install) and they show up there too. Playing signed out keeps everything on this browser only. Not sure what something does? Tap the ⓘ next to it.",
 
-  "settings.section.appearance": "Appearance",
-  "settings.section.soundAndHaptics": "Sound & haptics",
-  "settings.section.gameplay": "Gameplay",
   "settings.section.notifications": "Notifications",
   "settings.section.help": "Help",
+  "settings.tab.general": "General",
+  "settings.tab.display": "Display",
+  "settings.tab.audio": "Audio",
+  "settings.tab.gameplay": "Gameplay",
+  "settings.tab.accessibility": "Accessibility",
+  "settings.tabsLabel": "Settings sections",
+  "settings.resetSection": "Reset this section",
+  "settings.resetSectionConfirm": "Reset the settings in this section to their defaults?",
 
   "settings.colorblind.title": "Colorblind-friendly cards",
   "settings.colorblind.description":

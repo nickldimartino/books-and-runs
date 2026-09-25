@@ -32,11 +32,16 @@ const es = {
   "settings.tip.body":
     "El tema, el frente de la carta, el sonido, la dificultad de la IA y cada opción de esta página se sincronizan con tu cuenta: inicia sesión en otro dispositivo (o en una instalación nueva con “Añadir a pantalla de inicio”) y también aparecerán ahí. Si juegas sin iniciar sesión, todo queda solo en este navegador. ¿No sabes qué hace algo? Toca el ⓘ que está junto a eso.",
 
-  "settings.section.appearance": "Apariencia",
-  "settings.section.soundAndHaptics": "Sonido y vibración",
-  "settings.section.gameplay": "Jugabilidad",
   "settings.section.notifications": "Notificaciones",
   "settings.section.help": "Ayuda",
+  "settings.tab.general": "General",
+  "settings.tab.display": "Pantalla",
+  "settings.tab.audio": "Audio",
+  "settings.tab.gameplay": "Jugabilidad",
+  "settings.tab.accessibility": "Accesibilidad",
+  "settings.tabsLabel": "Secciones de ajustes",
+  "settings.resetSection": "Restablecer esta sección",
+  "settings.resetSectionConfirm": "¿Restablecer los ajustes de esta sección a sus valores predeterminados?",
 
   "settings.colorblind.title": "Cartas aptas para daltonismo",
   "settings.colorblind.description":

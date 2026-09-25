@@ -34,11 +34,16 @@ const it = {
   "settings.tip.body":
     "Tema, fronte carta, audio, difficoltà IA e tutte le impostazioni qui sotto si sincronizzano con il tuo account: accedi da un altro dispositivo (o da una nuova installazione con “Aggiungi a schermata Home”) e le ritroverai anche lì. Giocando senza accesso, tutto resta solo su questo browser. Non sai a cosa serve qualcosa? Tocca la ⓘ accanto.",
 
-  "settings.section.appearance": "Aspetto",
-  "settings.section.soundAndHaptics": "Audio e vibrazione",
-  "settings.section.gameplay": "Gioco",
   "settings.section.notifications": "Notifiche",
   "settings.section.help": "Aiuto",
+  "settings.tab.general": "Generali",
+  "settings.tab.display": "Schermo",
+  "settings.tab.audio": "Audio",
+  "settings.tab.gameplay": "Gioco",
+  "settings.tab.accessibility": "Accessibilità",
+  "settings.tabsLabel": "Sezioni delle impostazioni",
+  "settings.resetSection": "Reimposta questa sezione",
+  "settings.resetSectionConfirm": "Reimpostare le impostazioni di questa sezione ai valori predefiniti?",
 
   "settings.colorblind.title": "Carte per daltonici",
   "settings.colorblind.description":

@@ -44,7 +44,7 @@ export default function ThemeSettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
-      <BackLink href="/settings" label="Settings" />
+      <BackLink href="/settings#display" label="Settings" />
       <h1 className="-mt-2 text-2xl font-bold text-[var(--heading)]">Theme</h1>
 
       {loading || authLoading ? (

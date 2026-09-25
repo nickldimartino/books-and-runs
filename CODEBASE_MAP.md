@@ -130,7 +130,7 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 | `/tournaments`, `/tournaments?id=<uuid>`, `/tournaments/new` | A round-robin series — the same roster plays a fixed number of ordinary MP games back-to-back, standings summed live. List + detail (query-param routed) + the creation form (`?club=<uuid>` pre-checks that club's roster). |
 | `/history` | Local (device) game history. |
 | `/scorecard` | Standalone pen-and-paper scorekeeper (no engine — just a score grid). |
-| `/settings`, `/settings/theme`, `/settings/card-back`, `/settings/card-face` | House rules, theme picker (38 themes), card-back picker, card-face picker (6 styles). Every preference here syncs to the account when signed in — see `accountSettingsSync.ts`. |
+| `/settings`, `/settings/theme`, `/settings/card-back`, `/settings/card-face` | House rules, theme picker (38 themes), card-back picker, card-face picker (6 styles). The main page is tabbed (General, Display, Audio, Gameplay, Accessibility; tab kept in the URL hash, sub-page back links return to their tab) with a per-tab "Reset this section" plus a global reset on General. Every preference here syncs to the account when signed in — see `accountSettingsSync.ts`. |
 | `/account` | Email/password, 2FA, data export, danger zone. Links out to `/player` for display name/bio/avatar, which live there now. |
 | `/how-to-play` | Rules reference. `BackLink` returns to wherever you came from (`?from=game`). |
 | `/sign-in`, `/reset-password`, `/privacy`, `/terms` | Auth + legal. |

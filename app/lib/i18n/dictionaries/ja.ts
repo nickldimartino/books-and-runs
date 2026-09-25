@@ -32,11 +32,16 @@ const ja = {
   "settings.tip.body":
     "テーマ、カードの表面、サウンド、AIの難易度、下のすべてのトグルはアカウントに同期されます。別のデバイスでサインインしたり（または新規に「ホーム画面に追加」でインストールしたりしても、同じ設定が反映されます。サインアウトした状態でプレイすると、設定はこのブラウザだけに保存されます。設定の内容がわからないときは、隣の ⓘ をタップしてください。",
 
-  "settings.section.appearance": "外観",
-  "settings.section.soundAndHaptics": "サウンドと振動",
-  "settings.section.gameplay": "ゲームプレイ",
   "settings.section.notifications": "通知",
   "settings.section.help": "ヘルプ",
+  "settings.tab.general": "一般",
+  "settings.tab.display": "表示",
+  "settings.tab.audio": "オーディオ",
+  "settings.tab.gameplay": "ゲームプレイ",
+  "settings.tab.accessibility": "アクセシビリティ",
+  "settings.tabsLabel": "設定のカテゴリ",
+  "settings.resetSection": "このセクションをリセット",
+  "settings.resetSectionConfirm": "このセクションの設定を初期値に戻しますか?",
 
   "settings.colorblind.title": "色覚サポート表示",
   "settings.colorblind.description":

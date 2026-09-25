@@ -35,11 +35,16 @@ const ru = {
   "settings.tip.body":
     "Тема, лицевая сторона карт, звук, сложность ИИ и все переключатели ниже синхронизируются с твоим аккаунтом — войди на другом устройстве (или после новой установки через «На экран «Домой»»), и они появятся и там. Если играешь без входа, всё сохраняется только в этом браузере. Не понимаешь, что делает какая-то настройка? Нажми на ⓘ рядом с ней.",
 
-  "settings.section.appearance": "Внешний вид",
-  "settings.section.soundAndHaptics": "Звук и вибрация",
-  "settings.section.gameplay": "Игровой процесс",
   "settings.section.notifications": "Уведомления",
   "settings.section.help": "Помощь",
+  "settings.tab.general": "Общие",
+  "settings.tab.display": "Экран",
+  "settings.tab.audio": "Звук",
+  "settings.tab.gameplay": "Игровой процесс",
+  "settings.tab.accessibility": "Специальные возможности",
+  "settings.tabsLabel": "Разделы настроек",
+  "settings.resetSection": "Сбросить этот раздел",
+  "settings.resetSectionConfirm": "Сбросить настройки этого раздела к значениям по умолчанию?",
 
   "settings.colorblind.title": "Карты для дальтоников",
   "settings.colorblind.description":

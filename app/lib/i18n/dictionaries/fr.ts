@@ -32,11 +32,16 @@ const fr = {
   "settings.tip.body":
     "Le thème, la face des cartes, le son, la difficulté de l'IA et chaque option ci-dessous se synchronisent avec ton compte — connecte-toi sur un autre appareil (ou une nouvelle installation « Ajouter à l'écran d'accueil ») et tout apparaît là aussi. Jouer sans être connecté garde tout uniquement sur ce navigateur. Pas sûr de ce que fait une option ? Appuie sur le ⓘ à côté.",
 
-  "settings.section.appearance": "Apparence",
-  "settings.section.soundAndHaptics": "Son et vibrations",
-  "settings.section.gameplay": "Jeu",
   "settings.section.notifications": "Notifications",
   "settings.section.help": "Aide",
+  "settings.tab.general": "Général",
+  "settings.tab.display": "Affichage",
+  "settings.tab.audio": "Audio",
+  "settings.tab.gameplay": "Jeu",
+  "settings.tab.accessibility": "Accessibilité",
+  "settings.tabsLabel": "Sections des réglages",
+  "settings.resetSection": "Réinitialiser cette section",
+  "settings.resetSectionConfirm": "Remettre les réglages de cette section à leurs valeurs par défaut ?",
 
   "settings.colorblind.title": "Cartes adaptées au daltonisme",
   "settings.colorblind.description":

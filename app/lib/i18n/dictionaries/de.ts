@@ -32,11 +32,16 @@ const de = {
   "settings.tip.body":
     "Design, Kartenvorderseite, Sound, KI-Schwierigkeitsgrad und alle Schalter unten werden mit deinem Konto synchronisiert — melde dich auf einem anderen Gerät an (oder bei einer neuen Installation über „Zum Startbildschirm hinzufügen“) und sie erscheinen auch dort. Ohne Anmeldung bleibt alles nur in diesem Browser gespeichert. Nicht sicher, was etwas bewirkt? Tippe auf das ⓘ daneben.",
 
-  "settings.section.appearance": "Erscheinungsbild",
-  "settings.section.soundAndHaptics": "Sound & Haptik",
-  "settings.section.gameplay": "Spielablauf",
   "settings.section.notifications": "Benachrichtigungen",
   "settings.section.help": "Hilfe",
+  "settings.tab.general": "Allgemein",
+  "settings.tab.display": "Anzeige",
+  "settings.tab.audio": "Audio",
+  "settings.tab.gameplay": "Spielablauf",
+  "settings.tab.accessibility": "Barrierefreiheit",
+  "settings.tabsLabel": "Einstellungsbereiche",
+  "settings.resetSection": "Diesen Bereich zurücksetzen",
+  "settings.resetSectionConfirm": "Die Einstellungen in diesem Bereich auf die Standardwerte zurücksetzen?",
 
   "settings.colorblind.title": "Farbenblindheitsfreundliche Karten",
   "settings.colorblind.description":

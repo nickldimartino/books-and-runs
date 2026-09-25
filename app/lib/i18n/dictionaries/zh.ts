@@ -32,11 +32,16 @@ const zh = {
   "settings.tip.body":
     "主题、牌面、声音、AI 难度，以及下面的每个开关都会同步到你的账号 — 在其他设备登录（或全新“添加到主屏幕”安装后）也会一并生效。未登录游玩时，这些设置只保存在当前浏览器。不确定某项设置的作用？点击旁边的 ⓘ 即可查看。",
 
-  "settings.section.appearance": "外观",
-  "settings.section.soundAndHaptics": "声音与震动",
-  "settings.section.gameplay": "玩法",
   "settings.section.notifications": "通知",
   "settings.section.help": "帮助",
+  "settings.tab.general": "常规",
+  "settings.tab.display": "显示",
+  "settings.tab.audio": "音频",
+  "settings.tab.gameplay": "游戏玩法",
+  "settings.tab.accessibility": "无障碍",
+  "settings.tabsLabel": "设置分类",
+  "settings.resetSection": "重置此部分",
+  "settings.resetSectionConfirm": "将此部分的设置恢复为默认值?",
 
   "settings.colorblind.title": "色盲友好卡牌",
   "settings.colorblind.description":

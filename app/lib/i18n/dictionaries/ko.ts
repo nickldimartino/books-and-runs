@@ -32,11 +32,16 @@ const ko = {
   "settings.tip.body":
     "테마, 카드 앞면, 사운드, AI 난이도, 아래의 모든 설정이 계정에 동기화돼요 — 다른 기기에서 로그인하거나(또는 새로 “홈 화면에 추가”로 설치해도) 그대로 나타나요. 로그아웃 상태로 플레이하면 모든 설정이 이 브라우저에만 저장돼요. 뭔가 잘 모르겠다면 옆의 ⓘ를 탭해 보세요.",
 
-  "settings.section.appearance": "화면",
-  "settings.section.soundAndHaptics": "사운드 및 진동",
-  "settings.section.gameplay": "게임 플레이",
   "settings.section.notifications": "알림",
   "settings.section.help": "도움말",
+  "settings.tab.general": "일반",
+  "settings.tab.display": "화면",
+  "settings.tab.audio": "오디오",
+  "settings.tab.gameplay": "게임 플레이",
+  "settings.tab.accessibility": "접근성",
+  "settings.tabsLabel": "설정 카테고리",
+  "settings.resetSection": "이 섹션 초기화",
+  "settings.resetSectionConfirm": "이 섹션의 설정을 기본값으로 되돌릴까요?",
 
   "settings.colorblind.title": "색약 친화적 카드",
   "settings.colorblind.description":
