@@ -39,6 +39,7 @@ import {
 } from "@/achievements";
 import { useAuth } from "../AuthContext";
 import { usePlayerLevel } from "../PlayerLevelContext";
+import { loadPendingSessionCounters, withSessionCounters } from "../lib/pendingProgress";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { AvatarFrame } from "../components/AvatarFrame";
 import { BackLink } from "../components/BackLink";
@@ -935,12 +936,16 @@ export default function PlayerProfilePage() {
   const unlocked = useMemo(() => achievements.filter((a) => a.unlocked), [achievements]);
   // Same "closest goal" nudge Home already shows for its own card — surfaced
   // here too, since it's exactly the kind of thing a profile visit is for.
+  const [pendingSessionCounters, setPendingSessionCounters] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    if (isSelf) setPendingSessionCounters(loadPendingSessionCounters());
+  }, [isSelf]);
   const closestAchievement = useMemo(
     () =>
-      achievements
+      allAchievements(withSessionCounters(progress, pendingSessionCounters))
         .filter((a) => !a.unlocked && a.progressFraction > 0 && a.progressFraction < 1)
         .sort((a, b) => b.progressFraction - a.progressFraction)[0] ?? null,
-    [achievements]
+    [progress, pendingSessionCounters]
   );
   const masteredFamilies = useMemo(() => {
     const per = new Map<string, number>();

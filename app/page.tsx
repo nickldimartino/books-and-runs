@@ -21,6 +21,7 @@ import { useGame } from "./GameContext";
 import { useT } from "./lib/i18n/LocaleProvider";
 import type { TranslationKey } from "./lib/i18n/keys";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
+import { loadPendingSessionCounters, withSessionCounters } from "./lib/pendingProgress";
 import { clearJustSignedUp, hasJustSignedUp } from "./lib/onboardingStore";
 import {
   WeeklyChallengeState,
@@ -169,25 +170,6 @@ function ProgressTile({
       </span>
     </Link>
   );
-}
-
-/** Same estimate RoundSummary.tsx shows between rounds — the real persisted
- * counters (only ever written by a server-verified replay at game-over)
- * plus whatever this device's own in-progress save has racked up since,
- * merged additively. Lets Home's "closest achievement" reflect a meld you
- * just made this round instead of sitting stale until the whole game ends
- * and solo-verify runs. Never written anywhere — purely a display-time
- * preview of what the eventual real write will contain. */
-function withSessionCounters(
-  progress: AchievementProgressState | null,
-  sessionCounters: Record<string, number> | null
-): AchievementProgressState | null {
-  if (!progress || !sessionCounters || Object.keys(sessionCounters).length === 0) return progress;
-  const counters = { ...progress.counters };
-  for (const [key, delta] of Object.entries(sessionCounters)) {
-    counters[key] = (counters[key] ?? 0) + delta;
-  }
-  return { ...progress, counters };
 }
 
 /** The single locked achievement the account is furthest along toward — the
@@ -611,18 +593,7 @@ export default function HomePage() {
     setSavedSummary(saved ? summarizeSavedGame(saved.state, t, tPlural) : null);
     setSavedMode(saved ? savedGameMode(saved.state, t) : null);
 
-    // Every device-local save this account could be mid-round in at once —
-    // regular, Daily Deal, and Weekly Challenge are independent slots — each
-    // contributes its own not-yet-verified sessionCounters on top of the
-    // real persisted progress (see withSessionCounters).
-    const merged: Record<string, number> = {};
-    for (const slotSave of [saved, loadDailyDealSave(), loadWeeklyChallengeSave()]) {
-      if (!slotSave?.sessionCounters) continue;
-      for (const [key, amount] of Object.entries(slotSave.sessionCounters)) {
-        merged[key] = (merged[key] ?? 0) + amount;
-      }
-    }
-    setPendingSessionCounters(Object.keys(merged).length > 0 ? merged : null);
+    setPendingSessionCounters(loadPendingSessionCounters());
   }, [hasSavedGame, t, tPlural]);
 
   // Loaded once per visit to Home — this page fully remounts every time you
