@@ -33,6 +33,18 @@ const DICTIONARY_LOADERS: Record<LocaleId, () => Promise<{ default: Dict }>> = {
   it: () => import("./dictionaries/it"),
 };
 
+/** For screens outside the provider (global-error.tsx replaces the root
+ * layout): loads a locale's dictionary and returns a standalone t(). */
+export async function loadTranslator(locale: LocaleId): Promise<(key: TranslationKey, vars?: Vars) => string> {
+  let d: Dict = en;
+  try {
+    d = (await DICTIONARY_LOADERS[locale]()).default;
+  } catch {
+    /* fall back to English */
+  }
+  return (key, vars) => interpolate(d[key] ?? en[key] ?? key, vars);
+}
+
 export type Vars = Record<string, string | number>;
 
 interface LocaleContextValue {

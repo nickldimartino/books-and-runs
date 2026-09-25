@@ -12,6 +12,7 @@ import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { loadSupabase } from "../lib/supabaseClient";
+import { translateError } from "../lib/i18n/serverErrors";
 
 export default function ResetPasswordPage() {
   const { t } = useT();
@@ -64,7 +65,7 @@ export default function ResetPasswordPage() {
     const result = await updatePassword(password);
     setPending(false);
     if (result.error) {
-      setError(result.error);
+      setError(translateError(result.error, t));
     } else {
       setDone(true);
     }

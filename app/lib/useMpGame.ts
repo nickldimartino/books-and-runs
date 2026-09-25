@@ -41,6 +41,8 @@ import { loadAchievementProgressState } from "./loadAchievementProgress";
 import { parseRedactedView } from "./mpSchema";
 import { shareStructure } from "./structuralShare";
 import { supabase } from "./supabaseClient";
+import { useT } from "./i18n/LocaleProvider";
+import { translateError } from "./i18n/serverErrors";
 
 export interface StagedGroup {
   id: string;
@@ -177,6 +179,10 @@ export interface UseMpGame {
  */
 export function useMpGame(gameId: string | null): UseMpGame {
   const { user } = useAuth();
+  const { t } = useT();
+  const tRef = useRef(t);
+  tRef.current = t;
+  const tr = (m: string) => translateError(m, tRef.current);
   const [held, setHeld] = useState<Held | null>(null);
   const state = held?.resp ?? null;
   const [status, setStatus] = useState<UseMpGame["status"]>("loading");
@@ -250,7 +256,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
         setSyncError(null);
       })
       .catch((err) => {
-        const msg = err instanceof MpError ? err.message : "Couldn't load the game.";
+        const msg = err instanceof MpError ? tr(err.message) : tr("Couldn't load the game.");
         if (hasLoadedRef.current) {
           setSyncError(msg);
         } else {
@@ -449,7 +455,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
         }
         return res;
       } catch (err) {
-        setActionError(err instanceof MpError ? err.message : "Something went wrong.");
+        setActionError(err instanceof MpError ? tr(err.message) : tr("Something went wrong."));
         refreshRef.current(); // reconcile with the server on any failure
         return null;
       } finally {
@@ -513,7 +519,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
         return;
       }
       if (!result.valid || !result.type) {
-        setGroupError(result.reason ?? "Not a valid book or run.");
+        setGroupError(result.reason ? tr(result.reason) : tRef.current("game.buildMeld.invalidGroup"));
         return;
       }
       stageCards(selectedIds, result.type, result.runStartIndex);
@@ -526,7 +532,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
       if (!pendingRunChoice || !contract) return;
       const result = validateManualGroup(pendingRunChoice.cards, contract, start);
       if (!result.valid || !result.type) {
-        setGroupError(result.reason ?? "Not a valid book or run.");
+        setGroupError(result.reason ? tr(result.reason) : tRef.current("game.buildMeld.invalidGroup"));
         setPendingRunChoice(null);
         return;
       }
@@ -622,7 +628,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
       refresh(); // picks up the now-"cancelled" status from the server
       return true;
     } catch (err) {
-      setActionError(err instanceof MpError ? err.message : "Couldn't cancel this game.");
+      setActionError(err instanceof MpError ? tr(err.message) : tr("Couldn't cancel this game."));
       return false;
     } finally {
       setBusy(false);
@@ -645,7 +651,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
         refresh(); // picks up the now-active (or, on decline, cancelled) status
         return true;
       } catch (err) {
-        setActionError(err instanceof MpError ? err.message : "Couldn't respond to this invite.");
+        setActionError(err instanceof MpError ? tr(err.message) : tr("Couldn't respond to this invite."));
         return false;
       } finally {
         setBusy(false);
@@ -678,7 +684,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
       );
       return game_id;
     } catch (err) {
-      setActionError(err instanceof MpError ? err.message : "Couldn't start a rematch.");
+      setActionError(err instanceof MpError ? tr(err.message) : tr("Couldn't start a rematch."));
       return null;
     }
   }, [gameId, view, user]);

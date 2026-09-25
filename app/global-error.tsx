@@ -12,8 +12,18 @@
 // screen can match it without any CSS in play.
 
 import { useEffect, useState } from "react";
+import { loadTranslator } from "./lib/i18n/LocaleProvider";
+import { loadLocalLocale } from "./lib/localeStore";
+import type { TranslationKey } from "./lib/i18n/keys";
 import { report } from "./lib/errorReporter";
 import { DEFAULT_THEME, loadLocalTheme, THEME_ERROR_COLORS } from "./lib/themeStore";
+
+const FALLBACK: Record<string, string> = {
+  "globalError.title": "Books & Runs hit a snag",
+  "globalError.body": "Something went wrong loading the app. Reloading usually fixes it.",
+  "common.retry": "Try again",
+  "globalError.reload": "Reload",
+};
 
 export default function GlobalError({
   error,
@@ -31,6 +41,14 @@ export default function GlobalError({
     setThemeId(loadLocalTheme());
   }, []);
   const c = THEME_ERROR_COLORS[themeId];
+  // No LocaleProvider here (the root layout crashed), so load the saved
+  // language's dictionary directly; English until it arrives.
+  const [t, setT] = useState<(key: TranslationKey) => string>(() => (key: TranslationKey) => FALLBACK[key]);
+  useEffect(() => {
+    const locale = loadLocalLocale();
+    loadTranslator(locale).then((tr) => setT(() => (key: TranslationKey) => tr(key)));
+    document.documentElement.lang = locale;
+  }, []);
 
   useEffect(() => {
     console.error("Global error boundary caught:", error);
@@ -56,12 +74,12 @@ export default function GlobalError({
             "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         }}
       >
-        <title>Books &amp; Runs hit a snag</title>
+        <title>{t("globalError.title")}</title>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: c.heading, margin: 0 }}>
-          Books &amp; Runs hit a snag
+          {t("globalError.title")}
         </h1>
         <p style={{ fontSize: "0.875rem", color: c.muted, maxWidth: "22rem", margin: 0 }}>
-          Something went wrong loading the app. Reloading usually fixes it.
+          {t("globalError.body")}
         </p>
         <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
           <button
@@ -77,7 +95,7 @@ export default function GlobalError({
               fontWeight: 600,
             }}
           >
-            Try again
+            {t("common.retry")}
           </button>
           {/* Raw <a>, not next/link: this renders when the root layout
               itself crashed, so the router/Link may not be usable — a full
@@ -95,7 +113,7 @@ export default function GlobalError({
               textDecoration: "none",
             }}
           >
-            Reload
+            {t("globalError.reload")}
           </a>
         </div>
       </body>

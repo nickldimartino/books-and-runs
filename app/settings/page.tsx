@@ -73,6 +73,7 @@ import { supabase } from "../lib/supabaseClient";
 import { capitalize } from "../lib/text";
 import { THEME_SWATCHES } from "./themeSwatches";
 import { Difficulty } from "@/types";
+import { translateError } from "../lib/i18n/serverErrors";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 
@@ -249,6 +250,16 @@ function SectionReset({
       </div>
     </div>
   );
+}
+
+/** A language's name in the *active* UI language (falls back to the English
+ * name if Intl.DisplayNames doesn't know it). */
+function languageDisplayName(uiLocale: string, id: string, fallback: string): string {
+  try {
+    return new Intl.DisplayNames([uiLocale], { type: "language" }).of(id) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
@@ -619,7 +630,7 @@ export default function SettingsPage() {
     else if (result.reason === "denied") setPushState("denied");
     else {
       setPushState("off");
-      setPushError(result.reason ?? "Couldn't turn on notifications.");
+      setPushError(translateError(result.reason ?? "Couldn't turn on notifications.", t));
     }
   }
 
@@ -671,7 +682,7 @@ export default function SettingsPage() {
                 <button
                   key={l.id}
                   onClick={() => handleLocaleChange(l.id)}
-                  aria-label={`${l.name} (${l.nativeName})`}
+                  aria-label={`${languageDisplayName(locale, l.id, l.name)} (${l.nativeName})`}
                   className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
                     locale === l.id
                       ? "bg-[var(--accent)] text-[var(--on-accent)]"

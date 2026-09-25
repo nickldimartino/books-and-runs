@@ -259,13 +259,13 @@ function seasonAdjustedEntry(entry: LeaderboardEntry, snapshots: Record<string, 
 /** "September 2026" — matches leaderboardStore.ts's currentSeasonStart, in
  * the visitor's own locale but the same UTC month boundary the snapshot
  * itself uses, so this label always names the season actually being shown. */
-function seasonLabel(): string {
-  return new Date().toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+function seasonLabel(locale: string): string {
+  return new Date().toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 export default function LeaderboardPage() {
   const { configured, loading: authLoading, user } = useAuth();
-  const { t } = useT();
+  const { t, locale } = useT();
   const columns = useMemo(() => buildColumns(t), [t]);
   const seasonColumns = useMemo(() => columns.filter((c) => SEASON_COLUMN_KEYS.includes(c.key)), [columns]);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -458,7 +458,7 @@ export default function LeaderboardPage() {
 
           {view === "season" && (
             <PageTip id="leaderboard-season" title={t("leaderboard.view.thisMonth")}>
-              {t("leaderboard.seasonTip.body", { season: seasonLabel() })}
+              {t("leaderboard.seasonTip.body", { season: seasonLabel(locale) })}
             </PageTip>
           )}
 

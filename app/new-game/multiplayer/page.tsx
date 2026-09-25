@@ -24,6 +24,7 @@ import { createMpGame, MpError, NewGameSeat } from "../../lib/mpStore";
 import { supabase } from "../../lib/supabaseClient";
 import { capitalize } from "../../lib/text";
 import { CONTRACTS, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
+import { translateError } from "../../lib/i18n/serverErrors";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
@@ -114,7 +115,7 @@ export default function NewMultiplayerGamePage() {
       });
       router.push("/");
     } catch (err) {
-      setError(err instanceof MpError ? err.message : t("newGameMultiplayer.createError"));
+      setError(err instanceof MpError ? translateError(err.message, t) : t("newGameMultiplayer.createError"));
       setCreating(false);
     }
   }

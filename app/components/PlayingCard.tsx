@@ -3,6 +3,7 @@
 import { Card } from "@/types";
 import type { TranslationKey } from "../lib/i18n/keys";
 import { CardFace } from "./CardFace";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 // Exported so HandPreviewBar.tsx's mini fanned cards can reuse the exact
 // same suit glyphs / red-suit rule as the real card face, rather than a
@@ -71,6 +72,7 @@ export function PlayingCard({
   standInRank,
   canLayOff,
 }: PlayingCardProps) {
+  const { t } = useT();
   const size = small ? "h-14 w-10 text-xs" : "h-20 w-14 text-sm";
 
   if (faceDown) {
@@ -94,12 +96,12 @@ export function PlayingCard({
           the card it's describing did. */}
       {isNew && (
         <span className="card-enter absolute -top-1.5 -right-1.5 z-10 rounded-full bg-[var(--highlight)] px-1 text-[9px] font-bold leading-tight text-[var(--on-accent)] shadow">
-          NEW
+          {t("card.newBadge")}
         </span>
       )}
       {canLayOff && (
         <span
-          title="Can be laid off onto a meld on the table"
+          title={t("card.canLayOffTitle")}
           // Wild cards' own face is already a pale gold close to --accent, so
           // the badge needs a light ring around it to stay visible there —
           // --card-bg is a near-white constant across every theme, unlike

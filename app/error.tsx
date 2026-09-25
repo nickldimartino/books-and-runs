@@ -12,10 +12,12 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { clearSavedGame } from "./lib/localSave";
+import { useT } from "./lib/i18n/LocaleProvider";
 import { report } from "./lib/errorReporter";
 
 // Note: this (modified) Next passes `retry`, not the upstream `reset` name.
 export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+  const { t } = useT();
   useEffect(() => {
     console.error("Route error boundary caught:", error);
     report({ message: error.message, stack: error.stack, source: "error-boundary" });
@@ -23,23 +25,23 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
-      <p className="text-xs font-medium uppercase tracking-wide text-[var(--faint)]">Something broke</p>
-      <h1 className="text-2xl font-bold text-[var(--heading)]">This screen hit an error</h1>
+      <p className="text-xs font-medium uppercase tracking-wide text-[var(--faint)]">{t("error.eyebrow")}</p>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("error.title")}</h1>
       <p className="text-sm text-[var(--muted)]">
-        Try again — if it keeps happening, starting a fresh game usually clears it.
+        {t("error.body")}
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={() => retry()}
           className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
         >
-          Try again
+          {t("common.retry")}
         </button>
         <Link
           href="/"
           className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
-          Home
+          {t("common.home")}
         </Link>
       </div>
       <button
@@ -49,7 +51,7 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
         }}
         className="text-sm text-[var(--faint)] underline hover:text-[var(--text)]"
       >
-        Start a fresh game
+        {t("error.freshGame")}
       </button>
     </main>
   );

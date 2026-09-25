@@ -8,6 +8,7 @@ import { AccountSettingsSync } from "./AccountSettingsSync";
 import { AccountSwitchGuard } from "./AccountSwitchGuard";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
+import { DocumentTitleLocalizer } from "./components/DocumentTitleLocalizer";
 import { LocaleProvider } from "./lib/i18n/LocaleProvider";
 import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
@@ -108,8 +109,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen antialiased">
         <ServiceWorkerRegistrar />
-        <UpdateAvailableBanner />
         <LocaleProvider>
+          <UpdateAvailableBanner />
+          <DocumentTitleLocalizer />
           <AuthProvider>
             <AccountSwitchGuard />
             <AccountSettingsSync />

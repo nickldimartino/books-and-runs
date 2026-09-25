@@ -109,6 +109,7 @@ import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
 import { capitalize } from "../lib/text";
+import { translateError } from "../lib/i18n/serverErrors";
 
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert"];
 const PAST_GAMES_LIMIT = 10;
@@ -334,7 +335,7 @@ export default function PlayerProfilePage() {
   const { configured, loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
   const router = useRouter();
-  const { t, tPlural } = useT();
+  const { t, tPlural, locale } = useT();
   const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -529,7 +530,7 @@ export default function PlayerProfilePage() {
       setNameSaveState("saved");
     } catch (err) {
       if (err instanceof DisplayNameTakenError) {
-        setNameError(err.message);
+        setNameError(translateError(err.message, t));
       } else {
         console.error("Failed to save display name:", err);
       }
@@ -619,7 +620,7 @@ export default function PlayerProfilePage() {
       );
       setPhotoState("idle");
     } catch (err) {
-      setPhotoError(err instanceof InvalidAvatarFileError ? err.message : t("player.photo.uploadError"));
+      setPhotoError(err instanceof InvalidAvatarFileError ? translateError(err.message, t) : t("player.photo.uploadError"));
       setPhotoState("error");
     }
   }
@@ -652,7 +653,7 @@ export default function PlayerProfilePage() {
       setEntry((prev) => (prev ? { ...prev, avatar_frame: frameId } : prev));
       setFrameSaveState("saved");
     } catch (err) {
-      if (err instanceof CosmeticLockedError) setFrameSaveError(err.message);
+      if (err instanceof CosmeticLockedError) setFrameSaveError(translateError(err.message, t));
       else console.error("Failed to save avatar frame:", err);
       setFrameSaveState("error");
     }
@@ -672,7 +673,7 @@ export default function PlayerProfilePage() {
       setEntry((prev) => (prev ? { ...prev, title: titleId } : prev));
       setTitleSaveState("saved");
     } catch (err) {
-      if (err instanceof CosmeticLockedError) setTitleSaveError(err.message);
+      if (err instanceof CosmeticLockedError) setTitleSaveError(translateError(err.message, t));
       else console.error("Failed to save title:", err);
       setTitleSaveState("error");
     }
@@ -692,7 +693,7 @@ export default function PlayerProfilePage() {
       setEntry((prev) => (prev ? { ...prev, banner: bannerId } : prev));
       setBannerSaveState("saved");
     } catch (err) {
-      if (err instanceof CosmeticLockedError) setBannerSaveError(err.message);
+      if (err instanceof CosmeticLockedError) setBannerSaveError(translateError(err.message, t));
       else console.error("Failed to save banner:", err);
       setBannerSaveState("error");
     }
@@ -717,7 +718,7 @@ export default function PlayerProfilePage() {
       setEntry((prev) => (prev ? { ...prev, badge } : prev));
       setBadgeSaveState("saved");
     } catch (err) {
-      if (err instanceof CosmeticLockedError) setBadgeSaveError(err.message);
+      if (err instanceof CosmeticLockedError) setBadgeSaveError(translateError(err.message, t));
       else console.error("Failed to save badge:", err);
       setBadgeSaveState("error");
     }
@@ -1059,7 +1060,7 @@ export default function PlayerProfilePage() {
   const onBanner = !!findBannerOption(entry?.banner ?? null);
   const joinedLabel = entry?.joined_at
     ? t("player.joined", {
-        date: new Date(entry.joined_at).toLocaleDateString(undefined, { month: "short", year: "numeric" }),
+        date: new Date(entry.joined_at).toLocaleDateString(locale, { month: "short", year: "numeric" }),
       })
     : null;
 
@@ -2179,7 +2180,7 @@ export default function PlayerProfilePage() {
                                   )}
                                 </span>
                                 <span className="text-xs text-[var(--faint)]">
-                                  {new Date(g.played_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                                  {new Date(g.played_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}
                                 </span>
                               </div>
                               {yourScore !== null && !wonOrTied && (
@@ -2223,7 +2224,7 @@ export default function PlayerProfilePage() {
                                       : t("player.pastGames.lostTo", { winner: winnerName })}
                                 </span>
                                 <span className="text-xs text-[var(--faint)]">
-                                  {mg.completed_at ? new Date(mg.completed_at).toLocaleDateString(undefined, { dateStyle: "medium" }) : ""}
+                                  {mg.completed_at ? new Date(mg.completed_at).toLocaleDateString(locale, { dateStyle: "medium" }) : ""}
                                 </span>
                               </div>
                               {myScore != null && <p className="mt-0.5 text-xs text-[var(--muted)]">{t("player.pastGames.yourScore", { score: myScore })}</p>}

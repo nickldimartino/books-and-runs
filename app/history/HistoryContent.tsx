@@ -7,8 +7,20 @@
 import Link from "next/link";
 import { useT } from "../lib/i18n/LocaleProvider";
 
+const CREDIT_NAMES = ["LeAnne DiMartino", "Jennifer Monkiewicz", "John Lich", "Erin Peraino"];
+
+/** The credited names joined with the active language's own list
+ * conjunction ("A, B, C, and D" / "A、B、C和D" / ...). */
+function creditParts(locale: string) {
+  try {
+    return new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).formatToParts(CREDIT_NAMES);
+  } catch {
+    return CREDIT_NAMES.map((value) => ({ type: "element" as const, value }));
+  }
+}
+
 export function HistoryContent() {
-  const { t } = useT();
+  const { t, locale } = useT();
 
   return (
     <>
@@ -56,10 +68,15 @@ export function HistoryContent() {
           </h2>
           <p>
             {t("history.credits.thanksPrefix")}{" "}
-            <strong className="text-[var(--heading)]">LeAnne DiMartino</strong>,{" "}
-            <strong className="text-[var(--heading)]">Jennifer Monkiewicz</strong>,{" "}
-            <strong className="text-[var(--heading)]">John Lich</strong>, and{" "}
-            <strong className="text-[var(--heading)]">Erin Peraino</strong>{" "}
+            {creditParts(locale).map((part, i) =>
+              part.type === "element" ? (
+                <strong key={i} className="text-[var(--heading)]">
+                  {part.value}
+                </strong>
+              ) : (
+                <span key={i}>{part.value}</span>
+              )
+            )}{" "}
             {t("history.credits.thanksSuffix")}
           </p>
           <p className="mt-2">

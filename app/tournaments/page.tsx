@@ -33,6 +33,7 @@ import {
   TournamentSummary,
 } from "../lib/tournamentsStore";
 import { Difficulty } from "@/types";
+import { translateError } from "../lib/i18n/serverErrors";
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -286,7 +287,7 @@ function TournamentDetail({ tournamentId }: { tournamentId: string }) {
       router.push(`/multiplayer/play?g=${game_id}`);
     } catch (err) {
       console.error("Failed to start the next round:", err);
-      setActionError(err instanceof MpError ? err.message : t("tournaments.startNextRoundError"));
+      setActionError(err instanceof MpError ? translateError(err.message, t) : t("tournaments.startNextRoundError"));
       setBusy(false);
     }
   }

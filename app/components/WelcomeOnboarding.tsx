@@ -27,6 +27,7 @@ import {
   subscribeToPush,
 } from "../lib/pushSubscriptions";
 import { supabase } from "../lib/supabaseClient";
+import { translateError } from "../lib/i18n/serverErrors";
 
 export function WelcomeOnboarding({ open, onDismiss }: { open: boolean; onDismiss: () => void }) {
   const { t, locale, setLocale } = useT();
@@ -56,7 +57,7 @@ export function WelcomeOnboarding({ open, onDismiss }: { open: boolean; onDismis
     else if (result.reason === "denied") setPushState("denied");
     else {
       setPushState("off");
-      setPushError(result.reason ?? t("welcome.push.error"));
+      setPushError(result.reason ? translateError(result.reason, t) : t("welcome.push.error"));
     }
   }
 

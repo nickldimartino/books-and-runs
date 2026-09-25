@@ -28,6 +28,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { createTournament } from "../../lib/tournamentsStore";
 import { capitalize } from "../../lib/text";
 import { CONTRACTS, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
+import { translateError } from "../../lib/i18n/serverErrors";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
 const MAX_PLAYERS = 8;
@@ -150,7 +151,7 @@ export default function NewTournamentPage() {
       });
       router.push(`/tournaments?id=${tournamentId}`);
     } catch (err) {
-      setError(err instanceof MpError ? err.message : t("tournaments.new.createError"));
+      setError(err instanceof MpError ? translateError(err.message, t) : t("tournaments.new.createError"));
       setCreating(false);
     }
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "./lib/i18n/LocaleProvider";
 import { SW_UPDATE_AVAILABLE_EVENT } from "./ServiceWorkerRegistrar";
 
 /**
@@ -16,6 +17,7 @@ import { SW_UPDATE_AVAILABLE_EVENT } from "./ServiceWorkerRegistrar";
  * to the player to dismiss or act on whenever suits them (not mid-turn).
  */
 export function UpdateAvailableBanner() {
+  const { t } = useT();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -34,17 +36,17 @@ export function UpdateAvailableBanner() {
       className="fixed inset-x-0 top-0 z-50 flex flex-col gap-2 bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--on-accent)] shadow-lg sm:flex-row sm:items-center sm:justify-between"
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}
     >
-      <span>A new version of Books &amp; Runs is ready.</span>
+      <span>{t("update.newVersion")}</span>
       <div className="flex shrink-0 items-center gap-2">
         <button
           onClick={() => window.location.reload()}
           className="rounded-full bg-[var(--on-accent)]/20 px-3 py-1 font-semibold hover:bg-[var(--on-accent)]/30"
         >
-          Refresh
+          {t("update.refresh")}
         </button>
         <button
           onClick={() => setVisible(false)}
-          aria-label="Dismiss"
+          aria-label={t("common.dismiss")}
           className="rounded-full px-2 py-1 hover:bg-[var(--on-accent)]/20"
         >
           ✕

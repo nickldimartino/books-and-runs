@@ -48,6 +48,7 @@ import { groupMeldsByOwner, layOffOptions, runCardRank, RUN_ORDER, validateManua
 import { handPenalty } from "@/scorer";
 import { TUTORIAL_HUMAN_ID } from "@/tutorial";
 import { Card, ContractRequirement, Meld } from "@/types";
+import { translateError } from "../lib/i18n/serverErrors";
 
 interface PendingLayOff {
   card: Card;
@@ -842,7 +843,7 @@ export default function GamePage() {
       return;
     }
     if (!result.valid || !result.type) {
-      setGroupError(result.reason ?? t("game.buildMeld.invalidGroup"));
+      setGroupError(result.reason ? translateError(result.reason, t) : t("game.buildMeld.invalidGroup"));
       return;
     }
     setPendingGroups((prev) => [
@@ -864,7 +865,7 @@ export default function GamePage() {
     if (!result.valid || !result.type) {
       // Shouldn't happen — `start` came from our own offered options — but
       // fail safely rather than stage something invalid.
-      setGroupError(result.reason ?? t("game.buildMeld.invalidGroup"));
+      setGroupError(result.reason ? translateError(result.reason, t) : t("game.buildMeld.invalidGroup"));
       setPendingGroupChoice(null);
       return;
     }

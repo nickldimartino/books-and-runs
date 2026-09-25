@@ -16,6 +16,7 @@ import type { TranslationKey } from "../lib/i18n/keys";
 import { useT, Vars } from "../lib/i18n/LocaleProvider";
 import { syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
+import { translateError } from "../lib/i18n/serverErrors";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -138,7 +139,7 @@ export default function AccountPage() {
     }
     const { error } = await supabase.auth.updateUser({ email: newEmail });
     if (error) {
-      setEmailError(error.message);
+      setEmailError(translateError(error.message, t));
       setEmailSaveState("error");
       return;
     }
@@ -159,7 +160,7 @@ export default function AccountPage() {
     }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
-      setPasswordError(error.message);
+      setPasswordError(translateError(error.message, t));
       setPasswordSaveState("error");
       return;
     }
@@ -185,7 +186,7 @@ export default function AccountPage() {
     setEnrollError(null);
     const result = await enrollMfaFactor();
     if (result.error || !result.factorId || !result.qrCodeSvg || !result.secret) {
-      setEnrollError(result.error ?? t("account.mfa.startError"));
+      setEnrollError(translateError(result.error, t) || t("account.mfa.startError"));
       return;
     }
     setEnrolling({ factorId: result.factorId, qrCodeSvg: result.qrCodeSvg, secret: result.secret });
@@ -210,7 +211,7 @@ export default function AccountPage() {
     const result = await verifyMfaEnrollment(enrolling.factorId, enrollCode.trim());
     setEnrollSubmitting(false);
     if (result.error) {
-      setEnrollError(result.error);
+      setEnrollError(translateError(result.error, t));
       return;
     }
     setEnrolling(null);
@@ -232,7 +233,7 @@ export default function AccountPage() {
     const result = await unenrollMfaFactor(removingFactorId);
     setRemoveSubmitting(false);
     if (result.error) {
-      setRemoveError(result.error);
+      setRemoveError(translateError(result.error, t));
       return;
     }
     setRemovingFactorId(null);

@@ -55,9 +55,21 @@
   </head>
   <body>
     <span style="font-size: 2rem" aria-hidden="true">🃏</span>
-    <h1>You&rsquo;re offline</h1>
-    <p>This page hasn&rsquo;t been loaded before, so there&rsquo;s nothing saved to show without a
+    <h1 id="t">You&rsquo;re offline</h1>
+    <p id="b">This page hasn&rsquo;t been loaded before, so there&rsquo;s nothing saved to show without a
       connection. A page you&rsquo;ve already visited will still work offline.</p>
-    <button onclick="location.reload()">Try again</button>
+    <button id="r" onclick="location.reload()">Try again</button>
+    <script>
+      (function () {
+        var D = {"zh": ["你已离线", "此页面之前没有加载过，因此没有联网时可显示的已保存内容。你访问过的页面在离线时仍可使用。", "重试"], "ja": ["オフラインです", "このページはまだ読み込まれたことがないため、接続なしで表示できる保存済みデータがありません。以前に開いたページはオフラインでも使えます。", "再試行"], "ko": ["오프라인이에요", "이 페이지는 아직 불러온 적이 없어서 연결 없이 보여줄 저장된 내용이 없어요. 이미 방문한 페이지는 오프라인에서도 작동해요.", "다시 시도"], "de": ["Du bist offline", "Diese Seite wurde noch nie geladen, daher gibt es ohne Verbindung nichts Gespeichertes zu zeigen. Bereits besuchte Seiten funktionieren weiterhin offline.", "Erneut versuchen"], "fr": ["Tu es hors ligne", "Cette page n'a jamais été chargée, donc rien n'est enregistré à afficher sans connexion. Une page déjà visitée fonctionnera toujours hors ligne.", "Réessayer"], "es": ["Estás sin conexión", "Esta página no se ha cargado antes, así que no hay nada guardado que mostrar sin conexión. Las páginas que ya visitaste seguirán funcionando sin conexión.", "Reintentar"], "pt-BR": ["Você está offline", "Esta página nunca foi carregada, então não há nada salvo para mostrar sem conexão. Páginas que você já visitou continuam funcionando offline.", "Tentar novamente"], "ru": ["Ты не в сети", "Эта страница раньше не загружалась, поэтому без подключения показывать нечего. Уже посещённые страницы продолжат работать офлайн.", "Повторить"], "it": ["Sei offline", "Questa pagina non è mai stata caricata, quindi senza connessione non c'è nulla di salvato da mostrare. Le pagine già visitate funzioneranno comunque offline.", "Riprova"]};
+        var l; try { l = localStorage.getItem("booksAndRuns:locale"); } catch (e) {}
+        var d = D[l]; if (!d) return;
+        document.documentElement.lang = l;
+        document.getElementById("t").textContent = d[0];
+        document.getElementById("b").textContent = d[1];
+        document.getElementById("r").textContent = d[2];
+        document.title = "Books & Runs — " + d[0];
+      })();
+    </script>
   </body>
 </html>

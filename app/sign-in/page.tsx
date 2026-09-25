@@ -14,6 +14,7 @@ import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { markJustSignedUp } from "../lib/onboardingStore";
+import { translateError } from "../lib/i18n/serverErrors";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function SignInPage() {
       const result = await resetPasswordForEmail(email);
       setPending(false);
       if (result.error) {
-        setError(result.error);
+        setError(translateError(result.error, t));
       } else {
         setResetEmailSent(true);
       }
@@ -81,7 +82,7 @@ export default function SignInPage() {
       const result = await signUpWithPassword(email, password);
       setPending(false);
       if (result.error) {
-        setError(result.error);
+        setError(translateError(result.error, t));
       } else if (result.alreadyRegistered) {
         setError(t("signIn.alreadyRegistered"));
       } else {
@@ -98,7 +99,7 @@ export default function SignInPage() {
     }
     const result = await signInWithPassword(email, password);
     setPending(false);
-    if (result.error) setError(result.error);
+    if (result.error) setError(translateError(result.error, t));
   }
 
   async function handleMfaSubmit(e: FormEvent) {
@@ -107,7 +108,7 @@ export default function SignInPage() {
     setMfaSubmitting(true);
     const result = await verifyMfaCode(mfaCode.trim());
     setMfaSubmitting(false);
-    if (result.error) setMfaError(result.error);
+    if (result.error) setMfaError(translateError(result.error, t));
     // On success the session is upgraded to aal2 in place — AuthContext's
     // own auth-state listener resolves `user`, and the effect above redirects.
   }

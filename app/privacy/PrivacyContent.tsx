@@ -13,7 +13,7 @@ export function PrivacyContent() {
   return (
     <>
       <div>
-        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("signIn.privacyPolicy")}</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("privacy.title")}</h1>
         <p className="mt-1 text-sm text-[var(--faint)]">{t("privacy.lastUpdated")}</p>
       </div>
 
