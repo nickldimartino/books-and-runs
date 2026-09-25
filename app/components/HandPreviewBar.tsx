@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { Card } from "@/types";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { RED_SUITS, SUIT_SYMBOL } from "./PlayingCard";
 
 interface HandPreviewBarProps {
@@ -48,6 +49,7 @@ const WIDE_MIN_STEP = 22;
  * shortcut to it.
  */
 export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
+  const { t } = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [isWide, setIsWide] = useState(false);
@@ -122,7 +124,7 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
   return (
     <button
       onClick={onTap}
-      aria-label="Jump to your hand"
+      aria-label={t("game.jumpToHand")}
       data-tutorial="hand-bar"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)]"
     >
@@ -176,9 +178,10 @@ function MiniCard({
   marginLeft: number;
   fanned: boolean;
 }) {
+  const { t } = useT();
   const isRed = RED_SUITS.has(card.suit);
   const colorClass = card.isWild ? "wild" : isRed ? "red" : "";
-  const label = card.rank === "JOKER" ? "JKR" : card.rank;
+  const label = card.rank === "JOKER" ? t("card.jokerAbbr") : card.rank;
   const style: CSSProperties = { width, height, marginLeft };
 
   return (

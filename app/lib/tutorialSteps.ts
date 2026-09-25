@@ -15,6 +15,8 @@
  * one the step happens to mention first.
  */
 
+import type { TranslationKey } from "./i18n/keys";
+
 export type TutorialGate =
   | { type: "tap" }
   | { type: "drawn" }
@@ -25,8 +27,11 @@ export type TutorialGate =
 export interface TutorialStep {
   id: string;
   target: string | string[] | null;
-  title: string;
-  body: string;
+  /** Translation keys, not literal text — TutorialOverlay.tsx resolves
+   * them via t() at render time, so this array can stay a plain static
+   * list instead of a factory function needing a live t() to build. */
+  title: TranslationKey;
+  body: TranslationKey;
   gate: TutorialGate;
 }
 
@@ -34,106 +39,106 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "welcome",
     target: null,
-    title: "Welcome to Books & Runs!",
-    body: "This quick tour walks you through your first turn and points out where everything lives on screen. It only takes a minute — let's go.",
+    title: "tutorial.welcome.title",
+    body: "tutorial.welcome.body",
     gate: { type: "tap" },
   },
   {
     id: "contract",
     target: "round-header",
-    title: "Your round's contract",
-    body: "Up top: which round you're on and the contract you owe. Every round needs a specific set of melds before you can lay anything down. This round it's 1 Book + 1 Run.",
+    title: "tutorial.contract.title",
+    body: "tutorial.contract.body",
     gate: { type: "tap" },
   },
   {
     id: "opponents",
     target: "opponent-strip",
-    title: "The table",
-    body: "This strip is everyone playing — their marker, how many cards they're holding, and whose turn it is (the highlighted one). Tap any player to see their last discard and last pickup. When an opponent takes a turn, what they did shows up right here.",
+    title: "tutorial.opponents.title",
+    body: "tutorial.opponents.body",
     gate: { type: "tap" },
   },
   {
     id: "hand-bar",
     target: "hand-bar",
-    title: "Your hand",
-    body: "Your cards ride in this bar along the bottom, always one tap away. Opening it up full-screen is where you sort your hand, build melds, and discard — which we'll do in a moment.",
+    title: "tutorial.handBar.title",
+    body: "tutorial.handBar.body",
     gate: { type: "tap" },
   },
   {
     id: "draw",
     target: "draw-piles",
-    title: "Draw a card",
-    body: "Every turn starts with a draw. Tap the draw pile for a fresh card, or take the top of the discard pile if it helps your hand. Try it now.",
+    title: "tutorial.draw.title",
+    body: "tutorial.draw.body",
     gate: { type: "drawn" },
   },
   {
     id: "hand",
     target: "hand",
-    title: "Your full hand",
-    body: "Here's everything you're holding, opened up. You've already got what this round's contract needs — a book and a run are hiding in here.",
+    title: "tutorial.hand.title",
+    body: "tutorial.hand.body",
     gate: { type: "tap" },
   },
   {
     id: "organize-hand",
     target: "hand",
-    title: "Organize your hand",
-    body: 'Tap "Sort by suit" or "Sort by rank" to group your cards automatically, or press and drag any card to move it wherever you like. It\'s purely for your own convenience — it has no effect on the game.',
+    title: "tutorial.organizeHand.title",
+    body: "tutorial.organizeHand.body",
     gate: { type: "tap" },
   },
   {
     id: "wildcards",
     target: null,
-    title: "Wild cards",
-    body: "Jokers are always wild. 2s are dual-purpose — a 2 can stand in for any missing card, or play as its own rank, whichever helps. None of either in your hand this round, but if you lay a wild onto a run later, you may be asked which card it's filling in for.",
+    title: "tutorial.wildcards.title",
+    body: "tutorial.wildcards.body",
     gate: { type: "tap" },
   },
   {
     id: "book",
     target: ["build-meld", "hand"],
-    title: "Make a book",
-    body: 'A book is 3+ cards of the same rank. Tap your three 7s, then tap "Group selected cards."',
+    title: "tutorial.book.title",
+    body: "tutorial.book.body",
     gate: { type: "grouped", meldType: "book" },
   },
   {
     id: "run",
     target: ["build-meld", "hand"],
-    title: "Make a run",
-    body: 'A run is 4+ cards of one suit in sequence. Tap your 3, 4, 5, and 6 of spades, then tap "Group selected cards" again.',
+    title: "tutorial.run.title",
+    body: "tutorial.run.body",
     gate: { type: "grouped", meldType: "run" },
   },
   {
     id: "confirm",
     target: "confirm-meld",
-    title: "Lay it down",
-    body: 'Your book and run match the round\'s contract exactly. Tap "Confirm Meld" to lay them on the table.',
+    title: "tutorial.confirm.title",
+    body: "tutorial.confirm.body",
     gate: { type: "melded" },
   },
   {
     id: "table-melds",
     target: "table-melds",
-    title: "The table melds",
-    body: "There they are — laid out where every player can see them, and grouped by who owns them. Once your contract's down it stays down; you build on it from here.",
+    title: "tutorial.tableMelds.title",
+    body: "tutorial.tableMelds.body",
     gate: { type: "tap" },
   },
   {
     id: "layoff-hint",
     target: "hand",
-    title: "Laying off",
-    body: "With your contract melded, you can add single cards onto any meld on the table — yours or an opponent's. Watch for a small ↓ badge on a card: it means that card fits somewhere. Nothing qualifies this turn, but keep an eye out. You can turn the hint off in Settings.",
+    title: "tutorial.layoffHint.title",
+    body: "tutorial.layoffHint.body",
     gate: { type: "tap" },
   },
   {
     id: "discard",
     target: ["discard-btn", "hand"],
-    title: "End your turn",
-    body: 'Every turn ends with a discard. Tap one card in your hand, then "Discard selected card," then "Confirm."',
+    title: "tutorial.discard.title",
+    body: "tutorial.discard.body",
     gate: { type: "discarded" },
   },
   {
     id: "wrapup",
     target: null,
-    title: "That's the whole loop",
-    body: "Draw, meld, discard — every turn. First player to empty their hand ends the round; everyone else is penalized for whatever's left in theirs. The Beginner AI will take its turns automatically from here — play on to see the round through. Good luck!",
+    title: "tutorial.wrapup.title",
+    body: "tutorial.wrapup.body",
     gate: { type: "tap" },
   },
 ];

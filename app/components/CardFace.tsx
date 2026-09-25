@@ -1,4 +1,5 @@
 import { Card } from "@/types";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { CardFaceId, useCardFace } from "../lib/cardFaceStore";
 
 /**
@@ -148,13 +149,14 @@ interface StyleProps {
   label: string;
   isCourt: boolean;
   isJoker: boolean;
+  jokerLabel: string;
 }
 
 // `classic` — the new default: one big rank and one big suit icon, centered,
 // nothing else competing for attention. This is the same layout
 // HandPreviewBar's collapsed-drawer mini cards have always used, just drawn
 // in the same vector style as every other card instead of plain text.
-function ClassicFace({ card, label, isCourt, isJoker }: StyleProps) {
+function ClassicFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   if (isJoker) {
     return (
       <g>
@@ -169,7 +171,7 @@ function ClassicFace({ card, label, isCourt, isJoker }: StyleProps) {
           fontFamily="ui-sans-serif, system-ui, sans-serif"
           fill="currentColor"
         >
-          JOKER
+          {jokerLabel}
         </text>
       </g>
     );
@@ -198,7 +200,7 @@ function ClassicFace({ card, label, isCourt, isJoker }: StyleProps) {
 // `outline` (Boutique) — the exact Classic layout, but every fill becomes a
 // stroke: reuses Pip's own existing `outline` prop (already built for
 // Minimal's "thin outlined suit") rather than a new drawing.
-function OutlineFace({ card, label, isCourt, isJoker }: StyleProps) {
+function OutlineFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   if (isJoker) {
     return (
       <g fill="none" stroke="currentColor" strokeWidth="2">
@@ -212,7 +214,7 @@ function OutlineFace({ card, label, isCourt, isJoker }: StyleProps) {
           letterSpacing="2"
           fontFamily="ui-sans-serif, system-ui, sans-serif"
         >
-          JOKER
+          {jokerLabel}
         </text>
       </g>
     );
@@ -239,7 +241,7 @@ function OutlineFace({ card, label, isCourt, isJoker }: StyleProps) {
 
 // `realistic` — the original full treatment: corner indices, a real pip
 // layout for number cards, a crowned monogram for courts.
-function RealisticFace({ card, label, isCourt, isJoker }: StyleProps) {
+function RealisticFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   const tone: Tone = card.isWild ? "wild" : card.suit === "hearts" || card.suit === "diamonds" ? "red" : "black";
   return (
     <g fill="currentColor" data-tone={tone}>
@@ -263,7 +265,7 @@ function RealisticFace({ card, label, isCourt, isJoker }: StyleProps) {
             fontFamily="ui-sans-serif, system-ui, sans-serif"
             fill="currentColor"
           >
-            JOKER
+            {jokerLabel}
           </text>
         </g>
       ) : isCourt ? (
@@ -328,7 +330,7 @@ function BoldFace({ card, label, isJoker }: StyleProps) {
 
 // `minimal` — a quiet, understated face: a thin-weight rank and an
 // outline-only suit, deliberately not trying to fill the card.
-function MinimalFace({ card, label, isJoker }: StyleProps) {
+function MinimalFace({ card, label, isJoker, jokerLabel }: StyleProps) {
   if (isJoker) {
     return (
       <g>
@@ -349,7 +351,7 @@ function MinimalFace({ card, label, isJoker }: StyleProps) {
           fontFamily="ui-sans-serif, system-ui, sans-serif"
           fill="currentColor"
         >
-          JOKER
+          {jokerLabel}
         </text>
       </g>
     );
@@ -374,7 +376,7 @@ function MinimalFace({ card, label, isJoker }: StyleProps) {
 
 // `retro` — a vintage card-table look: a serif rank inside a thin framed
 // border, in place of the sans-serif everything else on the page uses.
-function RetroFace({ card, label, isCourt, isJoker }: StyleProps) {
+function RetroFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   return (
     <g>
       <rect x="6" y="6" width="88" height="128" rx="6" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.55" />
@@ -392,7 +394,7 @@ function RetroFace({ card, label, isCourt, isJoker }: StyleProps) {
             fontFamily="Georgia, 'Times New Roman', serif"
             fill="currentColor"
           >
-            JOKER
+            {jokerLabel}
           </text>
         </g>
       ) : (
@@ -485,14 +487,14 @@ function ShadowFace({ card, label, isJoker }: StyleProps) {
 
 // `neon` (Boutique) — Outline's stroke-only layout, redrawn with a second,
 // wider, low-opacity pass behind the crisp one for a glow/sign-tube look.
-function NeonFace({ card, label, isCourt, isJoker }: StyleProps) {
+function NeonFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   if (isJoker) {
     return (
       <g fill="none" stroke="currentColor">
         <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" strokeWidth="8" opacity="0.35" />
         <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" strokeWidth="2" />
         <text x="50" y="108" textAnchor="middle" fontSize="14" fontWeight="700" letterSpacing="2" strokeWidth="1.5">
-          JOKER
+          {jokerLabel}
         </text>
       </g>
     );
@@ -533,7 +535,7 @@ function NeonFace({ card, label, isCourt, isJoker }: StyleProps) {
 // `deco` (Boutique) — an Art Deco frame: a stepped double border with
 // corner ticks, plus a slim geometric rank — the border is the whole point
 // here, unlike Retro's plain rounded rect.
-function DecoFace({ card, label, isCourt, isJoker }: StyleProps) {
+function DecoFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   return (
     <g>
       <rect x="8" y="8" width="84" height="124" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -548,7 +550,7 @@ function DecoFace({ card, label, isCourt, isJoker }: StyleProps) {
         <g>
           <path d={STAR_PATH} transform="translate(50 58) scale(0.5) translate(-50 -50)" />
           <text x="50" y="104" textAnchor="middle" fontSize="12" fontWeight="700" letterSpacing="3" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
-            JOKER
+            {jokerLabel}
           </text>
         </g>
       ) : (
@@ -578,7 +580,7 @@ function DecoFace({ card, label, isCourt, isJoker }: StyleProps) {
 // `sketch` (Boutique) — a loose hand-drawn feel: a dashed border, a
 // slightly skewed rank, and a dashed-stroke pip — the one style that
 // deliberately looks a little imperfect rather than clean vector art.
-function SketchFace({ card, label, isCourt, isJoker }: StyleProps) {
+function SketchFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
   return (
     <g>
       <rect x="6" y="6" width="88" height="128" rx="8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.6" />
@@ -586,7 +588,7 @@ function SketchFace({ card, label, isCourt, isJoker }: StyleProps) {
         <g transform="skewX(-4)">
           <path d={STAR_PATH} transform="translate(50 58) scale(0.55) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="3 2" />
           <text x="50" y="106" textAnchor="middle" fontSize="13" fontWeight="700" letterSpacing="2" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
-            JOKER
+            {jokerLabel}
           </text>
         </g>
       ) : (
@@ -633,7 +635,7 @@ function MonoFace({ card, label, isJoker }: StyleProps) {
         <g>
           <path d={STAR_PATH} transform="translate(50 58) scale(0.55) translate(-50 -50)" />
           <text x="50" y="104" textAnchor="middle" fontSize="12" fontWeight="700" letterSpacing="2" fontFamily="ui-monospace, 'Courier New', monospace" fill="currentColor">
-            JKR
+            {label}
           </text>
         </g>
       ) : (
@@ -659,14 +661,14 @@ function MonoFace({ card, label, isJoker }: StyleProps) {
 // `ribbon` (Boutique) — a diagonal ribbon band across the card, with the
 // rank set into it at the same angle — the one style whose rank isn't
 // upright.
-function RibbonFace({ card, label, isJoker }: StyleProps) {
+function RibbonFace({ card, label, isJoker, jokerLabel }: StyleProps) {
   return (
     <g>
       <g transform="rotate(-16 50 70)">
         <rect x="-10" y="58" width="120" height="24" fill="currentColor" opacity="0.16" />
         {isJoker ? (
           <text x="50" y="75" textAnchor="middle" fontSize="14" fontWeight="700" letterSpacing="2" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
-            JOKER
+            {jokerLabel}
           </text>
         ) : (
           <text
@@ -707,7 +709,7 @@ function HaloFace({ card, label, isJoker }: StyleProps) {
         fontFamily="ui-sans-serif, system-ui, sans-serif"
         fill="currentColor"
       >
-        {isJoker ? "JKR" : label}
+        {label}
       </text>
       {isJoker ? (
         <path d={STAR_PATH} transform="translate(50 86) scale(0.36) translate(-50 -50)" />
@@ -736,7 +738,7 @@ function LedgerFace({ card, label, isJoker }: StyleProps) {
         fontFamily="ui-monospace, 'Courier New', monospace"
         fill="currentColor"
       >
-        {isJoker ? "JKR" : label}
+        {label}
       </text>
       {isJoker ? (
         <path d={STAR_PATH} transform="translate(20 30) scale(0.22) translate(-50 -50)" />
@@ -748,12 +750,15 @@ function LedgerFace({ card, label, isJoker }: StyleProps) {
 }
 
 export function CardFace({ card, style }: { card: Card; style?: CardFaceId }) {
+  const { t } = useT();
   const liveStyle = useCardFace();
   const resolved = style ?? liveStyle;
-  const label = card.rank === "JOKER" ? "JKR" : card.rank;
+  const jokerLabel = t("card.joker");
+  const jokerAbbr = t("card.jokerAbbr");
+  const label = card.rank === "JOKER" ? jokerAbbr : card.rank;
   const isCourt = card.rank === "J" || card.rank === "Q" || card.rank === "K";
   const isJoker = card.rank === "JOKER";
-  const props: StyleProps = { card, label, isCourt, isJoker };
+  const props: StyleProps = { card, label, isCourt, isJoker, jokerLabel };
 
   const isRed = card.suit === "hearts" || card.suit === "diamonds";
   const tone: Tone = card.isWild ? "wild" : isRed ? "red" : "black";

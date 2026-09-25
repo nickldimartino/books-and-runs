@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { TutorialStep } from "../lib/tutorialSteps";
 
 interface TutorialOverlayProps {
@@ -233,6 +234,7 @@ function TutorialCard({
   caret?: "up" | "down";
   caretLeft?: number;
 }) {
+  const { t } = useT();
   return (
     <div
       style={style}
@@ -250,24 +252,24 @@ function TutorialCard({
       )}
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)]">
-          Step {stepIndex + 1} of {totalSteps}
+          {t("tutorial.stepOf", { step: stepIndex + 1, total: totalSteps })}
         </span>
         <button onClick={onSkip} className="text-[10px] font-medium text-[var(--faint)] hover:text-[var(--muted)]">
-          Skip tutorial
+          {t("tutorial.skip")}
         </button>
       </div>
       <div>
-        <h3 className="text-sm font-bold text-[var(--heading)]">{step.title}</h3>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">{step.body}</p>
+        <h3 className="text-sm font-bold text-[var(--heading)]">{t(step.title)}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">{t(step.body)}</p>
       </div>
       {isGated ? (
-        <p className="text-xs font-medium text-[var(--accent)]">↑ Go ahead and try it</p>
+        <p className="text-xs font-medium text-[var(--accent)]">{t("tutorial.tryIt")}</p>
       ) : (
         <button
           onClick={onContinue}
           className="self-end rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)]"
         >
-          Got it →
+          {t("tutorial.gotIt")}
         </button>
       )}
     </div>

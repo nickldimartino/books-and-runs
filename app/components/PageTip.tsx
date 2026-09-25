@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { dismissTip, isTipSeen, TipId } from "../lib/tipsStore";
 
 interface PageTipProps {
@@ -18,6 +19,7 @@ interface PageTipProps {
  * would flash the tip before hiding it.
  */
 export function PageTip({ id, title, children }: PageTipProps) {
+  const { t } = useT();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export function PageTip({ id, title, children }: PageTipProps) {
           dismissTip(id);
           setVisible(false);
         }}
-        aria-label="Dismiss tip"
+        aria-label={t("common.dismissTip")}
         className="-m-1 shrink-0 rounded-full p-1.5 text-[var(--faint)] hover:bg-[var(--accent)]/20 hover:text-[var(--heading)]"
       >
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none">

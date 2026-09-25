@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/types";
+import type { TranslationKey } from "../lib/i18n/keys";
 import { CardFace } from "./CardFace";
 
 // Exported so HandPreviewBar.tsx's mini fanned cards can reuse the exact
@@ -16,15 +17,28 @@ export const SUIT_SYMBOL: Record<string, string> = {
 
 export const RED_SUITS = new Set(["hearts", "diamonds"]);
 
-const RANK_NAME: Record<string, string> = { A: "Ace", K: "King", Q: "Queen", J: "Jack", JOKER: "Joker" };
+const RANK_KEY: Partial<Record<string, string>> = {
+  A: "card.rank.ace",
+  K: "card.rank.king",
+  Q: "card.rank.queen",
+  J: "card.rank.jack",
+  JOKER: "card.joker",
+};
+
+type T = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
 // Screen readers otherwise only get the rank/suit symbols' raw text content
 // as a card's accessible name, which doesn't reliably announce as anything
-// meaningful (e.g. a suit glyph isn't guaranteed to read as "hearts").
-export function cardLabel(card: Card): string {
-  const rank = RANK_NAME[card.rank] ?? card.rank;
+// meaningful (e.g. a suit glyph isn't guaranteed to read as "hearts"). Takes
+// `t` rather than calling useT() itself since this is a plain function, not
+// a component/hook — called from several different components' own render
+// and effect bodies (game/page.tsx, DraggableHand.tsx).
+export function cardLabel(card: Card, t: T): string {
+  const rankKey = RANK_KEY[card.rank];
+  const rank = rankKey ? t(rankKey as TranslationKey) : card.rank;
   if (card.suit === "joker") return rank;
-  return `${rank} of ${card.suit}${card.isWild ? ", wild" : ""}`;
+  const suit = t(`card.suit.${card.suit}` as TranslationKey);
+  return card.isWild ? t("card.labelWild", { rank, suit }) : t("card.label", { rank, suit });
 }
 
 interface PlayingCardProps {

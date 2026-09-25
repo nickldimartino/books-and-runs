@@ -13,6 +13,7 @@ import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { PageTip } from "../components/PageTip";
 import { useGame } from "../GameContext";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { fetchOwnDisplayName } from "../lib/leaderboardStore";
 import { markTutorialStarting } from "../lib/localSave";
 import { hasStartedAGame } from "../lib/firstSessionStore";
@@ -27,6 +28,7 @@ import {
 
 export default function NewGamePage() {
   const router = useRouter();
+  const { t, tPlural } = useT();
   const { configured, user } = useAuth();
   const { startTutorialGame, startNewGame } = useGame();
   const [startingTutorial, setStartingTutorial] = useState(false);
@@ -70,7 +72,7 @@ export default function NewGamePage() {
   // the Account page. Computed once and reused for both the description
   // and the deal itself.
   const yourNameLocked = !!(configured && user);
-  const yourName = accountDisplayName?.trim() || "You";
+  const yourName = accountDisplayName?.trim() || t("newGame.you");
   const favoriteForDisplay: FavoriteGameConfig | null =
     favorite && yourNameLocked ? { ...favorite, humanNames: [yourName, ...favorite.humanNames.slice(1)] } : favorite;
 
@@ -90,42 +92,38 @@ export default function NewGamePage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
       <BackLink href="/" />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">New Game</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("newGame.title")}</h1>
 
-      <PageTip id="new-game" title="Pick your pace">
-        Solo &amp; pass-and-play is one sitting on this device — against AI, or passing it around a
-        table. With friends is slower-paced: everyone plays on their own time, no need to be online
-        together. Once you&apos;ve played a game, a one-tap &quot;Quick Deal&quot; shortcut shows up
-        here too.
+      <PageTip id="new-game" title={t("newGame.tip.title")}>
+        {t("newGame.tip.body")}
       </PageTip>
 
       <div className="flex flex-col gap-3">
         {isFirstSession && (
           <div className="rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 p-5">
-            <p className="text-base font-semibold text-[var(--heading)]">New here? Start with the tutorial</p>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              A short guided round (you vs. one Beginner AI) walking through drawing, melding, and
-              discarding — about a minute, doesn&apos;t count toward your stats.
-            </p>
+            <p className="text-base font-semibold text-[var(--heading)]">{t("newGame.startWithTutorial")}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t("newGame.tutorialBlurb")}</p>
             <button
               onClick={startTutorial}
               disabled={startingTutorial}
               className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)] disabled:opacity-50"
             >
-              {startingTutorial ? "Starting…" : "Start tutorial"}
+              {startingTutorial ? t("newGame.starting") : t("newGame.startTutorial")}
             </button>
           </div>
         )}
 
         {favoriteForDisplay && (
           <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-5">
-            <p className="text-base font-semibold text-[var(--heading)]">Quick Deal</p>
-            <p className="mt-1 text-sm text-[var(--muted)]">{describeFavoriteGameConfig(favoriteForDisplay)}</p>
+            <p className="text-base font-semibold text-[var(--heading)]">{t("newGame.quickDeal")}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {describeFavoriteGameConfig(favoriteForDisplay, t, tPlural)}
+            </p>
             <button
               onClick={playFavorite}
               className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
             >
-              Deal it
+              {t("newGame.dealIt")}
             </button>
           </div>
         )}
@@ -134,10 +132,8 @@ export default function NewGamePage() {
           href="/new-game/local"
           className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 transition hover:bg-[var(--panel-soft)]"
         >
-          <p className="text-base font-semibold text-[var(--heading)]">Solo &amp; pass-and-play</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Play now — against the AI, or hand the device around a table. One sitting, on this device.
-          </p>
+          <p className="text-base font-semibold text-[var(--heading)]">{t("newGame.soloAndPassAndPlay")}</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("newGame.soloAndPassAndPlayBody")}</p>
         </Link>
 
         {canPlayWithFriends ? (
@@ -145,21 +141,18 @@ export default function NewGamePage() {
             href="/new-game/multiplayer"
             className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 transition hover:bg-[var(--panel-soft)]"
           >
-            <p className="text-base font-semibold text-[var(--heading)]">With friends</p>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Turn-based online. Everyone plays from their own device, on their own time — take your
-              turn, then it&apos;s theirs.
-            </p>
+            <p className="text-base font-semibold text-[var(--heading)]">{t("newGame.withFriends")}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t("newGame.withFriendsBody")}</p>
           </Link>
         ) : (
           <div className="rounded-xl border border-dashed border-[var(--border)] p-5">
-            <p className="text-base font-semibold text-[var(--heading)]">With friends</p>
+            <p className="text-base font-semibold text-[var(--heading)]">{t("newGame.withFriends")}</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Turn-based online games with friends.{" "}
+              {t("newGame.withFriendsSignedOut")}{" "}
               <Link href="/sign-in" className="underline hover:text-[var(--heading)]">
-                Sign in
+                {t("signIn.title")}
               </Link>{" "}
-              to play these.
+              {t("newGame.toPlayThese")}
             </p>
           </div>
         )}
@@ -172,13 +165,10 @@ export default function NewGamePage() {
             disabled={startingTutorial}
             className="mt-2 self-start text-sm text-[var(--accent)] hover:underline disabled:opacity-50"
           >
-            New here? Take the tutorial →
+            {t("newGame.takeTheTutorial")}
           </button>
 
-          <p className="text-xs text-[var(--faint)]">
-            The tutorial is a short guided round (you vs. one Beginner AI) walking through drawing,
-            melding, and discarding. It doesn&apos;t count toward your stats.
-          </p>
+          <p className="text-xs text-[var(--faint)]">{t("newGame.tutorialBlurbShort")}</p>
         </>
       )}
     </main>

@@ -12,9 +12,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
+import { useT } from "../lib/i18n/LocaleProvider";
+import { markJustSignedUp } from "../lib/onboardingStore";
 
 export default function SignInPage() {
   const router = useRouter();
+  const { t } = useT();
   const { configured, user, mfaPending, signInWithPassword, signUpWithPassword, resetPasswordForEmail, verifyMfaCode } =
     useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot-password">("sign-in");
@@ -53,8 +56,8 @@ export default function SignInPage() {
   if (!configured) {
     return (
       <CenteredMessage
-        title="Sign in isn't set up yet"
-        body="This app doesn't have a Supabase project connected. Local pass-and-play games work fine without one — accounts and stats just aren't available yet."
+        title={t("signIn.notSetUp.title")}
+        body={t("signIn.notSetUp.body")}
         backOnClick={() => router.replace("/")}
       />
     );
@@ -80,11 +83,14 @@ export default function SignInPage() {
       if (result.error) {
         setError(result.error);
       } else if (result.alreadyRegistered) {
-        setError(
-          "An account already exists for this email. Try signing in, or use “Forgot password?” if you don't remember your password."
-        );
-      } else if (result.confirmationRequired) {
-        setCheckEmail(true);
+        setError(t("signIn.alreadyRegistered"));
+      } else {
+        // A genuinely new account either way — flag it now so Home shows
+        // the welcome prompt once this device is actually signed in,
+        // whether that's immediately (below) or after clicking the
+        // confirmation email's link (possibly in a new tab, later).
+        markJustSignedUp();
+        if (result.confirmationRequired) setCheckEmail(true);
       }
       // Otherwise email confirmation is off in Supabase and the account is
       // already signed in — the effect above will redirect to Home.
@@ -116,13 +122,11 @@ export default function SignInPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-8 px-6 py-10">
       <BackLink href="/" />
-      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">Sign in</h1>
+      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">{t("signIn.title")}</h1>
 
       {mfaPending ? (
         <form onSubmit={handleMfaSubmit} className="flex flex-col gap-3">
-          <p className="text-center text-sm text-[var(--muted)]">
-            Enter the 6-digit code from your authenticator app.
-          </p>
+          <p className="text-center text-sm text-[var(--muted)]">{t("signIn.mfaPrompt")}</p>
           <input
             type="text"
             inputMode="numeric"
@@ -141,31 +145,29 @@ export default function SignInPage() {
             disabled={mfaSubmitting || mfaCode.length !== 6}
             className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
           >
-            {mfaSubmitting ? "Verifying…" : "Verify"}
+            {mfaSubmitting ? t("signIn.verifying") : t("signIn.verify")}
           </button>
         </form>
       ) : checkEmail ? (
         <>
-          <p className="text-center text-sm text-[var(--muted)]">
-            Check your email (including spam) to confirm your account, then come back and sign in.
-          </p>
+          <p className="text-center text-sm text-[var(--muted)]">{t("signIn.checkEmail")}</p>
           <button
             onClick={() => switchMode("sign-in")}
             className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
           >
-            Back to sign in
+            {t("signIn.backToSignIn")}
           </button>
         </>
       ) : resetEmailSent ? (
         <>
           <p className="text-center text-sm text-[var(--muted)]">
-            If an account exists for {email}, we&apos;ve sent a link to reset your password.
+            {t("signIn.resetEmailSent", { email })}
           </p>
           <button
             onClick={() => switchMode("sign-in")}
             className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
           >
-            Back to sign in
+            {t("signIn.backToSignIn")}
           </button>
         </>
       ) : (
@@ -174,7 +176,7 @@ export default function SignInPage() {
             <input
               type="email"
               required
-              placeholder="Email"
+              placeholder={t("signIn.email")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
@@ -184,7 +186,7 @@ export default function SignInPage() {
                 type="password"
                 required
                 minLength={6}
-                placeholder="Password"
+                placeholder={t("signIn.password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
@@ -196,7 +198,11 @@ export default function SignInPage() {
               disabled={pending}
               className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
             >
-              {mode === "sign-in" ? "Sign in" : mode === "sign-up" ? "Create account" : "Send reset link"}
+              {mode === "sign-in"
+                ? t("signIn.title")
+                : mode === "sign-up"
+                  ? t("signIn.createAccount")
+                  : t("signIn.sendResetLink")}
             </button>
           </form>
 
@@ -205,7 +211,7 @@ export default function SignInPage() {
               onClick={() => switchMode("forgot-password")}
               className="-mt-4 text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
             >
-              Forgot password?
+              {t("signIn.forgotPassword")}
             </button>
           )}
 
@@ -214,26 +220,26 @@ export default function SignInPage() {
             className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
           >
             {mode === "sign-in"
-              ? "Need an account? Sign up"
+              ? t("signIn.needAccount")
               : mode === "sign-up"
-                ? "Already have an account? Sign in"
-                : "Back to sign in"}
+                ? t("signIn.alreadyHaveAccount")
+                : t("signIn.backToSignIn")}
           </button>
 
           <p className="text-center text-xs text-[var(--faint)]">
-            By continuing you agree to our{" "}
+            {t("signIn.agreePrefix")}{" "}
             <Link href="/terms" className="underline hover:text-[var(--muted)]">
-              Terms
+              {t("common.terms")}
             </Link>{" "}
-            and{" "}
+            {t("signIn.agreeAnd")}{" "}
             <Link href="/privacy" className="underline hover:text-[var(--muted)]">
-              Privacy Policy
+              {t("signIn.privacyPolicy")}
             </Link>
             .
           </p>
 
           <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-            Back to Home
+            {t("common.backToHome")}
           </Link>
         </>
       )}

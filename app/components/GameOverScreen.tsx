@@ -26,6 +26,8 @@ import { Difficulty, GameState, YOU_PLAYER_ID } from "@/types";
 import { ACHIEVEMENT_TIER_XP, DIFFICULTY_WIN_XP, FINISH_GAME_XP, WIN_GAME_XP } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import { useGame } from "../GameContext";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
 import { usePlayerLevel } from "../PlayerLevelContext";
 import { AnyCosmeticOption, diffNewlyUnlockedCosmetics } from "../lib/allCosmetics";
 import { track } from "../lib/analytics";
@@ -82,6 +84,7 @@ const SITE_URL = "https://books-and-runs.vercel.app";
 
 export function GameOverScreen({ state }: { state: GameState }) {
   const router = useRouter();
+  const { t, tPlural } = useT();
   const {
     quitToHome,
     roundHistory,
@@ -193,16 +196,19 @@ export function GameOverScreen({ state }: { state: GameState }) {
     // display projection (which XP lines to show) — the actual write below
     // never trusts anything computed here.
     const won = !!you && !isTie && you.cumulativeScore === lowestScore;
-    const breakdown: XpLineItem[] = [{ label: "Finished the game", amount: FINISH_GAME_XP }];
+    const breakdown: XpLineItem[] = [{ label: t("gameOver.xp.finished"), amount: FINISH_GAME_XP }];
     if (won) {
-      breakdown.push({ label: "Won", amount: WIN_GAME_XP });
+      breakdown.push({ label: t("gameOver.xp.won"), amount: WIN_GAME_XP });
       const difficultiesFaced = new Set(
         state.players
           .filter((p) => p.id !== you!.id && p.isAI && p.difficulty)
           .map((p) => p.difficulty as Difficulty)
       );
       for (const d of difficultiesFaced) {
-        breakdown.push({ label: `Beat a ${d} AI`, amount: DIFFICULTY_WIN_XP[d] ?? 0 });
+        breakdown.push({
+          label: t("gameOver.xp.beatDifficulty", { difficulty: t(`common.difficulty.${d}` as TranslationKey) }),
+          amount: DIFFICULTY_WIN_XP[d] ?? 0,
+        });
       }
     }
 
@@ -292,7 +298,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       setUnlockedAchievements(unlockedItems);
       setXpBreakdown(
         unlockedItems.length === 0 && achievementBonus > 0
-          ? [...breakdown, { label: "Achievements unlocked", amount: achievementBonus }]
+          ? [...breakdown, { label: t("gameOver.xp.achievementsUnlocked"), amount: achievementBonus }]
           : breakdown
       );
       if (didLevelUp) setLeveledUpTo(after.level);
@@ -459,15 +465,15 @@ export function GameOverScreen({ state }: { state: GameState }) {
   // computes, so neither can drift from what's on screen. Never called
   // during a tutorial — see the button's own !isTutorial guard below.
   function levelLabel(p: (typeof standings)[number]): string {
-    if (p.id === YOU_PLAYER_ID && level) return `Lv${level.level}`;
-    if (p.isAI && p.difficulty) return `Lv${AI_THEORETICAL_LEVEL[p.difficulty]}`;
+    if (p.id === YOU_PLAYER_ID && level) return t("game.levelBadge", { level: level.level });
+    if (p.isAI && p.difficulty) return t("game.levelBadge", { level: AI_THEORETICAL_LEVEL[p.difficulty] });
     return "";
   }
 
   function shareHeadline(): string {
     return isTie
-      ? `${joinNames(winners.map((w) => w.name))} tied in Books & Runs!`
-      : `${winners[0].name} won Books & Runs!`;
+      ? t("gameOver.share.tied", { names: joinNames(winners.map((w) => w.name)) })
+      : t("gameOver.share.won", { name: winners[0].name });
   }
 
   function shareText(): string {
@@ -570,29 +576,25 @@ export function GameOverScreen({ state }: { state: GameState }) {
       <div className="text-center">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">
           {isTutorial
-            ? "Tutorial complete"
+            ? t("gameOver.tutorialComplete")
             : isDailyDeal
-              ? "Daily Deal"
+              ? t("gameOver.dailyDeal")
               : isWeeklyChallenge
-                ? "Weekly Challenge"
-                : "Game over"}
+                ? t("gameOver.weeklyChallenge")
+                : t("gameOver.gameOver")}
         </p>
         {!isTutorial && wentOut && (
-          <p className="mt-1 break-words text-base font-semibold text-[var(--muted)]">{wentOut.name} went out!</p>
+          <p className="mt-1 break-words text-base font-semibold text-[var(--muted)]">{t("roundSummary.wentOut", { name: wentOut.name })}</p>
         )}
         <h1 className="win-announce mt-1 break-words text-3xl font-bold text-[var(--heading)]">
           {isTutorial
-            ? "Nice work!"
+            ? t("gameOver.niceWork")
             : isTie
-              ? `${joinNames(winners.map((w) => w.name))} tied!`
-              : `${winners[0].name} won!`}
+              ? t("gameOver.tied", { names: joinNames(winners.map((w) => w.name)) })
+              : t("gameOver.won", { name: winners[0].name })}
         </h1>
         {isTutorial && (
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            You just played a full round — draw, meld, discard, and everything in between. This
-            practice round didn&apos;t count toward your stats or achievements. Ready for a real
-            game?
-          </p>
+          <p className="mt-2 text-sm text-[var(--muted)]">{t("gameOver.tutorialBody")}</p>
         )}
       </div>
 
@@ -612,7 +614,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
               <span className="font-medium">
                 {rank}. {p.name}
               </span>
-              <span className="font-semibold text-[var(--heading)]">{p.cumulativeScore} pts</span>
+              <span className="font-semibold text-[var(--heading)]">{t("game.hand.pts", { count: p.cumulativeScore })}</span>
             </li>
           );
         })}
@@ -624,25 +626,21 @@ export function GameOverScreen({ state }: { state: GameState }) {
             onClick={handleShare}
             className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
-            {shareState === "copied" ? "Copied to clipboard ✓" : shareState === "error" ? "Couldn't copy — try again" : "Share result"}
+            {shareState === "copied" ? t("gameOver.share.copied") : shareState === "error" ? t("gameOver.share.copyError") : t("gameOver.share.button")}
           </button>
         </div>
       )}
 
       {isTutorial && (
         <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-sm text-[var(--muted)]">
-          <p className="font-semibold text-[var(--heading)]">How scoring works</p>
-          <p className="mt-1">
-            Lower is better. Only cards left in your hand when the round ends count against
-            you — anything melded or laid off is free. In a full game, whoever has the lowest
-            total score after every round wins.
-          </p>
+          <p className="font-semibold text-[var(--heading)]">{t("gameOver.scoring.heading")}</p>
+          <p className="mt-1">{t("gameOver.scoring.body")}</p>
           <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <li>3 – 9: 5 pts each</li>
-            <li>10, J, Q, K: 10 pts each</li>
-            <li>Ace: 15 pts each</li>
-            <li>Wild (2): 20 pts each</li>
-            <li>Joker: 50 pts each</li>
+            <li>{t("gameOver.scoring.numbers")}</li>
+            <li>{t("gameOver.scoring.faceCards")}</li>
+            <li>{t("gameOver.scoring.ace")}</li>
+            <li>{t("gameOver.scoring.wild")}</li>
+            <li>{t("gameOver.scoring.jokerCard")}</li>
           </ul>
         </div>
       )}
@@ -656,10 +654,10 @@ export function GameOverScreen({ state }: { state: GameState }) {
             🔥
           </p>
           <p className="mt-1 text-2xl font-bold text-[var(--heading)]">
-            {dailyDealState.streak}-day streak
+            {tPlural("gameOver.dayStreak", dailyDealState.streak)}
           </p>
           <p className="mt-1 text-xs text-[var(--faint)]">
-            Best streak: {dailyDealState.bestStreak}. Come back tomorrow for the next one.
+            {t("gameOver.bestStreakDaily", { best: dailyDealState.bestStreak })}
           </p>
         </div>
       )}
@@ -668,9 +666,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
           to show but the nudge to actually get one going. */}
       {isDailyDeal && !user && (
         <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-center">
-          <p className="text-sm text-[var(--muted)]">
-            Sign in to start a streak — it&apos;s tied to your account, so playing signed out won&apos;t count.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{t("gameOver.signInForStreak")}</p>
         </div>
       )}
 
@@ -682,19 +678,17 @@ export function GameOverScreen({ state }: { state: GameState }) {
             🏆
           </p>
           <p className="mt-1 text-2xl font-bold text-[var(--heading)]">
-            {weeklyChallengeState.streak}-week streak
+            {tPlural("gameOver.weekStreak", weeklyChallengeState.streak)}
           </p>
           <p className="mt-1 text-xs text-[var(--faint)]">
-            Best streak: {weeklyChallengeState.bestStreak}. A new challenge lands next week.
+            {t("gameOver.bestStreakWeekly", { best: weeklyChallengeState.bestStreak })}
           </p>
         </div>
       )}
 
       {isWeeklyChallenge && !user && (
         <div className="rounded-xl bg-[var(--panel-soft)] p-4 text-center">
-          <p className="text-sm text-[var(--muted)]">
-            Sign in to start a streak — it&apos;s tied to your account, so playing signed out won&apos;t count.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{t("gameOver.signInForStreak")}</p>
         </div>
       )}
 
@@ -704,7 +698,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       {isDailyDeal && dailyDealFriendScores && dailyDealFriendScores.length >= 2 && (
         <div className="rounded-xl bg-[var(--panel-soft)] p-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-            Today&apos;s deal · friends
+            {t("gameOver.friendsHeading")}
           </h3>
           <ol className="mt-2 flex flex-col gap-1">
             {dailyDealFriendScores.map((s, i) => (
@@ -719,7 +713,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="w-4 shrink-0 text-right tabular-nums text-[var(--faint)]">{i + 1}</span>
                   <span className="truncate">
-                    {s.isMe ? "You" : displayNameFor({ user_id: s.userId, display_name: s.displayName })}
+                    {s.isMe ? t("gameOver.you") : displayNameFor({ user_id: s.userId, display_name: s.displayName })}
                   </span>
                 </span>
                 <span className="shrink-0 tabular-nums">
@@ -740,48 +734,43 @@ export function GameOverScreen({ state }: { state: GameState }) {
           where the pitch is repeated, not just stated once on Home. */}
       {!isTutorial && !isDailyDeal && !isWeeklyChallenge && configured && !user && (
         <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4 text-center">
-          <p className="text-sm font-semibold text-[var(--heading)]">This game wasn&apos;t saved</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            Sign in to keep your level and achievement progress, show up on the leaderboard, and
-            play multiplayer with friends.
-          </p>
+          <p className="text-sm font-semibold text-[var(--heading)]">{t("gameOver.notSaved")}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">{t("gameOver.notSavedBody")}</p>
           <Link
             href="/sign-in"
             className="mt-3 inline-block rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
           >
-            Sign in
+            {t("signIn.title")}
           </Link>
         </div>
       )}
 
       {!isTutorial && !isDailyDeal && !isWeeklyChallenge && user && !trackStats && (
-        <p className="text-center text-xs text-[var(--faint)]">
-          Stats weren&apos;t tracked for this game — you turned that off on the New Game screen.
-        </p>
+        <p className="text-center text-xs text-[var(--faint)]">{t("gameOver.statsNotTracked")}</p>
       )}
 
       {!isTutorial && !isDailyDeal && !isWeeklyChallenge && user && trackStats && (
         <div className="text-center text-xs text-[var(--faint)]">
           <p>
-            {saved === "saving" && "Saving to your stats…"}
-            {saved === "saved" && "Saved to your stats."}
-            {saved === "error" && "Couldn't save to your stats — check your connection."}
+            {saved === "saving" && t("gameOver.saving")}
+            {saved === "saved" && t("gameOver.saved")}
+            {saved === "error" && t("gameOver.saveError")}
           </p>
           {saved === "error" && (
             <button
               onClick={() => attemptSave()}
               className="mt-1 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
             >
-              Try again
+              {t("common.retry")}
             </button>
           )}
           {saved === "saved" && xpGained !== null && (
             <div className="mt-1">
               <p className="text-sm font-semibold text-[var(--accent)]">
-                +{xpGained} XP
+                {t("roundSummary.xpGained", { xp: xpGained })}
                 {leveledUpTo !== null && (
                   <span className="level-up-pulse ml-1 inline-block font-bold">
-                    — Level up! Now level {leveledUpTo}
+                    {t("roundSummary.levelUp", { level: leveledUpTo })}
                   </span>
                 )}
               </p>
@@ -789,7 +778,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
                 <ul className="mt-1 flex flex-col gap-0.5">
                   {xpBreakdown.map((item, i) => (
                     <li key={i} className="line-enter" style={{ animationDelay: `${i * 70}ms` }}>
-                      +{item.amount} XP — {item.label}
+                      {t("gameOver.xpLine", { amount: item.amount, label: item.label })}
                     </li>
                   ))}
                 </ul>
@@ -802,7 +791,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
       {saved === "saved" && (
         <AchievementUnlockCard
           items={unlockedAchievements}
-          heading={`Achievement${unlockedAchievements.length > 1 ? "s" : ""} unlocked`}
+          heading={tPlural("multiplayer.achievementUnlocked", unlockedAchievements.length)}
         />
       )}
 
@@ -816,7 +805,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
             onClick={playAgain}
             className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
           >
-            {isTutorial ? "Play a real game" : "Play again"}
+            {isTutorial ? t("gameOver.playRealGame") : t("gameOver.playAgain")}
           </button>
         )}
         <button
@@ -827,7 +816,7 @@ export function GameOverScreen({ state }: { state: GameState }) {
               : "rounded-lg border border-[var(--border)] px-6 py-3 text-base font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           }
         >
-          Home
+          {t("common.home")}
         </button>
       </div>
     </main>

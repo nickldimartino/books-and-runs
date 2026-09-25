@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 // The "← X" pill in the top-left corner of nearly every page — the same
 // className was hand-copied verbatim into 25+ page files (and one
@@ -23,17 +24,19 @@ interface BackLinkProps {
   label?: ReactNode;
 }
 
-export function BackLink({ href, onClick, label = "Home" }: BackLinkProps) {
+export function BackLink({ href, onClick, label }: BackLinkProps) {
+  const { t } = useT();
+  const resolvedLabel = label ?? t("common.home");
   if (onClick) {
     return (
       <button onClick={onClick} className={CLASS_NAME}>
-        ← {label}
+        ← {resolvedLabel}
       </button>
     );
   }
   return (
     <Link href={href ?? "/"} className={CLASS_NAME}>
-      ← {label}
+      ← {resolvedLabel}
     </Link>
   );
 }

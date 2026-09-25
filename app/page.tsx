@@ -16,8 +16,12 @@ import { useAuth } from "./AuthContext";
 import { CardFanHero } from "./components/CardFanHero";
 import { IntroSplash } from "./components/IntroSplash";
 import { PageTip } from "./components/PageTip";
+import { WelcomeOnboarding } from "./components/WelcomeOnboarding";
 import { useGame } from "./GameContext";
+import { useT } from "./lib/i18n/LocaleProvider";
+import type { TranslationKey } from "./lib/i18n/keys";
 import { DailyDealState, loadDailyDealState, mergeCloudDailyDealState, playedToday } from "./lib/dailyDealStore";
+import { clearJustSignedUp, hasJustSignedUp } from "./lib/onboardingStore";
 import {
   WeeklyChallengeState,
   loadWeeklyChallengeState,
@@ -43,22 +47,28 @@ import { GameState } from "@/types";
  * what's *there* before committing to resuming it. */
 /** "Solo" (you vs AI) or "Pass & play" (2+ humans on one device) — shown on
  * the Resume card in place of the old "Local" tag now that the game syncs. */
-function savedGameMode(state: GameState): string {
+type T = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+type TPlural = (key: string, count: number, vars?: Record<string, string | number>) => string;
+
+function savedGameMode(state: GameState, t: T): string {
   const humanCount = state.players.filter((p) => !p.isAI).length;
-  return humanCount > 1 ? "Pass & play" : "Solo";
+  return humanCount > 1 ? t("home.passAndPlay") : t("home.solo");
 }
 
-function summarizeSavedGame(state: GameState): string {
+function summarizeSavedGame(state: GameState, t: T, tPlural: TPlural): string {
   const ais = state.players.filter((p) => p.isAI);
   const humanCount = state.players.length - ais.length;
   const parts: string[] = [];
-  if (humanCount > 1) parts.push(`${humanCount} players`);
-  if (ais.length === 1) parts.push(`vs. ${capitalize(ais[0].difficulty ?? "medium")} AI`);
-  else if (ais.length > 1) parts.push(`vs. ${ais.length} AI opponents`);
+  if (humanCount > 1) parts.push(tPlural("home.nPlayers", humanCount));
+  if (ais.length === 1) {
+    parts.push(t("home.vsDifficultyAi", { difficulty: capitalize(t(`common.difficulty.${ais[0].difficulty ?? "medium"}` as TranslationKey)) }));
+  } else if (ais.length > 1) {
+    parts.push(tPlural("home.vsAiOpponents", ais.length));
+  }
   // Joined with a space, not a comma — "2 players vs. 2 AI opponents" reads
   // as one phrase; a comma there ("2 players, vs. 2 AI opponents") read like
   // two disconnected fragments instead of "these two groups facing off."
-  return `Round ${state.round} of ${state.selectedContracts.length}${parts.length ? " · " + parts.join(" ") : ""}`;
+  return `${t("game.roundOf", { round: state.round, total: state.selectedContracts.length })}${parts.length ? " · " + parts.join(" ") : ""}`;
 }
 
 function StatsIcon() {
@@ -161,6 +171,25 @@ function ProgressTile({
   );
 }
 
+/** Same estimate RoundSummary.tsx shows between rounds — the real persisted
+ * counters (only ever written by a server-verified replay at game-over)
+ * plus whatever this device's own in-progress save has racked up since,
+ * merged additively. Lets Home's "closest achievement" reflect a meld you
+ * just made this round instead of sitting stale until the whole game ends
+ * and solo-verify runs. Never written anywhere — purely a display-time
+ * preview of what the eventual real write will contain. */
+function withSessionCounters(
+  progress: AchievementProgressState | null,
+  sessionCounters: Record<string, number> | null
+): AchievementProgressState | null {
+  if (!progress || !sessionCounters || Object.keys(sessionCounters).length === 0) return progress;
+  const counters = { ...progress.counters };
+  for (const [key, delta] of Object.entries(sessionCounters)) {
+    counters[key] = (counters[key] ?? 0) + delta;
+  }
+  return { ...progress, counters };
+}
+
 /** The single locked achievement the account is furthest along toward — the
  * one worth one more game to finish. Ignores anything not started (fraction
  * 0) so this never nudges toward something the player has shown no interest
@@ -178,6 +207,7 @@ function closestAchievement(progress: AchievementProgressState | null): Achievem
  * linking into the Achievements page for the full picture. Rendered only
  * when signed in and there's a partly-finished achievement to point at. */
 function ClosestAchievementCard({ achievement }: { achievement: AchievementInstance }) {
+  const { t } = useT();
   const pct = Math.round(achievement.progressFraction * 100);
   return (
     <Link
@@ -186,14 +216,15 @@ function ClosestAchievementCard({ achievement }: { achievement: AchievementInsta
     >
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--faint)]">
-          Closest achievement
+          {t("home.closestAchievement")}
         </p>
         <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">{pct}%</span>
       </div>
       <p className="mt-0.5 truncate text-sm font-semibold text-[var(--heading)]">
-        {capitalize(achievement.tier)} · {achievement.familyTitle}
+        {capitalize(t(`common.difficulty.${achievement.tier}` as TranslationKey))} ·{" "}
+        {t(achievement.familyTitleKey as TranslationKey)}
       </p>
-      <p className="mt-0.5 text-xs text-[var(--faint)]">{formatAchievementProgress(achievement)}</p>
+      <p className="mt-0.5 text-xs text-[var(--faint)]">{formatAchievementProgress(achievement, t)}</p>
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-soft)]">
         <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
       </div>
@@ -245,34 +276,35 @@ function MoreGroupLabel({ children }: { children: ReactNode }) {
  * on its own to need that.
  */
 function MoreSection({ configured, user, onSignOut }: { configured: boolean; user: boolean; onSignOut: () => void }) {
+  const { t } = useT();
   return (
     <details className="group rounded-lg border border-[var(--border)]">
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
-        More
+        {t("home.more")}
         <ChevronIcon className="h-4 w-4 transition group-open:rotate-180" />
       </summary>
       <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
         {configured && user && (
           <>
-            <MoreGroupLabel>Play with friends</MoreGroupLabel>
-            <MoreLink href="/clubs">Clubs</MoreLink>
-            <MoreLink href="/tournaments">Tournaments</MoreLink>
+            <MoreGroupLabel>{t("home.playWithFriends")}</MoreGroupLabel>
+            <MoreLink href="/clubs">{t("home.clubs")}</MoreLink>
+            <MoreLink href="/tournaments">{t("home.tournaments")}</MoreLink>
           </>
         )}
 
-        <MoreGroupLabel>Account</MoreGroupLabel>
-        <MoreLink href="/settings">Settings</MoreLink>
-        {configured && user && <MoreLink href="/account">Account</MoreLink>}
+        <MoreGroupLabel>{t("home.account")}</MoreGroupLabel>
+        <MoreLink href="/settings">{t("home.settings")}</MoreLink>
+        {configured && user && <MoreLink href="/account">{t("home.account")}</MoreLink>}
         {configured && user ? (
-          <MoreLink onClick={onSignOut}>Sign out</MoreLink>
+          <MoreLink onClick={onSignOut}>{t("home.signOut")}</MoreLink>
         ) : (
-          <MoreLink href="/sign-in">Sign in</MoreLink>
+          <MoreLink href="/sign-in">{t("signIn.title")}</MoreLink>
         )}
 
-        <MoreGroupLabel>Reference</MoreGroupLabel>
-        <MoreLink href="/how-to-play?from=home">How to Play</MoreLink>
-        <MoreLink href="/scorecard">Scorekeeper</MoreLink>
-        <MoreLink href="/history">History of Books &amp; Runs</MoreLink>
+        <MoreGroupLabel>{t("home.reference")}</MoreGroupLabel>
+        <MoreLink href="/how-to-play?from=home">{t("common.howToPlay")}</MoreLink>
+        <MoreLink href="/scorecard">{t("home.scorekeeper")}</MoreLink>
+        <MoreLink href="/history">{t("home.historyOfBooksAndRuns")}</MoreLink>
       </div>
     </details>
   );
@@ -293,6 +325,7 @@ function MoreSection({ configured, user, onSignOut }: { configured: boolean; use
  * game actually starts (see firstSessionStore.ts).
  */
 function SignInPrompt({ softened }: { softened: boolean }) {
+  const { t } = useT();
   return (
     <Link
       href="/sign-in"
@@ -303,10 +336,8 @@ function SignInPrompt({ softened }: { softened: boolean }) {
       }`}
     >
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-[var(--heading)]">Sign in to save your progress</span>
-        <span className="mt-0.5 block text-xs text-[var(--muted)]">
-          Track your level and achievements, climb the leaderboard, and play multiplayer with friends.
-        </span>
+        <span className="block text-sm font-semibold text-[var(--heading)]">{t("home.signInToSave")}</span>
+        <span className="mt-0.5 block text-xs text-[var(--muted)]">{t("home.signInToSaveBody")}</span>
       </span>
       <span
         className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold ${
@@ -315,7 +346,7 @@ function SignInPrompt({ softened }: { softened: boolean }) {
             : "bg-[var(--accent)] text-[var(--on-accent)]"
         }`}
       >
-        Sign in
+        {t("signIn.title")}
       </span>
     </Link>
   );
@@ -335,14 +366,15 @@ function daysStale(iso: string): number | null {
 }
 
 function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolean; dimmed: boolean }) {
+  const { t } = useT();
   const turnName = g.seats.find((s) => s.seat === g.turn_seat)?.name;
   const stale = daysStale(g.updated_at);
   const chip =
     g.status === "pending"
-      ? "Waiting to start"
+      ? t("home.waitingToStart")
       : yourTurn
-        ? "Your turn"
-        : `Waiting for ${turnName ?? "…"}`;
+        ? t("home.yourTurn")
+        : t("home.waitingForName", { name: turnName ?? "…" });
   return (
     <Link
       href={`/multiplayer/play?g=${g.game_id}`}
@@ -352,14 +384,14 @@ function MpGameRow({ g, yourTurn, dimmed }: { g: MpGameSummary; yourTurn: boolea
     >
       <span className="min-w-0">
         <span className="block truncate text-base font-semibold text-[var(--heading)]">
-          {opponentNames(g) || "Multiplayer game"}
+          {opponentNames(g) || t("home.multiplayerGame")}
         </span>
         <span className="block text-xs text-[var(--faint)]">
-          Round {g.round} of {g.total_rounds}
+          {t("game.roundOf", { round: g.round, total: g.total_rounds })}
           {stale != null && !yourTurn && (
             <span className={stale >= 14 ? "text-[var(--danger)]" : undefined}>
               {" · "}
-              {stale >= 14 ? `no moves in ${stale} days` : `${stale}d`}
+              {stale >= 14 ? t("home.noMovesInDays", { days: stale }) : t("home.daysAbbr", { days: stale })}
             </span>
           )}
         </span>
@@ -399,6 +431,7 @@ function HomeGames({
   notifications: ReturnType<typeof useNotifications>;
   userId: string | undefined;
 }) {
+  const { t, tPlural } = useT();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [respondError, setRespondError] = useState<string | null>(null);
 
@@ -417,7 +450,7 @@ function HomeGames({
   if (notifications.loading && !hasSavedGame) {
     return (
       <section className="flex flex-col gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your games</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("home.yourGames")}</h2>
         <div className="h-[60px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--panel)]" />
       </section>
     );
@@ -434,7 +467,7 @@ function HomeGames({
       await respondToMpGame(client, gameId, accept);
       notifications.refresh();
     } catch {
-      setRespondError("Couldn't respond — try again.");
+      setRespondError(t("home.respondError"));
     } finally {
       setBusyId(null);
     }
@@ -442,17 +475,17 @@ function HomeGames({
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Your games</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("home.yourGames")}</h2>
 
       {respondError && <p className="text-xs text-[var(--danger)]">{respondError}</p>}
 
       {invites.map((g) => (
         <div key={g.game_id} className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4 text-left">
           <p className="text-sm font-medium text-[var(--heading)]">
-            {opponentNames(g) || "Someone"} invited you
+            {t("home.invitedYou", { name: opponentNames(g) || t("home.someone") })}
           </p>
           <p className="mt-0.5 text-xs text-[var(--muted)]">
-            {g.total_rounds === 7 ? "Full game" : `${g.total_rounds}-round game`}
+            {g.total_rounds === 7 ? t("home.fullGame") : tPlural("home.roundGame", g.total_rounds)}
           </p>
           <div className="mt-3 flex gap-2">
             <button
@@ -460,14 +493,14 @@ function HomeGames({
               disabled={busyId === g.game_id}
               className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
             >
-              Accept
+              {t("multiplayer.accept")}
             </button>
             <button
               onClick={() => respond(g.game_id, false)}
               disabled={busyId === g.game_id}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
             >
-              Decline
+              {t("multiplayer.decline")}
             </button>
           </div>
         </div>
@@ -486,7 +519,7 @@ function HomeGames({
           </span>
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-base font-semibold text-[var(--heading)]">
-              {resuming ? "Checking for the latest save…" : "Resume game"}
+              {resuming ? t("home.checkingForSave") : t("home.resumeGame")}
               {!resuming && savedMode && (
                 <span className="rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--faint)]">
                   {savedMode}
@@ -512,6 +545,7 @@ function HomeGames({
 
 export default function HomePage() {
   const router = useRouter();
+  const { t, tPlural } = useT();
   const { configured, user, signOut } = useAuth();
   const {
     hasSavedGame,
@@ -532,6 +566,9 @@ export default function HomePage() {
   const [checkingForNewerSave, setCheckingForNewerSave] = useState(false);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedMode, setSavedMode] = useState<string | null>(null);
+  // This device's own not-yet-verified progress from any in-progress save
+  // (regular, Daily Deal, or Weekly Challenge) — see withSessionCounters.
+  const [pendingSessionCounters, setPendingSessionCounters] = useState<Record<string, number> | null>(null);
   const [dailyDeal, setDailyDeal] = useState<DailyDealState | null>(null);
   // Whether today's deal has an in-progress save to resume — see
   // GameContext.tsx's continueDailyDeal. Read once on mount, same as
@@ -548,6 +585,14 @@ export default function HomePage() {
   useEffect(() => {
     setIsFirstSession(!hasStartedAGame());
   }, []);
+  // The post-signup welcome prompt (language + notifications) — shown once,
+  // the first time this device sees the account signed in after sign-up
+  // (see onboardingStore.ts). consumeJustSignedUp() clears the flag on
+  // first read, so this is safe to re-check on every `user` change.
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => {
+    if (user && hasJustSignedUp()) setShowWelcome(true);
+  }, [user]);
   useEffect(() => {
     setHasDailyDealSave(loadDailyDealSave() !== null);
   }, []);
@@ -563,9 +608,22 @@ export default function HomePage() {
   // Continue button's own disabled state without a page reload.
   useEffect(() => {
     const saved = loadSavedGame();
-    setSavedSummary(saved ? summarizeSavedGame(saved.state) : null);
-    setSavedMode(saved ? savedGameMode(saved.state) : null);
-  }, [hasSavedGame]);
+    setSavedSummary(saved ? summarizeSavedGame(saved.state, t, tPlural) : null);
+    setSavedMode(saved ? savedGameMode(saved.state, t) : null);
+
+    // Every device-local save this account could be mid-round in at once —
+    // regular, Daily Deal, and Weekly Challenge are independent slots — each
+    // contributes its own not-yet-verified sessionCounters on top of the
+    // real persisted progress (see withSessionCounters).
+    const merged: Record<string, number> = {};
+    for (const slotSave of [saved, loadDailyDealSave(), loadWeeklyChallengeSave()]) {
+      if (!slotSave?.sessionCounters) continue;
+      for (const [key, amount] of Object.entries(slotSave.sessionCounters)) {
+        merged[key] = (merged[key] ?? 0) + amount;
+      }
+    }
+    setPendingSessionCounters(Object.keys(merged).length > 0 ? merged : null);
+  }, [hasSavedGame, t, tPlural]);
 
   // Loaded once per visit to Home — this page fully remounts every time you
   // navigate back to it (including right after finishing a Daily Deal), so
@@ -657,40 +715,45 @@ export default function HomePage() {
 
   const dailyDealPlayedToday = dailyDeal ? playedToday(dailyDeal) : false;
   const weeklyChallengePlayedThisWeek = weeklyChallenge ? playedThisWeek(weeklyChallenge) : false;
-  const closest = configured && user ? closestAchievement(progress) : null;
+  const closest = configured && user ? closestAchievement(withSessionCounters(progress, pendingSessionCounters)) : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
       <IntroSplash />
+      <WelcomeOnboarding
+        open={showWelcome}
+        onDismiss={() => {
+          setShowWelcome(false);
+          clearJustSignedUp();
+        }}
+      />
       <div>
         <CardFanHero />
         {configured && user && level && (
           <Link
             href={playerProfileHref(user.id)}
             className="mb-3 inline-block rounded-full bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
-            title={`${level.xpIntoLevel} / ${level.xpSpanForLevel} XP to level ${level.level + 1}`}
+            title={t("home.xpToLevel", { into: level.xpIntoLevel, span: level.xpSpanForLevel, next: level.level + 1 })}
           >
-            Level {level.level}
+            {t("home.levelN", { level: level.level })}
           </Link>
         )}
         <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)]">Books &amp; Runs</h1>
         {configured && user && (
-          <p className="mt-3 text-xs text-[var(--faint)]">Signed in as {user.email}</p>
+          <p className="mt-3 text-xs text-[var(--faint)]">{t("home.signedInAs", { email: user.email ?? "" })}</p>
         )}
       </div>
 
       <div className="flex w-full flex-col gap-5">
-        <PageTip id="home" title="Welcome to Books & Runs">
-          A free Contract Rummy card game — build books, complete runs, win with the lowest score.
-          Tap New Game to jump in; there&apos;s a short guided tutorial your first time through a
-          real turn. Sign in to track stats and achievements across devices.
+        <PageTip id="home" title={t("home.welcomeTip.title")}>
+          {t("home.welcomeTip.body")}
         </PageTip>
 
         <Link
           href="/new-game"
           className="rounded-lg bg-[var(--accent)] px-6 py-3.5 text-center text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
         >
-          New Game
+          {t("home.newGame")}
         </Link>
 
         <HomeGames
@@ -719,19 +782,19 @@ export default function HomePage() {
           }`}
         >
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-[var(--heading)]">Daily Deal</h2>
+            <h2 className="text-sm font-semibold text-[var(--heading)]">{t("home.dailyDeal.title")}</h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
               {!configured || !user
-                ? "Sign in to keep a streak — anyone can still play today's deal."
+                ? t("home.dailyDeal.signInHint")
                 : dailyDeal && dailyDeal.streak > 0
-                ? `🔥 ${dailyDeal.streak}-day streak`
-                : "One seeded round — the same deal for everyone today."}
+                ? t("home.dailyDeal.streak", { count: dailyDeal.streak })
+                : t("home.dailyDeal.oneSeeded")}
             </p>
             {dailyDealPlayedToday && (
-              <p className="mt-0.5 text-[10px] text-[var(--faint)]">Streak protected for today.</p>
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.dailyDeal.streakProtected")}</p>
             )}
             {!dailyDealPlayedToday && hasDailyDealSave && (
-              <p className="mt-0.5 text-[10px] text-[var(--faint)]">You left this one in progress.</p>
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.leftInProgress")}</p>
             )}
           </div>
           <button
@@ -742,7 +805,11 @@ export default function HomePage() {
                 : "bg-[var(--accent)] text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
             }`}
           >
-            {dailyDealPlayedToday ? "Play again" : hasDailyDealSave ? "Continue today's deal" : "Play today's deal"}
+            {dailyDealPlayedToday
+              ? t("home.playAgain")
+              : hasDailyDealSave
+                ? t("home.dailyDeal.continue")
+                : t("home.dailyDeal.play")}
           </button>
         </section>
 
@@ -755,19 +822,19 @@ export default function HomePage() {
           }`}
         >
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-[var(--heading)]">Weekly Challenge</h2>
+            <h2 className="text-sm font-semibold text-[var(--heading)]">{t("home.weeklyChallenge.title")}</h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
               {!configured || !user
-                ? "Sign in to keep a streak — anyone can still play this week's challenge."
+                ? t("home.weeklyChallenge.signInHint")
                 : weeklyChallenge && weeklyChallenge.streak > 0
-                ? `🏆 ${weeklyChallenge.streak}-week streak`
-                : "The full 7-round game vs. 3 Hard AIs — the same table for everyone this week."}
+                ? t("home.weeklyChallenge.streak", { count: weeklyChallenge.streak })
+                : t("home.weeklyChallenge.description")}
             </p>
             {weeklyChallengePlayedThisWeek && (
-              <p className="mt-0.5 text-[10px] text-[var(--faint)]">Streak protected for this week.</p>
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.weeklyChallenge.streakProtected")}</p>
             )}
             {!weeklyChallengePlayedThisWeek && hasWeeklyChallengeSave && (
-              <p className="mt-0.5 text-[10px] text-[var(--faint)]">You left this one in progress.</p>
+              <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.leftInProgress")}</p>
             )}
           </div>
           <button
@@ -787,24 +854,24 @@ export default function HomePage() {
             }`}
           >
             {weeklyChallengePlayedThisWeek
-              ? "Play again"
+              ? t("home.playAgain")
               : hasWeeklyChallengeSave
-                ? "Continue this week's challenge"
-                : "Play this week's challenge"}
+                ? t("home.weeklyChallenge.continue")
+                : t("home.weeklyChallenge.play")}
           </button>
         </section>
 
         <section className="grid grid-cols-4 gap-2">
-          <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label="Profile">
+          <ProgressTile href={user ? playerProfileHref(user.id) : "/player"} label={t("home.progressTile.profile")}>
             <StatsIcon />
           </ProgressTile>
-          <ProgressTile href="/achievements" label="Achievements">
+          <ProgressTile href="/achievements" label={t("home.progressTile.achievements")}>
             <AchievementsIcon />
           </ProgressTile>
-          <ProgressTile href="/leaderboard" label="Leaderboard">
+          <ProgressTile href="/leaderboard" label={t("home.progressTile.leaderboard")}>
             <LeaderboardIcon />
           </ProgressTile>
-          <ProgressTile href="/friends" label="Friends" badge={notifications.friendRequests}>
+          <ProgressTile href="/friends" label={t("home.progressTile.friends")} badge={notifications.friendRequests}>
             <FriendsIcon />
           </ProgressTile>
         </section>
@@ -820,15 +887,15 @@ export default function HomePage() {
 
       <p className="text-xs text-[var(--faint)]">
         <Link href="/privacy" className="underline hover:text-[var(--muted)]">
-          Privacy
+          {t("common.privacy")}
         </Link>{" "}
         ·{" "}
         <Link href="/terms" className="underline hover:text-[var(--muted)]">
-          Terms
+          {t("common.terms")}
         </Link>{" "}
         ·{" "}
         <Link href="/support" className="underline hover:text-[var(--muted)]">
-          Contact
+          {t("common.contact")}
         </Link>
       </p>
     </main>

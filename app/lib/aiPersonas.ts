@@ -1,5 +1,9 @@
 import { Difficulty } from "@/types";
 import { shuffle } from "@/deck";
+import type { TranslationKey } from "./i18n/keys";
+import type { Vars } from "./i18n/LocaleProvider";
+
+type T = (key: TranslationKey, vars?: Vars) => string;
 
 /**
  * Cosmetic identity for an AI opponent — a name, a small avatar glyph, and a
@@ -10,11 +14,16 @@ import { shuffle } from "@/deck";
  * leaderboard all already treat a player's name as an opaque string, so
  * "🦉 Hedda" flows through every one of them for free, with nothing
  * downstream needing to know personas exist at all.
+ *
+ * `name`/`avatar` stay untranslated proper nouns (a persona's identity, not
+ * a sentence — same treatment as cosmetic item names elsewhere in this
+ * app); `blurbKey` points at the translated flavor line, resolved at
+ * render time by personaBlurbFor(name, t) rather than baked in here.
  */
 export interface AiPersona {
   name: string;
   avatar: string;
-  blurb: string;
+  blurbKey: TranslationKey;
 }
 
 /**
@@ -35,49 +44,49 @@ export interface AiPersona {
  */
 export const AI_PERSONAS: Record<Difficulty, AiPersona[]> = {
   beginner: [
-    { name: "Pip", avatar: "🐣", blurb: "Still learning the difference between a book and a run." },
-    { name: "Nutmeg", avatar: "🐹", blurb: "Plays it safe and hopes for the best." },
-    { name: "Barnaby", avatar: "🐢", blurb: "Takes their time — sometimes too much of it." },
-    { name: "Dabble", avatar: "🦆", blurb: "Picks up cards just in case, then forgets which case." },
-    { name: "Bumble", avatar: "🐸", blurb: "Leaps before looking, every single turn." },
-    { name: "Doodle", avatar: "🐛", blurb: "Still counts the run out on their fingers." },
-    { name: "Waffle", avatar: "🐨", blurb: "Holds onto everything and melds almost none of it." },
+    { name: "Pip", avatar: "🐣", blurbKey: "aiPersona.pip" },
+    { name: "Nutmeg", avatar: "🐹", blurbKey: "aiPersona.nutmeg" },
+    { name: "Barnaby", avatar: "🐢", blurbKey: "aiPersona.barnaby" },
+    { name: "Dabble", avatar: "🦆", blurbKey: "aiPersona.dabble" },
+    { name: "Bumble", avatar: "🐸", blurbKey: "aiPersona.bumble" },
+    { name: "Doodle", avatar: "🐛", blurbKey: "aiPersona.doodle" },
+    { name: "Waffle", avatar: "🐨", blurbKey: "aiPersona.waffle" },
   ],
   easy: [
-    { name: "Clover", avatar: "🐰", blurb: "Knows the rules, still working on the strategy." },
-    { name: "Quill", avatar: "🦔", blurb: "Cautious, but starting to take real risks." },
-    { name: "Hazel", avatar: "🐿️", blurb: "Quick to meld, slow to plan ahead." },
-    { name: "Skipper", avatar: "🦦", blurb: "Has a plan and sticks to it — right up until it stops working." },
-    { name: "Dax", avatar: "🦫", blurb: "Builds steadily. Never takes the shortcut, even the obvious one." },
-    { name: "Newt", avatar: "🦎", blurb: "Adapts to the table, always about a turn late." },
-    { name: "Bram", avatar: "🦌", blurb: "Second-guesses every pickup and keeps the wrong card." },
+    { name: "Clover", avatar: "🐰", blurbKey: "aiPersona.clover" },
+    { name: "Quill", avatar: "🦔", blurbKey: "aiPersona.quill" },
+    { name: "Hazel", avatar: "🐿️", blurbKey: "aiPersona.hazel" },
+    { name: "Skipper", avatar: "🦦", blurbKey: "aiPersona.skipper" },
+    { name: "Dax", avatar: "🦫", blurbKey: "aiPersona.dax" },
+    { name: "Newt", avatar: "🦎", blurbKey: "aiPersona.newt" },
+    { name: "Bram", avatar: "🦌", blurbKey: "aiPersona.bram" },
   ],
   medium: [
-    { name: "Hedda", avatar: "🦉", blurb: "Reads the discard pile like a book." },
-    { name: "Reynard", avatar: "🦊", blurb: "Always angling for the next lay-off." },
-    { name: "Talon", avatar: "🐺", blurb: "Plays it straight, no wasted moves." },
-    { name: "Bandit", avatar: "🦝", blurb: "Takes the exact card you were about to reach for." },
-    { name: "Cleaver", avatar: "🐗", blurb: "Commits to a line early and makes it stick." },
-    { name: "Slate", avatar: "🐈‍⬛", blurb: "Patient. Waits for you to overcommit, then goes." },
-    { name: "Echo", avatar: "🦇", blurb: "Tracks every discard and plays the odds, not the hope." },
+    { name: "Hedda", avatar: "🦉", blurbKey: "aiPersona.hedda" },
+    { name: "Reynard", avatar: "🦊", blurbKey: "aiPersona.reynard" },
+    { name: "Talon", avatar: "🐺", blurbKey: "aiPersona.talon" },
+    { name: "Bandit", avatar: "🦝", blurbKey: "aiPersona.bandit" },
+    { name: "Cleaver", avatar: "🐗", blurbKey: "aiPersona.cleaver" },
+    { name: "Slate", avatar: "🐈‍⬛", blurbKey: "aiPersona.slate" },
+    { name: "Echo", avatar: "🦇", blurbKey: "aiPersona.echo" },
   ],
   hard: [
-    { name: "Corvina", avatar: "🦅", blurb: "Rarely discards anything useful." },
-    { name: "Zara", avatar: "🐆", blurb: "Fast, sharp, and not particularly forgiving." },
-    { name: "Idris", avatar: "🦂", blurb: "Counts cards better than you'd like." },
-    { name: "Marlow", avatar: "🦈", blurb: "Smells a weak hand and closes before you recover." },
-    { name: "Kesler", avatar: "🐊", blurb: "Sits perfectly still for six turns. Then it's over." },
-    { name: "Sabre", avatar: "🐅", blurb: "Always one good draw from going out." },
-    { name: "Vex", avatar: "🐙", blurb: "Has cards working in three melds before you've laid one." },
+    { name: "Corvina", avatar: "🦅", blurbKey: "aiPersona.corvina" },
+    { name: "Zara", avatar: "🐆", blurbKey: "aiPersona.zara" },
+    { name: "Idris", avatar: "🦂", blurbKey: "aiPersona.idris" },
+    { name: "Marlow", avatar: "🦈", blurbKey: "aiPersona.marlow" },
+    { name: "Kesler", avatar: "🐊", blurbKey: "aiPersona.kesler" },
+    { name: "Sabre", avatar: "🐅", blurbKey: "aiPersona.sabre" },
+    { name: "Vex", avatar: "🐙", blurbKey: "aiPersona.vex" },
   ],
   expert: [
-    { name: "Vesper", avatar: "🐍", blurb: "Every discard is a trap." },
-    { name: "Magnus", avatar: "🦁", blurb: "Plays for the whole game, not just the round." },
-    { name: "Nyra", avatar: "🕷️", blurb: "Ruthlessly efficient. Good luck." },
-    { name: "Drake", avatar: "🐉", blurb: "Plays like the round's already scored. It usually is." },
-    { name: "Bly", avatar: "🐋", blurb: "You're playing this round. It's playing all seven." },
-    { name: "Rook", avatar: "🐦‍⬛", blurb: "Every card it discards, you'll regret picking up." },
-    { name: "Sett", avatar: "🦡", blurb: "Locks down one meld and buries every option you had." },
+    { name: "Vesper", avatar: "🐍", blurbKey: "aiPersona.vesper" },
+    { name: "Magnus", avatar: "🦁", blurbKey: "aiPersona.magnus" },
+    { name: "Nyra", avatar: "🕷️", blurbKey: "aiPersona.nyra" },
+    { name: "Drake", avatar: "🐉", blurbKey: "aiPersona.drake" },
+    { name: "Bly", avatar: "🐋", blurbKey: "aiPersona.bly" },
+    { name: "Rook", avatar: "🐦‍⬛", blurbKey: "aiPersona.rook" },
+    { name: "Sett", avatar: "🦡", blurbKey: "aiPersona.sett" },
   ],
 };
 
@@ -127,7 +136,7 @@ function ordinalSuffix(n: number): string {
  * New Game never exhausts a pool; the numbered-repeat fallback below
  * (ordinalSuffix) only ever matters if that ratio changes.
  */
-export function pickAiPersonas(difficulties: Difficulty[]): { displayName: string; blurb: string }[] {
+export function pickAiPersonas(difficulties: Difficulty[]): { displayName: string }[] {
   const used = new Map<string, number>();
   // A fresh shuffled queue per difficulty, so repeated calls into the same
   // difficulty's pool exhaust it in a random (but non-repeating) order
@@ -149,27 +158,29 @@ export function pickAiPersonas(difficulties: Difficulty[]): { displayName: strin
     const count = (used.get(key) ?? 0) + 1;
     used.set(key, count);
     const suffix = count > 1 ? ` ${ordinalSuffix(count)}` : "";
-    return { displayName: `${chosen.avatar} ${chosen.name}${suffix}`, blurb: chosen.blurb };
+    return { displayName: `${chosen.avatar} ${chosen.name}${suffix}` };
   });
 }
 
 // One shared lookup, built once at module load, so game/page.tsx can look up
-// a persona's blurb from a player's display name alone (a plain string is
-// all Player.name ever carries — see this file's own top comment) without
-// needing pickAiPersonas' own bookkeeping. Keyed on "{avatar} {name}" with
-// no ordinal suffix — a "Hedda II" from a big table still maps back to the
-// same blurb as the first Hedda, which is exactly right, since it's the same
-// character reused, not a different one.
-const BLURB_BY_DISPLAY = new Map<string, string>();
+// a persona's blurb key from a player's display name alone (a plain string
+// is all Player.name ever carries — see this file's own top comment)
+// without needing pickAiPersonas' own bookkeeping. Keyed on "{avatar}
+// {name}" with no ordinal suffix — a "Hedda II" from a big table still maps
+// back to the same blurb as the first Hedda, which is exactly right, since
+// it's the same character reused, not a different one.
+const BLURB_KEY_BY_DISPLAY = new Map<string, TranslationKey>();
 for (const personas of Object.values(AI_PERSONAS)) {
-  for (const p of personas) BLURB_BY_DISPLAY.set(personaKey(p), p.blurb);
+  for (const p of personas) BLURB_KEY_BY_DISPLAY.set(personaKey(p), p.blurbKey);
 }
 
-/** Looks up a persona's blurb from a player's display name (e.g. "🦉 Hedda"
- * or "🦉 Hedda II") — undefined for anything that isn't a persona name at
- * all (a human's own name, or an older game recorded before personas
- * existed), which callers should treat as "nothing to show", not an error. */
-export function personaBlurbFor(displayName: string): string | undefined {
+/** Looks up a persona's translated blurb from a player's display name (e.g.
+ * "🦉 Hedda" or "🦉 Hedda II") — undefined for anything that isn't a
+ * persona name at all (a human's own name, or an older game recorded
+ * before personas existed), which callers should treat as "nothing to
+ * show", not an error. */
+export function personaBlurbFor(displayName: string, t: T): string | undefined {
   const withoutOrdinal = displayName.replace(/ (?:II|III|IV|V|VI|VII)$/, "");
-  return BLURB_BY_DISPLAY.get(withoutOrdinal);
+  const key = BLURB_KEY_BY_DISPLAY.get(withoutOrdinal);
+  return key ? t(key) : undefined;
 }

@@ -18,6 +18,7 @@ import { GameState } from "@/types";
 import { useAuth } from "../AuthContext";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { useGame } from "../GameContext";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
@@ -29,6 +30,7 @@ interface RoundSummaryProps {
 }
 
 export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSummaryProps) {
+  const { t, tPlural } = useT();
   const { getSessionCounters, isTutorial, trackStats } = useGame();
   const { user } = useAuth();
   const flushedRef = useRef<number | null>(null);
@@ -37,7 +39,6 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const lowestTotal = Math.min(...state.players.map((p) => p.cumulativeScore));
-  const roundLabel = `Round ${state.round}`;
   // Sum of this round's own newly-unlocked achievement tiers — the only XP
   // source that can possibly change mid-round (games played/won and
   // difficulty-win bonuses only ever move at a whole game's end, so there's
@@ -132,18 +133,18 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">
       <div className="text-center">
-        <p className="text-sm uppercase tracking-wide text-[var(--faint)]">{roundLabel} complete</p>
+        <p className="text-sm uppercase tracking-wide text-[var(--faint)]">{t("roundSummary.complete", { round: state.round })}</p>
         {wentOut && (
-          <h1 className="mt-1 break-words text-2xl font-bold text-[var(--heading)]">{wentOut.name} went out!</h1>
+          <h1 className="mt-1 break-words text-2xl font-bold text-[var(--heading)]">{t("roundSummary.wentOut", { name: wentOut.name })}</h1>
         )}
       </div>
 
       {roundXpGained > 0 && (
         <p className="text-center text-sm font-semibold text-[var(--accent)]">
-          +{roundXpGained} XP
+          {t("roundSummary.xpGained", { xp: roundXpGained })}
           {leveledUpTo !== null && (
             <span className="level-up-pulse ml-1 inline-block font-bold">
-              — Level up! Now level {leveledUpTo}
+              {t("roundSummary.levelUp", { level: leveledUpTo })}
             </span>
           )}
         </p>
@@ -151,16 +152,16 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
 
       <AchievementUnlockCard
         items={unlockedAchievements}
-        heading={`Achievement${unlockedAchievements.length > 1 ? "s" : ""} unlocked this round`}
+        heading={tPlural("roundSummary.achievementsUnlocked", unlockedAchievements.length)}
       />
 
       <div className="overflow-hidden rounded-xl border border-[var(--border)]">
         <table className="w-full text-left text-sm">
           <thead className="bg-[var(--panel)] text-[var(--faint)]">
             <tr>
-              <th className="px-4 py-2 font-medium">Player</th>
-              <th className="px-4 py-2 font-medium">This round</th>
-              <th className="px-4 py-2 font-medium">Total</th>
+              <th className="px-4 py-2 font-medium">{t("roundSummary.player")}</th>
+              <th className="px-4 py-2 font-medium">{t("roundSummary.thisRound")}</th>
+              <th className="px-4 py-2 font-medium">{t("roundSummary.total")}</th>
             </tr>
           </thead>
           <tbody>
@@ -179,7 +180,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
                     {p.name}
                     {isLeading && (
                       <span className="ml-1.5 rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
-                        Leading
+                        {t("roundSummary.leading")}
                       </span>
                     )}
                   </td>
@@ -202,7 +203,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
         onClick={onNextRound}
         className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)]"
       >
-        Start next round
+        {t("roundSummary.startNextRound")}
       </button>
     </main>
   );

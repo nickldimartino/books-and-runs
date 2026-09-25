@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "../lib/i18n/LocaleProvider";
+
 /**
  * Replaces the bare "Loading…" text every data-fetching page (Stats,
  * Achievements, Leaderboard, Account, Settings) used to show on its own —
@@ -7,7 +9,8 @@
  * prefers-reduced-motion via the `.card-flip` override in globals.css
  * (the card just sits face-up), same as every other animation here.
  */
-export function LoadingSpinner({ label = "Loading…" }: { label?: string }) {
+export function LoadingSpinner({ label }: { label?: string }) {
+  const { t } = useT();
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-8 text-sm text-[var(--faint)]">
       <div style={{ perspective: "260px" }}>
@@ -18,7 +21,7 @@ export function LoadingSpinner({ label = "Loading…" }: { label?: string }) {
           <span className="text-base leading-none">&hearts;</span>
         </div>
       </div>
-      <span>{label}</span>
+      <span>{label ?? t("common.loading")}</span>
     </div>
   );
 }

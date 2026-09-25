@@ -17,8 +17,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pickAiPersonas } from "./aiPersonas";
 import { capitalize } from "./text";
+import type { TranslationKey } from "./i18n/keys";
+import type { Vars } from "./i18n/LocaleProvider";
 import { PlayerConfig } from "@/gameEngine";
 import { CONTRACTS, ContractRequirement, Difficulty, SHORT_GAME_CONTRACTS } from "@/types";
+
+type T = (key: TranslationKey, vars?: Vars) => string;
+type TPlural = (key: string, count: number, vars?: Vars) => string;
 
 const KEY = "booksAndRuns:favoriteGame";
 
@@ -184,29 +189,31 @@ export function playerConfigsFor(
 /** "You + 3 Hard AI · Short game" — the one-line summary shown on the
  * "Play my usual" card so the player can tell at a glance it's the lineup
  * they meant. */
-export function describeFavoriteGameConfig(c: FavoriteGameConfig): string {
+export function describeFavoriteGameConfig(c: FavoriteGameConfig, t: T, tPlural: TPlural): string {
   const parts: string[] = [];
 
-  const firstName = c.humanNames[0]?.trim() || "You";
+  const firstName = c.humanNames[0]?.trim() || t("newGame.you");
   if (c.humanCount === 1) parts.push(firstName);
-  else parts.push(`${c.humanCount} players`);
+  else parts.push(tPlural("newGame.nPlayers", c.humanCount));
 
   if (c.aiDifficulties.length > 0) {
     // Group same-difficulty AI: "2 Hard + 1 Easy AI".
     const byDiff = new Map<Difficulty, number>();
     for (const d of c.aiDifficulties) byDiff.set(d, (byDiff.get(d) ?? 0) + 1);
-    const grouped = [...byDiff.entries()].map(([d, n]) => `${n} ${capitalize(d)}`).join(" + ");
-    parts.push(`${grouped} AI`);
+    const grouped = [...byDiff.entries()]
+      .map(([d, n]) => `${n} ${capitalize(t(`common.difficulty.${d}` as TranslationKey))}`)
+      .join(" + ");
+    parts.push(t("newGame.aiSuffix", { grouped }));
   }
 
   const lineup = parts.join(" + ");
 
   const rounds =
     c.roundMode === "all"
-      ? "All 7 rounds"
+      ? t("newGame.allRounds")
       : c.roundMode === "short"
-        ? "Short game"
-        : `${c.customRounds.filter((r) => CONTRACTS.some((cc) => cc.round === r)).length} rounds`;
+        ? t("newGame.shortGame")
+        : tPlural("newGame.nRounds", c.customRounds.filter((r) => CONTRACTS.some((cc) => cc.round === r)).length);
 
   return `${lineup} · ${rounds}`;
 }

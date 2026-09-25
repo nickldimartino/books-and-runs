@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BackLink } from "../components/BackLink";
 import { useGame } from "../GameContext";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 // This page's metadata export needs a Server Component, so the "where does
 // Back actually go" decision is split out into this small Client Component
@@ -22,6 +23,7 @@ import { useGame } from "../GameContext";
 // equivalent cheap client-side check for a still-live MP game, so `?from=mp`
 // just trusts the `g` id it's handed.
 function useBackDestination(): { href: string; label: string } {
+  const { t } = useT();
   const { state } = useGame();
   const [fromGame, setFromGame] = useState(false);
   const [mpGameId, setMpGameId] = useState<string | null>(null);
@@ -35,20 +37,22 @@ function useBackDestination(): { href: string; label: string } {
     setMpGameId(params.get("from") === "mp" ? params.get("g") : null);
   }, []);
 
-  if (mpGameId) return { href: `/multiplayer/play?g=${mpGameId}`, label: "Game" };
-  return fromGame && state ? { href: "/game", label: "Game" } : { href: "/", label: "Home" };
+  if (mpGameId) return { href: `/multiplayer/play?g=${mpGameId}`, label: t("howToPlay.backToGame") };
+  return fromGame && state
+    ? { href: "/game", label: t("howToPlay.backToGame") }
+    : { href: "/", label: t("common.backToHome") };
 }
 
 export function HowToPlayTopBackLink() {
   const { href, label } = useBackDestination();
-  return <BackLink href={href} label={`Back to ${label}`} />;
+  return <BackLink href={href} label={label} />;
 }
 
 export function HowToPlayBottomBackLink() {
   const { href, label } = useBackDestination();
   return (
     <Link href={href} className="text-sm text-[var(--faint)] hover:text-[var(--text)]">
-      Back to {label}
+      {label}
     </Link>
   );
 }

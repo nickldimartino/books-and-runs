@@ -8,6 +8,7 @@
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Card } from "@/types";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { cardLabel, PlayingCard } from "./PlayingCard";
 
 interface DraggableHandProps {
@@ -81,6 +82,7 @@ export function DraggableHand({
   onReorder,
   layoffEligibleIds,
 }: DraggableHandProps) {
+  const { t } = useT();
   const cardElRefs = useRef(new Map<string, HTMLDivElement>());
   const enterDelaysRef = useRef(new Map<string, number>());
   const handRootRef = useRef<HTMLDivElement | null>(null);
@@ -381,7 +383,7 @@ export function DraggableHand({
             }}
             role="button"
             tabIndex={0}
-            aria-label={cardLabel(card)}
+            aria-label={cardLabel(card, t)}
             aria-pressed={selectedCardIds.includes(card.id)}
             onPointerDown={(e) => handlePointerDown(e, card)}
             onKeyDown={(e) => {

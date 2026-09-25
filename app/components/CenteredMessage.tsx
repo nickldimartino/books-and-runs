@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 // The centered "this needs X" screen — a heading, optional body text, an
 // optional "Sign in" CTA, and a trailing way back — copy-pasted (often via
@@ -38,9 +39,11 @@ export function CenteredMessage({
   body,
   signIn,
   backHref = "/",
-  backLabel = "Back to Home",
+  backLabel,
   backOnClick,
 }: CenteredMessageProps) {
+  const { t } = useT();
+  const resolvedBackLabel = backLabel ?? t("common.backToHome");
   const signInHref = typeof signIn === "string" ? signIn : "/sign-in";
   // Whichever CTA renders first gets the extra breathing room above it (the
   // parent's own gap-4 handles spacing between two CTAs) — matches every
@@ -54,16 +57,16 @@ export function CenteredMessage({
       {body && <p className={BODY}>{body}</p>}
       {signIn && (
         <Link href={signInHref} className={`mt-2 ${PRIMARY}`}>
-          Sign in
+          {t("signIn.title")}
         </Link>
       )}
       {backOnClick ? (
         <button onClick={backOnClick} className={backClassName}>
-          {backLabel}
+          {resolvedBackLabel}
         </button>
       ) : (
         <Link href={backHref} className={backClassName}>
-          {backLabel}
+          {resolvedBackLabel}
         </Link>
       )}
     </main>

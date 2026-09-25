@@ -7,6 +7,7 @@
 // component renders nothing on every other load. Tapping skips it.
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 const SEEN_KEY = "booksAndRuns:introSeen";
 const DURATION_MS = 2650;
@@ -24,6 +25,7 @@ const CARDS = [
 ];
 
 export function IntroSplash() {
+  const { t } = useT();
   const [playing, setPlaying] = useState(false);
 
   // Read the flag the inline script set. Done in an effect (not useState
@@ -77,7 +79,7 @@ export function IntroSplash() {
           ))}
         </div>
         <p className="intro-title">Books &amp; Runs</p>
-        <p className="intro-tap">tap to skip</p>
+        <p className="intro-tap">{t("home.tapToSkip")}</p>
       </div>
     </div>
   );

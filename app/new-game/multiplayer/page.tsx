@@ -15,7 +15,10 @@ import { BackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { PageTip } from "../../components/PageTip";
 import { pickAiPersonas } from "../../lib/aiPersonas";
+import { contractNeedLabel } from "../../lib/contractDisplay";
 import { Friend, getFriends } from "../../lib/friendsStore";
+import { useT } from "../../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../../lib/i18n/keys";
 import { displayNameFor } from "../../lib/leaderboardStore";
 import { createMpGame, MpError, NewGameSeat } from "../../lib/mpStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -29,6 +32,7 @@ type RoundMode = "all" | "short" | "custom";
 
 export default function NewMultiplayerGamePage() {
   const router = useRouter();
+  const { t, tPlural } = useT();
   const { configured, loading: authLoading, user } = useAuth();
 
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -110,7 +114,7 @@ export default function NewMultiplayerGamePage() {
       });
       router.push("/");
     } catch (err) {
-      setError(err instanceof MpError ? err.message : "Couldn't create the game — try again.");
+      setError(err instanceof MpError ? err.message : t("newGameMultiplayer.createError"));
       setCreating(false);
     }
   }
@@ -118,15 +122,15 @@ export default function NewMultiplayerGamePage() {
   if (!authLoading && (!configured || !user)) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Sign in to play with friends</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("newGameMultiplayer.signInToPlay")}</h1>
         <Link href="/sign-in" className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
-          Sign in
+          {t("signIn.title")}
         </Link>
         <Link
           href="/new-game"
           className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
-          ← New Game
+          {t("newGameMultiplayer.backToNewGame")}
         </Link>
       </main>
     );
@@ -134,14 +138,12 @@ export default function NewMultiplayerGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-7 px-6 py-10">
-      <BackLink href="/new-game" label="New Game" />
+      <BackLink href="/new-game" label={t("newGame.title")} />
 
-      <h1 className="text-2xl font-bold text-[var(--heading)]">New multiplayer game</h1>
+      <h1 className="text-2xl font-bold text-[var(--heading)]">{t("newGameMultiplayer.title")}</h1>
 
-      <PageTip id="new-game-multiplayer" title="How this works">
-        Pick friends to invite, and add AI to fill any empty seats. Everyone you invite has to
-        accept before the deal — once it starts, take your turn whenever works for you, then it&apos;s
-        the next player&apos;s.
+      <PageTip id="new-game-multiplayer" title={t("newGameMultiplayer.tip.title")}>
+        {t("newGameMultiplayer.tip.body")}
       </PageTip>
 
       {authLoading || loading ? (
@@ -150,12 +152,15 @@ export default function NewMultiplayerGamePage() {
         <>
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Invite friends
+              {t("newGameMultiplayer.inviteFriends")}
             </h2>
             {friends.length === 0 ? (
               <p className="rounded-lg border border-dashed border-[var(--border)] px-4 py-4 text-sm text-[var(--faint)]">
-                You have no friends yet. Add some on the{" "}
-                <Link href="/friends" className="underline">Friends</Link> page, then come back.
+                {t("newGameMultiplayer.noFriendsYet")}{" "}
+                <Link href="/friends" className="underline">
+                  {t("home.progressTile.friends")}
+                </Link>{" "}
+                {t("newGameMultiplayer.pageThenComeBack")}
               </p>
             ) : (
               <ul className="flex flex-col gap-2">
@@ -196,23 +201,23 @@ export default function NewMultiplayerGamePage() {
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
-                AI opponents
+                {t("newGameLocal.aiOpponents")}
               </h2>
               <button
                 onClick={() => total < MAX_PLAYERS && setAis((prev) => [...prev, "medium"])}
                 disabled={total >= MAX_PLAYERS}
                 className="rounded-md bg-[var(--elevated)] px-3 py-1 text-sm font-medium text-[var(--heading)] hover:bg-[var(--elevated-hover)] disabled:opacity-40"
               >
-                + Add AI
+                {t("newGameLocal.addAI")}
               </button>
             </div>
             {ais.length === 0 ? (
-              <p className="text-sm text-[var(--faint)]">Optional — real players only by default.</p>
+              <p className="text-sm text-[var(--faint)]">{t("newGameMultiplayer.aiOptional")}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {ais.map((d, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--panel)] px-3 py-2">
-                    <span className="text-sm text-[var(--muted)]">AI {i + 1}</span>
+                    <span className="text-sm text-[var(--muted)]">{t("newGameLocal.aiN", { n: i + 1 })}</span>
                     <select
                       value={d}
                       onChange={(e) =>
@@ -222,7 +227,7 @@ export default function NewMultiplayerGamePage() {
                     >
                       {DIFFICULTIES.map((x) => (
                         <option key={x} value={x}>
-                          {capitalize(x)}
+                          {capitalize(t(`common.difficulty.${x}` as TranslationKey))}
                         </option>
                       ))}
                     </select>
@@ -230,7 +235,7 @@ export default function NewMultiplayerGamePage() {
                       onClick={() => setAis((prev) => prev.filter((_, j) => j !== i))}
                       className="text-sm text-[var(--danger)] hover:opacity-80"
                     >
-                      Remove
+                      {t("common.remove")}
                     </button>
                   </li>
                 ))}
@@ -239,13 +244,15 @@ export default function NewMultiplayerGamePage() {
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">Rounds</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
+              {t("newGameLocal.rounds")}
+            </h2>
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  ["all", "All 7"],
-                  ["short", "Short"],
-                  ["custom", "Custom"],
+                  ["all", t("newGameLocal.all7")],
+                  ["short", t("newGameLocal.short")],
+                  ["custom", t("newGameLocal.custom")],
                 ] as [RoundMode, string][]
               ).map(([mode, label]) => (
                 <button
@@ -262,9 +269,7 @@ export default function NewMultiplayerGamePage() {
               ))}
             </div>
             {roundMode === "short" && (
-              <p className="text-xs text-[var(--faint)]">
-                Drops the two hardest mixed rounds. A faster game — good for a first multiplayer round.
-              </p>
+              <p className="text-xs text-[var(--faint)]">{t("newGameMultiplayer.shortNote")}</p>
             )}
             {roundMode === "custom" && (
               <div className="flex flex-col gap-2">
@@ -291,7 +296,10 @@ export default function NewMultiplayerGamePage() {
                           </svg>
                         )}
                       </span>
-                      Round {c.round}: {c.label}
+                      {t("newGameLocal.roundLabel", {
+                        round: c.round,
+                        label: contractNeedLabel(c.books, c.runs, tPlural),
+                      })}
                     </button>
                   );
                 })}
@@ -306,7 +314,7 @@ export default function NewMultiplayerGamePage() {
             disabled={!canCreate}
             className="mt-auto rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow-lg transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {creating ? "Creating…" : "Send invites"}
+            {creating ? t("newGameMultiplayer.creating") : t("newGameMultiplayer.sendInvites")}
           </button>
         </>
       )}

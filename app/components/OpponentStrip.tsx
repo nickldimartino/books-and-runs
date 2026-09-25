@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { DiscardEvent, Player } from "@/types";
 import { PlayingCard } from "./PlayingCard";
 import { personaBlurbFor } from "../lib/aiPersonas";
+import { useT } from "../lib/i18n/LocaleProvider";
 
 interface OpponentStripProps {
   players: Player[];
@@ -90,6 +91,7 @@ export function OpponentStrip({
   aiThinking,
   bios,
 }: OpponentStripProps) {
+  const { t, tPlural } = useT();
   const [openId, setOpenId] = useState<string | null>(null);
   const activeRef = useRef<HTMLButtonElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -115,7 +117,7 @@ export function OpponentStrip({
 
   // A meld/lay-off/discard note already carries its own player's name; fall
   // back to "<current> is thinking…" only while the up AI hasn't acted yet.
-  const statusLine = aiStatus ?? (current?.isAI && aiThinking ? `${current.name} is thinking…` : null);
+  const statusLine = aiStatus ?? (current?.isAI && aiThinking ? t("opponentStrip.thinking", { name: current.name }) : null);
 
   return (
     <div
@@ -142,7 +144,11 @@ export function OpponentStrip({
               key={p.id}
               ref={active ? activeRef : undefined}
               onClick={() => setOpenId(isOpen ? null : p.id)}
-              aria-label={`${p.name}, ${p.hand.length} cards in hand${active ? ", their turn" : ""}`}
+              aria-label={
+                active
+                  ? t("opponentStrip.chipLabelActive", { name: p.name, cards: tPlural("opponentStrip.cardsInHand", p.hand.length) })
+                  : t("opponentStrip.chipLabel", { name: p.name, cards: tPlural("opponentStrip.cardsInHand", p.hand.length) })
+              }
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition ${
                 active
                   ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--heading)]"
@@ -191,7 +197,7 @@ export function OpponentStrip({
         <div className="relative mt-2 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-3 text-xs">
           <button
             onClick={() => setOpenId(null)}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="absolute right-1.5 top-1.5 rounded p-1 text-sm leading-none text-[var(--faint)] hover:text-[var(--muted)]"
           >
             ✕
@@ -200,15 +206,15 @@ export function OpponentStrip({
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-baseline gap-x-1.5">
                 <span className="font-semibold text-[var(--heading)]">{open.name}</span>
-                <span className="text-[var(--faint)]">{open.hand.length} in hand</span>
+                <span className="text-[var(--faint)]">{tPlural("opponentStrip.cardsInHand", open.hand.length)} {t("opponentStrip.inHandSuffix")}</span>
               </p>
-              {open.isAI && personaBlurbFor(open.name) && (
-                <p className="mt-1 text-[var(--faint)]">{personaBlurbFor(open.name)}</p>
+              {open.isAI && personaBlurbFor(open.name, t) && (
+                <p className="mt-1 text-[var(--faint)]">{personaBlurbFor(open.name, t)}</p>
               )}
               {!open.isAI && bios?.[open.id] && <p className="mt-1 text-[var(--faint)]">{bios[open.id]}</p>}
             </div>
-            <ActivityCard label="Last discard" card={latestCardFor(discardHistory, open.id)} />
-            <ActivityCard label="Last pickup" card={latestCardFor(pickupHistory, open.id)} />
+            <ActivityCard label={t("opponentStrip.lastDiscard")} card={latestCardFor(discardHistory, open.id)} />
+            <ActivityCard label={t("opponentStrip.lastPickup")} card={latestCardFor(pickupHistory, open.id)} />
           </div>
         </div>
       )}
@@ -218,8 +224,11 @@ export function OpponentStrip({
 
 function ActivityCard({ label, card }: { label: string; card: DiscardEvent["card"] | null }) {
   return (
-    <div className="shrink-0 text-center">
-      <p className="whitespace-nowrap text-[10px] uppercase tracking-wide text-[var(--faint)]">{label}</p>
+    <div className="shrink-0 w-14 text-center">
+      {/* No whitespace-nowrap here on purpose — a longer translated label
+          ("Last discard"/"Last pickup") wraps to 2 lines within this fixed
+          narrow column instead of forcing the row wider than its popover. */}
+      <p className="text-[10px] uppercase leading-tight tracking-wide text-[var(--faint)]">{label}</p>
       <div className="mt-1 flex justify-center">
         {card ? (
           <PlayingCard card={card} small />

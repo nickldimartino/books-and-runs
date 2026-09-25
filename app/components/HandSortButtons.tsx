@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "../lib/i18n/LocaleProvider";
 import { SortMode } from "../lib/handSort";
 
 // The "Sort by suit / Sort by rank" button pair in the hand drawer — pixel-
@@ -8,21 +11,14 @@ import { SortMode } from "../lib/handSort";
 const CLASS_NAME = "rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]";
 
 export function HandSortButtons({ onSort }: { onSort: (mode: SortMode) => void }) {
+  const { t } = useT();
   return (
     <div className="flex flex-wrap justify-center gap-2">
-      <button
-        onClick={() => onSort("suit")}
-        title="Group same-suit cards together — good for spotting runs"
-        className={CLASS_NAME}
-      >
-        Sort by suit
+      <button onClick={() => onSort("suit")} title={t("hand.sortBySuitHint")} className={CLASS_NAME}>
+        {t("hand.sortBySuit")}
       </button>
-      <button
-        onClick={() => onSort("rank")}
-        title="Group same-rank cards together — good for spotting books"
-        className={CLASS_NAME}
-      >
-        Sort by rank
+      <button onClick={() => onSort("rank")} title={t("hand.sortByRankHint")} className={CLASS_NAME}>
+        {t("hand.sortByRank")}
       </button>
     </div>
   );

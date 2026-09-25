@@ -33,6 +33,8 @@ import { UndoRing } from "../components/UndoRing";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { contractNeedLabel } from "../lib/contractDisplay";
 import { markGameStarted } from "../lib/firstSessionStore";
+import { useT, type Vars } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
 import { TUTORIAL_STEPS } from "../lib/tutorialSteps";
 import { consumeTutorialStartingFlag, loadSavedGame } from "../lib/localSave";
 import { YOU_PLAYER_ID } from "../lib/recordGameResult";
@@ -59,12 +61,12 @@ interface PendingLayOff {
 const DRAWER_TUTORIAL_TARGETS = new Set(["hand", "build-meld", "confirm-meld", "discard-btn"]);
 
 /** The rank a lay-off in this direction would represent, for labeling the choice. */
-function directionRank(meld: Meld, direction: "low" | "high"): string {
+function directionRank(meld: Meld, direction: "low" | "high", jokerAbbr: string): string {
   const start = meld.runStartIndex ?? 0;
   const end = start + meld.cards.length - 1;
   const idx = direction === "low" ? start - 1 : end + 1;
   const rank = RUN_ORDER[idx];
-  return rank === "JOKER" ? "JKR" : rank;
+  return rank === "JOKER" ? jokerAbbr : rank;
 }
 
 interface PendingGroup {
@@ -90,31 +92,35 @@ interface PendingGroupChoice {
  * own rank to its slot's rank — a 2 standing in for a *different* suit's
  * "2" slot has a rank that happens to match its slot anyway, which a naive
  * comparison would misread as "natural, not a stand-in." */
-function wildStandInLabel(cards: Card[], contract: ContractRequirement, start: number): string {
+function wildStandInLabel(cards: Card[], contract: ContractRequirement, start: number, jokerAbbr: string): string {
   const result = validateManualGroup(cards, contract, start);
   if (!result.orderedCards || !result.wildCardIds) return String(start);
   const ranks: string[] = [];
   result.orderedCards.forEach((c, i) => {
     if (result.wildCardIds!.has(c.id)) {
       const expected = RUN_ORDER[start + i];
-      ranks.push(expected === "JOKER" ? "JKR" : expected);
+      ranks.push(expected === "JOKER" ? jokerAbbr : expected);
     }
   });
   return ranks.join(", ");
 }
 
-function meldLabel(meld: Meld): string {
-  return meld.type === "book" ? "Book" : "Run";
+function meldLabel(meld: Meld, t: (key: TranslationKey) => string): string {
+  return meld.type === "book" ? t("game.meld.book") : t("game.meld.run");
 }
 
-/** contract.label split into one line per part for a compound contract
- * ("1 Book + 1 Run" -> ["1 Book", "1 Run"]), dropping the "+" itself; a
- * plain single-type label ("2 Books") comes back as its own one-element
- * array, unchanged. Needed once the round header's middle column (the
+type TPlural = (key: string, count: number, vars?: Vars) => string;
+
+/** One translated line per part of a contract's requirement ("1 book" /
+ * "1 run" for a compound contract, or a single line for a books-only or
+ * runs-only one) — needed once the round header's middle column (the
  * hand's live point total) narrowed the left column enough that a compound
  * label started wrapping mid-phrase right around the "+". */
-function contractLabelLines(label: string): string[] {
-  return label.split(" + ");
+function contractLabelLines(books: number, runs: number, tPlural: TPlural): string[] {
+  const lines: string[] = [];
+  if (books > 0) lines.push(tPlural("contract.book", books));
+  if (runs > 0) lines.push(tPlural("contract.run", runs));
+  return lines;
 }
 
 // Names can be up to 20 chars (New Game caps them there). "{name}'s hand" at
@@ -127,6 +133,7 @@ function shortNameForHeader(name: string): string {
 
 export default function GamePage() {
   const router = useRouter();
+  const { t, tPlural } = useT();
   const {
     state,
     hasDrawn,
@@ -272,7 +279,7 @@ export default function GamePage() {
 
     const handTarget: HTMLElement | null = handDrawerOpen
       ? document.querySelector('[data-tutorial="hand"]')
-      : document.querySelector('button[aria-label="Jump to your hand"]');
+      : document.querySelector('[data-tutorial="hand-bar"]');
 
     if (flightEvent.kind === "draw") {
       fl.fly([
@@ -354,8 +361,8 @@ export default function GamePage() {
     if (announcedTurnRef.current === idx) return;
     announcedTurnRef.current = idx;
     const p = state.players[idx];
-    setAnnouncement(p.id === YOU_PLAYER_ID ? "Your turn." : `${p.name}'s turn.`);
-  }, [state, awaitingReveal]);
+    setAnnouncement(p.id === YOU_PLAYER_ID ? t("game.announce.yourTurn") : t("game.announce.playerTurn", { name: p.name }));
+  }, [state, awaitingReveal, t]);
   useEffect(() => {
     if (!lastDrawnCardId || !state || announcedDrawRef.current === lastDrawnCardId) return;
     if (state.players[state.currentPlayerIndex]?.id !== YOU_PLAYER_ID) return;
@@ -363,8 +370,8 @@ export default function GamePage() {
     const card = state.players
       .find((p) => p.id === YOU_PLAYER_ID)
       ?.hand.find((c) => c.id === lastDrawnCardId);
-    if (card) setAnnouncement(`You drew the ${cardLabel(card)}.`);
-  }, [lastDrawnCardId, state]);
+    if (card) setAnnouncement(t("game.announce.youDrew", { card: cardLabel(card, t) }));
+  }, [lastDrawnCardId, state, t]);
 
   function handleShowWhoseTurn() {
     setWhoseTurnVisible(true);
@@ -746,12 +753,12 @@ export default function GamePage() {
   // elsewhere a beat earlier) rather than leaving a still-confusing generic
   // message as the only thing left once a real reason was findable.
   function layOffFailureReason(): string {
-    if (!hasDrawn) return "Draw a card before laying off.";
-    if (!player.hasMeldedContract) return "Meld your own contract before laying off.";
+    if (!hasDrawn) return t("game.layOff.errorNotDrawn");
+    if (!player.hasMeldedContract) return t("game.layOff.errorNotMelded");
     if (selectedCardsForLayOff.length > 1) {
-      return "Those cards can't all be laid off there together — try selecting them again, or lay them off one at a time.";
+      return t("game.layOff.errorMultiple");
     }
-    return "That card can't be laid off there anymore — try selecting it again.";
+    return t("game.layOff.errorSingle");
   }
 
   function handleMeldClick(meld: Meld) {
@@ -854,7 +861,7 @@ export default function GamePage() {
       return;
     }
     if (!result.valid || !result.type) {
-      setGroupError(result.reason ?? "Not a valid book or run.");
+      setGroupError(result.reason ?? t("game.buildMeld.invalidGroup"));
       return;
     }
     setPendingGroups((prev) => [
@@ -876,7 +883,7 @@ export default function GamePage() {
     if (!result.valid || !result.type) {
       // Shouldn't happen — `start` came from our own offered options — but
       // fail safely rather than stage something invalid.
-      setGroupError(result.reason ?? "Not a valid book or run.");
+      setGroupError(result.reason ?? t("game.buildMeld.invalidGroup"));
       setPendingGroupChoice(null);
       return;
     }
@@ -908,7 +915,7 @@ export default function GamePage() {
       setSelectedCardIds([]);
       setGroupError(null);
     } else {
-      setGroupError("Couldn't meld those groups — check they still match this round's contract.");
+      setGroupError(t("game.buildMeld.confirmMeldFailed"));
     }
   }
 
@@ -921,15 +928,13 @@ export default function GamePage() {
       className="panel-elevated flex flex-col items-center gap-3 rounded-xl bg-[var(--panel-soft)] p-4 text-center"
     >
       <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-        Build your meld — this round needs {contractNeedLabel(contract.books, contract.runs)}
+        {t("game.buildMeld.heading", { need: contractNeedLabel(contract.books, contract.runs, tPlural) })}
       </h2>
 
       {contract.wholeHandMeld && (
         <p className="max-w-prose text-xs text-[var(--muted)]">
-          This is the final round — there&apos;s no discard once you meld, so every card in
-          your hand has to go into these runs.
-          {cardsNotYetGrouped > 0 &&
-            ` ${cardsNotYetGrouped} card${cardsNotYetGrouped > 1 ? "s" : ""} not yet grouped.`}
+          {t("game.buildMeld.wholeHandNotice")}
+          {cardsNotYetGrouped > 0 && ` ${tPlural("game.buildMeld.notYetGrouped", cardsNotYetGrouped)}`}
         </p>
       )}
 
@@ -941,7 +946,7 @@ export default function GamePage() {
               className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] p-2"
             >
               <span className="w-12 shrink-0 text-xs font-semibold capitalize text-[var(--accent)]">
-                {group.type}
+                {group.type === "book" ? t("game.meld.book") : t("game.meld.run")}
               </span>
               <div className="flex flex-wrap gap-1">
                 {group.cardIds.map((id) => {
@@ -953,7 +958,7 @@ export default function GamePage() {
                 onClick={() => removePendingGroup(group.id)}
                 className="ml-auto text-xs text-[var(--danger)] hover:opacity-80"
               >
-                Remove
+                {t("common.remove")}
               </button>
             </div>
           ))}
@@ -963,7 +968,7 @@ export default function GamePage() {
       {pendingGroupChoice && (
         <div className="flex w-full flex-col items-center gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-            Which card is the wild standing in for?
+            {t("game.buildMeld.wildPrompt")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             {pendingGroupChoice.options.map((start) => (
@@ -972,14 +977,14 @@ export default function GamePage() {
                 onClick={() => chooseGroupRunStart(start)}
                 className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
               >
-                {wildStandInLabel(pendingGroupChoice.cards, contract, start)}
+                {wildStandInLabel(pendingGroupChoice.cards, contract, start, t("card.jokerAbbr"))}
               </button>
             ))}
             <button
               onClick={() => setPendingGroupChoice(null)}
               className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -993,7 +998,7 @@ export default function GamePage() {
           disabled={!hasDrawn || selectedCardIds.length === 0 || !!pendingGroupChoice}
           className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Group selected cards
+          {t("game.buildMeld.groupSelected")}
         </button>
         <button
           data-tutorial="confirm-meld"
@@ -1001,7 +1006,7 @@ export default function GamePage() {
           disabled={!hasDrawn || !meldReady || !!pendingGroupChoice}
           className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Confirm Meld
+          {t("game.buildMeld.confirmMeld")}
         </button>
         {/* The exact solver AI already runs every turn (attemptMeldContract
             in src/gameEngine.ts), just exposed here instead of being
@@ -1015,10 +1020,10 @@ export default function GamePage() {
           <button
             onClick={hintMeldContract}
             disabled={!hasDrawn || !!pendingGroupChoice || !canHintMeldContract()}
-            title="Automatically lays your contract if your hand can complete it right now"
+            title={t("game.buildMeld.hintTitle")}
             className="rounded-lg border border-dashed border-[var(--muted)]/50 px-4 py-2 text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            💡 Hint: Auto-meld
+            {t("game.buildMeld.hintButton")}
           </button>
         )}
       </div>
@@ -1030,19 +1035,19 @@ export default function GamePage() {
       {confirmingDiscard ? (
         <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
           <span className="text-sm text-[var(--muted)]">
-            Discard the {cardLabel(confirmingDiscard)} and end your turn?
+            {t("game.discard.confirmPrompt", { card: cardLabel(confirmingDiscard, t) })}
           </span>
           <button
             onClick={confirmDiscard}
             className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow"
           >
-            Confirm
+            {t("common.confirm")}
           </button>
           <button
             onClick={cancelDiscard}
             className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       ) : (
@@ -1058,14 +1063,14 @@ export default function GamePage() {
             disabled={!selectedCardCanLayOff || !!pendingLayOff}
             className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {selectedCardsForLayOff.length > 1 ? "Lay off cards" : "Lay off card"}
+            {tPlural("game.discard.layOffCard", selectedCardsForLayOff.length > 1 ? 2 : 1)}
           </button>
           <button
             onClick={handleDiscardSelected}
             disabled={!hasDrawn || selectedCardIds.length !== 1 || !!pendingLayOff}
             className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Discard selected card
+            {t("game.discard.discardSelected")}
           </button>
         </>
       )}
@@ -1076,12 +1081,12 @@ export default function GamePage() {
     <section data-tutorial="hand">
       <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-          {player.id === YOU_PLAYER_ID ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
+          {player.id === YOU_PLAYER_ID ? t("game.hand.yourHand") : t("game.hand.playerHand", { name: shortNameForHeader(player.name) })}
           <span className="ml-2 font-normal normal-case text-[var(--muted)]">
-            ({handPenalty(player.hand)} pts)
+            ({t("game.hand.pts", { count: handPenalty(player.hand) })})
           </span>
           {player.hasMeldedContract && (
-            <span className="ml-2 text-[var(--accent)]">— contract melded</span>
+            <span className="ml-2 text-[var(--accent)]">{t("game.hand.contractMelded")}</span>
           )}
         </h2>
         <HandSortButtons onSort={sortHand} />
@@ -1106,7 +1111,7 @@ export default function GamePage() {
         onReorder={reorderHand}
         layoffEligibleIds={layoffEligibleHandIds}
       />
-      <p className="mt-1 text-center text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
+      <p className="mt-1 text-center text-xs text-[var(--faint)]">{t("game.hand.dragToReorder")}</p>
     </section>
   );
 
@@ -1136,7 +1141,7 @@ export default function GamePage() {
           }}
           className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
-          ← Home
+          ← {t("common.home")}
         </button>
         {/* flex-wrap on the row above (not here) so this stays one group —
             on the narrowest real phones (~320px) three buttons' worth of
@@ -1148,14 +1153,14 @@ export default function GamePage() {
               onClick={handleShowWhoseTurn}
               className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
             >
-              Whose turn is it?
+              {t("game.whoseTurn")}
             </button>
           )}
           <Link
             href="/how-to-play?from=game"
             className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
-            How to play
+            {t("common.howToPlay")}
           </Link>
           <SoundQuickToggle />
         </div>
@@ -1170,7 +1175,7 @@ export default function GamePage() {
           // regardless.
           className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--on-accent)] shadow-lg"
         >
-          It&apos;s Jenny&apos;s turn!
+          {t("game.jennysTurn")}
         </div>
       )}
 
@@ -1196,10 +1201,10 @@ export default function GamePage() {
       >
         <div className="shrink-0 text-left">
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-            Round {state.round} of {state.selectedContracts.length}
+            {t("game.roundOf", { round: state.round, total: state.selectedContracts.length })}
           </p>
           <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-            {contractLabelLines(contract.label).map((line, i) => (
+            {contractLabelLines(contract.books, contract.runs, tPlural).map((line, i) => (
               <span key={i} className="block">
                 {line}
               </span>
@@ -1217,10 +1222,10 @@ export default function GamePage() {
             // than the single-line version this replaces.
             <>
               <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-                {player.id === YOU_PLAYER_ID ? "Your hand" : `${shortNameForHeader(player.name)}'s hand`}
+                {player.id === YOU_PLAYER_ID ? t("game.hand.yourHand") : t("game.hand.playerHand", { name: shortNameForHeader(player.name) })}
               </p>
               <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-                {handPenalty(player.hand)} pts
+                {t("game.hand.pts", { count: handPenalty(player.hand) })}
               </p>
             </>
           )}
@@ -1246,7 +1251,7 @@ export default function GamePage() {
               <li key={p.id} className="flex min-w-0 items-center justify-end gap-1">
                 {p.id === YOU_PLAYER_ID && level && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
-                    Lv{level.level}
+                    {t("game.levelBadge", { level: level.level })}
                   </span>
                 )}
                 {/* A cosmetic "power level" per difficulty, not a real
@@ -1257,7 +1262,7 @@ export default function GamePage() {
                     other is flavor. */}
                 {p.isAI && p.difficulty && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--muted)]">
-                    Lv{AI_THEORETICAL_LEVEL[p.difficulty]}
+                    {t("game.levelBadge", { level: AI_THEORETICAL_LEVEL[p.difficulty] })}
                   </span>
                 )}
                 {/* min-w-0 + max-w: `truncate` alone did nothing here — a
@@ -1294,13 +1299,13 @@ export default function GamePage() {
           // plain-text banner as everything else on the board.
           className="confirm-pop flex items-center justify-between gap-3 rounded-lg bg-[var(--accent)]/15 px-4 py-2 text-sm"
         >
-          <span className="text-[var(--muted)]">Meld or lay-off confirmed.</span>
+          <span className="text-[var(--muted)]">{t("game.undoBanner.confirmed")}</span>
           <button
             onClick={undoLastAction}
             className="flex shrink-0 items-center gap-1.5 rounded-md bg-[var(--accent)] pl-2 pr-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
           >
             {undoExpiresAt != null && <UndoRing expiresAt={undoExpiresAt} />}
-            Undo
+            {t("game.undoBanner.undo")}
           </button>
         </div>
       )}
@@ -1318,7 +1323,7 @@ export default function GamePage() {
           <section className="flex items-end justify-center gap-6">
             <div className="flex flex-col items-center gap-1 opacity-60">
               <DrawPile count={state.drawPile.length} />
-              <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
+              <span className="text-xs text-[var(--faint)]">{t("game.draw", { count: state.drawPile.length })}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <div
@@ -1328,12 +1333,12 @@ export default function GamePage() {
               >
                 <DiscardPile cards={state.discardPile} />
               </div>
-              <span className="text-xs text-[var(--faint)]">Discard pile</span>
+              <span className="text-xs text-[var(--faint)]">{t("game.discardPile")}</span>
             </div>
           </section>
           <p className="text-sm text-[var(--faint)]">
-            Waiting for {player.name}
-            {personaBlurbFor(player.name) ? ` — ${personaBlurbFor(player.name)}` : ""}
+            {t("game.waitingFor", { name: player.name })}
+            {personaBlurbFor(player.name, t) ? ` — ${personaBlurbFor(player.name, t)}` : ""}
           </p>
         </div>
       ) : (
@@ -1347,11 +1352,11 @@ export default function GamePage() {
                 onClick={() => draw(false)}
                 disabled={hasDrawn}
                 className="disabled:opacity-50"
-                aria-label="Draw from pile"
+                aria-label={t("game.drawFromPile")}
               >
                 <DrawPile count={state.drawPile.length} />
               </button>
-              <span className="text-xs text-[var(--faint)]">Draw ({state.drawPile.length})</span>
+              <span className="text-xs text-[var(--faint)]">{t("game.draw", { count: state.drawPile.length })}</span>
             </div>
 
             <div className="flex flex-col items-center gap-1">
@@ -1362,17 +1367,17 @@ export default function GamePage() {
                 onClick={() => draw(true)}
                 disabled={hasDrawn || !discardTop}
                 className="disabled:opacity-50"
-                aria-label="Draw from discard"
+                aria-label={t("game.drawFromDiscard")}
               >
                 <DiscardPile cards={state.discardPile} canLayOff={discardTopCanLayOff} />
               </button>
-              <span className="text-xs text-[var(--faint)]">Discard pile</span>
+              <span className="text-xs text-[var(--faint)]">{t("game.discardPile")}</span>
             </div>
           </section>
 
           {!hasDrawn && (
             <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-center text-xs font-medium text-[var(--accent)]">
-              Draw a card from the pile or discard pile to start your turn.
+              {t("game.drawToStart")}
             </p>
           )}
 
@@ -1391,31 +1396,31 @@ export default function GamePage() {
             // by tapping a meld that can be far down the page.
             <div
               role="alertdialog"
-              aria-label="Which card is this wild standing in for?"
+              aria-label={t("game.buildMeld.wildPromptShort")}
               className="fixed inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center px-4"
             >
               <section className="flex w-full max-w-xs flex-col gap-3 rounded-xl border border-[var(--accent)]/60 bg-[var(--panel)] p-4 shadow-xl">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                  Which card is this wild standing in for?
+                  {t("game.buildMeld.wildPromptShort")}
                 </h2>
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={() => chooseLayOffDirection("low")}
                     className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
                   >
-                    {directionRank(pendingLayOff.meld, "low")}
+                    {directionRank(pendingLayOff.meld, "low", t("card.jokerAbbr"))}
                   </button>
                   <button
                     onClick={() => chooseLayOffDirection("high")}
                     className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
                   >
-                    {directionRank(pendingLayOff.meld, "high")}
+                    {directionRank(pendingLayOff.meld, "high", t("card.jokerAbbr"))}
                   </button>
                   <button
                     onClick={() => setPendingLayOff(null)}
                     className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </div>
               </section>
@@ -1428,7 +1433,7 @@ export default function GamePage() {
             className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4"
           >
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-              Table melds
+              {t("game.tableMelds.heading")}
             </h2>
             {layOffError && <p className="mb-2 text-xs text-[var(--danger)]">{layOffError}</p>}
             {state.melds.length === 0 ? (
@@ -1438,9 +1443,7 @@ export default function GamePage() {
                   <span className="h-11 w-8 rounded-md border-2 border-dashed border-[var(--border)]" />
                   <span className="h-11 w-8 rounded-md border-2 border-dashed border-[var(--border)]" />
                 </div>
-                <p className="text-sm text-[var(--faint)]">
-                  Nothing melded yet — complete this round&apos;s contract to lay the first books and runs down here.
-                </p>
+                <p className="text-sm text-[var(--faint)]">{t("game.tableMelds.empty")}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
@@ -1450,7 +1453,7 @@ export default function GamePage() {
                     <div key={ownerId}>
                       <p
                         className="mb-1 text-xs text-[var(--faint)]"
-                        title={owner ? personaBlurbFor(owner.name) : undefined}
+                        title={owner ? personaBlurbFor(owner.name, t) : undefined}
                       >
                         {owner?.name ?? ownerId}
                       </p>
@@ -1479,7 +1482,7 @@ export default function GamePage() {
                               className={`max-w-full rounded-lg p-1 transition ${
                                 isValidTarget ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""
                               }`}
-                              title={meldLabel(meld)}
+                              title={meldLabel(meld, t)}
                             >
                               {/* overflow-x-auto lives on this inner div, not the
                                   button itself — a button that's also its own
@@ -1566,7 +1569,7 @@ export default function GamePage() {
                 ref={handDrawerRef}
                 role="dialog"
                 aria-modal="true"
-                aria-label="Manage your hand"
+                aria-label={t("game.manageHand")}
                 tabIndex={-1}
                 // max-w-2xl + mx-auto: on a wide screen the drawer is a
                 // centered column the same width as the game board, so the
@@ -1576,12 +1579,12 @@ export default function GamePage() {
                 className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl outline-none"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>
+                  <h2 className="text-sm font-semibold text-[var(--heading)]">{t("game.manageHand")}</h2>
                   <button
                     onClick={() => setHandDrawerOpen(false)}
                     className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
                   >
-                    Done
+                    {t("common.done")}
                   </button>
                 </div>
                 {buildMeldSection}

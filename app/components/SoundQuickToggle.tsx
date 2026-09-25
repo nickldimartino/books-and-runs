@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { startAmbience, stopAmbience } from "../lib/ambience";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
 
 /**
@@ -11,6 +12,7 @@ import { loadLocalSettings, saveLocalSettings } from "../lib/settingsStore";
  * toggle (see settingsStore.ts's hapticsEnabled) and isn't touched here.
  */
 export function SoundQuickToggle() {
+  const { t } = useT();
   const [muted, setMuted] = useState(false);
   const [ready, setReady] = useState(false);
   // Remembers whether ambient music was actually on before a mute, so
@@ -42,8 +44,8 @@ export function SoundQuickToggle() {
   return (
     <button
       onClick={toggle}
-      aria-label={muted ? "Unmute sound" : "Mute sound"}
-      title={muted ? "Unmute sound" : "Mute sound"}
+      aria-label={muted ? t("common.unmuteSound") : t("common.muteSound")}
+      title={muted ? t("common.unmuteSound") : t("common.muteSound")}
       className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] hover:bg-[var(--panel-soft)]"
     >
       {muted ? "🔇" : "🔊"}

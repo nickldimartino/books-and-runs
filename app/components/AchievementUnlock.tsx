@@ -1,6 +1,8 @@
 import { AchievementInstance, tierNumber } from "@/achievements";
 import { AchievementIcon } from "./AchievementIcons";
 import { formatAchievementProgress } from "../lib/achievementFormat";
+import { useT } from "../lib/i18n/LocaleProvider";
+import type { TranslationKey } from "../lib/i18n/keys";
 
 export interface AchievementUnlockItem {
   achievement: AchievementInstance;
@@ -22,6 +24,7 @@ export interface AchievementUnlockItem {
  * tap away, not something you have to go find on a different page.
  */
 export function AchievementUnlockList({ items }: { items: AchievementUnlockItem[] }) {
+  const { t } = useT();
   if (items.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1.5">
@@ -31,9 +34,11 @@ export function AchievementUnlockList({ items }: { items: AchievementUnlockItem[
             <summary className="flex cursor-pointer list-none items-center gap-2 text-sm text-[var(--heading)] [&::-webkit-details-marker]:hidden">
               <AchievementIcon category={a.category} className="h-5 w-5 shrink-0 text-[var(--accent)]" />
               <span className="min-w-0 flex-1 truncate">
-                {a.familyTitle} {tierNumber(a.tier)}
+                {t(a.familyTitleKey as TranslationKey)} {tierNumber(a.tier)}
               </span>
-              <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">+{xp} XP</span>
+              <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">
+                {t("roundSummary.xpGained", { xp })}
+              </span>
               <span
                 aria-hidden="true"
                 className="shrink-0 text-xs text-[var(--faint)] transition group-open:rotate-180"
@@ -41,7 +46,7 @@ export function AchievementUnlockList({ items }: { items: AchievementUnlockItem[
                 ▼
               </span>
             </summary>
-            <p className="mt-1 pl-7 text-xs text-[var(--faint)]">{formatAchievementProgress(a)}</p>
+            <p className="mt-1 pl-7 text-xs text-[var(--faint)]">{formatAchievementProgress(a, t)}</p>
           </details>
         </li>
       ))}

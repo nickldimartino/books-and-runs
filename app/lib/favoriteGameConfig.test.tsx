@@ -13,6 +13,9 @@ import {
   saveFavoriteGameConfig,
 } from "./favoriteGameConfig";
 import { CONTRACTS, SHORT_GAME_CONTRACTS } from "@/types";
+import { FALLBACK_CONTEXT } from "./i18n/LocaleProvider";
+
+const { t, tPlural } = FALLBACK_CONTEXT;
 
 const SOLO_VS_3_HARD: FavoriteGameConfig = {
   humanCount: 1,
@@ -66,24 +69,28 @@ describe("favoriteGameConfig persistence", () => {
 
 describe("describeFavoriteGameConfig", () => {
   it("summarises a solo game with grouped AI", () => {
-    expect(describeFavoriteGameConfig(SOLO_VS_3_HARD)).toBe("You + 3 Hard AI · Short game");
+    expect(describeFavoriteGameConfig(SOLO_VS_3_HARD, t, tPlural)).toBe("You + 3 Hard AI · Short game");
   });
 
   it("uses the first player's name", () => {
     expect(
-      describeFavoriteGameConfig({ ...SOLO_VS_3_HARD, humanNames: ["Nick"], roundMode: "all" })
+      describeFavoriteGameConfig({ ...SOLO_VS_3_HARD, humanNames: ["Nick"], roundMode: "all" }, t, tPlural)
     ).toBe("Nick + 3 Hard AI · All 7 rounds");
   });
 
   it("counts multiple humans and mixed difficulties", () => {
     expect(
-      describeFavoriteGameConfig({
-        humanCount: 2,
-        humanNames: ["A", "B"],
-        aiDifficulties: ["easy", "hard"],
-        roundMode: "custom",
-        customRounds: [1, 3, 5],
-      })
+      describeFavoriteGameConfig(
+        {
+          humanCount: 2,
+          humanNames: ["A", "B"],
+          aiDifficulties: ["easy", "hard"],
+          roundMode: "custom",
+          customRounds: [1, 3, 5],
+        },
+        t,
+        tPlural
+      )
     ).toBe("2 players + 1 Easy + 1 Hard AI · 3 rounds");
   });
 });

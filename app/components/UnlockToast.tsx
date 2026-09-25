@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { AnyCosmeticOption } from "../lib/allCosmetics";
 
 const AUTO_DISMISS_MS = 7000;
@@ -15,6 +16,7 @@ const AUTO_DISMISS_MS = 7000;
  * Auto-dismisses; renders nothing when there's nothing new.
  */
 export function UnlockToast({ items, onDismiss }: { items: AnyCosmeticOption[]; onDismiss: () => void }) {
+  const { t, tPlural } = useT();
   useEffect(() => {
     if (items.length === 0) return;
     const t = setTimeout(onDismiss, AUTO_DISMISS_MS);
@@ -31,7 +33,7 @@ export function UnlockToast({ items, onDismiss }: { items: AnyCosmeticOption[]; 
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-[var(--heading)]">
-            New profile reward{items.length > 1 ? "s" : ""} unlocked!
+            {tPlural("unlockToast.unlocked", items.length)}
           </p>
           <ul className="mt-1 flex flex-col gap-0.5 text-xs text-[var(--muted)]">
             {items.map((c) => (
@@ -39,12 +41,12 @@ export function UnlockToast({ items, onDismiss }: { items: AnyCosmeticOption[]; 
             ))}
           </ul>
           <Link href="/player" className="mt-1.5 inline-block text-xs font-medium text-[var(--accent)] hover:underline">
-            Go equip it →
+            {t("unlockToast.goEquip")}
           </Link>
         </div>
         <button
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={t("common.dismiss")}
           className="shrink-0 rounded p-0.5 text-[var(--faint)] hover:text-[var(--muted)]"
         >
           ✕

@@ -39,6 +39,7 @@ import { AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
 import { contractNeedLabel } from "../../lib/contractDisplay";
 import { applyHandOrder, compareByMode, SortMode } from "../../lib/handSort";
+import { useT } from "../../lib/i18n/LocaleProvider";
 import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
 import { getMpParticipantUserIds } from "../../lib/mpStore";
 import { loadLocalSettings } from "../../lib/settingsStore";
@@ -48,6 +49,7 @@ import { useFocusTrap } from "../../lib/useFocusTrap";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { groupMeldsByOwner, layOffOptions } from "@/meld";
 import { handPenalty } from "@/scorer";
+import { CONTRACTS } from "@/types";
 import type { Card, Meld, Player } from "@/types";
 import type { RedactedView } from "@/mp/types";
 
@@ -79,10 +81,11 @@ const RANK_SUIT: Record<string, string> = {
   spades: "♠",
   joker: "★",
 };
-const label = (c: Card) => `${c.rank === "JOKER" ? "Jkr" : c.rank}${c.suit === "joker" ? "" : RANK_SUIT[c.suit]}`;
+const label = (c: Card, jokerAbbr: string) => `${c.rank === "JOKER" ? jokerAbbr : c.rank}${c.suit === "joker" ? "" : RANK_SUIT[c.suit]}`;
 
 export default function MultiplayerPlayPage() {
   const router = useRouter();
+  const { t, tPlural } = useT();
   const gameId = useGameId();
   const { loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
@@ -280,9 +283,9 @@ export default function MultiplayerPlayPage() {
   if (!authLoading && !user) {
     return (
       <Center>
-        <h1 className="text-xl font-bold text-[var(--heading)]">Sign in to play</h1>
+        <h1 className="text-xl font-bold text-[var(--heading)]">{t("multiplayer.signInToPlay")}</h1>
         <Link href="/sign-in" className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow">
-          Sign in
+          {t("signIn.title")}
         </Link>
         <BackLink />
       </Center>
@@ -294,7 +297,7 @@ export default function MultiplayerPlayPage() {
   if (g.status === "error") {
     return (
       <Center>
-        <p className="text-sm text-[var(--danger)]">{g.error ?? "Couldn't load this game."}</p>
+        <p className="text-sm text-[var(--danger)]">{g.error ?? t("multiplayer.loadError")}</p>
         <BackLink />
       </Center>
     );
@@ -303,8 +306,8 @@ export default function MultiplayerPlayPage() {
   if (g.status === "cancelled") {
     return (
       <Center>
-        <h1 className="text-xl font-bold text-[var(--heading)]">Game cancelled</h1>
-        <p className="text-sm text-[var(--muted)]">Someone declined the invite before it started.</p>
+        <h1 className="text-xl font-bold text-[var(--heading)]">{t("multiplayer.cancelled.title")}</h1>
+        <p className="text-sm text-[var(--muted)]">{t("multiplayer.cancelled.body")}</p>
         <BackLink />
       </Center>
     );
@@ -340,12 +343,10 @@ export default function MultiplayerPlayPage() {
     return (
       <Center>
         <h1 className="text-xl font-bold text-[var(--heading)]">
-          {g.status === "dealing" ? "Dealing…" : "Waiting for players"}
+          {g.status === "dealing" ? t("multiplayer.dealing") : t("multiplayer.waitingForPlayers")}
         </h1>
         <p className="text-sm text-[var(--muted)]">
-          {g.status === "dealing"
-            ? "The game is being set up — this page will update."
-            : "The game starts once everyone you invited accepts."}
+          {g.status === "dealing" ? t("multiplayer.dealingBody") : t("multiplayer.waitingForPlayersBody")}
         </p>
 
         {g.status === "pending" && pendingParticipants.length > 0 && (
@@ -358,13 +359,13 @@ export default function MultiplayerPlayPage() {
                   key={p.user_id}
                   className="flex items-center justify-between gap-3 rounded-md bg-[var(--panel-soft)] px-3 py-2 text-sm"
                 >
-                  <span className="min-w-0 truncate text-[var(--heading)]">{seat?.name ?? "Someone"}</span>
+                  <span className="min-w-0 truncate text-[var(--heading)]">{seat?.name ?? t("multiplayer.someone")}</span>
                   <span
                     className={`shrink-0 text-xs font-medium ${
                       accepted ? "text-[var(--accent)]" : "text-[var(--faint)]"
                     }`}
                   >
-                    {accepted ? "Accepted" : "Waiting"}
+                    {accepted ? t("multiplayer.accepted") : t("multiplayer.waiting")}
                   </span>
                 </li>
               );
@@ -381,14 +382,14 @@ export default function MultiplayerPlayPage() {
               disabled={respondBusy !== null}
               className="flex-1 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
             >
-              {respondBusy === "accept" ? "Accepting…" : "Accept"}
+              {respondBusy === "accept" ? t("multiplayer.accepting") : t("multiplayer.accept")}
             </button>
             <button
               onClick={() => handleRespondPending(false)}
               disabled={respondBusy !== null}
               className="flex-1 rounded-md border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)] disabled:opacity-50"
             >
-              {respondBusy === "decline" ? "Declining…" : "Decline"}
+              {respondBusy === "decline" ? t("multiplayer.declining") : t("multiplayer.decline")}
             </button>
           </div>
         )}
@@ -397,7 +398,7 @@ export default function MultiplayerPlayPage() {
           onClick={g.refresh}
           className="rounded-md border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         >
-          Refresh
+          {t("common.refresh")}
         </button>
 
         {/* Only the host can withdraw a still-pending invite — an invitee
@@ -408,7 +409,7 @@ export default function MultiplayerPlayPage() {
             disabled={cancelBusy}
             className="text-sm text-[var(--danger)] underline hover:opacity-80 disabled:opacity-50"
           >
-            {cancelBusy ? "Cancelling…" : "Cancel this game"}
+            {cancelBusy ? t("multiplayer.cancelling") : t("multiplayer.cancelThisGame")}
           </button>
         )}
 
@@ -420,7 +421,7 @@ export default function MultiplayerPlayPage() {
   if (!view) return <Center><LoadingSpinner /></Center>;
 
   const me = view.players.find((p) => p.userId === user?.id) ?? null;
-  const currentName = view.players.find((p) => p.seat === view.currentSeat)?.name ?? "someone";
+  const currentName = view.players.find((p) => p.seat === view.currentSeat)?.name ?? t("multiplayer.someoneLower");
 
   if (view.gameOver) {
     const iWon = view.winnerSeat != null && view.players[view.winnerSeat]?.userId === user?.id;
@@ -429,28 +430,28 @@ export default function MultiplayerPlayPage() {
         <UnlockToast items={g.newlyUnlockedCosmetics} onDismiss={g.clearNewlyUnlockedCosmetics} />
         <BackLink />
         <h1 className="text-2xl font-bold text-[var(--heading)]">
-          {iWon ? "You won!" : `${view.winnerSeat != null ? view.players[view.winnerSeat].name : "Nobody"} won`}
+          {iWon
+            ? t("multiplayer.youWon")
+            : t("multiplayer.playerWon", { name: view.winnerSeat != null ? view.players[view.winnerSeat].name : t("multiplayer.nobody") })}
         </h1>
         <ol className="flex flex-col gap-2">
           {scores.map((p, i) => (
             <li key={p.seat} className="flex items-center justify-between rounded-lg border border-[var(--border)] px-4 py-3">
               <span className="text-sm font-medium text-[var(--heading)]">
                 {i + 1}. {p.name}
-                {p.resigned && <span className="ml-2 text-xs text-[var(--faint)]">(left)</span>}
+                {p.resigned && <span className="ml-2 text-xs text-[var(--faint)]">{t("multiplayer.left")}</span>}
               </span>
               <span className="text-sm font-semibold text-[var(--muted)]">{p.cumulativeScore}</span>
             </li>
           ))}
         </ol>
 
-        <p className="text-xs text-[var(--faint)]">
-          Recorded to your stats and multiplayer record.
-        </p>
+        <p className="text-xs text-[var(--faint)]">{t("multiplayer.recordedToStats")}</p>
 
         {g.unlockedAchievements.length > 0 && (
           <AchievementUnlockCard
             items={g.unlockedAchievements}
-            heading={g.unlockedAchievements.length === 1 ? "Achievement unlocked" : "Achievements unlocked"}
+            heading={tPlural("multiplayer.achievementUnlocked", g.unlockedAchievements.length)}
           />
         )}
 
@@ -465,7 +466,7 @@ export default function MultiplayerPlayPage() {
             href={`/tournaments?id=${tournamentLink.tournamentId}`}
             className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-center text-sm font-medium text-[var(--heading)] hover:bg-[var(--accent)]/15"
           >
-            Round {tournamentLink.roundNumber} of a tournament — view standings →
+            {t("multiplayer.tournamentRound", { round: tournamentLink.roundNumber })}
           </Link>
         )}
 
@@ -479,7 +480,7 @@ export default function MultiplayerPlayPage() {
           disabled={rematchBusy}
           className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-50"
         >
-          {rematchBusy ? "Setting up…" : "Rematch — same players"}
+          {rematchBusy ? t("multiplayer.settingUp") : t("multiplayer.rematch")}
         </button>
         {g.error && <p className="text-xs text-[var(--danger)]">{g.error}</p>}
       </main>
@@ -558,37 +559,40 @@ export default function MultiplayerPlayPage() {
             href={`/how-to-play?from=mp&g=${gameId ?? ""}`}
             className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
-            How to play
+            {t("common.howToPlay")}
           </Link>
           <SoundQuickToggle />
           <button
             onClick={() => {
-              if (confirm("Leave this game? You forfeit it.")) g.resign();
+              if (confirm(t("multiplayer.leaveConfirm"))) g.resign();
             }}
             className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
           >
-            Leave
+            {t("multiplayer.leave")}
           </button>
         </div>
       </div>
 
-      <PageTip id="multiplayer-play" title="Playing async">
-        You don&apos;t need to be online at the same time. Take your turn, then it&apos;s the next
-        player&apos;s — check back from Home, or turn on notifications in Settings to know when
-        it&apos;s yours again.
+      <PageTip id="multiplayer-play" title={t("multiplayer.playingAsync")}>
+        {t("multiplayer.playingAsyncBody")}
       </PageTip>
 
       <header className="panel-elevated flex items-center justify-between gap-3 rounded-xl bg-[var(--panel)] px-4 py-3">
         <div className="shrink-0 text-left">
           <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-            Round {view.round} of {view.totalRounds}
+            {t("game.roundOf", { round: view.round, total: view.totalRounds })}
           </p>
-          <p className="text-lg font-bold leading-tight text-[var(--heading)]">{view.roundLabel}</p>
+          <p className="text-lg font-bold leading-tight text-[var(--heading)]">
+            {(() => {
+              const found = CONTRACTS.find((c) => c.round === view.round);
+              return found ? contractNeedLabel(found.books, found.runs, tPlural) : view.roundLabel;
+            })()}
+          </p>
         </div>
         <div className="min-w-0 px-1 text-center">
-          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Your hand</p>
+          <p className="text-xs uppercase tracking-wide text-[var(--faint)]">{t("game.hand.yourHand")}</p>
           <p className="text-lg font-bold leading-tight text-[var(--heading)]">
-            {handPenalty(view.yourHand)} pts
+            {t("game.hand.pts", { count: handPenalty(view.yourHand) })}
           </p>
         </div>
         <ul className="shrink-0 space-y-1 text-right text-xs text-[var(--muted)]">
@@ -596,12 +600,12 @@ export default function MultiplayerPlayPage() {
             <li key={p.seat} className="flex items-center justify-end gap-1">
               {p.userId === user?.id && level && (
                 <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--accent)]">
-                  Lv{level.level}
+                  {t("game.levelBadge", { level: level.level })}
                 </span>
               )}
               {p.isAI && p.difficulty && (
                 <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--panel-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--muted)]">
-                  Lv{AI_THEORETICAL_LEVEL[p.difficulty]}
+                  {t("game.levelBadge", { level: AI_THEORETICAL_LEVEL[p.difficulty] })}
                 </span>
               )}
               <span className="truncate">
@@ -633,12 +637,18 @@ export default function MultiplayerPlayPage() {
             <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-[var(--heading)]">
-                  Round {rr.round} · {rr.label}
+                  {t("multiplayer.roundSummary.heading", {
+                    round: rr.round,
+                    label: (() => {
+                      const found = CONTRACTS.find((c) => c.round === rr.round);
+                      return found ? contractNeedLabel(found.books, found.runs, tPlural) : rr.label;
+                    })(),
+                  })}
                 </h2>
                 <button
                   onClick={() => setRoundSummaryFor(null)}
                   className="rounded p-0.5 text-sm text-[var(--faint)] hover:text-[var(--muted)]"
-                  aria-label="Dismiss"
+                  aria-label={t("common.dismiss")}
                 >
                   ✕
                 </button>
@@ -647,7 +657,7 @@ export default function MultiplayerPlayPage() {
                 {ranked.map((s) => (
                   <li key={s.seat} className="flex items-center justify-between">
                     <span className="text-[var(--muted)]">
-                      {view.players.find((p) => p.seat === s.seat)?.name ?? `Seat ${s.seat}`}
+                      {view.players.find((p) => p.seat === s.seat)?.name ?? t("multiplayer.seatN", { seat: s.seat })}
                     </span>
                     <span className="text-[var(--heading)]">
                       +{s.penalty} <span className="text-[var(--faint)]">({s.cumulative})</span>
@@ -656,7 +666,7 @@ export default function MultiplayerPlayPage() {
                 ))}
               </ul>
               <p className="mt-2 text-xs text-[var(--faint)]">
-                Round {rr.round + 1} is underway — take your turn below when it&apos;s yours.
+                {t("multiplayer.roundSummary.nextRound", { round: rr.round + 1 })}
               </p>
             </section>
           );
@@ -665,7 +675,9 @@ export default function MultiplayerPlayPage() {
       {!isMyTurn ? (
         <div className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">
           <p>
-            Waiting for <strong className="text-[var(--heading)]">{currentName}</strong> to take their turn.
+            {t("multiplayer.waitingForTurn.prefix")}{" "}
+            <strong className="text-[var(--heading)]">{currentName}</strong>{" "}
+            {t("multiplayer.waitingForTurn.suffix")}
           </p>
           {view.currentUserId && view.currentUserId !== user?.id && (
             <button
@@ -674,22 +686,21 @@ export default function MultiplayerPlayPage() {
               className="mt-2 rounded-md border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel)] disabled:opacity-60"
             >
               {g.nudgeState === "sent"
-                ? "Nudged 👍"
+                ? t("multiplayer.nudged")
                 : g.nudgeState === "error"
-                  ? "Can't nudge yet"
-                  : `Nudge ${currentName}`}
+                  ? t("multiplayer.cantNudgeYet")
+                  : t("multiplayer.nudgeName", { name: currentName })}
             </button>
           )}
           {g.daysSinceMove != null && g.daysSinceMove >= 14 && (
             <p className="mt-1 text-xs text-[var(--faint)]">
-              No moves in {g.daysSinceMove} days. If this game&apos;s been abandoned, use “Resign” above
-              to end it.
+              {t("multiplayer.abandonedNotice", { days: g.daysSinceMove })}
             </p>
           )}
         </div>
       ) : !drawn ? (
         <p className="rounded-lg bg-[var(--accent)]/10 px-4 py-3 text-center text-sm font-medium text-[var(--accent)]">
-          Your turn — draw a card to start.
+          {t("multiplayer.yourTurnDraw")}
         </p>
       ) : null}
 
@@ -699,29 +710,29 @@ export default function MultiplayerPlayPage() {
             disabled={!isMyTurn || drawn || g.busy}
             onClick={() => g.draw("stock")}
             className="disabled:opacity-50"
-            aria-label="Draw from the pile"
+            aria-label={t("game.drawFromPile")}
           >
             <DrawPile count={view.drawPileCount} />
           </button>
-          <span className="text-xs text-[var(--faint)]">Draw ({view.drawPileCount})</span>
+          <span className="text-xs text-[var(--faint)]">{t("game.draw", { count: view.drawPileCount })}</span>
         </div>
         <div className="flex flex-col items-center gap-1">
           <button
             disabled={!isMyTurn || drawn || g.busy || !view.discardTop}
             onClick={() => g.draw("discard")}
             className="disabled:opacity-50"
-            aria-label="Take the top of the discard pile"
+            aria-label={t("multiplayer.takeDiscardTop")}
           >
             <DiscardPile cards={view.discardPile} canLayOff={discardTopCanLayOff} />
           </button>
-          <span className="text-xs text-[var(--faint)]">Discard pile</span>
+          <span className="text-xs text-[var(--faint)]">{t("game.discardPile")}</span>
         </div>
       </section>
 
       <section ref={tableMeldsElRef} className="rounded-xl bg-[var(--panel-soft)] p-4">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Table melds</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("game.tableMelds.heading")}</h2>
         {view.melds.length === 0 ? (
-          <p className="text-sm text-[var(--faint)]">Nothing melded yet this round.</p>
+          <p className="text-sm text-[var(--faint)]">{t("multiplayer.noMeldsThisRound")}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {meldsByOwner.map(([ownerId, melds]) => (
@@ -774,17 +785,17 @@ export default function MultiplayerPlayPage() {
             ref={handDrawerRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Manage your hand"
+            aria-label={t("game.manageHand")}
             tabIndex={-1}
             className="fixed inset-x-0 bottom-0 z-[46] mx-auto flex max-h-[85vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl outline-none"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[var(--heading)]">Manage your hand</h2>
+              <h2 className="text-sm font-semibold text-[var(--heading)]">{t("game.manageHand")}</h2>
               <button
                 onClick={() => setHandDrawerOpen(false)}
                 className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
               >
-                Done
+                {t("common.done")}
               </button>
             </div>
 
@@ -815,11 +826,11 @@ export default function MultiplayerPlayPage() {
                 className="panel-elevated flex flex-col items-center gap-3 rounded-xl bg-[var(--panel-soft)] p-4 text-center"
               >
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                  Build your meld — this round needs {contractNeedLabel(view.contract.books, view.contract.runs)}
+                  {t("game.buildMeld.heading", { need: contractNeedLabel(view.contract.books, view.contract.runs, tPlural) })}
                 </h2>
 
                 {!drawn && (
-                  <p className="text-xs text-[var(--accent)]">Draw a card first to start your turn.</p>
+                  <p className="text-xs text-[var(--accent)]">{t("multiplayer.drawFirst")}</p>
                 )}
 
                 {g.draft.groups.length > 0 && (
@@ -830,7 +841,7 @@ export default function MultiplayerPlayPage() {
                         className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] p-2"
                       >
                         <span className="w-12 shrink-0 text-xs font-semibold capitalize text-[var(--accent)]">
-                          {grp.type}
+                          {grp.type === "book" ? t("game.meld.book") : t("game.meld.run")}
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {grp.cardIds
@@ -842,7 +853,7 @@ export default function MultiplayerPlayPage() {
                           onClick={() => g.unstageGroup(grp.id)}
                           className="ml-auto text-xs text-[var(--danger)] hover:opacity-80"
                         >
-                          Remove
+                          {t("common.remove")}
                         </button>
                       </div>
                     ))}
@@ -857,7 +868,7 @@ export default function MultiplayerPlayPage() {
                     disabled={!drawn || g.selectedIds.length === 0}
                     className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Group selected cards
+                    {t("game.buildMeld.groupSelected")}
                   </button>
                 </div>
               </section>
@@ -868,7 +879,12 @@ export default function MultiplayerPlayPage() {
                 {!alreadyMelded && g.draft.groups.length > 0 && (
                   <p className="text-xs text-[var(--faint)]">
                     <span className={contractStaged ? "text-[var(--accent)]" : undefined}>
-                      Contract: {stagedBooks}/{view.contract.books} books · {stagedRuns}/{view.contract.runs} runs
+                      {t("multiplayer.contractStatus", {
+                        stagedBooks,
+                        books: view.contract.books,
+                        stagedRuns,
+                        runs: view.contract.runs,
+                      })}
                       {contractStaged ? " ✓" : ""}
                     </span>
                   </p>
@@ -883,7 +899,7 @@ export default function MultiplayerPlayPage() {
                             onClick={() => g.unstageLayoff(lo.cardId)}
                             className="rounded-md border border-[var(--accent)]/50 px-2 py-1 text-xs text-[var(--accent)]"
                           >
-                            {c ? label(c) : "card"} ✕
+                            {c ? label(c, t("card.jokerAbbr")) : t("multiplayer.card")} ✕
                           </button>
                         </li>
                       );
@@ -894,8 +910,9 @@ export default function MultiplayerPlayPage() {
                 {confirmingDiscard ? (
                   <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
                     <span className="text-sm text-[var(--muted)]">
-                      Discard the {label(view.yourHand.find((c) => c.id === confirmingDiscard)!)} and end your
-                      turn?
+                      {t("game.discard.confirmPrompt", {
+                        card: label(view.yourHand.find((c) => c.id === confirmingDiscard)!, t("card.jokerAbbr")),
+                      })}
                     </span>
                     <button
                       onClick={async () => {
@@ -908,13 +925,13 @@ export default function MultiplayerPlayPage() {
                       disabled={g.busy}
                       className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] shadow disabled:opacity-40"
                     >
-                      {g.busy ? "…" : "Confirm"}
+                      {g.busy ? "…" : t("common.confirm")}
                     </button>
                     <button
                       onClick={() => setConfirmingDiscard(null)}
                       className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                 ) : (
@@ -925,7 +942,7 @@ export default function MultiplayerPlayPage() {
                         disabled={!drawn || !oneSelected || layoffTargets.length === 0}
                         className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Lay off card
+                        {tPlural("game.discard.layOffCard", 1)}
                       </button>
                     )}
                     {!goingOut && (
@@ -934,7 +951,7 @@ export default function MultiplayerPlayPage() {
                         disabled={!drawn || !oneSelected}
                         className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Discard selected card
+                        {t("game.discard.discardSelected")}
                       </button>
                     )}
                     {goingOut && (
@@ -943,7 +960,7 @@ export default function MultiplayerPlayPage() {
                         disabled={!canEndTurn}
                         className="rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {g.busy ? "…" : "Go out"}
+                        {g.busy ? "…" : t("multiplayer.goOut")}
                       </button>
                     )}
                   </div>
@@ -954,16 +971,16 @@ export default function MultiplayerPlayPage() {
             <section data-tutorial="hand">
               <div className="mb-2 flex flex-col items-center gap-2 text-center">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
-                  Your hand
+                  {t("game.hand.yourHand")}
                   <span className="ml-2 font-normal normal-case text-[var(--muted)]">
-                    ({handPenalty(orderedVisibleHand)} pts)
+                    ({t("game.hand.pts", { count: handPenalty(orderedVisibleHand) })})
                   </span>
-                  {alreadyMelded && <span className="ml-2 text-[var(--accent)]">— contract melded</span>}
+                  {alreadyMelded && <span className="ml-2 text-[var(--accent)]">{t("game.hand.contractMelded")}</span>}
                 </h2>
                 <HandSortButtons onSort={sortHand} />
               </div>
               {orderedVisibleHand.length === 0 ? (
-                <p className="text-sm text-[var(--faint)]">Your hand is empty — end your turn to go out.</p>
+                <p className="text-sm text-[var(--faint)]">{t("multiplayer.handEmpty")}</p>
               ) : (
                 <DraggableHand
                   key={`${view.round}-${view.yourSeat}`}
@@ -979,7 +996,7 @@ export default function MultiplayerPlayPage() {
                   }
                 />
               )}
-              <p className="mt-1 text-center text-xs text-[var(--faint)]">Drag a card to reorder your hand.</p>
+              <p className="mt-1 text-center text-xs text-[var(--faint)]">{t("game.hand.dragToReorder")}</p>
             </section>
           </div>
         </>
