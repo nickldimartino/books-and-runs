@@ -311,6 +311,11 @@ const ru = {
   "multiplayer.contractStatus": "Контракт: {stagedBooks}/{books} сетов · {stagedRuns}/{runs} стритов",
   "multiplayer.card": "карта",
   "multiplayer.goOut": "Выйти",
+  "multiplayer.meldAndDiscard": "Выложить и сбросить",
+  "multiplayer.contractReadyHint": "Контракт готов. Выберите карту для сброса и нажмите «Выложить и сбросить» — выкладка и сброс отправляются вместе и завершают ваш ход.",
+  "multiplayer.meldConfirmPrompt": "Выложить комбинацию и сбросить {card}?",
+  "multiplayer.stagedIncomplete": "Подготовленные группы пока не выполняют контракт этого раунда. Добавьте или уберите группы перед сбросом.",
+  "multiplayer.syncError": "Не удалось обновить — показано последнее известное состояние игры.",
   "multiplayer.handEmpty": "Твоя рука пуста — заверши ход, чтобы выйти.",
 
   "common.close": "Закрыть",

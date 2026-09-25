@@ -19,10 +19,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { usePlayerLevel } from "../../PlayerLevelContext";
 import { BackLink } from "../../components/BackLink";
+import { CardFlightLayer, type CardFlightHandle } from "../../components/CardFlightLayer";
 import { DraggableHand } from "../../components/DraggableHand";
 import { HandPreviewBar } from "../../components/HandPreviewBar";
 import { HandSortButtons } from "../../components/HandSortButtons";
@@ -37,8 +38,8 @@ import { UnlockToast } from "../../components/UnlockToast";
 import { useMpGame } from "../../lib/useMpGame";
 import { AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
-import { contractNeedLabel } from "../../lib/contractDisplay";
-import { applyHandOrder, compareByMode, SortMode } from "../../lib/handSort";
+import { contractNeedLabel, wildStandInLabel } from "../../lib/contractDisplay";
+import { applyHandOrder, compareByMode, mergeVisibleOrder, SortMode } from "../../lib/handSort";
 import { useT } from "../../lib/i18n/LocaleProvider";
 import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
 import { getMpParticipantUserIds } from "../../lib/mpStore";
@@ -206,6 +207,110 @@ export default function MultiplayerPlayPage() {
     () => (view ? [...view.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore) : []),
     [view]
   );
+
+  // Everything derived from the view below is memoised on the (now
+  // structurally shared — see useMpGame's reconcile) view/hand identities, so
+  // a refresh that changed nothing re-renders nothing of substance: no new
+  // arrays for OpponentStrip/DraggableHand to diff, no new Set for the
+  // lay-off badges.
+  const opponentPlayers = useMemo(() => (view ? stripPlayers(view) : []), [view]);
+  const visibleHandCards = g.visibleHand;
+  const orderedVisibleHand = useMemo(
+    () => applyHandOrder(visibleHandCards, handOrder),
+    [visibleHandCards, handOrder]
+  );
+  const yourMelds = view?.melds;
+  const meldedAlready = !!view?.players.find((p) => p.userId === user?.id)?.hasMeldedContract;
+  const canLayOffNow = meldedAlready || g.draft.groups.length > 0;
+  const layoffEligibleIds = useMemo(() => {
+    if (!canLayOffNow || !yourMelds) return undefined;
+    return new Set(
+      orderedVisibleHand.filter((c) => yourMelds.some((m) => layOffOptions(c, m).length > 0)).map((c) => c.id)
+    );
+  }, [canLayOffNow, orderedVisibleHand, yourMelds]);
+  const { toggleCard } = g;
+  const onCardTap = useCallback((card: Card) => toggleCard(card.id), [toggleCard]);
+  const noopTap = useCallback(() => {}, []);
+
+  // Card-flight overlay — the same draw / discard / meld cues solo has (see
+  // game/page.tsx). Your own moves come from useMpGame's flightEvent; an
+  // opponent's discard is inferred below from the discard pile's top card
+  // changing under you. Purely cosmetic and best-effort (a missing anchor or
+  // reduced-motion just means no flight).
+  const cardFlightRef = useRef<CardFlightHandle>(null);
+  const drawPileElRef = useRef<HTMLElement | null>(null);
+  const discardPileElRef = useRef<HTMLElement | null>(null);
+  const opponentAnchorRef = useRef<HTMLDivElement | null>(null);
+  const lastFlightIdRef = useRef(0);
+  const ownDiscardIdRef = useRef<string | null>(null);
+  const { flightEvent } = g;
+  useEffect(() => {
+    if (!flightEvent || flightEvent.id === lastFlightIdRef.current) return;
+    lastFlightIdRef.current = flightEvent.id;
+    const fl = cardFlightRef.current;
+    const handTarget: HTMLElement | null = handDrawerOpen
+      ? document.querySelector('[data-tutorial="hand"]')
+      : document.querySelector('[data-tutorial="hand-bar"]');
+    if (flightEvent.kind === "draw") {
+      fl?.fly([
+        {
+          card: flightEvent.card,
+          from: flightEvent.fromDiscard ? discardPileElRef.current : drawPileElRef.current,
+          to: handTarget,
+          faceDown: !flightEvent.fromDiscard,
+        },
+      ]);
+      return;
+    }
+    ownDiscardIdRef.current = flightEvent.discard?.id ?? null;
+    const handRect = document.querySelector('[data-tutorial="hand"]')?.getBoundingClientRect() ?? null;
+    if (flightEvent.discard) {
+      fl?.fly([{ card: flightEvent.discard, from: handTarget, to: discardPileElRef.current }]);
+    }
+    if (flightEvent.melded.length > 0) {
+      // Same as solo: close the drawer so the fresh melds are visible, then
+      // fly the cards onto Table melds once that layout has settled.
+      setHandDrawerOpen(false);
+      const cards = flightEvent.melded;
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const section = tableMeldsElRef.current;
+          let dest: HTMLElement | DOMRect | null = section;
+          if (section && window.innerWidth < 640) {
+            const r = section.getBoundingClientRect();
+            const y = Math.max(90, Math.min(r.top + 24, window.innerHeight - 130));
+            dest = new DOMRect(r.left, y, r.width, 44);
+          }
+          cardFlightRef.current?.fly(cards.map((c, i) => ({ card: c, from: handRect, to: dest, delay: i * 55 })));
+        })
+      );
+    }
+    for (const lo of flightEvent.layoffs) {
+      const meldEl = document.querySelector<HTMLElement>(`[data-meld-id="${lo.meldId}"]`) ?? tableMeldsElRef.current;
+      fl?.fly([{ card: lo.card, from: handTarget, to: meldEl }]);
+    }
+  }, [flightEvent, handDrawerOpen]);
+
+  const discardTopId = view?.discardTop?.id ?? null;
+  const prevDiscardTopRef = useRef<{ id: string | null; round: number | null } | null>(null);
+  const opponentDiscardTop = view?.discardTop ?? null;
+  const currentRound = view?.round ?? null;
+  useEffect(() => {
+    const prev = prevDiscardTopRef.current;
+    prevDiscardTopRef.current = { id: discardTopId, round: currentRound };
+    // Skip the first paint, an unchanged top, and a fresh deal's new pile.
+    if (!prev || prev.id === null || prev.round !== currentRound) return;
+    if (!opponentDiscardTop || prev.id === discardTopId) return;
+    if (ownDiscardIdRef.current === discardTopId) {
+      ownDiscardIdRef.current = null; // already animated as your own discard
+      return;
+    }
+    cardFlightRef.current?.fly([
+      { card: opponentDiscardTop, from: opponentAnchorRef.current, to: discardPileElRef.current },
+    ]);
+    // `opponentDiscardTop` is derived from discardTopId — keyed on the id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discardTopId, currentRound]);
 
   // Reset the armed-layoff mode and any pending discard confirmation
   // whenever the turn context changes — both are per-turn transient UI
@@ -491,12 +596,13 @@ export default function MultiplayerPlayPage() {
   const drawn = g.youHaveDrawn;
   const acting = isMyTurn && drawn;
   const alreadyMelded = !!me?.hasMeldedContract;
-  const canLayOff = alreadyMelded || g.draft.groups.length > 0;
+  const canLayOff = canLayOffNow;
 
-  const stagedBooks = g.draft.groups.filter((x) => x.type === "book").length;
-  const stagedRuns = g.draft.groups.filter((x) => x.type === "run").length;
-  const contractStaged =
-    !alreadyMelded && g.draft.groups.length > 0 && stagedBooks === view.contract.books && stagedRuns === view.contract.runs;
+  const { stagedBooks, stagedRuns, contractStaged } = g;
+  // Groups are staged but they aren't (yet) exactly this round's contract:
+  // committing now would only be refused by the server, so the discard step
+  // is held back and the player is told why.
+  const stagedIncomplete = !alreadyMelded && g.draft.groups.length > 0 && !contractStaged;
   const goingOut = g.visibleHand.length === 0 && (alreadyMelded || contractStaged);
   // The only remaining caller of this is the "Go out" button — a normal
   // turn now ends through the discard-confirm dialog's own commitTurn call
@@ -518,11 +624,17 @@ export default function MultiplayerPlayPage() {
   const meldsByOwner = groupMeldsByOwner(view.melds);
 
   // Same purely-local sort/reorder as game/page.tsx's hand drawer — see
-  // handOrder's own doc for why this never reaches the server.
-  const orderedVisibleHand = applyHandOrder(g.visibleHand, handOrder);
-
+  // handOrder's own doc for why this never reaches the server. Both work on
+  // the *whole* hand's order, not just what's visible: cards staged into a
+  // meld are hidden right now but must come back into their sorted /
+  // dragged-to slot when unstaged, not jump to the server's ordering.
   function sortHand(mode: SortMode) {
-    setHandOrder([...g.visibleHand].sort(compareByMode(mode)).map((c) => c.id));
+    setHandOrder([...view!.yourHand].sort(compareByMode(mode)).map((c) => c.id));
+  }
+
+  function reorderHand(visibleOrder: string[]) {
+    const fullIds = applyHandOrder(view!.yourHand, handOrder).map((c) => c.id);
+    setHandOrder(mergeVisibleOrder(fullIds, visibleOrder));
   }
 
   function onMeldClick(meld: Meld) {
@@ -616,17 +728,30 @@ export default function MultiplayerPlayPage() {
         </ul>
       </header>
 
-      <OpponentStrip
-        players={stripPlayers(view)}
-        currentPlayerIndex={view.currentSeat}
-        discardHistory={view.discardHistory}
-        pickupHistory={view.pickupHistory}
-        aiStatus={null}
-        aiThinking={false}
-        bios={bioBySeatId}
-      />
+      <div ref={opponentAnchorRef}>
+        <OpponentStrip
+          players={opponentPlayers}
+          currentPlayerIndex={view.currentSeat}
+          discardHistory={view.discardHistory}
+          pickupHistory={view.pickupHistory}
+          aiStatus={null}
+          aiThinking={false}
+          bios={bioBySeatId}
+        />
+      </div>
 
-      {g.error && <p className="text-sm text-[var(--danger)]">{g.error}</p>}
+      {g.syncFailed && (
+        <p className="text-center text-xs text-[var(--faint)]">{t("multiplayer.syncError")}</p>
+      )}
+
+      {/* While the hand drawer is open its own copy of this (below) is the
+          one you can actually see — this one sits behind the drawer's
+          backdrop, which is where a rejected meld used to vanish. */}
+      {g.error && !handDrawerOpen && (
+        <p role="alert" className="text-sm text-[var(--danger)]">
+          {g.error}
+        </p>
+      )}
 
       {roundSummaryFor != null &&
         (() => {
@@ -707,6 +832,9 @@ export default function MultiplayerPlayPage() {
       <section className="flex items-start justify-center gap-8">
         <div className="flex flex-col items-center gap-1">
           <button
+            ref={(el) => {
+              drawPileElRef.current = el;
+            }}
             disabled={!isMyTurn || drawn || g.busy}
             onClick={() => g.draw("stock")}
             className="disabled:opacity-50"
@@ -718,6 +846,9 @@ export default function MultiplayerPlayPage() {
         </div>
         <div className="flex flex-col items-center gap-1">
           <button
+            ref={(el) => {
+              discardPileElRef.current = el;
+            }}
             disabled={!isMyTurn || drawn || g.busy || !view.discardTop}
             onClick={() => g.draw("discard")}
             className="disabled:opacity-50"
@@ -799,6 +930,18 @@ export default function MultiplayerPlayPage() {
               </button>
             </div>
 
+            {g.error && (
+              <div
+                role="alert"
+                className="flex items-start justify-between gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]"
+              >
+                <span>{g.error}</span>
+                <button onClick={g.dismissError} aria-label={t("common.dismiss")} className="shrink-0 text-xs opacity-80 hover:opacity-100">
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Always rendered whenever it's your turn — matching solo's
                 buildMeldSection/discardSection (see game/page.tsx), which
                 stay mounted and only disable individual buttons rather than
@@ -860,12 +1003,37 @@ export default function MultiplayerPlayPage() {
                   </div>
                 )}
 
+                {g.pendingRunChoice && (
+                  <div className="flex w-full flex-col items-center gap-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--panel)] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+                      {t("game.buildMeld.wildPrompt")}
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      {g.pendingRunChoice.options.map((start) => (
+                        <button
+                          key={start}
+                          onClick={() => g.chooseRunStart(start)}
+                          className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] hover:bg-[var(--panel-soft)]"
+                        >
+                          {wildStandInLabel(g.pendingRunChoice!.cards, g.contract!, start, t("card.jokerAbbr"))}
+                        </button>
+                      ))}
+                      <button
+                        onClick={g.cancelRunChoice}
+                        className="text-sm text-[var(--faint)] hover:text-[var(--muted)]"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {g.groupError && <p className="text-xs text-[var(--danger)]">{g.groupError}</p>}
 
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     onClick={() => g.stageGroup()}
-                    disabled={!drawn || g.selectedIds.length === 0}
+                    disabled={!drawn || g.selectedIds.length === 0 || !!g.pendingRunChoice}
                     className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {t("game.buildMeld.groupSelected")}
@@ -889,6 +1057,17 @@ export default function MultiplayerPlayPage() {
                     </span>
                   </p>
                 )}
+                {acting && contractStaged && !goingOut && (
+                  <p
+                    data-testid="contract-ready-hint"
+                    className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-center text-xs font-medium text-[var(--heading)]"
+                  >
+                    {t("multiplayer.contractReadyHint")}
+                  </p>
+                )}
+                {acting && stagedIncomplete && (
+                  <p className="text-center text-xs text-[var(--danger)]">{t("multiplayer.stagedIncomplete")}</p>
+                )}
                 {g.draft.layoffs.length > 0 && (
                   <ul className="flex flex-wrap justify-center gap-2">
                     {g.draft.layoffs.map((lo) => {
@@ -910,7 +1089,7 @@ export default function MultiplayerPlayPage() {
                 {confirmingDiscard ? (
                   <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-[var(--panel-soft)] px-4 py-2">
                     <span className="text-sm text-[var(--muted)]">
-                      {t("game.discard.confirmPrompt", {
+                      {t(contractStaged ? "multiplayer.meldConfirmPrompt" : "game.discard.confirmPrompt", {
                         card: label(view.yourHand.find((c) => c.id === confirmingDiscard)!, t("card.jokerAbbr")),
                       })}
                     </span>
@@ -948,10 +1127,14 @@ export default function MultiplayerPlayPage() {
                     {!goingOut && (
                       <button
                         onClick={() => oneSelected && setConfirmingDiscard(g.selectedIds[0])}
-                        disabled={!drawn || !oneSelected}
-                        className="rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={!drawn || !oneSelected || stagedIncomplete}
+                        className={
+                          contractStaged
+                            ? "rounded-lg bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--on-accent)] shadow disabled:cursor-not-allowed disabled:opacity-40"
+                            : "rounded-lg border border-[var(--accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--heading)] disabled:cursor-not-allowed disabled:opacity-40"
+                        }
                       >
-                        {t("game.discard.discardSelected")}
+                        {contractStaged ? t("multiplayer.meldAndDiscard") : t("game.discard.discardSelected")}
                       </button>
                     )}
                     {goingOut && (
@@ -986,14 +1169,10 @@ export default function MultiplayerPlayPage() {
                   key={`${view.round}-${view.yourSeat}`}
                   cards={orderedVisibleHand}
                   selectedCardIds={g.selectedIds}
-                  lastDrawnCardId={null}
-                  onCardClick={acting ? (card) => g.toggleCard(card.id) : () => {}}
-                  onReorder={setHandOrder}
-                  layoffEligibleIds={
-                    canLayOff
-                      ? new Set(orderedVisibleHand.filter((c) => view.melds.some((m) => layOffOptions(c, m).length > 0)).map((c) => c.id))
-                      : undefined
-                  }
+                  lastDrawnCardId={g.lastDrawnCardId}
+                  onCardClick={acting ? onCardTap : noopTap}
+                  onReorder={reorderHand}
+                  layoffEligibleIds={layoffEligibleIds}
                 />
               )}
               <p className="mt-1 text-center text-xs text-[var(--faint)]">{t("game.hand.dragToReorder")}</p>
@@ -1002,6 +1181,7 @@ export default function MultiplayerPlayPage() {
         </>
       )}
       <div aria-hidden="true" className="h-20 md:h-28" />
+      <CardFlightLayer ref={cardFlightRef} />
     </main>
   );
 }

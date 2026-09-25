@@ -19,7 +19,7 @@ const RANK_ORDER = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
 const SUIT_ORDER = ["hearts", "spades", "diamonds", "clubs", "joker"];
 
 /** Groups same-suit cards together, in sequence — good for spotting runs. */
-export function compareBySuit(a: Card, b: Card): number {
+function compareBySuit(a: Card, b: Card): number {
   if (a.isWild !== b.isWild) return a.isWild ? 1 : -1;
   const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
   if (suitDiff !== 0) return suitDiff;
@@ -54,4 +54,18 @@ export function applyHandOrder(cards: Card[], order: string[] | null): Card[] {
     .sort((a, b) => orderIndex.get(a.id)! - orderIndex.get(b.id)!);
   let i = 0;
   return cards.map((c) => (orderIndex.has(c.id) ? reordered[i++] : c));
+}
+
+/**
+ * Folds a reorder of only the *visible* cards (the drawer hides anything
+ * staged into a meld/discard) back into a full-hand order. Every slot a
+ * visible card occupied in `fullIds` is refilled, in sequence, from
+ * `visibleOrder`; hidden (staged) cards keep their exact slots — so when one
+ * is unstaged it returns to where it was instead of jumping to wherever the
+ * server happens to list it.
+ */
+export function mergeVisibleOrder(fullIds: string[], visibleOrder: string[]): string[] {
+  const visible = new Set(visibleOrder);
+  let i = 0;
+  return fullIds.map((id) => (visible.has(id) ? visibleOrder[i++] : id));
 }

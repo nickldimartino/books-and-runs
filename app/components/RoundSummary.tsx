@@ -19,6 +19,7 @@ import { useAuth } from "../AuthContext";
 import { AchievementUnlockCard, AchievementUnlockItem } from "./AchievementUnlock";
 import { useGame } from "../GameContext";
 import { useT } from "../lib/i18n/LocaleProvider";
+import { diffAchievementProgress, estimateProgress } from "../lib/achievementUnlockDiff";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { playAchievementUnlock, playLevelUp } from "../lib/sound";
 import { supabase } from "../lib/supabaseClient";
@@ -92,31 +93,15 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
       }
       if (!before) return;
 
-      const estimatedCounters = { ...before.counters };
-      for (const [key, delta] of Object.entries(sessionDeltas)) {
-        estimatedCounters[key] = (estimatedCounters[key] ?? 0) + delta;
-      }
-      const after: AchievementProgressState = { ...before, counters: estimatedCounters };
-
-      const didLevelUp = levelProgress(after).level > levelProgress(before).level;
-      if (didLevelUp) setLeveledUpTo(levelProgress(after).level);
-
-      const beforeUnlocked = new Set(
-        allAchievements(before)
-          .filter((a) => a.unlocked)
-          .map((a) => `${a.familyId}:${a.tier}`)
-      );
-      const newly = allAchievements(after).filter(
-        (a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`)
-      );
-      if (newly.length > 0) {
-        setUnlockedAchievements(newly.map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] })));
-      }
+      const diff = diffAchievementProgress(before, estimateProgress(before, sessionDeltas));
+      if (diff.leveledUpTo !== null) setLeveledUpTo(diff.leveledUpTo);
+      const newly = diff.newlyUnlocked;
+      if (newly.length > 0) setUnlockedAchievements(newly);
       // Same "don't layer two chimes at once" priority GameOverScreen uses
       // for its own overlapping case — a level up already means real
       // progress happened this round, so it takes priority over the
       // smaller achievement ping rather than both firing together.
-      if (didLevelUp) {
+      if (diff.leveledUpTo !== null) {
         playLevelUp();
       } else if (newly.length > 0) {
         playAchievementUnlock();

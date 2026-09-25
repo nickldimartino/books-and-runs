@@ -59,6 +59,7 @@ import {
   syncLeaderboardStats,
 } from "../lib/leaderboardStore";
 import { AI_THEORETICAL_LEVEL } from "../lib/aiPersonas";
+import { diffAchievementProgress } from "../lib/achievementUnlockDiff";
 import { loadAchievementProgressState } from "../lib/loadAchievementProgress";
 import { renderShareCard } from "../lib/shareCard";
 import { removePendingSave, setActiveForegroundGame, upsertPendingSave } from "../lib/pendingSaveQueue";
@@ -279,17 +280,12 @@ export function GameOverScreen({ state }: { state: GameState }) {
       if ((achievementBonus > 0 || didLevelUp) && beforeAchievementsRef.current) {
         try {
           const afterProgress = await loadAchievementProgressState(supabase, user.id);
-          const beforeUnlocked = new Set(
-            allAchievements(beforeAchievementsRef.current)
-              .filter((a) => a.unlocked)
-              .map((a) => `${a.familyId}:${a.tier}`)
-          );
-          unlockedItems = allAchievements(afterProgress)
-            .filter((a) => a.unlocked && !beforeUnlocked.has(`${a.familyId}:${a.tier}`))
-            .map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] }));
-          setNewlyUnlockedCosmetics(
-            diffNewlyUnlockedCosmetics(beforeLevel, beforeAchievementsRef.current, after.level, afterProgress)
-          );
+          const diff = diffAchievementProgress(beforeAchievementsRef.current, afterProgress, {
+            before: beforeLevel,
+            after: after.level,
+          });
+          unlockedItems = diff.newlyUnlocked;
+          setNewlyUnlockedCosmetics(diff.newCosmetics);
         } catch (err) {
           console.error("Failed to determine which achievements this game unlocked:", err);
         }

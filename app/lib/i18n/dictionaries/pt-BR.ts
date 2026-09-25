@@ -293,6 +293,11 @@ const ptBR = {
   "multiplayer.contractStatus": "Contrato: {stagedBooks}/{books} trincas · {stagedRuns}/{runs} sequências",
   "multiplayer.card": "carta",
   "multiplayer.goOut": "Bater",
+  "multiplayer.meldAndDiscard": "Baixar e descartar",
+  "multiplayer.contractReadyHint": "Seu contrato está pronto. Escolha uma carta para descartar e toque em Baixar e descartar — a baixada e o descarte são enviados juntos e encerram sua vez.",
+  "multiplayer.meldConfirmPrompt": "Baixar sua combinação e descartar {card}?",
+  "multiplayer.stagedIncomplete": "Seus grupos preparados ainda não cumprem o contrato desta rodada. Adicione ou remova grupos antes de descartar.",
+  "multiplayer.syncError": "Não foi possível atualizar — mostrando o último estado conhecido do jogo.",
   "multiplayer.handEmpty": "Sua mão está vazia — encerre seu turno para bater.",
 
   "common.close": "Fechar",

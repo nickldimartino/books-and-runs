@@ -31,7 +31,7 @@ import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { UndoRing } from "../components/UndoRing";
 import { LoadingSpinner } from "../components/LoadingSpinner";
-import { contractNeedLabel } from "../lib/contractDisplay";
+import { contractNeedLabel, wildStandInLabel } from "../lib/contractDisplay";
 import { markGameStarted } from "../lib/firstSessionStore";
 import { useT, type Vars } from "../lib/i18n/LocaleProvider";
 import type { TranslationKey } from "../lib/i18n/keys";
@@ -84,25 +84,6 @@ interface PendingGroupChoice {
   cards: Card[];
   cardIds: string[];
   options: number[];
-}
-
-/** For one candidate run window, which rank(s) a wild in this selection
- * would stand in for — e.g. "2" or "6" for the two ways naturals 3-4-5 plus
- * one wild could resolve. Uses wildCardIds rather than comparing a card's
- * own rank to its slot's rank — a 2 standing in for a *different* suit's
- * "2" slot has a rank that happens to match its slot anyway, which a naive
- * comparison would misread as "natural, not a stand-in." */
-function wildStandInLabel(cards: Card[], contract: ContractRequirement, start: number, jokerAbbr: string): string {
-  const result = validateManualGroup(cards, contract, start);
-  if (!result.orderedCards || !result.wildCardIds) return String(start);
-  const ranks: string[] = [];
-  result.orderedCards.forEach((c, i) => {
-    if (result.wildCardIds!.has(c.id)) {
-      const expected = RUN_ORDER[start + i];
-      ranks.push(expected === "JOKER" ? jokerAbbr : expected);
-    }
-  });
-  return ranks.join(", ");
 }
 
 function meldLabel(meld: Meld, t: (key: TranslationKey) => string): string {

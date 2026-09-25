@@ -293,6 +293,11 @@ const fr = {
   "multiplayer.contractStatus": "Contrat : {stagedBooks}/{books} brelans · {stagedRuns}/{runs} suites",
   "multiplayer.card": "carte",
   "multiplayer.goOut": "Sortir",
+  "multiplayer.meldAndDiscard": "Poser & défausser",
+  "multiplayer.contractReadyHint": "Ton contrat est prêt. Choisis une carte à défausser, puis touche Poser & défausser — la pose et la défausse sont envoyées ensemble et terminent ton tour.",
+  "multiplayer.meldConfirmPrompt": "Poser ta combinaison et défausser {card} ?",
+  "multiplayer.stagedIncomplete": "Tes groupes préparés ne remplissent pas encore le contrat de cette manche. Ajoute ou retire des groupes avant de défausser.",
+  "multiplayer.syncError": "Actualisation impossible — dernier état connu de la partie affiché.",
   "multiplayer.handEmpty": "Ta main est vide — termine ton tour pour sortir.",
 
   "common.close": "Fermer",

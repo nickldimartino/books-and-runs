@@ -307,6 +307,11 @@ const en = {
   "multiplayer.contractStatus": "Contract: {stagedBooks}/{books} books · {stagedRuns}/{runs} runs",
   "multiplayer.card": "card",
   "multiplayer.goOut": "Go out",
+  "multiplayer.meldAndDiscard": "Meld & discard",
+  "multiplayer.contractReadyHint": "Your contract is staged. Choose one card to discard, then Meld & discard — your meld and discard are sent together and end your turn.",
+  "multiplayer.meldConfirmPrompt": "Lay down your meld and discard {card}?",
+  "multiplayer.stagedIncomplete": "Your staged groups don't match this round's contract yet. Add or remove groups to complete it before discarding.",
+  "multiplayer.syncError": "Couldn't refresh — showing the last known game state.",
   "multiplayer.handEmpty": "Your hand is empty — end your turn to go out.",
 
   "common.close": "Close",

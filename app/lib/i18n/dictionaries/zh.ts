@@ -293,6 +293,11 @@ const zh = {
   "multiplayer.contractStatus": "定约进度：{stagedBooks}/{books} 组同点数 · {stagedRuns}/{runs} 组顺子",
   "multiplayer.card": "张牌",
   "multiplayer.goOut": "出完手牌",
+  "multiplayer.meldAndDiscard": "组牌并弃牌",
+  "multiplayer.contractReadyHint": "你的定约已备好。选择一张要弃的牌，然后点击“组牌并弃牌”——组牌与弃牌会一并提交，并结束你的回合。",
+  "multiplayer.meldConfirmPrompt": "摆出你的牌组并弃掉 {card}？",
+  "multiplayer.stagedIncomplete": "你暂存的牌组还不满足本轮定约。弃牌前请添加或移除牌组。",
+  "multiplayer.syncError": "无法刷新——显示的是最后已知的游戏状态。",
   "multiplayer.handEmpty": "你的手牌已空 — 结束回合以出完手牌。",
 
   "common.close": "关闭",

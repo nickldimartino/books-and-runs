@@ -295,6 +295,11 @@ const it = {
   "multiplayer.contractStatus": "Contratto: {stagedBooks}/{books} tris · {stagedRuns}/{runs} scale",
   "multiplayer.card": "carta",
   "multiplayer.goOut": "Chiudi",
+  "multiplayer.meldAndDiscard": "Cala e scarta",
+  "multiplayer.contractReadyHint": "Il tuo contratto è pronto. Scegli una carta da scartare e tocca Cala e scarta: la calata e lo scarto vengono inviati insieme e concludono il tuo turno.",
+  "multiplayer.meldConfirmPrompt": "Calare la combinazione e scartare {card}?",
+  "multiplayer.stagedIncomplete": "I gruppi preparati non soddisfano ancora il contratto di questo round. Aggiungi o rimuovi gruppi prima di scartare.",
+  "multiplayer.syncError": "Impossibile aggiornare: viene mostrato l'ultimo stato noto della partita.",
   "multiplayer.handEmpty": "La tua mano è vuota — termina il turno per chiudere.",
 
   "common.close": "Chiudi",

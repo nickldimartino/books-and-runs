@@ -358,3 +358,236 @@ describe("useMpGame — nudge, cancel", () => {
     await waitFor(() => expect(result.current.status).toBe("cancelled"));
   });
 });
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+describe("useMpGame — stable, ordered state (multiplayer smoothness)", () => {
+  it("keeps the same view/hand identities when a refresh returns identical content", async () => {
+    installFetch({ state: () => ({ body: { status: "active", view: JSON.parse(JSON.stringify(BASE_VIEW)) } }) });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    const view0 = result.current.view;
+    const hand0 = result.current.visibleHand;
+
+    await act(async () => result.current.refresh());
+    await act(async () => result.current.refresh());
+
+    expect(result.current.view).toBe(view0);
+    expect(result.current.visibleHand).toBe(hand0);
+  });
+
+  it("keeps hand card identities when only another part of the view changes", async () => {
+    let discardTop: Card | null = null;
+    installFetch({
+      state: () => ({
+        body: {
+          status: "active",
+          view: JSON.parse(JSON.stringify({ ...BASE_VIEW, discardTop, discardPile: discardTop ? [discardTop] : [] })),
+        },
+      }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    const hand0 = result.current.view!.yourHand;
+    const firstCard = hand0[0];
+
+    discardTop = card("d9", "9");
+    await act(async () => result.current.refresh());
+    await waitFor(() => expect(result.current.view?.discardTop?.id).toBe("d9"));
+
+    expect(result.current.view!.yourHand).toBe(hand0);
+    expect(result.current.view!.yourHand[0]).toBe(firstCard);
+  });
+
+  it("drops a stale refresh that resolves after your own move's response", async () => {
+    const pre = { ...BASE_VIEW, youHaveDrawn: false };
+    const post = { ...BASE_VIEW, youHaveDrawn: true, yourHand: [...BASE_VIEW.yourHand, card("c9", "Q")] };
+    const slow = deferred<void>();
+    let stateCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const path = String(url).split("/").filter(Boolean).pop()!;
+        if (path === "state") {
+          stateCalls++;
+          if (stateCalls === 2) {
+            // The realtime-triggered refresh: server snapshot from BEFORE the draw, delivered late.
+            await slow.promise;
+            return { ok: true, status: 200, json: async () => ({ status: "active", view: pre }) } as Response;
+          }
+          return { ok: true, status: 200, json: async () => ({ status: "active", view: stateCalls === 1 ? pre : post }) } as Response;
+        }
+        return { ok: true, status: 200, json: async () => ({ status: "active", view: post, drawnCard: { id: "c9" } }) } as Response;
+      })
+    );
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+
+    act(() => result.current.refresh()); // starts, then stalls
+    await act(async () => {
+      await result.current.draw("stock");
+    });
+    expect(result.current.youHaveDrawn).toBe(true);
+    expect(result.current.lastDrawnCardId).toBe("c9");
+
+    await act(async () => {
+      slow.resolve();
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    // The late pre-draw snapshot must not roll the board back (hand loses the
+    // drawn card, draft wiped) — and the re-issued refresh converges on `post`.
+    expect(result.current.youHaveDrawn).toBe(true);
+    expect(result.current.view!.yourHand.map((c) => c.id)).toContain("c9");
+  });
+
+  it("does not wipe a staged draft when an equal refresh lands", async () => {
+    installFetch({ state: () => ({ body: { status: "active", view: JSON.parse(JSON.stringify(BASE_VIEW)) } }) });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    act(() => {
+      result.current.toggleCard("c1");
+      result.current.toggleCard("c2");
+      result.current.toggleCard("c3");
+    });
+    act(() => result.current.stageGroup());
+    expect(result.current.draft.groups).toHaveLength(1);
+
+    await act(async () => result.current.refresh());
+    await act(async () => result.current.refresh());
+
+    expect(result.current.draft.groups).toHaveLength(1);
+    expect(result.current.contractStaged).toBe(true);
+  });
+
+  it("surfaces a rejected commit and keeps it (and the draft) through the reconciling refresh", async () => {
+    installFetch({
+      state: () => ({ body: { status: "active", view: BASE_VIEW } }),
+      move: () => ({ status: 409, body: { error: "that meld doesn't complete this round's contract" } }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    act(() => {
+      result.current.toggleCard("c1");
+      result.current.toggleCard("c2");
+      result.current.toggleCard("c3");
+    });
+    act(() => result.current.stageGroup());
+
+    await act(async () => {
+      await result.current.commitTurn({ discardCardId: "c4" });
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30)); // let the reconcile refresh land
+    });
+
+    expect(result.current.error).toMatch(/complete this round's contract/);
+    expect(result.current.draft.groups).toHaveLength(1);
+    act(() => result.current.dismissError());
+    expect(result.current.error).toBeNull();
+  });
+
+  it("keeps the board up (soft sync error) when a background refresh fails", async () => {
+    let fail = false;
+    installFetch({
+      state: () => (fail ? { status: 500, body: { error: "boom" } } : { body: { status: "active", view: BASE_VIEW } }),
+    });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+
+    fail = true;
+    await act(async () => result.current.refresh());
+    await waitFor(() => expect(result.current.syncFailed).toBe(true));
+    expect(result.current.status).toBe("active");
+    expect(result.current.view).not.toBeNull();
+
+    fail = false;
+    await act(async () => result.current.refresh());
+    await waitFor(() => expect(result.current.syncFailed).toBe(false));
+  });
+
+  it("sends only one move for a rapid double tap", async () => {
+    const gate = deferred<void>();
+    const moves: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const path = String(url).split("/").filter(Boolean).pop()!;
+        if (path === "move") {
+          moves.push(JSON.parse(String(init?.body)));
+          await gate.promise;
+          return { ok: true, status: 200, json: async () => ({ status: "active", view: { ...BASE_VIEW, youHaveDrawn: true }, drawnCard: { id: "c1" } }) } as Response;
+        }
+        return { ok: true, status: 200, json: async () => ({ status: "active", view: { ...BASE_VIEW, youHaveDrawn: false } }) } as Response;
+      })
+    );
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+
+    const first = result.current.draw("stock");
+    const second = result.current.draw("stock");
+    gate.resolve();
+    await act(async () => {
+      await Promise.all([first, second]);
+    });
+    expect(moves).toHaveLength(1);
+  });
+
+  it("asks where an ambiguous run's wild sits, then stages it with that choice", async () => {
+    const view: RedactedView = {
+      ...BASE_VIEW,
+      round: 3,
+      roundLabel: "2 Runs",
+      contract: { books: 0, runs: 2, bookSize: 3, runSize: 4, wholeHandMeld: false },
+      yourHand: [
+        card("r3", "3", "hearts"),
+        card("r4", "4", "hearts"),
+        card("r5", "5", "hearts"),
+        card("w", "2", "clubs"),
+        card("x", "K", "spades"),
+      ],
+    };
+    installFetch({ state: () => ({ body: { status: "active", view } }) });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+
+    act(() => {
+      ["r3", "r4", "r5", "w"].forEach((id) => result.current.toggleCard(id));
+    });
+    act(() => result.current.stageGroup());
+    expect(result.current.draft.groups).toHaveLength(0);
+    expect(result.current.pendingRunChoice?.options.length).toBeGreaterThan(1);
+
+    act(() => result.current.chooseRunStart(result.current.pendingRunChoice!.options[0]));
+    expect(result.current.pendingRunChoice).toBeNull();
+    expect(result.current.draft.groups).toHaveLength(1);
+    expect(result.current.draft.groups[0].runStartIndex).toBeTypeOf("number");
+  });
+
+  it("recognises the reported hand (J,J,J + 8,8,wild-2) as a complete 2-book contract", async () => {
+    const view: RedactedView = {
+      ...BASE_VIEW,
+      contract: { books: 2, runs: 0, bookSize: 3, runSize: 4, wholeHandMeld: false },
+      yourHand: [
+        card("j1", "J", "hearts"), card("j2", "J", "spades"), card("j3", "J", "clubs"),
+        card("e1", "8", "hearts"), card("e2", "8", "diamonds"), card("w1", "2", "spades"),
+        card("k1", "K", "spades"),
+      ],
+    };
+    installFetch({ state: () => ({ body: { status: "active", view } }) });
+    const { result } = renderHook(() => useMpGame("game-1"));
+    await waitFor(() => expect(result.current.status).toBe("active"));
+    act(() => ["j1", "j2", "j3"].forEach((id) => result.current.toggleCard(id)));
+    act(() => result.current.stageGroup());
+    act(() => ["e1", "e2", "w1"].forEach((id) => result.current.toggleCard(id)));
+    act(() => result.current.stageGroup());
+
+    expect(result.current.groupError).toBeNull();
+    expect(result.current.stagedBooks).toBe(2);
+    expect(result.current.contractStaged).toBe(true);
+  });
+});

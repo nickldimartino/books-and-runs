@@ -18,7 +18,8 @@ import { allAchievements, AchievementProgressState } from "@/achievements";
 import { ACHIEVEMENT_TIER_XP, levelProgress } from "@/leveling";
 import { useAuth } from "../AuthContext";
 import type { AchievementUnlockItem } from "../components/AchievementUnlock";
-import { AnyCosmeticOption, diffNewlyUnlockedCosmetics } from "./allCosmetics";
+import type { AnyCosmeticOption } from "./allCosmetics";
+import { diffAchievementProgress } from "./achievementUnlockDiff";
 import { hapticLight, hapticMedium, hapticSuccess } from "../lib/haptics";
 import { playCardTap, playGameWin, playMeld, playRoundWin } from "../lib/sound";
 import {
@@ -35,6 +36,7 @@ import {
 } from "./mpStore";
 import { loadAchievementProgressState } from "./loadAchievementProgress";
 import { parseRedactedView } from "./mpSchema";
+import { shareStructure } from "./structuralShare";
 import { supabase } from "./supabaseClient";
 
 export interface StagedGroup {
@@ -58,11 +60,47 @@ interface Draft {
 
 const EMPTY_DRAFT: Draft = { groups: [], layoffs: [], discardCardId: null };
 
+/** A run whose wild could stand in at more than one spot — the player picks
+ * (same prompt solo shows; see game/page.tsx's pendingGroupChoice). */
+export interface PendingRunChoice {
+  cards: Card[];
+  cardIds: string[];
+  options: number[];
+}
+
+/** A card-flight cue for the board (draw pile -> hand, hand -> discard,
+ * hand -> table), mirroring GameContext's flightEvent for solo. Own moves
+ * only; the page derives opponents' from view changes. */
+export type MpFlightEvent =
+  | { id: number; kind: "draw"; card: Card; fromDiscard: boolean }
+  | { id: number; kind: "commit"; discard: Card | null; melded: Card[]; layoffs: { card: Card; meldId: string }[] };
+
+/** What the server-held state looks like once reconciled: the raw response
+ * plus its validated view, both structurally shared with the previous one so
+ * an unchanged refresh is a no-op for React. */
+interface Held {
+  resp: MpStateResponse;
+  view: RedactedView | null;
+}
+
+function reconcile(prev: Held | null, res: MpStateResponse): Held {
+  const resp = shareStructure(prev?.resp, res);
+  if (prev && resp === prev.resp) return prev;
+  const parsed = resp.view ? parseRedactedView(resp.view) : null;
+  return { resp, view: shareStructure(prev?.view ?? null, parsed) };
+}
+
 export interface UseMpGame {
   status: MpStateResponse["status"] | "loading" | "error";
   view: RedactedView | null;
   pending: MpStateResponse | null; // populated while status === "pending"
   error: string | null;
+  /** Clears a surfaced action error (the play screen shows it inside the
+   * hand drawer too, where the user is when a commit is rejected). */
+  dismissError: () => void;
+  /** A background refresh failed while a game is on screen — the board keeps
+   * showing the last known state; the screen shows a soft notice. */
+  syncFailed: boolean;
   busy: boolean;
 
   myTurn: boolean;
@@ -76,6 +114,18 @@ export interface UseMpGame {
   selectedIds: string[];
   draft: Draft;
   groupError: string | null;
+  /** Set while a staged run needs the player to pick where its wild sits. */
+  pendingRunChoice: PendingRunChoice | null;
+  chooseRunStart: (start: number) => void;
+  cancelRunChoice: () => void;
+  /** Contract progress of the staged draft (books/runs staged, and whether
+   * the draft is exactly this round's contract). */
+  stagedBooks: number;
+  stagedRuns: number;
+  contractStaged: boolean;
+  /** The card you just drew this turn (null before drawing / once staged). */
+  lastDrawnCardId: string | null;
+  flightEvent: MpFlightEvent | null;
   /** Achievements this game unlocked — populated once, at game over. */
   unlockedAchievements: AchievementUnlockItem[];
   /** Any avatar emoji/frame/title/banner newly earned this game — see
@@ -127,10 +177,28 @@ export interface UseMpGame {
  */
 export function useMpGame(gameId: string | null): UseMpGame {
   const { user } = useAuth();
-  const [state, setState] = useState<MpStateResponse | null>(null);
+  const [held, setHeld] = useState<Held | null>(null);
+  const state = held?.resp ?? null;
   const [status, setStatus] = useState<UseMpGame["status"]>("loading");
-  const [error, setError] = useState<string | null>(null);
+  // Two kinds of error, deliberately separate: an *action* error (a move the
+  // server rejected — cleared by the next action or dismissed) and a *sync*
+  // error (a background refresh failed — cleared by the next successful
+  // refresh). Previously one shared string meant the reconciling refresh
+  // that follows a rejected move wiped the rejection reason a few ms after
+  // it appeared, so a refused meld looked like nothing happened.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const hasLoadedRef = useRef(false);
+  const epochRef = useRef(0);
+  const inflightRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const refreshRef = useRef<() => void>(() => {});
+  const [pendingRunChoice, setPendingRunChoice] = useState<PendingRunChoice | null>(null);
+  const [drawnCardId, setDrawnCardId] = useState<string | null>(null);
+  const [flightEvent, setFlightEvent] = useState<MpFlightEvent | null>(null);
+  const flightSeq = useRef(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [groupError, setGroupError] = useState<string | null>(null);
@@ -140,28 +208,67 @@ export function useMpGame(gameId: string | null): UseMpGame {
   const [nudgeState, setNudgeState] = useState<"idle" | "sent" | "error">("idle");
   const loadedFor = useRef<string | null>(null);
 
-  // Validate the server view before any component reads it (defense in
-  // depth — a malformed response becomes a clean error, not a deep crash).
-  const view = useMemo(() => {
-    if (!state?.view) return null;
-    return parseRedactedView(state.view);
-  }, [state?.view]);
+  // The validated view (defense in depth — a malformed response becomes a
+  // clean error, not a deep crash), already structurally shared by
+  // reconcile() so its identity only changes when its content does.
+  const view = held?.view ?? null;
   const viewMalformed = !!state?.view && view === null;
   const snapKey = gameId ? `mp:achv:${gameId}` : null;
 
+  const applyResponse = useCallback((res: MpStateResponse) => {
+    hasLoadedRef.current = true;
+    setHeld((prev) => reconcile(prev, res));
+    setStatus(res.status);
+  }, []);
+
+  // Background reconcile with the server. Three properties keep it from
+  // fighting the UI:
+  //  - coalesced: realtime delivers several events per move (state write,
+  //    public-columns write, the opponent's own reply), so while one fetch is
+  //    in flight further requests only mark it dirty and trigger one re-run;
+  //  - ordered: a fetch that started before one of *your* moves completed may
+  //    carry an older snapshot than the move's own response — it is dropped
+  //    (and re-issued) rather than allowed to roll the board back a step;
+  //  - non-destructive: a failed refresh with a game already on screen keeps
+  //    showing it (with a soft sync error) instead of swapping in an error
+  //    page and remounting every card when it recovers.
   const refresh = useCallback(() => {
     if (!supabase || !gameId) return;
+    if (inflightRef.current) {
+      dirtyRef.current = true;
+      return;
+    }
+    inflightRef.current = true;
+    const epoch = epochRef.current;
     getMpState(supabase, gameId)
       .then((res) => {
-        setState(res);
-        setStatus(res.status);
-        setError(null);
+        if (epoch !== epochRef.current) {
+          dirtyRef.current = true; // a move landed mid-flight — this may be older than it
+          return;
+        }
+        applyResponse(res);
+        setSyncError(null);
       })
       .catch((err) => {
-        setStatus("error");
-        setError(err instanceof MpError ? err.message : "Couldn't load the game.");
+        const msg = err instanceof MpError ? err.message : "Couldn't load the game.";
+        if (hasLoadedRef.current) {
+          setSyncError(msg);
+        } else {
+          setStatus("error");
+          setActionError(msg);
+        }
+      })
+      .finally(() => {
+        inflightRef.current = false;
+        if (dirtyRef.current) {
+          dirtyRef.current = false;
+          refreshRef.current();
+        }
       });
-  }, [gameId]);
+  }, [gameId, applyResponse]);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
 
   useEffect(() => {
     if (!gameId || loadedFor.current === gameId) return;
@@ -174,7 +281,25 @@ export function useMpGame(gameId: string | null): UseMpGame {
     setDraft(EMPTY_DRAFT);
     setSelectedIds([]);
     setGroupError(null);
+    setPendingRunChoice(null);
   }, [view?.currentSeat, view?.round, view?.youHaveDrawn, view?.roundOver]);
+
+  // Belt and braces: if the hand ever stops containing a staged card (e.g. a
+  // reconcile landed a newer snapshot), a draft pointing at cards you no
+  // longer hold can only be sent as a guaranteed rejection — drop it.
+  const yourHand = view?.yourHand;
+  useEffect(() => {
+    if (!yourHand) return;
+    const ids = new Set(yourHand.map((c) => c.id));
+    setDraft((prev) => {
+      const ok =
+        prev.groups.every((g) => g.cardIds.every((id) => ids.has(id))) &&
+        prev.layoffs.every((l) => ids.has(l.cardId)) &&
+        (!prev.discardCardId || ids.has(prev.discardCardId));
+      return ok ? prev : EMPTY_DRAFT;
+    });
+    setSelectedIds((prev) => (prev.every((id) => ids.has(id)) ? prev : prev.filter((id) => ids.has(id))));
+  }, [yourHand]);
 
   // Snapshot this account's achievement progress the first time we see the
   // game live, so game-over can diff "since the game started" (per-turn
@@ -225,20 +350,10 @@ export function useMpGame(gameId: string | null): UseMpGame {
         const raw = localStorage.getItem(snapKey);
         if (!raw) return;
         const before = JSON.parse(raw) as AchievementProgressState;
-        const beforeSet = new Set(
-          allAchievements(before)
-            .filter((a) => a.unlocked)
-            .map((a) => `${a.familyId}:${a.tier}`)
-        );
         const after = await loadAchievementProgressState(supabase!, user.id);
-        setUnlockedAchievements(
-          allAchievements(after)
-            .filter((a) => a.unlocked && !beforeSet.has(`${a.familyId}:${a.tier}`))
-            .map((a) => ({ achievement: a, xp: ACHIEVEMENT_TIER_XP[a.tier] }))
-        );
-        setNewlyUnlockedCosmetics(
-          diffNewlyUnlockedCosmetics(levelProgress(before).level, before, levelProgress(after).level, after)
-        );
+        const diff = diffAchievementProgress(before, after);
+        setUnlockedAchievements(diff.newlyUnlocked);
+        setNewlyUnlockedCosmetics(diff.newCosmetics);
         localStorage.removeItem(snapKey);
       } catch (err) {
         console.error("Failed to diff MP achievements:", err);
@@ -285,45 +400,85 @@ export function useMpGame(gameId: string | null): UseMpGame {
     return s;
   }, [draft]);
 
+  const stagedBooks = draft.groups.filter((g) => g.type === "book").length;
+  const stagedRuns = draft.groups.filter((g) => g.type === "run").length;
+  const meldedAlready = !!view?.players.find((p) => p.seat === view.yourSeat)?.hasMeldedContract;
+  const contractStaged =
+    !!view &&
+    !meldedAlready &&
+    draft.groups.length > 0 &&
+    stagedBooks === view.contract.books &&
+    stagedRuns === view.contract.runs;
+
+  // Only meaningful while it's still in your hand and you're mid-turn.
+  const lastDrawnCardId =
+    view?.yourTurn && view.youHaveDrawn && drawnCardId && view.yourHand.some((c) => c.id === drawnCardId)
+      ? drawnCardId
+      : null;
+
   const visibleHand = useMemo(
     () => (view?.yourHand ?? []).filter((c) => !stagedCardIds.has(c.id)),
     [view?.yourHand, stagedCardIds]
   );
 
-  async function run<T extends MpStateResponse | MpMoveResponse | { view: RedactedView; status: string }>(
-    fn: () => Promise<T>
-  ): Promise<T | null> {
-    if (!supabase || busy) return null;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fn();
-      if ("view" in res && res.view) {
-        setState((prev) => ({ ...(prev ?? {}), status: res.status as MpStateResponse["status"], view: res.view }));
-        setStatus(res.status as MpStateResponse["status"]);
+  // Runs one server action. `busyRef` (not the `busy` state) is the guard:
+  // callbacks here are memoised and capture the render they were created in,
+  // so a state-based check read a stale `false` and let a rapid double-tap
+  // send two moves (the second then failed with "already drawn" / "isn't
+  // your turn" and surfaced a bogus error). A successful response is the
+  // authority for your own move: it bumps the epoch so any refresh that
+  // started earlier can't overwrite it with an older snapshot.
+  const run = useCallback(
+    async <T extends MpStateResponse | MpMoveResponse | { view: RedactedView; status: string }>(
+      fn: () => Promise<T>
+    ): Promise<T | null> => {
+      if (!supabase || busyRef.current) return null;
+      busyRef.current = true;
+      setBusy(true);
+      setActionError(null);
+      try {
+        const res = await fn();
+        epochRef.current++;
+        if ("view" in res && res.view) {
+          const view = res.view;
+          const status = res.status as MpStateResponse["status"];
+          hasLoadedRef.current = true;
+          setHeld((prev) => reconcile(prev, { ...(prev?.resp ?? {}), status, view }));
+          setStatus(status);
+          setSyncError(null);
+        }
+        // Anything queued behind this move should now re-fetch on top of it.
+        if (dirtyRef.current && !inflightRef.current) {
+          dirtyRef.current = false;
+          refreshRef.current();
+        }
+        return res;
+      } catch (err) {
+        setActionError(err instanceof MpError ? err.message : "Something went wrong.");
+        refreshRef.current(); // reconcile with the server on any failure
+        return null;
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
       }
-      return res;
-    } catch (err) {
-      const msg = err instanceof MpError ? err.message : "Something went wrong.";
-      setError(msg);
-      refresh(); // reconcile with the server on any failure
-      return null;
-    } finally {
-      setBusy(false);
-    }
-  }
+    },
+    []
+  );
 
   const draw = useCallback(
     async (from: "stock" | "discard") => {
       if (!supabase || !gameId) return;
       const res = await run(() => submitMpMove(supabase!, gameId, { type: "draw", from }));
       if (res) {
+        const drawnId = "drawnCard" in res ? res.drawnCard?.id ?? null : null;
+        setDrawnCardId(drawnId);
+        const card = drawnId && "view" in res ? res.view.yourHand.find((c) => c.id === drawnId) : undefined;
+        if (card) setFlightEvent({ id: ++flightSeq.current, kind: "draw", card, fromDiscard: from === "discard" });
         playCardTap();
         hapticLight();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gameId, user]
+    [gameId, run]
   );
 
   const toggleCard = useCallback((id: string) => {
@@ -333,6 +488,22 @@ export function useMpGame(gameId: string | null): UseMpGame {
 
   const clearSelection = useCallback(() => setSelectedIds([]), []);
 
+  const stageCards = useCallback(
+    (cardIds: string[], type: "book" | "run", runStartIndex: number | undefined) => {
+      setDraft((prev) => ({
+        ...prev,
+        groups: [
+          ...prev.groups,
+          { id: `g-${Date.now()}-${prev.groups.length}`, type, cardIds: [...cardIds], runStartIndex },
+        ],
+      }));
+      setSelectedIds([]);
+      setGroupError(null);
+      setPendingRunChoice(null);
+    },
+    []
+  );
+
   const stageGroup = useCallback(
     (preferredRunStart?: number) => {
       if (!view || !contract || selectedIds.length === 0) return;
@@ -341,30 +512,35 @@ export function useMpGame(gameId: string | null): UseMpGame {
         .filter((c): c is Card => !!c);
       const result = validateManualGroup(cards, contract, preferredRunStart);
       if (result.needsRunStartChoice) {
-        setGroupError(`This run's wild could sit at more than one spot — tap the card again after choosing.`);
+        // Same as solo: ask where the wild sits, then stage (see chooseRunStart).
+        setPendingRunChoice({ cards, cardIds: [...selectedIds], options: result.needsRunStartChoice });
+        setGroupError(null);
         return;
       }
       if (!result.valid || !result.type) {
         setGroupError(result.reason ?? "Not a valid book or run.");
         return;
       }
-      setDraft((prev) => ({
-        ...prev,
-        groups: [
-          ...prev.groups,
-          {
-            id: `g-${Date.now()}-${prev.groups.length}`,
-            type: result.type!,
-            cardIds: [...selectedIds],
-            runStartIndex: result.runStartIndex,
-          },
-        ],
-      }));
-      setSelectedIds([]);
-      setGroupError(null);
+      stageCards(selectedIds, result.type, result.runStartIndex);
     },
-    [view, contract, selectedIds]
+    [view, contract, selectedIds, stageCards]
   );
+
+  const chooseRunStart = useCallback(
+    (start: number) => {
+      if (!pendingRunChoice || !contract) return;
+      const result = validateManualGroup(pendingRunChoice.cards, contract, start);
+      if (!result.valid || !result.type) {
+        setGroupError(result.reason ?? "Not a valid book or run.");
+        setPendingRunChoice(null);
+        return;
+      }
+      stageCards(pendingRunChoice.cardIds, result.type, result.runStartIndex);
+    },
+    [pendingRunChoice, contract, stageCards]
+  );
+
+  const cancelRunChoice = useCallback(() => setPendingRunChoice(null), []);
 
   const unstageGroup = useCallback((id: string) => {
     setDraft((prev) => ({ ...prev, groups: prev.groups.filter((g) => g.id !== id) }));
@@ -391,17 +567,30 @@ export function useMpGame(gameId: string | null): UseMpGame {
       overrides && "discardCardId" in overrides
         ? { ...draft, discardCardId: overrides.discardCardId ?? null }
         : draft;
+    const cardOf = (id: string) => view.yourHand.find((c) => c.id === id);
+    const flight = {
+      discard: preDraft.discardCardId ? cardOf(preDraft.discardCardId) ?? null : null,
+      melded: preDraft.groups.flatMap((g) => g.cardIds).map(cardOf).filter((c): c is Card => !!c),
+      layoffs: preDraft.layoffs
+        .map((l) => ({ card: cardOf(l.cardId), meldId: l.meldId }))
+        .filter((l): l is { card: Card; meldId: string } => !!l.card),
+    };
 
     const res = await run(() =>
       submitMpMove(supabase!, gameId, {
         type: "commit",
         groups: preDraft.groups.length ? preDraft.groups.map((g) => g.cardIds) : undefined,
+        // JSON has no `undefined`: an unset entry arrives server-side as
+        // null (the server normalises that back to "no preference").
         preferredRunStarts: preDraft.groups.length ? preDraft.groups.map((g) => g.runStartIndex) : undefined,
         layoffs: preDraft.layoffs.length ? preDraft.layoffs : undefined,
         discardCardId: preDraft.discardCardId ?? undefined,
       })
     );
-    if (!res) return; // failed — nothing applied server-side
+    if (!res) return; // failed — nothing applied server-side; the draft is kept so it can be fixed
+
+    setFlightEvent({ id: ++flightSeq.current, kind: "commit", ...flight });
+    setDrawnCardId(null);
 
     // The round/game-over chime is handled by its own transition effect
     // above (it needs to fire from a realtime refresh too, not just your
@@ -417,25 +606,23 @@ export function useMpGame(gameId: string | null): UseMpGame {
       playCardTap();
       hapticLight();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, draft, view, contract, user]);
+  }, [gameId, draft, view, contract, run]);
 
   const resign = useCallback(async () => {
     if (!supabase || !gameId) return;
     await run(() => resignMpGame(supabase!, gameId));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
+  }, [gameId, run]);
 
   const cancelPending = useCallback(async (): Promise<boolean> => {
     if (!supabase || !gameId) return false;
     setBusy(true);
-    setError(null);
+    setActionError(null);
     try {
       await cancelMpGame(supabase, gameId);
       refresh(); // picks up the now-"cancelled" status from the server
       return true;
     } catch (err) {
-      setError(err instanceof MpError ? err.message : "Couldn't cancel this game.");
+      setActionError(err instanceof MpError ? err.message : "Couldn't cancel this game.");
       return false;
     } finally {
       setBusy(false);
@@ -452,13 +639,13 @@ export function useMpGame(gameId: string | null): UseMpGame {
     async (accept: boolean): Promise<boolean> => {
       if (!supabase || !gameId) return false;
       setBusy(true);
-      setError(null);
+      setActionError(null);
       try {
         await respondToMpGame(supabase, gameId, accept);
         refresh(); // picks up the now-active (or, on decline, cancelled) status
         return true;
       } catch (err) {
-        setError(err instanceof MpError ? err.message : "Couldn't respond to this invite.");
+        setActionError(err instanceof MpError ? err.message : "Couldn't respond to this invite.");
         return false;
       } finally {
         setBusy(false);
@@ -491,7 +678,7 @@ export function useMpGame(gameId: string | null): UseMpGame {
       );
       return game_id;
     } catch (err) {
-      setError(err instanceof MpError ? err.message : "Couldn't start a rematch.");
+      setActionError(err instanceof MpError ? err.message : "Couldn't start a rematch.");
       return null;
     }
   }, [gameId, view, user]);
@@ -508,7 +695,12 @@ export function useMpGame(gameId: string | null): UseMpGame {
     status: viewMalformed ? "error" : status,
     view,
     pending: status === "pending" ? state : null,
-    error: viewMalformed ? "The game data looked wrong — try reloading." : error,
+    error: viewMalformed ? "The game data looked wrong — try reloading." : actionError,
+    syncFailed: !!syncError && !viewMalformed,
+    dismissError: () => {
+      setActionError(null);
+      setSyncError(null);
+    },
     busy,
     myTurn: !!view?.yourTurn,
     youHaveDrawn: !!view?.youHaveDrawn,
@@ -518,6 +710,14 @@ export function useMpGame(gameId: string | null): UseMpGame {
     selectedIds,
     draft,
     groupError,
+    pendingRunChoice,
+    chooseRunStart,
+    cancelRunChoice,
+    stagedBooks,
+    stagedRuns,
+    contractStaged,
+    lastDrawnCardId,
+    flightEvent,
     unlockedAchievements,
     newlyUnlockedCosmetics,
     clearNewlyUnlockedCosmetics,

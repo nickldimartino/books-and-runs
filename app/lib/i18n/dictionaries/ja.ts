@@ -293,6 +293,11 @@ const ja = {
   "multiplayer.contractStatus": "コントラクト：ブック {stagedBooks}/{books} ・ ラン {stagedRuns}/{runs}",
   "multiplayer.card": "枚",
   "multiplayer.goOut": "上がる",
+  "multiplayer.meldAndDiscard": "出して捨てる",
+  "multiplayer.contractReadyHint": "コントラクトの準備ができました。捨てるカードを1枚選び、「出して捨てる」を押してください。出す操作と捨てる操作が一緒に送信され、ターンが終了します。",
+  "multiplayer.meldConfirmPrompt": "組み合わせを出して {card} を捨てますか？",
+  "multiplayer.stagedIncomplete": "準備したグループがこのラウンドのコントラクトをまだ満たしていません。捨てる前にグループを追加または削除してください。",
+  "multiplayer.syncError": "更新できませんでした。最後に確認できたゲーム状態を表示しています。",
   "multiplayer.handEmpty": "手札がありません — ターンを終了して上がってください。",
 
   "common.close": "閉じる",

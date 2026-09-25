@@ -293,6 +293,11 @@ const ko = {
   "multiplayer.contractStatus": "계약: 세트 {stagedBooks}/{books} · 런 {stagedRuns}/{runs}",
   "multiplayer.card": "카드",
   "multiplayer.goOut": "아웃",
+  "multiplayer.meldAndDiscard": "멜드 후 버리기",
+  "multiplayer.contractReadyHint": "계약이 준비되었습니다. 버릴 카드를 한 장 고른 뒤 '멜드 후 버리기'를 누르세요. 멜드와 버리기가 함께 전송되어 차례가 끝납니다.",
+  "multiplayer.meldConfirmPrompt": "멜드를 내려놓고 {card}을(를) 버릴까요?",
+  "multiplayer.stagedIncomplete": "준비한 그룹이 아직 이번 라운드 계약을 충족하지 않습니다. 버리기 전에 그룹을 추가하거나 제거하세요.",
+  "multiplayer.syncError": "새로고침하지 못했습니다. 마지막으로 확인된 게임 상태를 표시합니다.",
   "multiplayer.handEmpty": "손패가 비었어요 — 차례를 마치면 아웃돼요.",
 
   "common.close": "닫기",

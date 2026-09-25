@@ -355,3 +355,94 @@ describe("publicColumns", () => {
     expect(JSON.stringify(cols)).not.toMatch(/"suit"/);
   });
 });
+
+describe("applyCommit — the reported 'couldn't meld' hand", () => {
+  // Round 1 "2 Books": Book 1 = J,J,J and Book 2 = 8,8 + a wild 2, with
+  // leftovers to discard. Everything the client stages must round-trip
+  // through JSON (as the real Edge Function request does) and commit.
+  function reportedEngine() {
+    const hand = makeHand([
+      ["J", "hearts"], ["J", "spades"], ["J", "clubs"],
+      ["8", "hearts"], ["8", "diamonds"], ["2", "spades"],
+      ["K", "spades"], ["4", "hearts"], ["6", "clubs"],
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 1,
+        players: [
+          makePlayer({ id: "seat-0", hand }),
+          makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) }),
+        ],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    return { eng, hand };
+  }
+
+  it("commits J,J,J + 8,8,wild-2 with a discard", () => {
+    const { eng, hand } = reportedEngine();
+    const payload = JSON.parse(
+      JSON.stringify({
+        type: "commit",
+        groups: [[hand[0].id, hand[1].id, hand[2].id], [hand[3].id, hand[4].id, hand[5].id]],
+        preferredRunStarts: [undefined, undefined], // serialises to [null, null]
+        discardCardId: hand[6].id,
+      })
+    );
+    const r = applyCommit(eng, humanConfig(2), 0, payload);
+    expect(r.error).toBeUndefined();
+    expect(r.engine.state.players[0].hasMeldedContract).toBe(true);
+    expect(r.engine.state.currentPlayerIndex).toBe(1);
+  });
+
+  it("refuses to commit the melds without a discard (the step players miss)", () => {
+    const { eng, hand } = reportedEngine();
+    const r = applyCommit(eng, humanConfig(2), 0, {
+      type: "commit",
+      groups: [[hand[0].id, hand[1].id, hand[2].id], [hand[3].id, hand[4].id, hand[5].id]],
+    });
+    expect(r.error).toMatch(/discard/);
+    expect(r.engine).toBe(eng);
+  });
+
+  it("tolerates JSON-null preferredRunStarts on an ambiguous run (client sends undefined -> null)", () => {
+    const hand = makeHand([
+      ["3", "hearts"], ["4", "hearts"], ["5", "hearts"], ["2", "clubs"],
+      ["9", "hearts"], ["9", "spades"], ["9", "clubs"],
+      ["K", "spades"], ["4", "clubs"],
+    ]);
+    const eng: MpEngine = {
+      state: makeGameState({
+        selectedContracts: CONTRACTS,
+        round: 2, // 1 Book + 1 Run
+        players: [
+          makePlayer({ id: "seat-0", hand }),
+          makePlayer({ id: "seat-1", hand: makeHand([["3", "spades"]]) }),
+        ],
+        drawPile: makeHand([["A", "hearts"]]),
+      }),
+      turnDrawn: true,
+      resignedSeats: [],
+      roundResults: [],
+    };
+    // 3-4-5 + wild is ambiguous (2-3-4-5 vs 3-4-5-6); the player picked start 1 (3 is index 1).
+    const r = applyCommit(
+      eng,
+      humanConfig(2),
+      0,
+      JSON.parse(
+        JSON.stringify({
+          type: "commit",
+          groups: [[hand[4].id, hand[5].id, hand[6].id], [hand[0].id, hand[1].id, hand[2].id, hand[3].id]],
+          preferredRunStarts: [undefined, 1],
+          discardCardId: hand[7].id,
+        })
+      )
+    );
+    expect(r.error).toBeUndefined();
+  });
+});

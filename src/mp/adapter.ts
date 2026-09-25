@@ -227,7 +227,14 @@ export function applyCommit(
   let meldedThisCommit: Meld[] | undefined;
   if (action.groups && action.groups.length > 0) {
     if (player.hasMeldedContract) return { engine: engIn, error: "you've already melded this round" };
-    const melds = meldChosenGroups(s, action.groups, action.preferredRunStarts);
+    // A JSON round trip turns `undefined` entries into `null`; the engine
+    // only understands "no preference" as undefined (null would fail its
+    // `!== undefined` check and demand a run-start choice), so normalise —
+    // and drop anything that isn't a plain integer.
+    const preferred = action.preferredRunStarts?.map((n) =>
+      typeof n === "number" && Number.isInteger(n) ? n : undefined
+    );
+    const melds = meldChosenGroups(s, action.groups, preferred);
     if (!melds) return { engine: engIn, error: "that meld doesn't complete this round's contract" };
     meldedThisCommit = melds;
   }

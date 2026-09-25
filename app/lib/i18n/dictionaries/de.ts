@@ -300,6 +300,11 @@ const de = {
   "multiplayer.contractStatus": "Kontrakt: {stagedBooks}/{books} Sätze · {stagedRuns}/{runs} Folgen",
   "multiplayer.card": "Karte",
   "multiplayer.goOut": "Aussteigen",
+  "multiplayer.meldAndDiscard": "Auslegen & ablegen",
+  "multiplayer.contractReadyHint": "Dein Kontrakt ist bereit. Wähle eine Karte zum Ablegen und tippe auf Auslegen & ablegen — Auslegen und Ablegen werden zusammen gesendet und beenden deinen Zug.",
+  "multiplayer.meldConfirmPrompt": "Deine Kombination auslegen und {card} ablegen?",
+  "multiplayer.stagedIncomplete": "Deine vorbereiteten Gruppen erfüllen den Kontrakt dieser Runde noch nicht. Ergänze oder entferne Gruppen, bevor du ablegst.",
+  "multiplayer.syncError": "Aktualisierung fehlgeschlagen – letzter bekannter Spielstand wird angezeigt.",
   "multiplayer.handEmpty": "Deine Hand ist leer — beende deinen Zug, um auszusteigen.",
 
   "common.close": "Schließen",

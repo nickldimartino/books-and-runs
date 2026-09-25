@@ -293,6 +293,11 @@ const es = {
   "multiplayer.contractStatus": "Contrato: {stagedBooks}/{books} grupos · {stagedRuns}/{runs} escaleras",
   "multiplayer.card": "carta",
   "multiplayer.goOut": "Salir",
+  "multiplayer.meldAndDiscard": "Bajar y descartar",
+  "multiplayer.contractReadyHint": "Tu contrato está listo. Elige una carta para descartar y pulsa Bajar y descartar: la bajada y el descarte se envían juntos y terminan tu turno.",
+  "multiplayer.meldConfirmPrompt": "¿Bajar tu combinación y descartar {card}?",
+  "multiplayer.stagedIncomplete": "Tus grupos preparados aún no cumplen el contrato de esta ronda. Añade o quita grupos antes de descartar.",
+  "multiplayer.syncError": "No se pudo actualizar: se muestra el último estado conocido de la partida.",
   "multiplayer.handEmpty": "Tu mano está vacía: termina tu turno para salir.",
 
   "common.close": "Cerrar",
