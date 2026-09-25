@@ -247,7 +247,7 @@ const de = {
   "signIn.alreadyHaveAccount": "Bereits ein Konto? Anmelden",
   "signIn.agreePrefix": "Mit dem Fortfahren stimmst du unseren",
   "signIn.agreeAnd": "und",
-  "signIn.privacyPolicy": "Datenschutzrichtlinien",
+  "signIn.privacyPolicy": "Datenschutzrichtlinie",
 
   "multiplayer.signInToPlay": "Zum Spielen anmelden",
   "multiplayer.loadError": "Dieses Spiel konnte nicht geladen werden.",
@@ -271,7 +271,7 @@ const de = {
   "multiplayer.youWon": "Du hast gewonnen!",
   "multiplayer.playerWon": "{name} hat gewonnen",
   "multiplayer.nobody": "Niemand",
-  "multiplayer.left": "(hat verlassen)",
+  "multiplayer.left": "(hat das Spiel verlassen)",
   "multiplayer.recordedToStats": "In deiner Statistik und deiner Mehrspieler-Bilanz erfasst.",
   "multiplayer.achievementUnlocked.one": "Erfolg freigeschaltet",
   "multiplayer.achievementUnlocked.other": "Erfolge freigeschaltet",
@@ -282,12 +282,12 @@ const de = {
   "multiplayer.leave": "Verlassen",
   "multiplayer.playingAsync": "Asynchron spielen",
   "multiplayer.playingAsyncBody":
-    "Ihr müsst nicht gleichzeitig online sein. Mach deinen Zug, dann ist der nächste Spieler dran — schau auf der Startseite vorbei oder aktiviere Benachrichtigungen in den Einstellungen, um zu erfahren, wann du wieder an der Reihe bist.",
+    "Du musst nicht zur selben Zeit online sein wie die anderen. Mach deinen Zug, dann ist der nächste Spieler dran — schau auf der Startseite vorbei oder aktiviere Benachrichtigungen in den Einstellungen, um zu erfahren, wann du wieder an der Reihe bist.",
   "multiplayer.roundSummary.heading": "Runde {round} · {label}",
   "multiplayer.seatN": "Platz {seat}",
   "multiplayer.roundSummary.nextRound": "Runde {round} läuft bereits — mach deinen Zug unten, sobald du dran bist.",
   "multiplayer.waitingForTurn.prefix": "Warten auf",
-  "multiplayer.waitingForTurn.suffix": "bis diese Person am Zug ist.",
+  "multiplayer.waitingForTurn.suffix": "— diese Person ist am Zug.",
   "multiplayer.nudged": "Angestupst 👍",
   "multiplayer.cantNudgeYet": "Anstupsen noch nicht möglich",
   "multiplayer.nudgeName": "{name} anstupsen",
@@ -301,10 +301,10 @@ const de = {
   "multiplayer.card": "Karte",
   "multiplayer.goOut": "Aussteigen",
   "multiplayer.meldAndDiscard": "Auslegen & ablegen",
-  "multiplayer.contractReadyHint": "Dein Kontrakt ist bereit. Wähle eine Karte zum Ablegen und tippe auf Auslegen & ablegen — Auslegen und Ablegen werden zusammen gesendet und beenden deinen Zug.",
-  "multiplayer.meldConfirmPrompt": "Deine Kombination auslegen und {card} ablegen?",
+  "multiplayer.contractReadyHint": "Dein Kontrakt ist bereit. Wähle eine Karte zum Ablegen und tippe auf Auslegen & ablegen — Meldung und Ablage werden zusammen gesendet und beenden deinen Zug.",
+  "multiplayer.meldConfirmPrompt": "Deine Meldung auslegen und {card} ablegen?",
   "multiplayer.stagedIncomplete": "Deine vorbereiteten Gruppen erfüllen den Kontrakt dieser Runde noch nicht. Ergänze oder entferne Gruppen, bevor du ablegst.",
-  "multiplayer.syncError": "Aktualisierung fehlgeschlagen – letzter bekannter Spielstand wird angezeigt.",
+  "multiplayer.syncError": "Aktualisierung fehlgeschlagen — letzter bekannter Spielstand wird angezeigt.",
   "multiplayer.handEmpty": "Deine Hand ist leer — beende deinen Zug, um auszusteigen.",
 
   "common.close": "Schließen",
@@ -442,7 +442,7 @@ const de = {
   "buyOfferGate.buyIt": "Kaufen",
 
   "common.privacy": "Datenschutz",
-  "common.terms": "AGB",
+  "common.terms": "Bedingungen",
   "common.contact": "Kontakt",
 
   "home.newGame": "Neues Spiel",
@@ -1066,7 +1066,7 @@ const de = {
   "privacy.export.bodyMiddle":
     "-Schaltfläche, die dir jederzeit und ohne nachfragen zu müssen alles oben Genannte als eine Datei gibt. Wir bewahren deine Kontodaten auf, solange dein Konto besteht. Um dein Konto und alles, was damit verknüpft ist — Statistiken, Spielverlauf, Erfolgsfortschritt, Anzeigename, Freunde und Mehrspieler-Spiele — zu löschen, schreib eine E-Mail an",
   "privacy.export.bodySuffix":
-    "von der E-Mail-Adresse des Kontos, und wir entfernen sie innerhalb einer angemessenen Frist. Das Löschen deines Kontos entfernt dich auch aus den Freundeslisten anderer Spieler.",
+    "von der E-Mail-Adresse des Kontos, und wir entfernen es innerhalb einer angemessenen Frist. Das Löschen deines Kontos entfernt dich auch aus den Freundeslisten anderer Spieler.",
   "privacy.children.title": "Datenschutz für Kinder",
   "privacy.children.body":
     "Diese App richtet sich nicht an Kinder unter 13 Jahren, und wir erheben wissentlich keine personenbezogenen Daten von ihnen.",

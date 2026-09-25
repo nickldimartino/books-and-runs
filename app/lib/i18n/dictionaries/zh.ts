@@ -293,11 +293,11 @@ const zh = {
   "multiplayer.contractStatus": "定约进度：{stagedBooks}/{books} 组同点数 · {stagedRuns}/{runs} 组顺子",
   "multiplayer.card": "张牌",
   "multiplayer.goOut": "出完手牌",
-  "multiplayer.meldAndDiscard": "组牌并弃牌",
-  "multiplayer.contractReadyHint": "你的定约已备好。选择一张要弃的牌，然后点击“组牌并弃牌”——组牌与弃牌会一并提交，并结束你的回合。",
-  "multiplayer.meldConfirmPrompt": "摆出你的牌组并弃掉 {card}？",
-  "multiplayer.stagedIncomplete": "你暂存的牌组还不满足本轮定约。弃牌前请添加或移除牌组。",
-  "multiplayer.syncError": "无法刷新——显示的是最后已知的游戏状态。",
+  "multiplayer.meldAndDiscard": "出组并弃牌",
+  "multiplayer.contractReadyHint": "你的定约已备好。选择一张要弃的牌，然后点击“出组并弃牌” — 出组与弃牌会一并提交，并结束你的回合。",
+  "multiplayer.meldConfirmPrompt": "出组并弃掉 {card}？",
+  "multiplayer.stagedIncomplete": "你暂存的组合还不满足本回合的定约要求。弃牌前请添加或移除组合以补全。",
+  "multiplayer.syncError": "无法刷新 — 显示的是最后已知的游戏状态。",
   "multiplayer.handEmpty": "你的手牌已空 — 结束回合以出完手牌。",
 
   "common.close": "关闭",
@@ -991,7 +991,7 @@ const zh = {
   "terms.ip.body": "本应用的设计、代码和内容归其开发者所有。其底层的纸牌游戏规则属于一种常见的家规变体，不归任何人所有。",
   "terms.disclaimer.title": "免责声明与责任限制",
   "terms.disclaimer.body":
-    "本应用按“现状”提供，不附带任何形式的保证。在法律允许的最大范围内，开发者不对因使用本应用而产生的任何损害承担责任。",
+    "本应用按“现状”提供，不提供任何形式的担保。在法律允许的最大范围内，开发者不对因使用本应用而产生的任何损害承担责任。",
   "terms.termination.title": "终止",
   "terms.termination.body":
     "你可以随时停止使用本应用或删除你的账号（具体方法参见隐私政策）。对于违反本条款的账号，我们可能会暂停或终止其使用。",

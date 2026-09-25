@@ -293,8 +293,8 @@ const ptBR = {
   "multiplayer.contractStatus": "Contrato: {stagedBooks}/{books} trincas · {stagedRuns}/{runs} sequências",
   "multiplayer.card": "carta",
   "multiplayer.goOut": "Bater",
-  "multiplayer.meldAndDiscard": "Baixar e descartar",
-  "multiplayer.contractReadyHint": "Seu contrato está pronto. Escolha uma carta para descartar e toque em Baixar e descartar — a baixada e o descarte são enviados juntos e encerram sua vez.",
+  "multiplayer.meldAndDiscard": "Combinar e descartar",
+  "multiplayer.contractReadyHint": "Seu contrato está pronto. Escolha uma carta para descartar e toque em Combinar e descartar — a combinação e o descarte são enviados juntos e encerram sua vez.",
   "multiplayer.meldConfirmPrompt": "Baixar sua combinação e descartar {card}?",
   "multiplayer.stagedIncomplete": "Seus grupos preparados ainda não cumprem o contrato desta rodada. Adicione ou remova grupos antes de descartar.",
   "multiplayer.syncError": "Não foi possível atualizar — mostrando o último estado conhecido do jogo.",
@@ -970,7 +970,7 @@ const ptBR = {
   "account.data.exportError": "Não foi possível preparar o download — tente novamente.",
   "account.delete.heading": "Excluir sua conta",
   "account.delete.bodyPrefix":
-    "Ainda não há uma exclusão autônoma. Para remover sua conta e tudo vinculado a ela — estatísticas, histórico de partidas, conquistas, nome de exibição, amigos e partidas multiplayer — envie um e-mail para",
+    "Ainda não existe a opção de excluir a conta por conta própria. Para remover sua conta e tudo vinculado a ela — estatísticas, histórico de partidas, conquistas, nome de exibição, amigos e partidas multiplayer — envie um e-mail para",
   "account.delete.bodySuffix": "a partir do endereço da sua conta.",
   "account.error.notConfigured": "Não configurado.",
   "account.error.wrongPassword": "A senha atual está incorreta.",
@@ -991,7 +991,7 @@ const ptBR = {
     "Se você criar uma conta, você é responsável por manter suas credenciais seguras e por qualquer coisa que aconteça sob sua conta. Forneça informações precisas ao se cadastrar.",
   "terms.acceptableUse.title": "Uso aceitável",
   "terms.acceptableUse.body":
-    "Não use o aplicativo para interferir em seu funcionamento normal, tentar acessar dados de outros usuários, ou usá-lo para qualquer atividade ilegal.",
+    "Não use o aplicativo para interferir em seu funcionamento normal, tentar acessar dados de outros usuários ou usá-lo para qualquer atividade ilegal.",
   "terms.ip.title": "Propriedade intelectual",
   "terms.ip.body":
     "O design, o código e o conteúdo do aplicativo pertencem ao seu desenvolvedor. As regras subjacentes do jogo de cartas são uma variante comum de regras da casa e não pertencem a ninguém.",
@@ -1001,7 +1001,7 @@ const ptBR = {
   "terms.termination.title": "Encerramento",
   "terms.termination.body":
     "Você pode parar de usar o aplicativo ou excluir sua conta a qualquer momento (veja a Política de Privacidade para saber como). Podemos suspender ou encerrar contas que violem estes termos.",
-  "terms.changes.title": "Alterações a estes termos",
+  "terms.changes.title": "Alterações nestes termos",
   "terms.changes.body": "Se estes termos mudarem, atualizaremos a data no topo desta página.",
   "terms.contact.body": "Dúvidas sobre estes termos? Fale conosco em",
 
@@ -1018,19 +1018,19 @@ const ptBR = {
     "Entrar é opcional e desbloqueia Estatísticas, Conquistas, seu nível de conta, o Ranking, Amigos e partidas multiplayer por turnos. Se você entrar com e-mail, armazenamos:",
   "privacy.account.item.email": "Seu endereço de e-mail, por meio do nosso provedor de autenticação (Supabase Auth).",
   "privacy.account.item.stats":
-    "Estatísticas de partidas vinculadas à sua conta: partidas jogadas e vencidas, melhor, pior e pontuação média, e vitórias divididas pela dificuldade de IA enfrentada.",
+    "Estatísticas de partidas vinculadas à sua conta: partidas jogadas e vencidas, melhor pontuação, pior pontuação e pontuação média, e vitórias divididas pela dificuldade de IA enfrentada.",
   "privacy.account.item.history":
     "Um histórico das suas partidas concluídas: os oponentes enfrentados (IA ou outros jogadores), pontuações por rodada, o vencedor e quando a partida foi jogada.",
   "privacy.account.item.achievements":
     "Progresso de conquistas: contagens de ações específicas dentro do jogo — combinações feitas, cartas acrescentadas, rodadas vencidas de uma forma específica e afins — usadas para determinar quais conquistas você desbloqueou. Seu nível de conta é calculado a partir desses dados e das estatísticas acima, e não é armazenado separadamente.",
   "privacy.account.item.displayName":
-    "Um nome de exibição, se você definir um. Isso é opcional, fica visível para outros jogadores conectados no Ranking e para qualquer pessoa com quem você é amigo(a), e não precisa ser seu nome real. Até você definir um, você aparece com um rótulo gerado automaticamente, como \"Jogador 4821\".",
+    "Um nome de exibição, se você definir um. Isso é opcional, fica visível no Ranking para outros jogadores que entraram na conta e para qualquer pessoa com quem você é amigo(a), e não precisa ser seu nome real. Até você definir um, você aparece com um rótulo gerado automaticamente, como \"Jogador 4821\".",
   "privacy.account.item.friendsPrefix": "Um",
   "privacy.account.item.friendCodeLabel": "código de amigo",
   "privacy.account.item.friendsSuffix":
     "por conta, e sua lista de amigos: quais outras contas você adicionou como amigos, e quaisquer solicitações de amizade pendentes enviadas ou recebidas. Adicionar um amigo torna seu nome de exibição visível para ele, e o dele visível para você.",
   "privacy.account.item.multiplayer":
-    "Dados de partidas multiplayer: para qualquer partida por turnos que você iniciar ou entrar, os outros participantes, a ordem dos assentos, de quem é a vez, o tamanho das mãos, as pontuações e o resultado final. O estado completo da partida (incluindo o baralho embaralhado e a mão de cada jogador) é mantido no servidor e só é revelado a um jogador como a própria visão dele — você nunca vê a mão de outro jogador.",
+    "Dados de partidas multiplayer: para qualquer partida por turnos que você iniciar ou da qual participar, os outros participantes, a ordem dos assentos, de quem é a vez, o tamanho das mãos, as pontuações e o resultado final. O estado completo da partida (incluindo o baralho embaralhado e a mão de cada jogador) é mantido no servidor e só é revelado a um jogador como a própria visão dele — você nunca vê a mão de outro jogador.",
   "privacy.account.item.aiDifficulty":
     "Sua preferência de dificuldade padrão de IA, se você definir uma na tela Configurações. (Tema, verso da carta, modo daltônico e som/vibração ativados ou desativados também são definidos lá, mas ficam apenas no seu dispositivo e nunca são enviados para nós.)",
   "privacy.account.outro":
@@ -1039,18 +1039,18 @@ const ptBR = {
   "privacy.processors.bodyPrefix": "Os dados da conta são armazenados em um banco de dados Postgres hospedado pelo",
   "privacy.processors.linkText": "Supabase",
   "privacy.processors.bodySuffix":
-    ", protegido por segurança em nível de linha, de modo que, além do nome de exibição e das estatísticas deliberadamente mostradas no Ranking, só você pode ler ou gravar suas próprias linhas. As jogadas multiplayer por turnos são validadas por uma Supabase Edge Function que executa o mesmo motor do jogo; ela é a única coisa capaz de ver o estado completo e oculto da partida.",
+    ", protegido por segurança em nível de linha, de modo que, além do nome de exibição e das estatísticas deliberadamente mostradas no Ranking, só você pode ler ou gravar suas próprias linhas. As jogadas multiplayer por turnos são validadas por uma Supabase Edge Function que executa o mesmo motor do jogo; ela é o único componente capaz de ver o estado completo e oculto da partida.",
   "privacy.export.title": "Exportação e exclusão de dados",
   "privacy.export.bodyPrefix": "A página Conta tem o botão",
   "privacy.export.downloadLabel": "Baixar meus dados",
   "privacy.export.bodyMiddle":
     "que fornece tudo o que foi descrito acima em um único arquivo, a qualquer momento, sem precisar pedir. Mantemos os dados da sua conta enquanto ela existir. Para excluir sua conta e tudo vinculado a ela — estatísticas, histórico de partidas, progresso de conquistas, nome de exibição, amigos e partidas multiplayer — envie um e-mail para",
   "privacy.export.bodySuffix":
-    "a partir do endereço da conta, e nós a removeremos dentro de um prazo razoável. Excluir sua conta também te remove das listas de amigos de outros jogadores.",
+    "a partir do endereço da conta, e nós a removeremos dentro de um prazo razoável. Excluir sua conta também remove você das listas de amigos de outros jogadores.",
   "privacy.children.title": "Privacidade infantil",
   "privacy.children.body":
-    "Este aplicativo não é direcionado a crianças menores de 13 anos, e não coletamos intencionalmente informações pessoais delas.",
-  "privacy.changes.title": "Alterações a esta política",
+    "Este aplicativo não é direcionado a crianças menores de 13 anos, e não coletamos intencionalmente dados pessoais delas.",
+  "privacy.changes.title": "Alterações nesta política",
   "privacy.changes.body": "Se esta política mudar, atualizaremos a data no topo desta página.",
   "privacy.contact.body": "Perguntas, ou quer que seus dados sejam excluídos? Fale conosco em",
 
