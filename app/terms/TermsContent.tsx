@@ -44,6 +44,11 @@ export function TermsContent() {
         </section>
 
         <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.userContent.title")}</h2>
+          <p>{t("terms.userContent.body")}</p>
+        </section>
+
+        <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.ip.title")}</h2>
           <p>{t("terms.ip.body")}</p>
         </section>
@@ -51,11 +56,22 @@ export function TermsContent() {
         <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.disclaimer.title")}</h2>
           <p>{t("terms.disclaimer.body")}</p>
+          <p className="mt-2">{t("terms.disclaimer.statutory")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.service.title")}</h2>
+          <p>{t("terms.service.body")}</p>
         </section>
 
         <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.termination.title")}</h2>
           <p>{t("terms.termination.body")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.law.title")}</h2>
+          <p>{t("terms.law.body")}</p>
         </section>
 
         <section>

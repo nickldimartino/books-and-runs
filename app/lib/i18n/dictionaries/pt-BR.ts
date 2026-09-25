@@ -293,10 +293,6 @@ const ptBR = {
   "multiplayer.contractStatus": "Contrato: {stagedBooks}/{books} trincas · {stagedRuns}/{runs} sequências",
   "multiplayer.card": "carta",
   "multiplayer.goOut": "Bater",
-  "multiplayer.meldAndDiscard": "Combinar e descartar",
-  "multiplayer.contractReadyHint": "Seu contrato está pronto. Escolha uma carta para descartar e toque em Combinar e descartar — a combinação e o descarte são enviados juntos e encerram sua vez.",
-  "multiplayer.meldConfirmPrompt": "Baixar sua combinação e descartar {card}?",
-  "multiplayer.stagedIncomplete": "Seus grupos preparados ainda não cumprem o contrato desta rodada. Adicione ou remova grupos antes de descartar.",
   "multiplayer.syncError": "Não foi possível atualizar — mostrando o último estado conhecido do jogo.",
   "multiplayer.handEmpty": "Sua mão está vazia — encerre seu turno para bater.",
 
@@ -979,44 +975,62 @@ const ptBR = {
 
   // terms.*
   "terms.title": "Termos de Serviço",
-  "terms.lastUpdated": "Última atualização em 12 de agosto de 2026",
+  "terms.lastUpdated": "Última atualização em 25 de setembro de 2026",
   "terms.intro":
     "Ao usar o Books & Runs (\"o aplicativo\"), você concorda com estes termos. Se você não concordar, não use o aplicativo.",
   "terms.app.title": "O aplicativo",
   "terms.app.bodyPrefix":
-    "Books & Runs é um jogo de cartas para partidas locais de passar-e-jogar e partidas individuais contra oponentes de IA. Ele funciona totalmente offline, sem necessidade de conta. Criar uma conta é opcional e desbloqueia estatísticas entre dispositivos, conquistas e nível de conta — veja nossa",
+    "Books & Runs é um jogo de cartas para partidas locais de passar-e-jogar e partidas individuais contra oponentes de IA. Ele funciona totalmente offline, sem necessidade de conta. Criar uma conta é opcional e desbloqueia estatísticas entre dispositivos, conquistas e nível de conta, além de recursos sociais como o Ranking, amigos, clubes, torneios e partidas multiplayer por turnos com outros jogadores — veja nossa",
   "terms.app.bodySuffix": "para saber o que isso envolve.",
   "terms.accounts.title": "Contas",
   "terms.accounts.body":
-    "Se você criar uma conta, você é responsável por manter suas credenciais seguras e por qualquer coisa que aconteça sob sua conta. Forneça informações precisas ao se cadastrar.",
+    "Se você criar uma conta, você é responsável por manter suas credenciais seguras e por qualquer coisa que aconteça sob sua conta. Forneça informações precisas ao se cadastrar. Você precisa ter idade suficiente para usar o aplicativo de acordo com as regras de idade da Política de Privacidade.",
   "terms.acceptableUse.title": "Uso aceitável",
   "terms.acceptableUse.body":
-    "Não use o aplicativo para interferir em seu funcionamento normal, tentar acessar dados de outros usuários ou usá-lo para qualquer atividade ilegal.",
+    "Não use o aplicativo para interferir em seu funcionamento normal, tentar acessar dados de outros usuários, trapacear ou adulterar resultados de partidas, estatísticas ou o Ranking, nem para qualquer finalidade ilegal.",
+  "terms.userContent.title": "Nomes, fotos e outros conteúdos que você adiciona",
+  "terms.userContent.body":
+    "Se você definir um nome de exibição, uma bio, o nome de um clube ou torneio ou uma foto de perfil, outros jogadores poderão vê-los. Não use conteúdo que seja ilegal, que incite ódio, de assédio ou sexualmente explícito, que se passe por outra pessoa ou que você não tenha o direito de compartilhar. Você mantém os direitos que tiver sobre o seu conteúdo; você nos dá permissão para armazená-lo e exibi-lo dentro do aplicativo para que os recursos funcionem. Podemos remover ou redefinir conteúdo que viole estas regras.",
   "terms.ip.title": "Propriedade intelectual",
   "terms.ip.body":
     "O design, o código e o conteúdo do aplicativo pertencem ao seu desenvolvedor. As regras subjacentes do jogo de cartas são uma variante comum de regras da casa e não pertencem a ninguém.",
   "terms.disclaimer.title": "Isenção e limitação de responsabilidade",
   "terms.disclaimer.body":
     "O aplicativo é fornecido \"como está\", sem garantias de qualquer tipo. Na máxima extensão permitida por lei, o desenvolvedor não é responsável por quaisquer danos decorrentes do uso do aplicativo.",
+  "terms.disclaimer.statutory":
+    "Nada nestes termos limita ou exclui a responsabilidade por dolo ou culpa grave, por morte ou lesão corporal, nem qualquer direito ou responsabilidade que não possa ser limitado ou excluído nos termos da legislação obrigatória de proteção ao consumidor ou de outra natureza do país onde você mora.",
+  "terms.service.title": "Alterações no aplicativo",
+  "terms.service.body":
+    "O aplicativo é um projeto de hobby mantido por um desenvolvedor individual. Podemos adicionar, alterar ou remover recursos, redefinir ou reequilibrar estatísticas e rankings, ou deixar de oferecer o aplicativo ou partes dele (incluindo recursos online) a qualquer momento. Procuraremos dar um aviso razoável sobre mudanças significativas sempre que possível, mas não podemos prometer que os recursos online estarão sempre disponíveis.",
   "terms.termination.title": "Encerramento",
   "terms.termination.body":
-    "Você pode parar de usar o aplicativo ou excluir sua conta a qualquer momento (veja a Política de Privacidade para saber como). Podemos suspender ou encerrar contas que violem estes termos.",
+    "Você pode parar de usar o aplicativo ou excluir sua conta a qualquer momento (veja a Política de Privacidade para saber como). O desenvolvedor pode suspender, restringir ou excluir uma conta, ou remover conteúdo, se ela violar estes termos — por exemplo, trapaça, assédio, nomes ou fotos ofensivos, ou tentativas de atacar ou sobrecarregar o serviço — e pode fazê-lo sem aviso prévio quando necessário para proteger o serviço ou outros jogadores. Se você acha que houve um engano, entre em contato conosco.",
+  "terms.law.title": "Lei aplicável",
+  "terms.law.body":
+    "Nada nestes termos retira os direitos legais obrigatórios que você tem de acordo com a legislação do país onde você mora, e essas regras continuam a valer para você.",
   "terms.changes.title": "Alterações nestes termos",
-  "terms.changes.body": "Se estes termos mudarem, atualizaremos a data no topo desta página.",
+  "terms.changes.body":
+    "Se estes termos mudarem, atualizaremos a data no topo desta página. Se você continuar usando o aplicativo após uma alteração, isso significa que você aceita os termos atualizados; se não os aceitar, pare de usar o aplicativo e, se quiser, exclua sua conta.",
   "terms.contact.body": "Dúvidas sobre estes termos? Fale conosco em",
 
   // privacy.*
-  "privacy.lastUpdated": "Última atualização em 11 de setembro de 2026",
+  "privacy.lastUpdated": "Última atualização em 25 de setembro de 2026",
   "privacy.overview.title": "Visão geral",
   "privacy.overview.body":
     "Books & Runs é um jogo de cartas que você pode jogar totalmente offline, em um único dispositivo, sem necessidade de conta. Esta política explica o que acontece se você optar por criar uma conta, e confirma o que nunca coletamos.",
+  "privacy.controller.title": "Quem é responsável pelos seus dados",
+  "privacy.controller.body":
+    "O Books & Runs é mantido por um desenvolvedor individual, que é o controlador dos dados pessoais descritos nesta política. Não há nenhuma empresa por trás do aplicativo. Você pode falar com o desenvolvedor pelo e-mail de contato no final desta página.",
   "privacy.localPlay.title": "Jogar localmente não exige conta",
   "privacy.localPlay.body":
-    "Se você nunca entrar em uma conta, o aplicativo não coleta nada. Sua partida em andamento e quaisquer configurações de regras da casa que você escolher ficam armazenadas apenas no armazenamento local do seu navegador ou dispositivo, nunca são transmitidas a lugar nenhum e nunca são vistas por nós.",
+    "Se você nunca entrar em uma conta, seus jogos e configurações ficam com você. Sua partida em andamento, suas configurações de regras da casa e suas preferências ficam armazenadas apenas no armazenamento local do seu navegador ou dispositivo, nunca são transmitidas a lugar nenhum e nunca são vistas por nós.",
+  "privacy.localPlay.diagnostics":
+    "Duas coisas pequenas são enviadas mesmo sem uma conta, para que problemas possam ser encontrados e corrigidos: relatórios de falhas e erros (a mensagem de erro, a página em que você estava, o tipo de navegador e dispositivo e a versão do aplicativo) e contagens de uso anônimas, como “uma partida foi iniciada”, com detalhes genéricos como modo de jogo e dificuldade. As contagens de uso não trazem conta, nome nem identificador de dispositivo. Seu endereço IP fica inevitavelmente visível para o nosso provedor de hospedagem sempre que qualquer requisição é feita, mas não o armazenamos nesses registros. Se você usar a página de Suporte, a mensagem e quaisquer arquivos ou endereço de contato que você optar por incluir são enviados por e-mail ao desenvolvedor.",
   "privacy.account.title": "Se você criar uma conta",
   "privacy.account.intro":
-    "Entrar é opcional e desbloqueia Estatísticas, Conquistas, seu nível de conta, o Ranking, Amigos e partidas multiplayer por turnos. Se você entrar com e-mail, armazenamos:",
-  "privacy.account.item.email": "Seu endereço de e-mail, por meio do nosso provedor de autenticação (Supabase Auth).",
+    "Entrar é opcional e desbloqueia Estatísticas, Conquistas, seu nível de conta, o Ranking, Amigos, Clubes, Torneios e partidas multiplayer por turnos. Se você entrar com e-mail, armazenamos:",
+  "privacy.account.item.email":
+    "Seu endereço de e-mail e uma senha protegida por hash, por meio do nosso provedor de autenticação (Supabase Auth), além dos dados da sua autenticação de dois fatores (aplicativo autenticador), se você ativá-la. Sua sessão iniciada é mantida no armazenamento local do seu navegador.",
   "privacy.account.item.stats":
     "Estatísticas de partidas vinculadas à sua conta: partidas jogadas e vencidas, melhor pontuação, pior pontuação e pontuação média, e vitórias divididas pela dificuldade de IA enfrentada.",
   "privacy.account.item.history":
@@ -1024,34 +1038,64 @@ const ptBR = {
   "privacy.account.item.achievements":
     "Progresso de conquistas: contagens de ações específicas dentro do jogo — combinações feitas, cartas acrescentadas, rodadas vencidas de uma forma específica e afins — usadas para determinar quais conquistas você desbloqueou. Seu nível de conta é calculado a partir desses dados e das estatísticas acima, e não é armazenado separadamente.",
   "privacy.account.item.displayName":
-    "Um nome de exibição, se você definir um. Isso é opcional, fica visível no Ranking para outros jogadores que entraram na conta e para qualquer pessoa com quem você é amigo(a), e não precisa ser seu nome real. Até você definir um, você aparece com um rótulo gerado automaticamente, como \"Jogador 4821\".",
+    "Um nome de exibição, se você definir um. Isso é opcional, fica visível no Ranking para outros jogadores que entraram na conta e para qualquer pessoa com quem você é amigo(a), e não precisa ser seu nome real. Até você definir um, você aparece com um rótulo gerado automaticamente, como “Jogador 4821”.",
   "privacy.account.item.friendsPrefix": "Um",
   "privacy.account.item.friendCodeLabel": "código de amigo",
   "privacy.account.item.friendsSuffix":
     "por conta, e sua lista de amigos: quais outras contas você adicionou como amigos, e quaisquer solicitações de amizade pendentes enviadas ou recebidas. Adicionar um amigo torna seu nome de exibição visível para ele, e o dele visível para você.",
+  "privacy.account.item.profile":
+    "Seu perfil público, que qualquer jogador com conta pode ver junto com a sua entrada no Ranking: uma bio curta opcional, avatar (um emoji e uma cor, ou uma foto que você envia), banner, moldura, título, emblema, conquistas e estilo de carta fixados, nível e estatísticas, sequências da Rodada Diária e a data em que você entrou. As fotos de perfil enviadas ficam armazenadas em um repositório de imagens público, portanto qualquer pessoa que tenha o link da foto pode abri-la. Não envie nada que você não gostaria que outras pessoas vissem. Os jogadores podem denunciar uma foto de perfil, e mantemos essas denúncias (quem denunciou quem e um motivo opcional).",
+  "privacy.account.item.saves":
+    "Seu progresso, para que você possa continuar em qualquer dispositivo: uma partida individual em andamento salva na sua conta, conclusões e pontuações da Rodada Diária e do Desafio Semanal, totais mensais da temporada e a configuração de jogo favorita que você salvou.",
+  "privacy.account.item.clubs":
+    "Clubes e torneios que você cria ou dos quais participa: o nome do clube ou torneio (visível para seus membros e participantes), quem é o dono ou anfitrião e quem são seus membros e participantes.",
   "privacy.account.item.multiplayer":
     "Dados de partidas multiplayer: para qualquer partida por turnos que você iniciar ou da qual participar, os outros participantes, a ordem dos assentos, de quem é a vez, o tamanho das mãos, as pontuações e o resultado final. O estado completo da partida (incluindo o baralho embaralhado e a mão de cada jogador) é mantido no servidor e só é revelado a um jogador como a própria visão dele — você nunca vê a mão de outro jogador.",
   "privacy.account.item.aiDifficulty":
-    "Sua preferência de dificuldade padrão de IA, se você definir uma na tela Configurações. (Tema, verso da carta, modo daltônico e som/vibração ativados ou desativados também são definidos lá, mas ficam apenas no seu dispositivo e nunca são enviados para nós.)",
+    "Suas preferências, para que acompanhem você em um novo dispositivo ou instalação: tema, verso e face da carta, modo daltônico, tamanho do texto, idioma, configurações de som e vibração, configurações de música ambiente, opções de dicas e destaques, sua dificuldade padrão de IA e suas escolhas de regras da casa. Elas são sincronizadas com a sua conta somente enquanto você estiver com a sessão iniciada; se você não entrar, ficam apenas no seu dispositivo e nunca são enviadas para nós.",
+  "privacy.account.item.push":
+    "Se você ativar as notificações, a assinatura de notificações push do seu navegador (um endereço e chaves de criptografia fornecidos pelo serviço de push do seu navegador), para que possamos enviar notificações de “sua vez”, de amigos e lembretes da Rodada Diária. Isso fica desativado, a menos que você opte por ativar, e você pode desativá-lo a qualquer momento no aplicativo ou nas configurações do seu navegador ou dispositivo.",
+  "privacy.account.item.support":
+    "Se você enviar uma gorjeta pela página Apoiar o desenvolvedor, o pagamento é tratado inteiramente pela Stripe, e nunca vemos os dados do seu cartão. Armazenamos apenas que um pagamento ocorreu (a referência da sessão da Stripe, o valor e a moeda), para que possamos conceder a você o emblema de apoiador.",
+  "privacy.account.item.security":
+    "Registros técnicos de curta duração: notificações no aplicativo e contadores de requisições usados para prevenir abusos (mantidos por algumas semanas, no máximo) e, para usuários com sessão iniciada, relatórios de erro que podem ser vinculados à sua conta para que possamos investigar um problema.",
   "privacy.account.outro":
-    "Não exigimos seu nome real, e não coletamos sua localização, contatos, fotos ou qualquer permissão do dispositivo. Não há anúncios nem SDKs de análise ou rastreamento neste aplicativo.",
+    "Não exigimos seu nome real, e não coletamos sua localização, seus contatos nem quaisquer permissões do dispositivo além de notificações, se você optar por ativá-las. Não há anúncios nem SDKs de análise ou rastreamento de terceiros neste aplicativo.",
   "privacy.processors.title": "Quem processa esses dados",
   "privacy.processors.bodyPrefix": "Os dados da conta são armazenados em um banco de dados Postgres hospedado pelo",
   "privacy.processors.linkText": "Supabase",
   "privacy.processors.bodySuffix":
     ", protegido por segurança em nível de linha, de modo que, além do nome de exibição e das estatísticas deliberadamente mostradas no Ranking, só você pode ler ou gravar suas próprias linhas. As jogadas multiplayer por turnos são validadas por uma Supabase Edge Function que executa o mesmo motor do jogo; ela é o único componente capaz de ver o estado completo e oculto da partida.",
+  "privacy.processors.others":
+    "Outros prestadores de serviços atuam somente para as finalidades descritas aqui: a Stripe processa gorjetas opcionais, e um serviço de envio de e-mails é usado para entregar as mensagens que você envia pela página de Suporte. Não vendemos seus dados pessoais nem os compartilhamos para fins de publicidade.",
+  "privacy.legalBases.title": "Por que usamos seus dados (bases legais)",
+  "privacy.legalBases.body":
+    "Usamos os dados da sua conta para prestar o serviço que você pediu ao criar uma conta (execução do nosso contrato com você, nos termos dos Termos de Serviço). Quando você opta por ativar algo — por exemplo, notificações push ou uma foto de perfil pública — baseamo-nos no seu consentimento, que você pode retirar a qualquer momento. Usamos relatórios de erro, contagens de uso anônimas e registros de prevenção de abusos para atender aos nossos interesses legítimos em manter o aplicativo seguro, justo e funcionando; você pode se opor a esse uso (veja abaixo). Quando a lei local exigir, também tratamos dados para cumprir obrigações legais. Este é um resumo em linguagem simples e não uma declaração de certificação em conformidade com qualquer lei específica.",
+  "privacy.storage.title": "Cookies, armazenamento local e notificações",
+  "privacy.storage.body":
+    "O aplicativo não usa cookies de publicidade nem de análise. Ele usa o armazenamento local do seu navegador e um service worker (que armazena páginas em cache para que o aplicativo funcione offline) para lembrar sua partida, suas preferências e, se você tiver entrado na conta, sua sessão. Se você optar por ativar as notificações push, seu navegador armazena uma assinatura push. Você pode limpar esses dados ou desativar as notificações a qualquer momento nas configurações do seu navegador ou dispositivo; limpar o armazenamento local removerá qualquer partida de visitante e as preferências nesse dispositivo.",
   "privacy.export.title": "Exportação e exclusão de dados",
   "privacy.export.bodyPrefix": "A página Conta tem o botão",
   "privacy.export.downloadLabel": "Baixar meus dados",
   "privacy.export.bodyMiddle":
-    "que fornece tudo o que foi descrito acima em um único arquivo, a qualquer momento, sem precisar pedir. Mantemos os dados da sua conta enquanto ela existir. Para excluir sua conta e tudo vinculado a ela — estatísticas, histórico de partidas, progresso de conquistas, nome de exibição, amigos e partidas multiplayer — envie um e-mail para",
+    "que fornece os dados vinculados à sua conta (perfil, estatísticas, histórico, conquistas, configurações, progresso salvo, amigos e registro multiplayer) em um único arquivo, a qualquer momento, sem precisar pedir. Ainda não há um botão de exclusão autoatendido. Para excluir sua conta e tudo vinculado a ela — estatísticas, histórico de partidas, progresso de conquistas, perfil, amigos, clubes e partidas multiplayer — envie um e-mail para",
   "privacy.export.bodySuffix":
-    "a partir do endereço da conta, e nós a removeremos dentro de um prazo razoável. Excluir sua conta também remove você das listas de amigos de outros jogadores.",
+    "a partir do endereço da conta, e nós a excluiremos. Excluir sua conta também remove você das listas de amigos de outros jogadores.",
+  "privacy.retention.title": "Por quanto tempo mantemos os dados",
+  "privacy.retention.body":
+    "Mantemos os dados da sua conta enquanto ela existir. Depois que você pedir a exclusão da sua conta, buscamos removê-los prontamente e, em qualquer caso, dentro de um prazo razoável. Os relatórios de falhas são excluídos automaticamente após cerca de 30 dias, e os registros de notificações e de prevenção de abusos de curta duração, após algumas semanas, no máximo. As contagens de uso anônimas não contêm identificadores pessoais e são mantidas por até cerca de 13 meses. Cópias podem permanecer nos backups do provedor por um tempo limitado até serem sobrescritas.",
+  "privacy.transfers.title": "Transferências internacionais",
+  "privacy.transfers.body":
+    "Nosso provedor de hospedagem pode armazenar e processar dados em servidores fora do país onde você mora. Quando isso acontecer, contamos com as salvaguardas do provedor para transferências internacionais. Ao usar uma conta, você entende que seus dados podem ser processados em outros países.",
+  "privacy.rights.title": "Seus direitos",
+  "privacy.rights.body":
+    "Dependendo de onde você mora, você pode ter o direito de acessar seus dados pessoais, corrigi-los, excluí-los, receber uma cópia em formato portável, opor-se a determinados tratamentos ou pedir a restrição deles, e retirar o consentimento que deu. Grande parte disso você mesmo pode fazer: edite seu perfil e suas configurações no aplicativo e baixe seus dados na página Conta. Para qualquer outra coisa, ou para excluir sua conta, envie um e-mail para o endereço abaixo. Você também tem o direito de apresentar uma reclamação à autoridade local de proteção de dados. Podemos precisar confirmar que é realmente você antes de atender a uma solicitação.",
   "privacy.children.title": "Privacidade infantil",
   "privacy.children.body":
-    "Este aplicativo não é direcionado a crianças menores de 13 anos, e não coletamos intencionalmente dados pessoais delas.",
+    "Este aplicativo não é direcionado a crianças menores de 13 anos, e não coletamos intencionalmente dados pessoais delas. Quando a lei local estabelecer uma idade mínima mais alta para que uma pessoa possa consentir com o tratamento de seus dados pessoais (por exemplo, 14 anos na Coreia do Sul, ou 16 em partes da União Europeia), o aplicativo também não é direcionado a pessoas abaixo dessa idade, e você não deve criar uma conta se estiver nessa situação. Se você acredita que uma criança nos forneceu dados pessoais, entre em contato conosco e os excluiremos.",
   "privacy.changes.title": "Alterações nesta política",
-  "privacy.changes.body": "Se esta política mudar, atualizaremos a data no topo desta página.",
+  "privacy.changes.body":
+    "Se esta política mudar, atualizaremos a data no topo desta página e, no caso de mudanças significativas, procuraremos avisar no aplicativo os usuários que entraram na conta.",
   "privacy.contact.body": "Perguntas, ou quer que seus dados sejam excluídos? Fale conosco em",
 
   // scorecard.*

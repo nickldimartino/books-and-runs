@@ -24,8 +24,14 @@ export function PrivacyContent() {
         </section>
 
         <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.controller.title")}</h2>
+          <p>{t("privacy.controller.body")}</p>
+        </section>
+
+        <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.localPlay.title")}</h2>
           <p>{t("privacy.localPlay.body")}</p>
+          <p className="mt-2">{t("privacy.localPlay.diagnostics")}</p>
         </section>
 
         <section>
@@ -42,8 +48,14 @@ export function PrivacyContent() {
               <span className="text-[var(--heading)]">{t("privacy.account.item.friendCodeLabel")}</span>{" "}
               {t("privacy.account.item.friendsSuffix")}
             </li>
+            <li>{t("privacy.account.item.profile")}</li>
+            <li>{t("privacy.account.item.saves")}</li>
+            <li>{t("privacy.account.item.clubs")}</li>
             <li>{t("privacy.account.item.multiplayer")}</li>
             <li>{t("privacy.account.item.aiDifficulty")}</li>
+            <li>{t("privacy.account.item.push")}</li>
+            <li>{t("privacy.account.item.support")}</li>
+            <li>{t("privacy.account.item.security")}</li>
           </ul>
           <p className="mt-2">{t("privacy.account.outro")}</p>
         </section>
@@ -62,6 +74,17 @@ export function PrivacyContent() {
             </a>
             {t("privacy.processors.bodySuffix")}
           </p>
+          <p className="mt-2">{t("privacy.processors.others")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.legalBases.title")}</h2>
+          <p>{t("privacy.legalBases.body")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.storage.title")}</h2>
+          <p>{t("privacy.storage.body")}</p>
         </section>
 
         <section>
@@ -73,6 +96,21 @@ export function PrivacyContent() {
             <span className="text-[var(--heading)]">nick.l.dimartino@icloud.com</span>{" "}
             {t("privacy.export.bodySuffix")}
           </p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.retention.title")}</h2>
+          <p>{t("privacy.retention.body")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.transfers.title")}</h2>
+          <p>{t("privacy.transfers.body")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("privacy.rights.title")}</h2>
+          <p>{t("privacy.rights.body")}</p>
         </section>
 
         <section>

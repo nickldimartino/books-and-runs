@@ -63,7 +63,7 @@ reads and mutates in place.
 | `tutorial.ts` | Builds the scripted (non-random) deal the interactive tutorial runs on. Step copy + gating live in `app/lib/tutorialSteps.ts`. |
 | `leveling.ts` | Account level / XP as a pure function of progress data. `computeTotalXp`, `ACHIEVEMENT_TIER_XP`. |
 | `achievements.ts` | 44 families × 5 tiers = 220 achievements. Pure: `allAchievements(progress)` → unlocked/locked. `AchievementProgressState` is the input shape. |
-| `mp/adapter.ts` | The pure core of multiplayer: `dealGame`, `applyDraw`, `applyCommit`, `applyResign`, `advanceThroughAi`, `redactFor`. Transactional via `structuredClone`. |
+| `mp/adapter.ts` | The pure core of multiplayer: `dealGame`, `applyDraw`, `applyMeld`, `applyLayoff`, `applyDiscard` (turn = individual actions mirroring solo; meld/layoff keep the turn open, discard / card-less discard ends it and runs the AI), legacy `applyCommit` (atomic; kept for older clients), `applyResign`, `advanceThroughAi`, `redactFor`. Transactional via `structuredClone`. |
 | `mp/types.ts` | MP adapter types: `MpSeat`, `MpConfig`, `MpEngine`, `RedactedView`, `RoundResult`. |
 | `moveLog.ts` | `MoveLogEntry` — one atomic draw/meld/lay-off/discard, human or AI, appended to alongside `GameState` for solo/pass-and-play games (see `app/GameContext.tsx`'s `moveLogRef`). |
 | `replayStats.ts` | Pure achievement-counter-delta functions (`drawDeltas`, `meldDeltas`, `layOffDeltas`, `roundWonDeltas`, `discardDeltas`, `tableCompositionDeltas`, `finalGameDeltas`) — the one place "what counts" is defined, shared by live play and the server-side replay below. |
@@ -120,7 +120,7 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 | `/new-game/local` | The solo game setup form (players, difficulty, round mode). |
 | `/new-game/multiplayer` | MP game setup — pick friends + AI seats, choose rounds, send invites. |
 | `/game` | **The solo game screen.** ~1400 lines. Renders `GameContext`'s state: hand drawer, table melds, piles, `OpponentStrip`, meld builder, tutorial overlay, card-flight layer. |
-| `/multiplayer/play?g=<id>` | **The MP game screen.** Driven by `useMpGame`; two-round-trip turns (draw, then commit). |
+| `/multiplayer/play?g=<id>` | **The MP game screen.** Driven by `useMpGame`; a turn is individual server actions like solo: draw, Confirm Meld, lay-offs, then Discard / Go out. |
 | `/multiplayer`, `/multiplayer/new`, `/stats` | Client redirect stubs for old links (hub was folded into `/` and `/new-game`; `/stats` was merged into `/player`). |
 | `/player?id=<uuid>` | **Profile page**, public top + private bottom. Top (avatar, display name, bio, level, public stat tiles from `leaderboard_entries`) renders the same for anyone; reachable by clicking a name on the Leaderboard/Friends page. Your own additionally shows "Edit profile" (avatar/name/bio, with live display-name-uniqueness checking) and, below that, a private section only you see — the old `/stats` page's detailed stats breakdown, achievement showcase, and game/MP history. |
 | `/achievements` | All 220 achievements by family, unlocked state, progress. |
@@ -227,7 +227,7 @@ client's word. See §8 for the full design.
 |---|---|
 | `mpStore.ts` | Client → Edge Function (`create`/`respond`/`state`/`move`/`resign`, via `callEdgeFunction.ts`) + read-only RPC lists (`getMyMpGames`, `getMyMpHistory`, `getMyMpStats`). `MpError`. |
 | `callEdgeFunction.ts` | The "get the session, POST with a bearer token, tolerantly parse JSON, throw a custom Error subclass" wrapper shared by `mpStore.ts`'s `callMp` and `verifySoloGame.ts` — deliberately not `supabase.functions.invoke`, so the function's own real error message survives instead of a generic non-2xx message. |
-| `useMpGame.ts` | The MP play-screen hook. Turn drafting (`draw` then `commit`); stats/achievement-counter crediting happen server-side now (see `mp/index.ts`) — this just diffs a progress snapshot at game-over to show what unlocked. |
+| `useMpGame.ts` | The MP play-screen hook. Only the group(s) being built are local; `draw` / `confirmMeld` / `layOff` / `discard` / `goOut` each call the `mp` function; stats/achievement-counter crediting happen server-side now (see `mp/index.ts`) — this just diffs a progress snapshot at game-over to show what unlocked. |
 | `useNotifications.ts` | One combined Realtime hook: friend requests + game requests + your-turn count → a single badge. Replaced `useFriendActivity` + `useMpActivity`. |
 | `friendsStore.ts` | Friend RPC wrappers (`getFriends`, `sendFriendRequest`, `addFriendByCode`, …). |
 | `clubsStore.ts` | Club RPC wrappers (migration 0040) — create/rename/delete, add/remove member (owner-only, only onto an existing friend), `getClubStandings` (real MP stats, filtered + re-ranked to the roster). |
@@ -330,11 +330,14 @@ entirely, same treatment as the "track stats" opt-out.
 ```
 multiplayer/play  →  useMpGame
    getMpState        → mpStore → Edge Function → redacted view
-   [player drafts turn locally: groups, layoffs, discard]
+   [player stages group(s) locally; everything else is a real server action]
    draw              → Edge Function: applyDraw   → returns the drawn card
                                                    → credits achievement counters
                                                      for the caller's own seat
-   commitTurn        → Edge Function: applyCommit → validates + advanceThroughAi
+   confirmMeld / layOff → Edge Function: applyMeld / applyLayoff (turn stays open,
+                          no AI, no push); discard / goOut → applyDiscard →
+                          validates + advanceThroughAi (`{type:'commit'}` still accepted)
+                          (counters via src/mp/credit.ts splitMoveDeltas)
                                                    → writes mp_game_state
                                                    → credits achievement counters
                                                      (derived from what was
@@ -975,8 +978,9 @@ dedicated task. Full architecture in §3e; migration `0055`.
   the atomic commit needs a discard + confirm with no hint saying so; a
   failed move's error rendered behind the drawer backdrop and was cleared by
   the reconciling refresh; ambiguous run-wild placement had no picker in MP.
-  Now: a "contract staged — pick a discard" hint, a primary "Meld & discard"
-  button, in-drawer persistent errors, and the solo-style wild-position
+  Now: individual actions like solo (Group selected -> Confirm Meld -> lay-offs ->
+  Discard/Go out; the combined "Meld & discard" was reverted — the `mp`
+  function gained `meld`/`layoff`/`discard` actions, `commit` kept), in-drawer persistent errors, and the solo-style wild-position
   picker. Smoothness: refreshes are ordered/coalesced so a stale response can
   never roll the board back over your own move's response; `shareStructure`
   keeps object identity for unchanged view parts (no re-animating cards);
@@ -984,6 +988,6 @@ dedicated task. Full architecture in §3e; migration `0055`.
   double-tap guard replaces a stale-closure `busy`; hand sort/reorder operate
   on the whole hand (`mergeVisibleOrder`) so unstaged cards return to their
   slot; MP gained the drawn-card highlight and card-flight animations. The
-  `mp` Edge Function needs a redeploy for the `preferredRunStarts` null
-  normalisation in `src/mp/adapter.ts` (defensive only). Flight timing and
+  `mp` Edge Function needs a redeploy for the new split actions and the
+  `preferredRunStarts` null normalisation. Flight timing and
   realtime bursts still need a live two-player check.

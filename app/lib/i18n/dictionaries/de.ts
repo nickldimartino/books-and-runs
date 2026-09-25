@@ -300,10 +300,6 @@ const de = {
   "multiplayer.contractStatus": "Kontrakt: {stagedBooks}/{books} Sätze · {stagedRuns}/{runs} Folgen",
   "multiplayer.card": "Karte",
   "multiplayer.goOut": "Aussteigen",
-  "multiplayer.meldAndDiscard": "Auslegen & ablegen",
-  "multiplayer.contractReadyHint": "Dein Kontrakt ist bereit. Wähle eine Karte zum Ablegen und tippe auf Auslegen & ablegen — Meldung und Ablage werden zusammen gesendet und beenden deinen Zug.",
-  "multiplayer.meldConfirmPrompt": "Deine Meldung auslegen und {card} ablegen?",
-  "multiplayer.stagedIncomplete": "Deine vorbereiteten Gruppen erfüllen den Kontrakt dieser Runde noch nicht. Ergänze oder entferne Gruppen, bevor du ablegst.",
   "multiplayer.syncError": "Aktualisierung fehlgeschlagen — letzter bekannter Spielstand wird angezeigt.",
   "multiplayer.handEmpty": "Deine Hand ist leer — beende deinen Zug, um auszusteigen.",
 
@@ -999,80 +995,128 @@ const de = {
 
   // terms.*
   "terms.title": "Nutzungsbedingungen",
-  "terms.lastUpdated": "Zuletzt aktualisiert am 12. August 2026",
+  "terms.lastUpdated": "Zuletzt aktualisiert am 25. September 2026",
   "terms.intro":
-    "Durch die Nutzung von Books & Runs („die App“) stimmst du diesen Bedingungen zu. Wenn du nicht zustimmst, nutze die App bitte nicht.",
+    "Durch die Nutzung von Books & Runs („die App“) stimmen Sie diesen Bedingungen zu. Wenn Sie nicht zustimmen, nutzen Sie die App bitte nicht.",
   "terms.app.title": "Die App",
   "terms.app.bodyPrefix":
-    "Books & Runs ist ein Kartenspiel für lokales Pass-and-Play und Einzelspieler-Partien gegen KI-Gegner. Es funktioniert vollständig offline und ohne Konto. Ein Konto zu erstellen ist optional und schaltet geräteübergreifende Statistiken, Erfolge und die Kontostufe frei — siehe unsere",
-  "terms.app.bodySuffix": "für Details dazu.",
+    "Books & Runs ist ein Kartenspiel für lokales Pass-and-Play und Einzelspieler-Partien gegen KI-Gegner. Es funktioniert vollständig offline und ohne Konto. Ein Konto zu erstellen ist optional und schaltet geräteübergreifende Statistiken, Erfolge und die Kontostufe frei sowie soziale Funktionen wie die Bestenliste, Freunde, Clubs, Turniere und rundenbasierte Mehrspieler-Partien mit anderen Spielern — siehe unsere",
+  "terms.app.bodySuffix": "für Näheres dazu, was das bedeutet.",
   "terms.accounts.title": "Konten",
   "terms.accounts.body":
-    "Wenn du ein Konto erstellst, bist du dafür verantwortlich, deine Zugangsdaten sicher zu halten, sowie für alles, was unter deinem Konto geschieht. Gib bei der Registrierung korrekte Angaben an.",
+    "Wenn Sie ein Konto erstellen, sind Sie dafür verantwortlich, Ihre Zugangsdaten sicher aufzubewahren, sowie für alles, was unter Ihrem Konto geschieht. Machen Sie bei der Registrierung korrekte Angaben. Sie müssen nach den Altersregeln der Datenschutzrichtlinie alt genug sein, um die App zu nutzen.",
   "terms.acceptableUse.title": "Zulässige Nutzung",
   "terms.acceptableUse.body":
-    "Nutze die App nicht, um ihren normalen Betrieb zu stören, versuche nicht, auf die Daten anderer Nutzer zuzugreifen, und verwende sie nicht für rechtswidrige Zwecke.",
+    "Nutzen Sie die App nicht, um ihren normalen Betrieb zu stören, versuchen Sie nicht, auf die Daten anderer Nutzer zuzugreifen, betrügen Sie nicht und manipulieren Sie keine Spielergebnisse, Statistiken oder die Bestenliste, und verwenden Sie die App nicht für rechtswidrige Zwecke.",
+  "terms.userContent.title": "Namen, Fotos und andere Inhalte, die Sie hinzufügen",
+  "terms.userContent.body":
+    "Wenn Sie einen Anzeigenamen, eine Bio, einen Club- oder Turniernamen oder ein Profilfoto festlegen, können andere Spieler dies sehen. Verwenden Sie keine Inhalte, die rechtswidrig, hasserfüllt, belästigend oder sexuell explizit sind, die sich als eine andere Person ausgeben oder die Sie nicht berechtigt sind zu teilen. Sie behalten die Rechte, die Sie an Ihren Inhalten haben; Sie erlauben uns, sie innerhalb der App zu speichern und anzuzeigen, damit die Funktionen funktionieren. Wir dürfen Inhalte entfernen oder zurücksetzen, die gegen diese Regeln verstoßen.",
   "terms.ip.title": "Geistiges Eigentum",
   "terms.ip.body":
     "Design, Code und Inhalte der App gehören ihrem Entwickler. Die zugrunde liegenden Kartenspielregeln sind eine verbreitete Hausregel-Variante und stehen in niemandes Eigentum.",
   "terms.disclaimer.title": "Haftungsausschluss und Haftungsbeschränkung",
   "terms.disclaimer.body":
-    "Die App wird „wie besehen“ bereitgestellt, ohne jegliche Gewährleistung. Im gesetzlich zulässigen Höchstmaß haftet der Entwickler nicht für Schäden, die aus deiner Nutzung der App entstehen.",
+    "Die App wird „wie besehen“ bereitgestellt, ohne jegliche Gewährleistung. Im gesetzlich zulässigen Höchstmaß haftet der Entwickler nicht für Schäden, die aus Ihrer Nutzung der App entstehen.",
+  "terms.disclaimer.statutory":
+    "Nichts in diesen Bedingungen beschränkt oder schließt die Haftung für Vorsatz oder grobe Fahrlässigkeit, für den Tod oder die Verletzung von Personen oder ein Recht oder eine Haftung aus, die nach dem zwingenden Verbraucherschutzrecht oder sonstigen zwingenden Recht des Landes, in dem Sie leben, nicht beschränkt oder ausgeschlossen werden kann.",
+  "terms.service.title": "Änderungen an der App",
+  "terms.service.body":
+    "Die App ist ein Hobbyprojekt, das von einem einzelnen Entwickler betrieben wird. Wir dürfen jederzeit Funktionen hinzufügen, ändern oder entfernen, Statistiken und Bestenlisten zurücksetzen oder neu ausbalancieren oder das Angebot der App oder von Teilen davon (einschließlich der Online-Funktionen) einstellen. Wir bemühen uns, wesentliche Änderungen, wo möglich, mit angemessener Frist anzukündigen, können aber nicht zusichern, dass die Online-Funktionen stets verfügbar sind.",
   "terms.termination.title": "Beendigung",
   "terms.termination.body":
-    "Du kannst die Nutzung der App jederzeit beenden oder dein Konto löschen (siehe die Datenschutzrichtlinie für die Vorgehensweise). Wir können Konten sperren oder schließen, die gegen diese Bedingungen verstoßen.",
+    "Sie können die Nutzung der App jederzeit beenden oder Ihr Konto löschen (wie, steht in der Datenschutzrichtlinie). Der Entwickler darf ein Konto sperren, einschränken oder löschen oder Inhalte entfernen, wenn es gegen diese Bedingungen verstößt — zum Beispiel bei Betrug, Belästigung, anstößigen Namen oder Fotos oder Versuchen, den Dienst anzugreifen oder zu überlasten — und darf dies ohne Vorankündigung tun, soweit es zum Schutz des Dienstes oder anderer Spieler erforderlich ist. Wenn Sie glauben, dass dies ein Irrtum war, kontaktieren Sie uns.",
+  "terms.law.title": "Anwendbares Recht",
+  "terms.law.body":
+    "Nichts in diesen Bedingungen nimmt Ihnen die zwingenden gesetzlichen Rechte, die Sie nach dem Recht des Landes haben, in dem Sie leben; diese Vorschriften gelten für Sie weiter.",
   "terms.changes.title": "Änderungen dieser Bedingungen",
-  "terms.changes.body": "Wenn sich diese Bedingungen ändern, aktualisieren wir das Datum oben auf dieser Seite.",
-  "terms.contact.body": "Fragen zu diesen Bedingungen? Kontaktiere",
+  "terms.changes.body":
+    "Wenn sich diese Bedingungen ändern, aktualisieren wir das Datum oben auf dieser Seite. Wenn Sie die App nach einer Änderung weiter nutzen, bedeutet das, dass Sie die aktualisierten Bedingungen akzeptieren; wenn Sie sie nicht akzeptieren, beenden Sie bitte die Nutzung der App und löschen Sie auf Wunsch Ihr Konto.",
+  "terms.contact.body": "Fragen zu diesen Bedingungen? Kontaktieren Sie",
 
   // privacy.*
-  "privacy.lastUpdated": "Zuletzt aktualisiert am 11. September 2026",
+  "privacy.lastUpdated": "Zuletzt aktualisiert am 25. September 2026",
   "privacy.overview.title": "Überblick",
   "privacy.overview.body":
-    "Books & Runs ist ein Kartenspiel, das du vollständig offline, auf einem Gerät und ohne Konto spielen kannst. Diese Richtlinie erklärt, was passiert, wenn du dich entscheidest, ein Konto zu erstellen, und bestätigt, was wir niemals erheben.",
+    "Books & Runs ist ein Kartenspiel, das Sie vollständig offline, auf einem Gerät und ohne Konto spielen können. Diese Richtlinie erklärt, was passiert, wenn Sie sich entscheiden, ein Konto zu erstellen, und bestätigt, was wir niemals erheben.",
+  "privacy.controller.title": "Wer für Ihre Daten verantwortlich ist",
+  "privacy.controller.body":
+    "Books & Runs wird von einem einzelnen Entwickler betrieben, der Verantwortlicher für die in dieser Richtlinie beschriebenen personenbezogenen Daten ist. Hinter der App steht kein Unternehmen. Sie erreichen den Entwickler über die Kontakt-E-Mail-Adresse am Ende dieser Seite.",
   "privacy.localPlay.title": "Lokales Spielen benötigt kein Konto",
   "privacy.localPlay.body":
-    "Wenn du dich nie anmeldest, erhebt die App nichts. Dein laufendes Spiel und alle Hausregel-Einstellungen, die du wählst, werden nur im lokalen Speicher deines Browsers oder Geräts gespeichert, niemals irgendwohin übertragen und niemals von uns eingesehen.",
-  "privacy.account.title": "Wenn du ein Konto erstellst",
+    "Wenn Sie sich nie anmelden, bleiben Ihre Spiele und Einstellungen bei Ihnen. Ihr laufendes Spiel, Ihre Hausregel-Einstellungen und Ihre Präferenzen werden nur im lokalen Speicher Ihres Browsers oder Geräts gespeichert, niemals irgendwohin übertragen und niemals von uns eingesehen.",
+  "privacy.localPlay.diagnostics":
+    "Zwei Kleinigkeiten werden auch ohne Konto gesendet, damit Probleme gefunden und behoben werden können: Absturz- und Fehlerberichte (die Fehlermeldung, die Seite, auf der Sie sich befanden, Ihr Browser- und Gerätetyp sowie die App-Version) und anonyme Nutzungszählungen wie „ein Spiel wurde gestartet“ mit groben Angaben wie Spielmodus und Schwierigkeit. Nutzungszählungen enthalten keine Konto-, Namens- oder Gerätekennung. Ihre IP-Adresse ist für unseren Hosting-Anbieter bei jeder Anfrage zwangsläufig sichtbar, wir speichern sie aber nicht in diesen Datensätzen. Wenn Sie die Support-Seite nutzen, werden die Nachricht sowie alle Dateien oder die Kontaktadresse, die Sie angeben, per E-Mail an den Entwickler gesendet.",
+  "privacy.account.title": "Wenn Sie ein Konto erstellen",
   "privacy.account.intro":
-    "Die Anmeldung ist optional und schaltet Statistiken, Erfolge, deine Kontostufe, die Bestenliste, Freunde und rundenbasierte Mehrspieler-Spiele frei. Wenn du dich mit E-Mail anmeldest, speichern wir:",
-  "privacy.account.item.email": "Deine E-Mail-Adresse, über unseren Authentifizierungsanbieter (Supabase Auth).",
+    "Die Anmeldung ist optional und schaltet Statistiken, Erfolge, Ihre Kontostufe, die Bestenliste, Freunde, Clubs, Turniere und rundenbasierte Mehrspieler-Spiele frei. Wenn Sie sich mit E-Mail anmelden, speichern wir:",
+  "privacy.account.item.email":
+    "Ihre E-Mail-Adresse und ein sicher gehashtes Passwort über unseren Authentifizierungsanbieter (Supabase Auth) sowie Ihre Angaben zur Zwei-Faktor-Authentifizierung (Authenticator-App), falls Sie diese aktivieren. Ihre angemeldete Sitzung wird im lokalen Speicher Ihres Browsers gehalten.",
   "privacy.account.item.stats":
-    "Spielstatistiken, die an dein Konto gebunden sind: gespielte und gewonnene Spiele, beste, schlechteste und durchschnittliche Punktzahl sowie Siege aufgeschlüsselt nach der KI-Schwierigkeit, gegen die du angetreten bist.",
+    "Spielstatistiken, die an Ihr Konto gebunden sind: gespielte und gewonnene Spiele, beste, schlechteste und durchschnittliche Punktzahl sowie Siege aufgeschlüsselt nach der KI-Schwierigkeit, gegen die Sie angetreten sind.",
   "privacy.account.item.history":
-    "Ein Verlauf deiner abgeschlossenen Spiele: die Gegner, gegen die du angetreten bist (KI oder andere Spieler), Punktzahlen pro Runde, der Gewinner und wann das Spiel gespielt wurde.",
+    "Ein Verlauf Ihrer abgeschlossenen Spiele: die Gegner, gegen die Sie angetreten sind (KI oder andere Spieler), Punktzahlen pro Runde, der Gewinner und wann das Spiel gespielt wurde.",
   "privacy.account.item.achievements":
-    "Erfolgsfortschritt: Zählungen bestimmter Aktionen im Spiel — vorgenommene Meldungen, angelegte Karten, auf bestimmte Weise gewonnene Runden und Ähnliches —, anhand derer bestimmt wird, welche Erfolge du freigeschaltet hast. Deine Kontostufe wird aus diesen Daten und den obigen Statistiken berechnet und nicht separat gespeichert.",
+    "Erfolgsfortschritt: Zählungen bestimmter Aktionen im Spiel — vorgenommene Meldungen, angelegte Karten, auf bestimmte Weise gewonnene Runden und Ähnliches —, anhand derer bestimmt wird, welche Erfolge Sie freigeschaltet haben. Ihre Kontostufe wird aus diesen Daten und den obigen Statistiken berechnet und nicht separat gespeichert.",
   "privacy.account.item.displayName":
-    "Ein Anzeigename, falls du einen festlegst. Das ist optional, für andere angemeldete Spieler auf der Bestenliste und für alle, mit denen du befreundet bist, sichtbar, und muss nicht dein echter Name sein. Bis du einen festlegst, erscheinst du unter einer generierten Bezeichnung wie „Player 4821“.",
+    "Ein Anzeigename, falls Sie einen festlegen. Das ist optional, für andere angemeldete Spieler auf der Bestenliste und für alle, mit denen Sie befreundet sind, sichtbar, und muss nicht Ihr echter Name sein. Bis Sie einen festlegen, erscheinen Sie unter einer generierten Bezeichnung wie „Player 4821“.",
+  "privacy.account.item.profile":
+    "Ihr öffentliches Profil, das jeder angemeldete Spieler zusammen mit Ihrem Bestenlisten-Eintrag einsehen kann: eine optionale kurze Bio, Avatar (ein Emoji mit Farbe oder ein von Ihnen hochgeladenes Foto), Banner, Rahmen, Titel, Abzeichen, angeheftete Erfolge und Kartenstil, Stufe und Statistiken, Serien beim Tages-Deal und der Zeitpunkt Ihres Beitritts. Hochgeladene Profilfotos werden in einem öffentlichen Bild-Speicher (Bucket) abgelegt, sodass jeder, der den Link zum Foto hat, es öffnen kann. Laden Sie nichts hoch, was andere nicht sehen sollen. Spieler können ein Profilfoto melden, und wir bewahren diese Meldungen auf (wer wen gemeldet hat und einen optionalen Grund).",
+  "privacy.account.item.saves":
+    "Ihren Fortschritt, damit Sie auf jedem Gerät weiterspielen können: ein in Ihrem Konto gespeichertes laufendes Einzelspieler-Spiel, Abschlüsse und Ergebnisse des Tages-Deals und der Wochen-Challenge, monatliche Saison-Summen und Ihr gespeichertes Lieblings-Spielsetup.",
+  "privacy.account.item.clubs":
+    "Clubs und Turniere, die Sie erstellen oder denen Sie beitreten: der Club- oder Turniername (für Mitglieder bzw. Teilnehmer sichtbar), wer Inhaber oder Gastgeber ist und wer die Mitglieder und Teilnehmer sind.",
+  "privacy.account.item.push":
+    "Wenn Sie Benachrichtigungen aktivieren, das Push-Abonnement Ihres Browsers (eine Adresse und Verschlüsselungsschlüssel, die vom Push-Dienst Ihres Browsers bereitgestellt werden), damit wir Ihnen Benachrichtigungen wie „Sie sind am Zug“, zu Freunden und Erinnerungen zum Tages-Deal senden können. Dies ist ausgeschaltet, sofern Sie nicht einwilligen, und Sie können es jederzeit in der App oder in Ihren Browser- oder Geräteeinstellungen ausschalten.",
+  "privacy.account.item.support":
+    "Wenn Sie über die Seite „Den Entwickler unterstützen“ ein Trinkgeld senden, wird die Zahlung vollständig von Stripe abgewickelt, und wir sehen Ihre Kartendaten nie. Wir speichern nur, dass eine Zahlung erfolgt ist (die Stripe-Sitzungsreferenz, den Betrag und die Währung), damit wir Ihnen das Unterstützer-Abzeichen geben können.",
+  "privacy.account.item.security":
+    "Kurzlebige technische Datensätze: In-App-Benachrichtigungen und Anfragezähler zur Missbrauchsvermeidung (höchstens einige Wochen aufbewahrt) und, bei angemeldeten Nutzern, Fehlerberichte, die mit Ihrem Konto verknüpft sein können, damit wir ein Problem untersuchen können.",
   "privacy.account.item.friendsPrefix": "Ein pro Konto vergebener",
   "privacy.account.item.friendCodeLabel": "Freundescode",
   "privacy.account.item.friendsSuffix":
-    "sowie deine Freundesliste: welche anderen Konten du als Freunde hinzugefügt hast und alle ausstehenden Freundschaftsanfragen, die du gesendet oder erhalten hast. Wenn du jemanden als Freund hinzufügst, wird dein Anzeigename für diese Person sichtbar und umgekehrt.",
+    "sowie Ihre Freundesliste: welche anderen Konten Sie als Freunde hinzugefügt haben und alle ausstehenden Freundschaftsanfragen, die Sie gesendet oder erhalten haben. Wenn Sie jemanden als Freund hinzufügen, wird Ihr Anzeigename für diese Person sichtbar und umgekehrt.",
   "privacy.account.item.multiplayer":
-    "Mehrspieler-Spieldaten: Für jedes rundenbasierte Spiel, das du startest oder dem du beitrittst, die anderen Teilnehmer, die Sitzordnung, wer am Zug ist, Handgrößen, Punktzahlen und das Endergebnis. Der vollständige Spielzustand (einschließlich des gemischten Decks und der Hand jedes Spielers) wird serverseitig gehalten und jedem Spieler ausschließlich als seine eigene Ansicht angezeigt — du siehst nie die Hand eines anderen Spielers.",
+    "Mehrspieler-Spieldaten: Für jedes rundenbasierte Spiel, das Sie starten oder dem Sie beitreten, die anderen Teilnehmer, die Sitzordnung, wer am Zug ist, Handgrößen, Punktzahlen und das Endergebnis. Der vollständige Spielzustand (einschließlich des gemischten Decks und der Hand jedes Spielers) wird serverseitig gehalten und jedem Spieler ausschließlich als seine eigene Ansicht angezeigt — Sie sehen nie die Hand eines anderen Spielers.",
   "privacy.account.item.aiDifficulty":
-    "Deine bevorzugte Standard-KI-Schwierigkeit, falls du eine im Einstellungsbildschirm festlegst. (Design, Kartenrückseite, Farbenblindheitsmodus sowie Sound/Haptik ein/aus werden dort ebenfalls festgelegt, bleiben aber lokal auf deinem Gerät und werden nie an uns gesendet.)",
+    "Ihre Einstellungen, damit sie Ihnen auf ein neues Gerät oder eine neue Installation folgen: Design, Kartenrückseite und Kartenvorderseite, Farbenblindheitsmodus, Textgröße, Sprache, Sound- und Haptik-Einstellungen, Einstellungen zur Hintergrundmusik, Hinweis- und Hervorhebungsoptionen, Ihre Standard-KI-Schwierigkeit und Ihre Hausregel-Auswahl. Diese werden nur mit Ihrem Konto synchronisiert, solange Sie angemeldet sind; wenn Sie sich nicht anmelden, bleiben sie nur auf Ihrem Gerät und werden nie an uns gesendet.",
   "privacy.account.outro":
-    "Wir benötigen nicht deinen echten Namen und erheben weder deinen Standort noch Kontakte, Fotos oder Geräteberechtigungen. Diese App enthält keine Werbung und keine Analyse- oder Tracking-SDKs.",
+    "Wir benötigen nicht Ihren echten Namen und erheben weder Ihren Standort noch Kontakte oder Geräteberechtigungen über Benachrichtigungen hinaus, falls Sie einwilligen. Diese App enthält keine Werbung und keine Analyse- oder Tracking-SDKs von Drittanbietern.",
   "privacy.processors.title": "Wer diese Daten verarbeitet",
   "privacy.processors.bodyPrefix": "Kontodaten werden in einer Postgres-Datenbank gespeichert, gehostet von",
   "privacy.processors.linkText": "Supabase",
   "privacy.processors.bodySuffix":
-    ", geschützt durch Row-Level-Security, sodass außer dem Anzeigenamen und den Statistiken, die bewusst auf der Bestenliste gezeigt werden, nur du deine eigenen Zeilen lesen oder schreiben kannst. Rundenbasierte Mehrspieler-Züge werden von einer Supabase Edge Function validiert, die dieselbe Spiel-Engine ausführt; sie ist die einzige Stelle, die den vollständigen verborgenen Spielzustand sehen kann.",
+    ", geschützt durch Row-Level-Security, sodass außer dem Anzeigenamen und den Statistiken, die bewusst auf der Bestenliste gezeigt werden, nur Sie Ihre eigenen Zeilen lesen oder schreiben können. Rundenbasierte Mehrspieler-Züge werden von einer Supabase Edge Function validiert, die dieselbe Spiel-Engine ausführt; sie ist die einzige Stelle, die den vollständigen verborgenen Spielzustand sehen kann.",
+  "privacy.processors.others":
+    "Weitere Dienstleister handeln nur zu den hier beschriebenen Zwecken: Stripe verarbeitet freiwillige Trinkgelder, und ein E-Mail-Zustelldienst dient dazu, Nachrichten zuzustellen, die Sie über die Support-Seite senden. Wir verkaufen Ihre personenbezogenen Daten nicht und geben sie nicht zu Werbezwecken weiter.",
+  "privacy.legalBases.title": "Warum wir Ihre Daten verwenden (Rechtsgrundlagen)",
+  "privacy.legalBases.body":
+    "Wir verwenden Ihre Kontodaten, um den Dienst bereitzustellen, um den Sie beim Erstellen eines Kontos gebeten haben (Erfüllung unserer Vereinbarung mit Ihnen gemäß den Nutzungsbedingungen). Wo Sie einwilligen — zum Beispiel in Push-Benachrichtigungen oder in ein öffentliches Profilfoto —, stützen wir uns auf Ihre Einwilligung, die Sie jederzeit widerrufen können. Fehlerberichte, anonyme Nutzungszählungen und Aufzeichnungen zur Missbrauchsvermeidung verwenden wir auf Grundlage unserer berechtigten Interessen daran, die App sicher, fair und funktionsfähig zu halten; dem können Sie widersprechen (siehe unten). Wo das örtliche Recht es verlangt, verarbeiten wir Daten außerdem zur Erfüllung rechtlicher Verpflichtungen. Dies ist eine allgemeinverständliche Zusammenfassung und keine Behauptung einer Zertifizierung nach einem bestimmten Gesetz.",
+  "privacy.storage.title": "Cookies, lokaler Speicher und Benachrichtigungen",
+  "privacy.storage.body":
+    "Die App verwendet keine Werbe- oder Analyse-Cookies. Sie nutzt den lokalen Speicher Ihres Browsers und einen Service Worker (der Seiten zwischenspeichert, damit die App offline funktioniert), um sich Ihr Spiel, Ihre Einstellungen und, wenn Sie angemeldet sind, Ihre Sitzung zu merken. Wenn Sie in Push-Benachrichtigungen einwilligen, speichert Ihr Browser ein Push-Abonnement. Sie können diese Daten löschen oder Benachrichtigungen jederzeit in Ihren Browser- oder Geräteeinstellungen ausschalten; das Löschen des lokalen Speichers entfernt jedes Gastspiel und alle Einstellungen auf diesem Gerät.",
   "privacy.export.title": "Datenexport und -löschung",
-  "privacy.export.bodyPrefix": "Die Konto-Seite hat eine",
+  "privacy.export.bodyPrefix": "Auf der Konto-Seite gibt es die Schaltfläche",
   "privacy.export.downloadLabel": "Meine Daten herunterladen",
   "privacy.export.bodyMiddle":
-    "-Schaltfläche, die dir jederzeit und ohne nachfragen zu müssen alles oben Genannte als eine Datei gibt. Wir bewahren deine Kontodaten auf, solange dein Konto besteht. Um dein Konto und alles, was damit verknüpft ist — Statistiken, Spielverlauf, Erfolgsfortschritt, Anzeigename, Freunde und Mehrspieler-Spiele — zu löschen, schreib eine E-Mail an",
+    "— damit erhalten Sie die an Ihr Konto gebundenen Daten (Profil, Statistiken, Verlauf, Erfolge, Einstellungen, Speicherstände, Freunde und Mehrspieler-Aufzeichnungen) jederzeit und ohne Anfrage als eine Datei. Eine Schaltfläche zum eigenständigen Löschen gibt es noch nicht. Um Ihr Konto und alles, was damit verknüpft ist — Statistiken, Spielverlauf, Erfolgsfortschritt, Profil, Freunde, Clubs und Mehrspieler-Spiele — zu löschen, schreiben Sie eine E-Mail an",
   "privacy.export.bodySuffix":
-    "von der E-Mail-Adresse des Kontos, und wir entfernen es innerhalb einer angemessenen Frist. Das Löschen deines Kontos entfernt dich auch aus den Freundeslisten anderer Spieler.",
+    "von der E-Mail-Adresse des Kontos, und wir löschen es. Das Löschen Ihres Kontos entfernt Sie auch aus den Freundeslisten anderer Spieler.",
+  "privacy.retention.title": "Wie lange wir Daten aufbewahren",
+  "privacy.retention.body":
+    "Wir bewahren Ihre Kontodaten auf, solange Ihr Konto besteht. Nachdem Sie uns um die Löschung Ihres Kontos gebeten haben, bemühen wir uns, es zügig und in jedem Fall innerhalb einer angemessenen Frist zu entfernen. Absturzberichte werden nach etwa 30 Tagen automatisch gelöscht, kurzlebige Benachrichtigungs- und Missbrauchsvermeidungsdaten spätestens nach einigen Wochen. Anonyme Nutzungszählungen enthalten keine persönlichen Kennungen und werden bis zu etwa 13 Monate aufbewahrt. Kopien können für begrenzte Zeit in Backups der Anbieter verbleiben, bevor sie überschrieben werden.",
+  "privacy.transfers.title": "Internationale Übermittlungen",
+  "privacy.transfers.body":
+    "Unser Hosting-Anbieter kann Daten auf Servern außerhalb des Landes speichern und verarbeiten, in dem Sie leben. Wo das geschieht, stützen wir uns auf die Garantien des Anbieters für internationale Übermittlungen (Drittlandübermittlung). Mit der Nutzung eines Kontos nehmen Sie zur Kenntnis, dass Ihre Daten in anderen Ländern verarbeitet werden können.",
+  "privacy.rights.title": "Ihre Rechte",
+  "privacy.rights.body":
+    "Je nachdem, wo Sie leben, haben Sie möglicherweise das Recht, auf Ihre personenbezogenen Daten zuzugreifen, sie zu berichtigen, zu löschen, eine Kopie in einem übertragbaren Format zu erhalten, einer bestimmten Verarbeitung zu widersprechen oder uns um deren Einschränkung zu bitten und erteilte Einwilligungen zu widerrufen (Betroffenenrechte). Vieles davon können Sie selbst tun: Bearbeiten Sie Ihr Profil und Ihre Einstellungen in der App und laden Sie Ihre Daten auf der Konto-Seite herunter. Für alles Weitere oder um Ihr Konto zu löschen, schreiben Sie an die unten stehende Adresse. Sie haben außerdem das Recht, bei Ihrer örtlichen Datenschutz-Aufsichtsbehörde Beschwerde einzulegen. Möglicherweise müssen wir bestätigen, dass Sie es wirklich sind, bevor wir einen Antrag bearbeiten.",
   "privacy.children.title": "Datenschutz für Kinder",
   "privacy.children.body":
-    "Diese App richtet sich nicht an Kinder unter 13 Jahren, und wir erheben wissentlich keine personenbezogenen Daten von ihnen.",
+    "Diese App richtet sich nicht an Kinder unter 13 Jahren, und wir erheben wissentlich keine personenbezogenen Daten von ihnen. Wo das örtliche Recht ein höheres Mindestalter für die Einwilligung in die Verarbeitung der eigenen personenbezogenen Daten festlegt (zum Beispiel 14 in Südkorea oder 16 in Teilen der Europäischen Union), richtet sich die App auch nicht an Personen unter diesem Alter, und Sie sollten kein Konto erstellen, wenn Sie jünger sind. Wenn Sie glauben, dass ein Kind uns personenbezogene Daten übermittelt hat, kontaktieren Sie uns, und wir löschen sie.",
   "privacy.changes.title": "Änderungen dieser Richtlinie",
-  "privacy.changes.body": "Wenn sich diese Richtlinie ändert, aktualisieren wir das Datum oben auf dieser Seite.",
-  "privacy.contact.body": "Fragen, oder möchtest du deine Daten löschen lassen? Kontaktiere",
+  "privacy.changes.body":
+    "Wenn sich diese Richtlinie ändert, aktualisieren wir das Datum oben auf dieser Seite, und bei wesentlichen Änderungen bemühen wir uns, angemeldete Nutzer in der App zu informieren.",
+  "privacy.contact.body": "Fragen, oder möchten Sie Ihre Daten löschen lassen? Kontaktieren Sie",
 
   // scorecard.*
   "scorecard.title": "Punktezähler",

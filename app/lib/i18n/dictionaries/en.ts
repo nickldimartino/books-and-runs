@@ -307,10 +307,6 @@ const en = {
   "multiplayer.contractStatus": "Contract: {stagedBooks}/{books} books · {stagedRuns}/{runs} runs",
   "multiplayer.card": "card",
   "multiplayer.goOut": "Go out",
-  "multiplayer.meldAndDiscard": "Meld & discard",
-  "multiplayer.contractReadyHint": "Your contract is staged. Choose one card to discard, then Meld & discard — your meld and discard are sent together and end your turn.",
-  "multiplayer.meldConfirmPrompt": "Lay down your meld and discard {card}?",
-  "multiplayer.stagedIncomplete": "Your staged groups don't match this round's contract yet. Add or remove groups to complete it before discarding.",
   "multiplayer.syncError": "Couldn't refresh — showing the last known game state.",
   "multiplayer.handEmpty": "Your hand is empty — end your turn to go out.",
 
@@ -994,44 +990,62 @@ const en = {
 
   // terms.*
   "terms.title": "Terms of Service",
-  "terms.lastUpdated": "Last updated August 12, 2026",
+  "terms.lastUpdated": "Last updated September 25, 2026",
   "terms.intro":
     "By using Books & Runs (\"the app\"), you agree to these terms. If you don't agree, please don't use the app.",
   "terms.app.title": "The app",
   "terms.app.bodyPrefix":
-    "Books & Runs is a card game for local pass-and-play and single-player games against AI opponents. It works fully offline with no account. Creating an account is optional and unlocks cross-device stats, achievements, and account level — see our",
+    "Books & Runs is a card game for local pass-and-play and single-player games against AI opponents. It works fully offline with no account. Creating an account is optional and unlocks cross-device stats, achievements, and account level, plus social features such as the Leaderboard, friends, clubs, tournaments, and turn-based multiplayer games with other players — see our",
   "terms.app.bodySuffix": "for what that involves.",
   "terms.accounts.title": "Accounts",
   "terms.accounts.body":
-    "If you create an account, you're responsible for keeping your credentials secure and for anything that happens under your account. Provide accurate information when signing up.",
+    "If you create an account, you're responsible for keeping your credentials secure and for anything that happens under your account. Provide accurate information when signing up. You must be old enough to use the app under the Privacy Policy's age rules.",
   "terms.acceptableUse.title": "Acceptable use",
   "terms.acceptableUse.body":
-    "Don't use the app to interfere with its normal operation, attempt to access other users' data, or use it for anything unlawful.",
+    "Don't use the app to interfere with its normal operation, attempt to access other users' data, cheat or tamper with game results, stats, or the Leaderboard, or use it for anything unlawful.",
+  "terms.userContent.title": "Names, photos, and other content you add",
+  "terms.userContent.body":
+    "If you set a display name, bio, club or tournament name, or profile photo, other players can see it. Don't use content that is unlawful, hateful, harassing, sexually explicit, or that impersonates someone else or that you don't have the right to share. You keep whatever rights you have in your content; you give us permission to store and show it inside the app so the features work. We may remove or reset content that breaks these rules.",
   "terms.ip.title": "Intellectual property",
   "terms.ip.body":
     "The app's design, code, and content belong to its developer. The underlying card game rules are a common house-rules variant and aren't owned by anyone.",
   "terms.disclaimer.title": "Disclaimer and limitation of liability",
   "terms.disclaimer.body":
     "The app is provided \"as is,\" without warranties of any kind. To the fullest extent permitted by law, the developer isn't liable for any damages arising from your use of the app.",
+  "terms.disclaimer.statutory":
+    "Nothing in these terms limits or excludes liability for intent or gross negligence, for death or personal injury, or any right or liability that cannot be limited or excluded under the mandatory consumer-protection or other law of the country where you live.",
+  "terms.service.title": "Changes to the app",
+  "terms.service.body":
+    "The app is a hobby project run by an individual developer. We may add, change, or remove features, reset or rebalance stats and leaderboards, or stop offering the app or parts of it (including online features) at any time. We'll try to give reasonable notice of significant changes where we can, but we can't promise the online features will always be available.",
   "terms.termination.title": "Termination",
   "terms.termination.body":
-    "You can stop using the app or delete your account at any time (see the Privacy Policy for how). We may suspend or terminate accounts that violate these terms.",
+    "You can stop using the app or delete your account at any time (see the Privacy Policy for how). The developer may suspend, restrict, or delete an account, or remove content, if it breaks these terms — for example cheating, harassment, offensive names or photos, or attempts to attack or overload the service — and may do so without notice where needed to protect the service or other players. If you think this was a mistake, contact us.",
+  "terms.law.title": "Governing law",
+  "terms.law.body":
+    "Nothing in these terms takes away the mandatory legal rights you have under the law of the country where you live, and those rules continue to apply to you.",
   "terms.changes.title": "Changes to these terms",
-  "terms.changes.body": "If these terms change, we'll update the date at the top of this page.",
+  "terms.changes.body":
+    "If these terms change, we'll update the date at the top of this page. If you keep using the app after a change, that means you accept the updated terms; if you don't accept them, please stop using the app and, if you like, delete your account.",
   "terms.contact.body": "Questions about these terms? Contact",
 
   // privacy.*
-  "privacy.lastUpdated": "Last updated September 11, 2026",
+  "privacy.lastUpdated": "Last updated September 25, 2026",
   "privacy.overview.title": "Overview",
   "privacy.overview.body":
     "Books & Runs is a card game you can play entirely offline, on one device, with no account required. This policy explains what happens if you choose to create an account, and confirms what we never collect.",
+  "privacy.controller.title": "Who is responsible for your data",
+  "privacy.controller.body":
+    "Books & Runs is run by an individual developer, who is the controller of the personal data described in this policy. There is no company behind the app. You can reach the developer at the contact email at the bottom of this page.",
   "privacy.localPlay.title": "Local play needs no account",
   "privacy.localPlay.body":
-    "If you never sign in, the app collects nothing. Your in-progress game and any house-rule settings you choose are stored only in your browser or device's local storage, are never transmitted anywhere, and are never seen by us.",
+    "If you never sign in, your games and settings stay with you. Your in-progress game, house-rule settings, and preferences are stored only in your browser or device's local storage, are never transmitted anywhere, and are never seen by us.",
+  "privacy.localPlay.diagnostics":
+    "Two small things are sent even without an account, so problems can be found and fixed: crash and error reports (the error message, the page you were on, your browser and device type, and the app version), and anonymous usage counts such as “a game was started” with coarse details like game mode and difficulty. Usage counts carry no account, name, or device identifier. Your IP address is inevitably visible to our hosting provider when any request is made, but we don't store it in these records. If you use the Support page, the message and any files or contact address you choose to include are emailed to the developer.",
   "privacy.account.title": "If you create an account",
   "privacy.account.intro":
-    "Signing in is optional and unlocks Stats, Achievements, your account level, the Leaderboard, Friends, and turn-based multiplayer games. If you sign in with email, we store:",
-  "privacy.account.item.email": "Your email address, via our authentication provider (Supabase Auth).",
+    "Signing in is optional and unlocks Stats, Achievements, your account level, the Leaderboard, Friends, Clubs, Tournaments, and turn-based multiplayer games. If you sign in with email, we store:",
+  "privacy.account.item.email":
+    "Your email address and a securely hashed password, via our authentication provider (Supabase Auth), plus your two-factor authentication (authenticator app) details if you turn that on. Your signed-in session is kept in your browser's local storage.",
   "privacy.account.item.stats":
     "Game stats tied to your account: games played and won, best, worst, and average score, and wins broken down by AI difficulty faced.",
   "privacy.account.item.history":
@@ -1040,6 +1054,18 @@ const en = {
     "Achievement progress: counts of specific in-game actions — melds made, cards laid off, rounds won a particular way, and similar — used to determine which achievements you've unlocked. Your account level is calculated from this data and the stats above, not stored separately.",
   "privacy.account.item.displayName":
     "A display name, if you set one. This is optional, is visible to other signed-in players on the Leaderboard and to anyone you're friends with, and does not have to be your real name. Until you set one you appear as a generated label like “Player 4821”.",
+  "privacy.account.item.profile":
+    "Your public profile, which any signed-in player can view along with your Leaderboard entry: an optional short bio, avatar (an emoji and colour, or a photo you upload), banner, frame, title, badge, pinned achievements and card style, level and stats, Daily Deal streaks, and when you joined. Uploaded profile photos are stored in a public image bucket, so anyone who has the photo's link can open it. Don't upload anything you wouldn't want others to see. Players can report a profile photo, and we keep those reports (who reported whom, and an optional reason).",
+  "privacy.account.item.saves":
+    "Your progress so you can continue on any device: an in-progress solo game saved to your account, Daily Deal and Weekly Challenge completions and scores, monthly season totals, and your saved favourite game setup.",
+  "privacy.account.item.clubs":
+    "Clubs and tournaments you create or join: the club or tournament name (visible to its members and participants), who owns or hosts it, and who its members and participants are.",
+  "privacy.account.item.push":
+    "If you turn on notifications, your browser's push subscription (an address and encryption keys supplied by your browser's push service) so we can send you “your turn”, friend, and Daily Deal reminder notifications. This is off unless you opt in, and you can turn it off at any time in the app or in your browser or device settings.",
+  "privacy.account.item.support":
+    "If you send a tip through the Support the developer page, payment is handled entirely by Stripe, and we never see your card details. We store only that a payment happened (the Stripe session reference, amount, and currency) so we can give you the supporter badge.",
+  "privacy.account.item.security":
+    "Short-lived technical records: in-app notifications and request counters used to prevent abuse (kept for a few weeks at most), and, for signed-in users, error reports may be linked to your account so we can investigate a problem.",
   "privacy.account.item.friendsPrefix": "A per-account",
   "privacy.account.item.friendCodeLabel": "friend code",
   "privacy.account.item.friendsSuffix":
@@ -1047,26 +1073,44 @@ const en = {
   "privacy.account.item.multiplayer":
     "Multiplayer game data: for any turn-based game you start or join, the other participants, the seating, whose turn it is, hand sizes, scores, and the final result. The full game state (including the shuffled deck and each player's hand) is held server-side and only ever revealed to a player as their own view — you never see another player's hand.",
   "privacy.account.item.aiDifficulty":
-    "Your default AI difficulty preference, if you set one on the Settings screen. (Theme, card back, colorblind mode, and sound/haptics on-off are also set there, but stay local to your device and are never sent to us.)",
+    "Your preferences, so they follow you to a new device or install: theme, card back and card face, colorblind mode, text size, language, sound and haptics settings, ambient music settings, hint and highlight options, your default AI difficulty, and your house-rule choices. These sync to your account only while you're signed in; if you don't sign in, they stay only on your device and are never sent to us.",
   "privacy.account.outro":
-    "We don't require your real name, and we don't collect your location, contacts, photos, or any device permissions. There are no ads and no analytics or tracking SDKs in this app.",
+    "We don't require your real name, and we don't collect your location, contacts, or any device permissions beyond notifications if you opt in. There are no ads and no third-party analytics or tracking SDKs in this app.",
   "privacy.processors.title": "Who processes this data",
   "privacy.processors.bodyPrefix": "Account data is stored in a Postgres database hosted by",
   "privacy.processors.linkText": "Supabase",
   "privacy.processors.bodySuffix":
     ", protected by row-level security so, other than the display name and stats that are deliberately shown on the Leaderboard, only you can read or write your own rows. Turn-based multiplayer moves are validated by a Supabase Edge Function that runs the same game engine; it is the only thing that can see the full hidden game state.",
+  "privacy.processors.others":
+    "Other service providers act only for the purposes described here: Stripe processes optional tips, and an email delivery service is used to deliver messages you send through the Support page. We don't sell your personal data or share it for advertising.",
+  "privacy.legalBases.title": "Why we use your data (legal bases)",
+  "privacy.legalBases.body":
+    "We use your account data to provide the service you asked for when you created an account (performance of our agreement with you under the Terms of Service). Where you opt in — for example to push notifications or to a public profile photo — we rely on your consent, which you can withdraw at any time. We use error reports, anonymous usage counts, and abuse-prevention records for our legitimate interests in keeping the app secure, fair, and working; you can object to this (see below). Where local law requires it, we also process data to meet legal obligations. This is a plain-language summary and not a claim of certification under any particular law.",
+  "privacy.storage.title": "Cookies, local storage, and notifications",
+  "privacy.storage.body":
+    "The app doesn't use advertising or analytics cookies. It uses your browser's local storage and a service worker (which caches pages so the app works offline) to remember your game, preferences, and, if you're signed in, your session. If you opt in to push notifications, your browser stores a push subscription. You can clear this data or turn notifications off at any time in your browser or device settings; clearing local storage will remove any guest game and preferences on that device.",
   "privacy.export.title": "Data export and deletion",
   "privacy.export.bodyPrefix": "The Account page has a",
   "privacy.export.downloadLabel": "Download my data",
   "privacy.export.bodyMiddle":
-    "button that gives you everything above as one file, any time, with no need to ask. We keep your account data for as long as your account exists. To delete your account and everything tied to it — stats, game history, achievement progress, display name, friends, and multiplayer games — email",
+    "button that gives you the data tied to your account (profile, stats, history, achievements, settings, saves, friends, and multiplayer record) as one file, any time, with no need to ask. There is no self-serve delete button yet. To delete your account and everything tied to it — stats, game history, achievement progress, profile, friends, clubs, and multiplayer games — email",
   "privacy.export.bodySuffix":
-    "from the address on the account and we'll remove it within a reasonable time. Deleting your account also removes you from other players' friends lists.",
+    "from the address on the account and we'll delete it. Deleting your account also removes you from other players' friends lists.",
+  "privacy.retention.title": "How long we keep data",
+  "privacy.retention.body":
+    "We keep your account data for as long as your account exists. After you ask us to delete your account we aim to remove it promptly and in any case within a reasonable time. Crash reports are automatically deleted after about 30 days and short-lived notification and abuse-prevention records after a few weeks at most. Anonymous usage counts contain no personal identifiers and are kept for up to about 13 months. Copies may remain in provider backups for a limited time before they are overwritten.",
+  "privacy.transfers.title": "International transfers",
+  "privacy.transfers.body":
+    "Our hosting provider may store and process data on servers outside the country where you live. Where that happens, we rely on the provider's safeguards for international transfers. By using an account, you understand your data may be processed in other countries.",
+  "privacy.rights.title": "Your rights",
+  "privacy.rights.body":
+    "Depending on where you live, you may have the right to access your personal data, correct it, delete it, receive a copy in a portable format, object to or ask us to restrict certain processing, and withdraw consent you gave. Much of this you can do yourself: edit your profile and settings in the app, and download your data from the Account page. For anything else, or to delete your account, email the address below. You also have the right to lodge a complaint with your local data-protection authority. We may need to confirm it's really you before acting on a request.",
   "privacy.children.title": "Children's privacy",
   "privacy.children.body":
-    "This app is not directed at children under 13, and we do not knowingly collect personal information from them.",
+    "This app is not directed at children under 13, and we do not knowingly collect personal data from them. Where local law sets a higher minimum age for a person to consent to the processing of their personal data (for example 14 in South Korea, or 16 in parts of the European Union), the app is not directed at people under that age either, and you should not create an account if you are. If you believe a child has given us personal data, contact us and we will delete it.",
   "privacy.changes.title": "Changes to this policy",
-  "privacy.changes.body": "If this policy changes, we'll update the date at the top of this page.",
+  "privacy.changes.body":
+    "If this policy changes, we'll update the date at the top of this page, and for significant changes we'll try to tell signed-in users in the app.",
   "privacy.contact.body": "Questions, or want your data deleted? Contact",
 
   // scorecard.*
