@@ -2,9 +2,11 @@
 
 import { Card } from "@/types";
 import { CardFace } from "../components/CardFace";
-import { cardCosmeticRequirementLabel, isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
+import { useT } from "../lib/i18n/LocaleProvider";
+import { isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
 import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
 import { CARD_FACES, CardFaceId, CardFaceOption } from "../lib/cardFaceStore";
+import { cardFaceDescKey, cardUnlockText } from "./pickerText";
 import { CheckBadge } from "./SwatchPicker";
 
 // A fixed sample card every tile previews — a numbered, red card (rather
@@ -29,7 +31,8 @@ function CardFaceTile({
   unlocked: boolean;
   onClick: () => void;
 }) {
-  const title = unlocked || !option.unlock ? option.description : cardCosmeticRequirementLabel(option.unlock);
+  const { t } = useT();
+  const title = unlocked || !option.unlock ? t(cardFaceDescKey(option.id)) : cardUnlockText(t, option.unlock);
   return (
     <button
       onClick={unlocked ? onClick : undefined}
@@ -73,11 +76,12 @@ export function CardFacePicker({
   /** Gates the Boutique style (Outline) — same source as `level`. */
   isCreator?: boolean;
 }) {
+  const { t } = useT();
   const activeOption = CARD_FACES.find((f) => f.id === active);
   return (
     <div className="flex flex-col gap-2.5">
       <p className="text-xs text-[var(--faint)]">
-        Currently: <span className="font-semibold text-[var(--muted)]">{activeOption?.name ?? "Classic"}</span>
+        {t("settingsPicker.currently")} <span className="font-semibold text-[var(--muted)]">{activeOption?.name ?? "Classic"}</span>
       </p>
       <div className="grid grid-cols-2 gap-2">
         {CARD_FACES.map((f) => (

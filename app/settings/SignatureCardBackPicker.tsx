@@ -1,9 +1,11 @@
 "use client";
 
 import { CSSProperties } from "react";
-import { cardCosmeticRequirementLabel, isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
+import { useT } from "../lib/i18n/LocaleProvider";
+import { isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
 import { SIGNATURE_CARD_BACKS, SignatureCardBackId, SignatureCardBackOption } from "../lib/cardBackStore";
 import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
+import { cardBackDescKey, cardUnlockText } from "./pickerText";
 import { CheckBadge } from "./SwatchPicker";
 
 // A small standalone grid for the 2 "Signature" card backs (not derived
@@ -23,7 +25,8 @@ function SignatureCardBackTile({
   unlocked: boolean;
   onClick: () => void;
 }) {
-  const title = unlocked || !option.unlock ? option.description : cardCosmeticRequirementLabel(option.unlock);
+  const { t } = useT();
+  const title = unlocked || !option.unlock ? t(cardBackDescKey(option.id)) : cardUnlockText(t, option.unlock);
   return (
     <button
       onClick={unlocked ? onClick : undefined}
@@ -66,9 +69,10 @@ export function SignatureCardBackPicker({
   /** Gates the Boutique style (Static) — same source as `level`. */
   isCreator?: boolean;
 }) {
+  const { t } = useT();
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">Signature</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("settingsPicker.signature")}</p>
       <div className="grid grid-cols-2 gap-2">
         {SIGNATURE_CARD_BACKS.map((s) => (
           <SignatureCardBackTile

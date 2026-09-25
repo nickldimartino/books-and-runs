@@ -38,10 +38,9 @@ export default function AmbientSongSettingsPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       <BackLink href="/settings#audio" label={t("home.settings")} />
       <div className="-mt-2">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Ambient song</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("settings.ambientSong")}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Play through all of them forward, then back again, 3 minutes each and blending into each
-          other — or pin it to just one.
+          {t("settingsAmbientSong.description")}
         </p>
       </div>
 

@@ -51,11 +51,9 @@ export default function CardBackSettingsPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       <BackLink href="/settings#display" label={t("home.settings")} />
       <div className="-mt-2">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Card back</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("settings.cardBack")}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          The pattern and color on the back of your cards — the draw pile, and another
-          player&apos;s hand while it&apos;s face down. Separate from Theme, so any table look
-          can be paired with any card back.
+          {t("settingsCardBack.description")}
         </p>
       </div>
 

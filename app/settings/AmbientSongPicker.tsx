@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { AmbientTrackChoice } from "../lib/settingsStore";
 import { AMBIENT_SONGS, isPreviewing, previewSong, stopPreview } from "../lib/ambience";
 
@@ -22,6 +23,7 @@ export function AmbientSongPicker({
   disabled: boolean;
   onSelect: (id: AmbientTrackChoice) => void;
 }) {
+  const { t } = useT();
   const [previewingId, setPreviewingId] = useState<(typeof AMBIENT_SONGS)[number]["id"] | null>(null);
 
   // Never leave a preview playing behind after navigating away — nothing
@@ -52,7 +54,7 @@ export function AmbientSongPicker({
             : "bg-[var(--panel)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
         }`}
       >
-        Play all songs
+        {t("settingsAmbientSong.playAll")}
       </button>
       {AMBIENT_SONGS.map((song) => (
         <div key={song.id} className="flex items-center gap-2">
@@ -70,7 +72,7 @@ export function AmbientSongPicker({
           <button
             type="button"
             onClick={() => togglePreview(song.id)}
-            aria-label={previewingId === song.id ? `Stop listening to ${song.label}` : `Listen to ${song.label}`}
+            aria-label={t(previewingId === song.id ? "settingsAmbientSong.stopListening" : "settingsAmbientSong.listen", { name: song.label })}
             className="shrink-0 rounded-md bg-[var(--panel)] px-3 py-2 text-sm text-[var(--heading)] hover:bg-[var(--panel-soft)]"
           >
             {previewingId === song.id ? "⏸" : "▶"}

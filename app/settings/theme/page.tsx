@@ -47,21 +47,20 @@ export default function ThemeSettingsPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       <BackLink href="/settings#display" label={t("home.settings")} />
-      <h1 className="-mt-2 text-2xl font-bold text-[var(--heading)]">Theme</h1>
+      <h1 className="-mt-2 text-2xl font-bold text-[var(--heading)]">{t("settings.theme")}</h1>
 
       {loading || authLoading ? (
         <LoadingSpinner />
       ) : signedOutGate ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--panel)] p-6 text-center">
           <p className="text-sm text-[var(--muted)]">
-            Sign in to pick a theme — signed-out play always uses the default table so there&apos;s
-            nothing to lose track of between devices.
+            {t("settingsTheme.signInPrompt")}
           </p>
           <Link
             href="/sign-in"
             className="rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]"
           >
-            Sign in
+            {t("signIn.title")}
           </Link>
         </div>
       ) : (

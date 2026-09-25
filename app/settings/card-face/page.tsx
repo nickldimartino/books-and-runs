@@ -33,10 +33,9 @@ export default function CardFaceSettingsPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10">
       <BackLink href="/settings#display" label={t("home.settings")} />
       <div className="-mt-2">
-        <h1 className="text-2xl font-bold text-[var(--heading)]">Card face</h1>
+        <h1 className="text-2xl font-bold text-[var(--heading)]">{t("settings.cardFace")}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          How a card&apos;s rank and suit are drawn. Separate from Theme and Card back, so any table
-          look can be paired with any card face.
+          {t("settingsCardFace.description")}
         </p>
       </div>
 

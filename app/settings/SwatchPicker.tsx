@@ -1,7 +1,9 @@
 "use client";
 
 import { CSSProperties, useState } from "react";
+import { useT } from "../lib/i18n/LocaleProvider";
 import { THEMES, ThemeCategory, ThemeId, ThemeOption } from "../lib/themeStore";
+import { themeDescKey } from "./pickerText";
 import { THEME_SWATCHES } from "./themeSwatches";
 
 export function CheckBadge({ className }: { className: string }) {
@@ -24,12 +26,13 @@ export function CheckBadge({ className }: { className: string }) {
 // color block (not a small dot) is a far more honest preview of what a
 // theme actually looks like once applied.
 function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
+  const { t } = useT();
   const swatch = THEME_SWATCHES[option.id];
   return (
     <button
       onClick={onClick}
       aria-current={isActive}
-      title={option.description}
+      title={t(themeDescKey(option.id))}
       className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
         isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
       }`}
@@ -68,12 +71,13 @@ function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActi
 // live --elevated var, which is what actually makes a dark card back read
 // as dark here regardless of the currently active table theme.
 function CardBackTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
+  const { t } = useT();
   const swatch = THEME_SWATCHES[option.id];
   return (
     <button
       onClick={onClick}
       aria-current={isActive}
-      title={option.description}
+      title={t(themeDescKey(option.id))}
       className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
         isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
       }`}
@@ -103,6 +107,7 @@ function CardBackTile({ option, isActive, onClick }: { option: ThemeOption; isAc
 // row, since "always match whatever theme is active" isn't a preview-able
 // color the way every other card back option is.
 function MatchThemeTile({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
+  const { t } = useT();
   return (
     <button
       onClick={onClick}
@@ -118,8 +123,8 @@ function MatchThemeTile({ isActive, onClick }: { isActive: boolean; onClick: () 
         </svg>
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-[var(--heading)]">Match table theme</span>
-        <span className="block text-xs text-[var(--faint)]">Always follows whichever theme is active above.</span>
+        <span className="block text-sm font-medium text-[var(--heading)]">{t("settings.matchTableTheme")}</span>
+        <span className="block text-xs text-[var(--faint)]">{t("settingsPicker.matchThemeHint")}</span>
       </span>
       {isActive && <CheckBadge className="h-4 w-4 shrink-0 text-[var(--accent)]" />}
     </button>
@@ -134,6 +139,7 @@ const CATEGORIES: ThemeCategory[] = ["classic", "holiday"];
 // scroll: a "Show ▼" disclosure still leaves the *other* category's rows
 // sitting there once opened, where a tab just replaces the grid outright.
 function CategoryTabs({ tab, onChange }: { tab: ThemeCategory; onChange: (t: ThemeCategory) => void }) {
+  const { t } = useT();
   return (
     <div className="flex gap-1 rounded-lg bg-[var(--panel-soft)] p-1" role="tablist">
       {CATEGORIES.map((c) => (
@@ -148,7 +154,7 @@ function CategoryTabs({ tab, onChange }: { tab: ThemeCategory; onChange: (t: The
               : "text-[var(--muted)] hover:bg-[var(--panel)]"
           }`}
         >
-          {c}
+          {c === "classic" ? t("settingsPicker.tabClassic") : t("settingsPicker.tabHoliday")}
         </button>
       ))}
     </div>
@@ -179,9 +185,10 @@ export function SwatchPicker({
   onSelect: (id: ThemeId | "match") => void;
   matchOption?: boolean;
 }) {
-  const activeOption = active === "match" ? undefined : THEMES.find((t) => t.id === active);
+  const { t } = useT();
+  const activeOption = active === "match" ? undefined : THEMES.find((o) => o.id === active);
   const [tab, setTab] = useState<ThemeCategory>(activeOption?.category ?? "classic");
-  const visible = THEMES.filter((t) => t.category === tab);
+  const visible = THEMES.filter((o) => o.category === tab);
   const currentSwatch = activeOption ? THEME_SWATCHES[activeOption.id] : undefined;
 
   return (
@@ -194,9 +201,9 @@ export function SwatchPicker({
             aria-hidden="true"
           />
         )}
-        Currently:{" "}
+        {t("settingsPicker.currently")}{" "}
         <span className="font-semibold text-[var(--muted)]">
-          {activeOption ? activeOption.name : "Match table theme"}
+          {activeOption ? activeOption.name : t("settings.matchTableTheme")}
         </span>
       </p>
 
@@ -210,11 +217,11 @@ export function SwatchPicker({
           separate flag just for tile choice would be tracking the same
           thing twice. */}
       <div className="grid grid-cols-2 gap-2">
-        {visible.map((t) =>
+        {visible.map((o) =>
           matchOption ? (
-            <CardBackTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
+            <CardBackTile key={o.id} option={o} isActive={active === o.id} onClick={() => onSelect(o.id)} />
           ) : (
-            <SwatchTile key={t.id} option={t} isActive={active === t.id} onClick={() => onSelect(t.id)} />
+            <SwatchTile key={o.id} option={o} isActive={active === o.id} onClick={() => onSelect(o.id)} />
           )
         )}
       </div>
