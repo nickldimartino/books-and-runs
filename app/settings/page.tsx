@@ -209,7 +209,11 @@ function SectionReset({
   onAsk,
   onCancel,
   onConfirm,
+  label,
+  confirmText,
 }: {
+  label?: string;
+  confirmText?: string;
   confirming: boolean;
   onAsk: () => void;
   onCancel: () => void;
@@ -222,13 +226,13 @@ function SectionReset({
         onClick={onAsk}
         className="self-start rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
       >
-        {t("settings.resetSection")}
+        {label ?? t("settings.resetSection")}
       </button>
     );
   }
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
-      <p className="text-sm text-[var(--muted)]">{t("settings.resetSectionConfirm")}</p>
+      <p className="text-sm text-[var(--muted)]">{confirmText ?? t("settings.resetSectionConfirm")}</p>
       <div className="flex gap-3">
         <button
           onClick={onCancel}
@@ -471,7 +475,16 @@ export default function SettingsPage() {
     else if (permission === "denied") setPushState("denied");
     else isPushSubscribed().then((subbed) => setPushState(subbed ? "on" : "off"));
     setLoading(false);
-    return onAccountSettingsSynced(loadAllFromLocal);
+    const onHashChange = () => {
+      const h = window.location.hash.slice(1);
+      if ((TABS as readonly string[]).includes(h)) setTab(h as SettingsTab);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    const stopSync = onAccountSettingsSynced(loadAllFromLocal);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      stopSync();
+    };
   }, []);
 
   // The active tab lives in the URL hash (replaceState, so tabs don't pile
@@ -786,32 +799,14 @@ export default function SettingsPage() {
             </section>
           </SettingsSection>
 
-          {confirmingReset === "global" ? (
-            <div className="flex flex-col gap-3 rounded-lg border border-[var(--danger)]/50 bg-[var(--panel)] p-3">
-              <p className="text-sm text-[var(--muted)]">{t("settings.resetConfirm")}</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmingReset(null)}
-                  className="flex-1 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  onClick={handleResetToDefaults}
-                  className="flex-1 rounded-lg border border-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-[var(--danger)] hover:bg-[var(--panel-soft)]"
-                >
-                  {t("settings.yesReset")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmingReset("global")}
-              className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-            >
-              {t("settings.resetToDefaults")}
-            </button>
-          )}
+          <SectionReset
+                label={t("settings.resetToDefaults")}
+                confirmText={t("settings.resetConfirm")}
+                confirming={confirmingReset === "global"}
+                onAsk={() => setConfirmingReset("global")}
+                onCancel={() => setConfirmingReset(null)}
+                onConfirm={handleResetToDefaults}
+              />
             </>
           )}
 
