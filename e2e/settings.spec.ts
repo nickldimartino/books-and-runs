@@ -71,6 +71,8 @@ test("game speed and reduce motion persist and apply", async ({ page }) => {
   // Survives a reload — init.js re-applies the attribute before first paint.
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-reduce-motion", "on");
-  await page.goto("/settings#gameplay");
+  // A hash-only page.goto() doesn't reliably raise hashchange in WebKit, so
+  // switch tabs the way a user does.
+  await page.getByRole("tab", { name: "Gameplay" }).click();
   await expect(page.getByRole("button", { name: "Fast", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
