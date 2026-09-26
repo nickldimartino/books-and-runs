@@ -326,7 +326,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="mt-auto flex flex-col gap-1 pt-2">
+      <div className="mt-4 flex flex-col gap-1">
         <footer className="flex flex-wrap justify-center gap-x-3 text-xs text-[var(--faint)]">
           <Link href="/privacy" className={footerLink}>
             {t("common.privacy")}

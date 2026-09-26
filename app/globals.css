@@ -2615,6 +2615,9 @@ body:has(.app-nav) {
    page doesn't scroll by exactly the bar's height. */
 body:has(.app-nav) main.min-h-screen {
   min-height: calc(100vh - var(--nav-offset));
+  /* 100vh is the *largest* mobile viewport (browser toolbars hidden), so on
+     iOS it left a phantom gap under short pages; dvh tracks what is visible. */
+  min-height: calc(100dvh - var(--nav-offset));
 }
 /* No bar while the intro plays or a modal dialog is open. */
 html[data-intro] .app-nav,
