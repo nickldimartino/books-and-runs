@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
     ? { distDir: process.env.BR_DIST_DIR, typescript: { ignoreBuildErrors: true } }
     : {}),
   images: { unoptimized: true },
+  // Dev-only: the route badge sits bottom-left, right on top of the app nav's
+  // Play tab (and intercepts Playwright's clicks on it). Compile/runtime error
+  // overlays still show.
+  devIndicators: false,
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,
   },

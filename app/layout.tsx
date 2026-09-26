@@ -8,12 +8,14 @@ import { AccountSettingsSync } from "./AccountSettingsSync";
 import { AccountSwitchGuard } from "./AccountSwitchGuard";
 import { AuthProvider } from "./AuthContext";
 import { GameProvider } from "./GameContext";
+import { AppNav } from "./components/AppNav";
 import { DocumentTitleLocalizer } from "./components/DocumentTitleLocalizer";
 import { InstallHint } from "./components/InstallHint";
 import { ShellEffects } from "./components/ShellEffects";
 import { ToastHost } from "./components/ToastHost";
 import { GamepadNavigation } from "./components/GamepadNavigation";
 import { LocaleProvider } from "./lib/i18n/LocaleProvider";
+import { NotificationsProvider } from "./lib/NotificationsContext";
 import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
@@ -151,8 +153,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <PlayerLevelProvider>
               <PendingSaveSync />
               <GameProvider>
-                <LocalSaveSync />
-                {children}
+                <NotificationsProvider>
+                  <LocalSaveSync />
+                  {children}
+                  <AppNav />
+                </NotificationsProvider>
               </GameProvider>
             </PlayerLevelProvider>
           </AuthProvider>

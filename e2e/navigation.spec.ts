@@ -26,6 +26,11 @@ test("home screen shows the hero and the main entry points", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Books & Runs" })).toBeVisible();
   await expect(page.getByRole("link", { name: "New Game" })).toBeVisible();
   await expect(page.getByRole("button", { name: /play today's deal/i })).toBeVisible();
+  // The slim top bar and the persistent nav.
+  await expect(page.getByTestId("home-topbar").getByRole("link", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByTestId("app-nav")).toBeVisible();
+  // "More" is gone; its links live on the Profile hub / Home footer.
+  await expect(page.getByText("More", { exact: true })).toHaveCount(0);
 });
 
 test("New Game leads to the solo / with-friends fork", async ({ page }) => {

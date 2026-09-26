@@ -125,6 +125,22 @@
     }
   } catch (e) {}
 
+  // Home's Today card remembers its selected tab (Daily / Weekly / Quests) and
+  // the dismissed guest sign-in prompt — both stamped here so the prerendered
+  // layout already matches before first paint (see app/globals.css).
+  try {
+    var tt = localStorage.getItem("booksAndRuns:todayTab");
+    if (tt === "daily" || tt === "weekly" || tt === "quests") {
+      document.documentElement.setAttribute("data-today-tab", tt);
+    }
+    if (localStorage.getItem("booksAndRuns:hadMpGames") === "1") {
+      document.documentElement.setAttribute("data-had-games", "1");
+    }
+    if (localStorage.getItem("booksAndRuns:signInPromptDismissed") === "1") {
+      document.documentElement.setAttribute("data-signin-dismissed", "1");
+    }
+  } catch (e) {}
+
   // Arms the first-visit intro (see components/IntroSplash.tsx). Runs
   // before the body paints so html[data-intro]::before can cover the
   // screen with no flash of the home content underneath. Only the very

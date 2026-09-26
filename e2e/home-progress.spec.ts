@@ -9,8 +9,9 @@ import {
   type TestUser,
 } from "./helpers/testAccounts";
 
-// Home's progression layer: the rotating daily/weekly quests card, the
-// identity chip with a real XP bar, and the "welcome back" recap.
+// Home's progression layer: the Today card (Daily / Weekly / Quests behind a
+// segmented control), the top-bar identity chip with a real XP bar, and the
+// "welcome back" recap.
 
 async function seedReturningPlayer(page: Page, extra: Record<string, string> = {}) {
   await page.addInitScript((extraKeys) => {
@@ -33,6 +34,7 @@ test.describe("Home progression (guest)", () => {
   test("a returning guest sees the daily and weekly quests with a sign-in prompt", async ({ page }) => {
     await seedReturningPlayer(page);
     await page.goto("/");
+    await page.getByRole("tab", { name: "Quests" }).click();
     const quests = page.getByRole("region", { name: "Quests" });
     await expect(quests).toBeVisible();
     await expect(quests.getByRole("progressbar")).toHaveCount(6);
@@ -56,10 +58,13 @@ test.describe("Home progression (guest)", () => {
       }),
     });
     await page.goto("/");
-    const card = page.locator("section").filter({ hasText: "Quick Deal" });
-    await expect(card).toBeVisible();
-    await expect(card).toContainText("Tester");
-    await card.getByRole("button", { name: "Play" }).click();
+    // The Play zone's one primary button becomes Quick Deal, with the saved
+    // lineup as its caption and New Game demoted beside it.
+    const zone = page.getByTestId("play-zone");
+    await expect(zone.getByRole("button", { name: "Quick Deal" })).toBeVisible();
+    await expect(zone).toContainText("Tester");
+    await expect(zone.getByRole("link", { name: "New Game" })).toBeVisible();
+    await zone.getByRole("button", { name: "Quick Deal" }).click();
     await expect(page).toHaveURL(/\/game$/);
     await expect(page.getByText(/round 1 of 5/i)).toBeVisible();
   });
@@ -79,8 +84,51 @@ test.describe("Home progression (guest)", () => {
         .forEach((k) => localStorage.removeItem(k));
     });
     await page.reload();
-    await expect(page.getByRole("link", { name: "New Game" })).toBeVisible();
+    // One primary button — New Game — and no Quick Deal / Continue yet.
+    await expect(page.getByTestId("play-primary")).toHaveText("New Game");
+    await expect(page.getByTestId("play-zone").getByRole("link", { name: "New Game" })).toHaveCount(1);
+    // Calm: no Quests segment, no Quests region.
+    await expect(page.getByRole("tab", { name: "Quests" })).toBeHidden();
     await expect(page.getByRole("region", { name: "Quests" })).toHaveCount(0);
+    // The Today card itself is there, with Daily and Weekly.
+    await expect(page.getByRole("tab", { name: "Daily" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Weekly" })).toBeVisible();
+  });
+
+  test("the Today card opens on Daily, switches segments, and remembers the choice", async ({ page }) => {
+    await seedReturningPlayer(page);
+    await page.goto("/");
+    const daily = page.getByRole("tab", { name: "Daily" });
+    await expect(daily).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("button", { name: /play today's deal/i })).toBeVisible();
+
+    await page.getByRole("tab", { name: "Weekly" }).click();
+    await expect(page.getByRole("button", { name: /play this week's challenge/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /play today's deal/i })).toHaveCount(0);
+
+    // Remembered across a reload (localStorage + the <html data-today-tab> hint).
+    await page.reload();
+    await expect(page.getByRole("tab", { name: "Weekly" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-today-tab", "weekly");
+
+    // Arrow keys move between segments.
+    await page.getByRole("tab", { name: "Weekly" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Quests" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("region", { name: "Quests" })).toBeVisible();
+  });
+
+  test("the guest sign-in card is dismissible and stays dismissed", async ({ page }) => {
+    await seedReturningPlayer(page);
+    await page.goto("/");
+    const card = page.locator("[data-home-signin]");
+    await expect(card).toBeVisible();
+    await card.getByRole("button", { name: "Dismiss" }).click();
+    await expect(card).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator("[data-home-signin]")).toBeHidden();
+    // The top bar's Sign in chip is always there.
+    await expect(page.getByTestId("home-topbar").getByRole("link", { name: "Sign in" })).toBeVisible();
   });
 
   test("the quests are the same for everyone on a given UTC day (deterministic)", async ({ browser }) => {
@@ -90,6 +138,7 @@ test.describe("Home progression (guest)", () => {
       const page = await context.newPage();
       await seedReturningPlayer(page);
       await page.goto("/");
+      await page.getByRole("tab", { name: "Quests" }).click();
       const quests = page.getByRole("region", { name: "Quests" });
       await expect(quests).toBeVisible();
       labels.push(await quests.getByRole("progressbar").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") ?? "")));
@@ -109,7 +158,7 @@ test.describe("Home progression (guest)", () => {
     await expect(card).toHaveCount(0);
     // Visiting again straight away is not another absence.
     await page.reload();
-    await expect(page.getByRole("link", { name: "New Game" })).toBeVisible();
+    await expect(page.getByTestId("play-primary")).toBeVisible();
     await expect(page.getByRole("region", { name: "Welcome back!" })).toHaveCount(0);
   });
 });
@@ -139,13 +188,24 @@ test.describe("Home progression (signed in)", () => {
     });
     await page.goto("/");
 
-    const chip = page.getByRole("link", { name: /Level \d+/ });
+    const chip = page.getByTestId("home-topbar").getByRole("link", { name: /Level \d+/ });
     await expect(chip).toBeVisible({ timeout: 15_000 });
     await expect(chip.getByRole("progressbar")).toBeVisible();
     await expect(chip.getByText(/XP to level/)).toBeVisible();
     await expect(page.getByText(user.email)).toHaveCount(0);
     await expect(page.getByText(/signed in as/i)).toHaveCount(0);
 
+    // Signed in: the top bar has the bell + settings gear, no guest chip.
+    await expect(page.getByTestId("notification-bell")).toBeVisible();
+    await expect(page.getByTestId("home-topbar").getByRole("link", { name: "Settings" })).toBeVisible();
+    // The streak-shield rows show once each, for the selected segment.
+    await expect(page.getByTestId("daily-shields")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("weekly-shields")).toHaveCount(0);
+    await page.getByRole("tab", { name: "Weekly" }).click();
+    await expect(page.getByTestId("weekly-shields")).toBeVisible();
+    await expect(page.getByTestId("daily-shields")).toHaveCount(0);
+
+    await page.getByRole("tab", { name: "Quests" }).click();
     const quests = page.getByRole("region", { name: "Quests" });
     await expect(quests).toBeVisible({ timeout: 15_000 });
     await expect(quests.getByRole("progressbar")).toHaveCount(6);

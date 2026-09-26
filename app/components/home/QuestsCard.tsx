@@ -59,14 +59,33 @@ function QuestRow({ status, earning }: { status: QuestStatus; earning: boolean }
   );
 }
 
-export function QuestsCard({ views, earning, now }: { views: QuestPeriodView[]; earning: boolean; now: Date }) {
+export function QuestsCard({
+  views,
+  earning,
+  now,
+  embedded = false,
+}: {
+  views: QuestPeriodView[];
+  earning: boolean;
+  now: Date;
+  /** Inside Home's Today card: no border/panel of its own, and the heading is
+   * screen-reader-only (the segmented control already says "Quests"). */
+  embedded?: boolean;
+}) {
   const { t } = useT();
   return (
     <section
       aria-labelledby="quests-heading"
-      className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3"
+      className={`flex flex-col gap-4 ${embedded ? "" : "rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3"}`}
     >
-      <h2 id="quests-heading" className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+      <h2
+        id="quests-heading"
+        className={
+          embedded
+            ? "sr-only"
+            : "text-left text-xs font-semibold uppercase tracking-wide text-[var(--faint)]"
+        }
+      >
         {t("quests.title")}
       </h2>
       {views.map((view) => (

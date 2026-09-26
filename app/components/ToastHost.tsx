@@ -72,7 +72,7 @@ export function ToastHost() {
       aria-live="polite"
       aria-atomic="false"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-[120] flex flex-col items-center gap-2 px-4"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+      style={{ paddingBottom: "calc(var(--nav-offset, env(safe-area-inset-bottom)) + 1rem)" }}
     >
       {toasts.map((x) => {
         const message = x.key ? t(x.key, x.vars) : (x.text ?? "");

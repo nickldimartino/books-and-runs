@@ -38,6 +38,7 @@ export const SAME_AS_ENGLISH_ALLOWLIST: Record<string, Entry> = {
   "support.description": { locales: ["fr"], reason: "'Description' is the French word" },
   "home.solo": { locales: ["de", "fr", "es", "pt-BR", "it"], reason: "'Solo' is the local word" },
   "home.clubs": { locales: ["de", "fr"], reason: "'Clubs' is the local word" },
+  "nav.social": { locales: ["fr", "es", "pt-BR", "it"], reason: "'Social' is the local word (tab label)" },
   "clubs.title": { locales: ["de", "fr"], reason: "'Clubs' is the local word" },
   "clubs.backToClubs": { locales: ["de", "fr"], reason: "'← Clubs' is the local word" },
   "common.home": { locales: ["it"], reason: "Italian UIs use 'Home'" },

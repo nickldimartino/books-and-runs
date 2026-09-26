@@ -2531,9 +2531,162 @@ html[data-seen-tips~="tournaments-new"] [data-tip="tournaments-new"]{display:non
 html:not([data-started]) [data-home-quests] {
   display: none;
 }
-html:not([data-signed-in]) [data-home-games-skeleton] {
+html:not([data-signed-in][data-had-games]) [data-home-games-skeleton] {
   display: none;
 }
 html[data-signed-in] [data-home-signin] {
+  display: none;
+}
+
+/* ── Persistent app navigation (components/AppNav.tsx) ────────────────────
+   Bottom tab bar under 1024px, left rail from 1024px up. Present in the DOM
+   only on the screens lib/navVisibility.ts lists, so `body:has(.app-nav)` is
+   the "a nav is showing" switch that pads page content clear of it. */
+:root {
+  --nav-h: 3.75rem;
+  --rail-w: 5.5rem;
+}
+.app-nav {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  /* Opaque enough that scrolled content never reads through it. */
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.18);
+}
+.app-nav__list {
+  display: flex;
+  margin: 0 auto;
+  max-width: 34rem;
+  list-style: none;
+  padding: 0;
+}
+.app-nav__item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.app-nav__link {
+  position: relative;
+  display: flex;
+  min-height: var(--nav-h);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.25rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.app-nav__link:hover {
+  color: var(--heading);
+}
+.app-nav__link[aria-current="page"] {
+  color: var(--accent);
+}
+.app-nav__link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 28%;
+  right: 28%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--accent);
+}
+.app-nav__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+body:has(.app-nav) {
+  --nav-offset: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: var(--nav-offset);
+}
+/* Pages size their <main> to the viewport; give back the nav's share so the
+   page doesn't scroll by exactly the bar's height. */
+body:has(.app-nav) main.min-h-screen {
+  min-height: calc(100vh - var(--nav-offset));
+}
+/* No bar while the intro plays or a modal dialog is open. */
+html[data-intro] .app-nav,
+body:has([aria-modal="true"]) .app-nav {
+  visibility: hidden;
+}
+@media (min-width: 1024px) {
+  .app-nav {
+    top: 0;
+    right: auto;
+    bottom: 0;
+    width: var(--rail-w);
+    padding: 1rem 0 0;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .app-nav__list {
+    flex-direction: column;
+    gap: 0.25rem;
+    max-width: none;
+  }
+  .app-nav__item {
+    flex: none;
+  }
+  .app-nav__link[aria-current="page"]::before {
+    top: 22%;
+    bottom: 22%;
+    left: 0;
+    right: auto;
+    width: 3px;
+    height: auto;
+    border-radius: 0 3px 3px 0;
+  }
+  body:has(.app-nav) {
+    --nav-offset: env(safe-area-inset-bottom);
+    padding-bottom: 0;
+    padding-left: var(--rail-w);
+  }
+  body:has(.app-nav) main.min-h-screen {
+    min-height: 100vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-nav__link {
+    transition: none;
+  }
+}
+
+/* Home layout (app/page.tsx). Two columns from 1024px; the card fan is a
+   first-visit flourish on phones (a returning player goes straight to Play). */
+@media (max-width: 1023.98px) {
+  html[data-started] .home-hero-fan {
+    display: none;
+  }
+}
+/* Today card: reserve the height of the remembered tab before hydration, so
+   picking it up from localStorage after the fact doesn't shift the page. */
+.today-body {
+  min-height: 8.5rem;
+}
+/* Signed in: streak line, notes and the shield row sit above the button. */
+html[data-signed-in] .today-body {
+  min-height: 11.5rem;
+}
+html[data-today-tab="quests"] .today-body {
+  min-height: 21rem;
+}
+html:not([data-signed-in]) [data-home-identity-skeleton],
+html[data-signed-in] [data-home-signin-chip] {
+  display: none;
+}
+html[data-signin-dismissed] [data-home-signin] {
   display: none;
 }

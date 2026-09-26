@@ -31,8 +31,11 @@ export interface Notifications {
  * subscription. Replaces the separate friend / multiplayer activity hooks so
  * the Home screen has one badge, not two systems.
  */
-export function useNotifications(): Notifications {
-  const { user } = useAuth();
+export function useNotifications(enabled = true): Notifications {
+  const { user: authUser } = useAuth();
+  // `enabled` false (in-game screens, where the app nav that shows these
+  // badges is hidden) behaves like signed out: no fetch, no Realtime channel.
+  const user = enabled ? authUser : null;
   const [friendRequests, setFriendRequests] = useState(0);
   const [mpGames, setMpGames] = useState<MpGameSummary[]>([]);
   const [loading, setLoading] = useState(true);

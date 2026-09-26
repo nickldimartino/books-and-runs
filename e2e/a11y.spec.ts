@@ -6,7 +6,7 @@ import AxeBuilder from "@axe-core/playwright";
 // fail the build; the two themes are checked because contrast is the axe
 // rule most likely to differ between them.
 
-const PAGES = ["/", "/new-game", "/how-to-play", "/settings", "/scorecard", "/sign-in"];
+const PAGES = ["/", "/progress", "/social", "/profile", "/new-game", "/how-to-play", "/settings", "/scorecard", "/sign-in"];
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {

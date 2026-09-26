@@ -1,9 +1,11 @@
 "use client";
 
-// Home's signed-in identity chip: avatar, display name, level and a real XP
-// progress bar with the next cosmetic reward — replaces the old level pill
-// (whose XP detail was a hover-only tooltip, unusable on touch) and the
-// account e-mail line under the title. The whole chip links to the profile.
+// The signed-in identity: avatar, display name, level and a real XP progress
+// bar. Two shapes — `chip` (a slim pill for Home's top bar) and `card` (the
+// roomier version with the next cosmetic reward, used on the Progress hub).
+// Replaced the old level pill (whose XP detail was a hover-only tooltip,
+// unusable on touch) and the account e-mail line under the title. The whole
+// thing links to the profile.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,10 +27,12 @@ export function HomeIdentity({
   userId,
   level,
   loading,
+  variant = "card",
 }: {
   userId: string;
   level: LevelProgress | null;
   loading: boolean;
+  variant?: "chip" | "card";
 }) {
   const { t } = useT();
   const [name, setName] = useState<string | null>(null);
@@ -50,14 +54,50 @@ export function HomeIdentity({
     };
   }, [userId]);
 
+  const compact = variant === "chip";
+
   // Same skeleton height as the loaded chip so the page doesn't jump.
+  if (!level && compact) {
+    return <div className="h-10 w-40 animate-pulse rounded-full bg-[var(--panel)]" />;
+  }
   if (!level) {
     return loading ? (
-      <div className="mx-auto mt-3 h-[76px] w-full max-w-xs animate-pulse rounded-xl bg-[var(--panel)]" />
+      <div className="h-[76px] w-full animate-pulse rounded-xl bg-[var(--panel)]" />
     ) : null;
   }
 
   const pct = Math.round(Math.min(1, Math.max(0, level.progressFraction)) * 100);
+  const xpText = t("home.xpToLevel", { into: level.xpIntoLevel, span: level.xpSpanForLevel, next: level.level + 1 });
+
+  if (compact) {
+    return (
+      <Link
+        href={playerProfileHref(userId)}
+        title={xpText}
+        className="flex h-10 min-w-0 max-w-[13.5rem] items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--panel)] py-1 pl-1 pr-3 text-left transition hover:bg-[var(--panel-soft)]"
+      >
+        <PlayerAvatar avatar={avatar} size={32} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-[var(--heading)]">{name ?? nameOf(userId, null)}</span>
+            <span className="shrink-0 text-[10px] font-semibold text-[var(--accent)]">{t("home.levelN", { level: level.level })}</span>
+          </span>
+          <span
+            role="progressbar"
+            aria-label={xpText}
+            aria-valuemin={0}
+            aria-valuemax={level.xpSpanForLevel}
+            aria-valuenow={level.xpIntoLevel}
+            className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-[var(--border)]"
+          >
+            <span className="block h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
+          </span>
+          <span className="sr-only">{xpText}</span>
+        </span>
+      </Link>
+    );
+  }
+
   const next = nextLevelUnlocks(level.level);
   const first = next?.items[0];
   const reward = first
@@ -67,7 +107,7 @@ export function HomeIdentity({
   return (
     <Link
       href={playerProfileHref(userId)}
-      className="mx-auto mt-3 flex w-full max-w-xs items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2.5 text-left transition hover:bg-[var(--panel-soft)]"
+      className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2.5 text-left transition hover:bg-[var(--panel-soft)]"
     >
       <PlayerAvatar avatar={avatar} size={40} />
       <span className="min-w-0 flex-1">

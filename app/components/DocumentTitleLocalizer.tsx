@@ -15,6 +15,9 @@ const PAGE_TITLE_KEYS: Record<string, TranslationKey> = {
   "/history": "history.title",
   "/terms": "terms.title",
   "/privacy": "privacy.title",
+  "/progress": "nav.progress",
+  "/social": "nav.social",
+  "/profile": "nav.profile",
 };
 
 export function DocumentTitleLocalizer() {

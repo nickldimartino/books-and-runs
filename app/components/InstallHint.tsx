@@ -69,7 +69,7 @@ export function InstallHint() {
     <section
       aria-label={kind === "ios" ? t("install.ios.title") : t("install.title")}
       className="fixed inset-x-0 bottom-0 z-[100] mx-auto flex max-w-md items-start gap-3 rounded-t-2xl border border-b-0 border-[var(--accent)]/40 bg-[var(--panel)] px-4 pt-3 shadow-2xl"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+      style={{ paddingBottom: "calc(var(--nav-offset, env(safe-area-inset-bottom)) + 0.75rem)" }}
     >
       <div className="min-w-0 flex-1 text-left">
         <p className="text-sm font-semibold text-[var(--heading)]">

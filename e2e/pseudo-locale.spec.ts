@@ -12,6 +12,9 @@ import { toPseudo } from "../app/lib/i18n/pseudoLocale";
 
 const ROUTES = [
   "/",
+  "/progress",
+  "/social",
+  "/profile",
   "/how-to-play",
   "/terms",
   "/privacy",

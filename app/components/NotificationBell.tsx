@@ -42,11 +42,15 @@ export function NotificationBell({
   notifications,
   shieldSaveDay = null,
   claimedQuests = [],
+  className = "fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-40",
 }: {
   userId: string | null;
   notifications: Pick<Notifications, "friendRequests" | "mpGames" | "refresh">;
   shieldSaveDay?: string | null;
   claimedQuests?: ClaimedQuest[];
+  /** Positioning of the bell's wrapper (the dialog anchors to it). Defaults
+   * to a fixed top-right corner; Home's top bar places it inline instead. */
+  className?: string;
 }) {
   const { t, tPlural } = useT();
   const [open, setOpen] = useState(false);
@@ -147,7 +151,7 @@ export function NotificationBell({
   const bellLabel = unseen > 0 ? t("notifications.bellCount", { count: unseen }) : t("notifications.title");
 
   return (
-    <div className="fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-40" data-testid="notification-bell">
+    <div className={className} data-testid="notification-bell">
       <button
         ref={buttonRef}
         type="button"

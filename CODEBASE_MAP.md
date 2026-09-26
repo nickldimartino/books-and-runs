@@ -105,6 +105,8 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
   └ PlayerLevelProvider     current level/XP, refetched after each game
       └ PendingSaveSync     retries game saves that failed offline
       └ GameProvider        THE local game — state, actions, AI loop, saves
+          └ NotificationsProvider   ONE useNotifications() (friend requests / invites / your-turn games) shared by Home, the bell, the nav badges; off on /game + /multiplayer/*
+          └ AppNav                  persistent tab bar / left rail (see "Home & navigation" below)
 ```
 
 | File | Role |
@@ -119,7 +121,8 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 
 | Route | Purpose |
 |---|---|
-| `/` (`page.tsx`) | Home. Identity chip (avatar, display name, level, XP bar, next cosmetic reward) when signed in; New Game button; dismissible "welcome back" card after ≥3 days away; `<HomeGames>` "Your games" list (local save + active MP games + pending invites); one-tap Quick Deal (saved lineup) when nothing is in progress; the daily/weekly Quests card; Daily Deal + Weekly Challenge entries. Quests/Quick Deal stay hidden until a first game has been started (firstSessionStore). |
+| `/` (`page.tsx`) | Home — see "Home & navigation" below. Slim top bar (identity chip with level + XP bar / "Sign in" chip, notification bell, settings gear), the Play zone (one primary button: Continue → Quick Deal → New Game), "Your games" (MP turns + invites), one segmented "Today" card (Daily · Weekly · Quests), a dismissible guest sign-in card, footer links. |
+| `/progress`, `/social`, `/profile` | Hub pages behind the app-nav tabs (noindex, not in the sitemap; `page.tsx` metadata shell + `*Content.tsx`). Progress: identity/XP card, closest-achievement card, links to Achievements / Leaderboard / Stats & history (own `/player`). Social: Friends (request badge), Play with friends, Clubs, Tournaments. Profile: My profile, Account, Settings, Sign out, and a "Help & about" list (How to Play, Scorekeeper, History of Books & Runs, Privacy, Terms, Support). |
 | `/new-game` | Fork screen: Solo & pass-and-play / With friends / tutorial link. |
 | `/new-game/local` | The solo game setup form (players, difficulty, round mode). |
 | `/new-game/multiplayer` | MP game setup — pick friends + AI seats, choose rounds, send invites. |
@@ -161,7 +164,9 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 | `GameOverScreen.tsx` | game screen | Final standings, share image, **records the game** (stats/achievements/XP/leaderboard), shows achievement unlocks. |
 | `RoundSummary.tsx` | game + MP screens | Between-round panel; also flushes per-round achievement progress and shows mid-game unlocks. |
 | `AchievementUnlock.tsx` / `AchievementIcons.tsx` | round summary + game over + MP | Shared "you unlocked this" card; one line-art icon per achievement category. |
-| `home/HomeIdentity.tsx` / `home/QuestsCard.tsx` / `home/QuestToast.tsx` / `home/WelcomeBackCard.tsx` / `home/QuickPlayCard.tsx` | Home | The progression layer: identity chip + XP bar (`role=progressbar`, usable on touch), the daily/weekly quests card (guests see the same quests with a sign-in prompt; nothing to "claim" — the server auto-pays), the quest-completed toast, the recap card, and the one-tap saved-lineup deal. |
+| `home/HomeTopBar.tsx` / `home/HomeIdentity.tsx` (`chip` / `card` variants) / `home/PlayZone.tsx` / `home/HomeGames.tsx` / `home/TodayCard.tsx` / `home/QuestsCard.tsx` (`embedded`) / `home/StreakShields.tsx` / `home/SignInCard.tsx` / `home/QuestToast.tsx` / `home/WelcomeBackCard.tsx` | Home | See "Home & navigation". `HomeIdentity` `role=progressbar` XP bar is usable on touch (the old level pill's detail was a hover tooltip). |
+| `AppNav.tsx` | root layout | Persistent navigation: bottom tab bar (< 1024px) / left rail (>= 1024px). Four `<Link>` tabs (Play, Progress, Social, Profile), `aria-current`, count badges. Visibility = `lib/navVisibility.ts` (pure, by pathname). |
+| `HubLink.tsx` / `ClosestAchievementCard.tsx` | Progress / Social / Profile hubs | Hub row (icon, title, description, badge, chevron); the "closest achievement" card (moved off Home). |
 | `UnlockToast.tsx` | game over + MP | Top-of-screen toast for a newly-earned profile cosmetic (avatar emoji/frame/title/banner) — see `allCosmetics.ts`'s `diffNewlyUnlockedCosmetics`. Separate from `AchievementUnlock.tsx`, which is for achievements themselves. |
 | `Confetti.tsx` | game over | Win celebration. |
 | `PassGate.tsx` / `BuyOfferGate.tsx` | game screen | "Pass the device to X" interstitial; the (disabled) buy-the-discard offer. |
@@ -175,6 +180,16 @@ LocaleProvider              loads the active language's dictionary; exposes t()/
 | `LoadingSpinner.tsx` | data pages | A card-flip loading state. |
 | `PageTip.tsx` | one per route — see `tipsStore.ts`'s `TipId` union for the current list | A first-visit-only dismissible banner; permanently replaced several pages' old always-visible explanatory paragraphs. |
 | `IntroSplash.tsx` | home | The one-time "dealing" animation on first visit to `/` this session (`sessionStorage`, not `tipsStore` — replays every new session, purely decorative). |
+
+### Home & navigation (2026-09-26 reorganisation)
+
+- **Persistent nav** (`components/AppNav.tsx`, mounted in `layout.tsx` inside `NotificationsProvider`): `navStateFor(pathname)` (`lib/navVisibility.ts`, trailing-slash/query tolerant, unit-tested) decides visibility + active tab. Shown on Home, the three hubs, Achievements, Leaderboard, Friends, Clubs, Tournaments (list/detail), `/player`, Settings top level, Account, and the reference pages (How to Play, History, Support, Privacy, Terms, all "Profile"). Hidden on `/game`, `/multiplayer/*`, all `/new-game*`, `/tournaments/new`, `/settings/*` pickers, `/scorecard`, `/tip`, sign-in / reset-password and unknown routes. CSS (`.app-nav` in `globals.css`): fixed bottom bar (`--nav-h`, safe-area padding) under 1024px, left rail (`--rail-w`) from 1024px; `body:has(.app-nav)` pads the page (bottom, or left on desktop), gives back the bar's height to `main.min-h-screen`, and sets `--nav-offset` (used by `ToastHost` / `InstallHint` so they float above the bar). Hidden via CSS while `html[data-intro]` plays and while an `aria-modal` dialog is open. Badges: Social = friend requests, Play = your-turn games + invites. The dev-only Next route badge is disabled (`devIndicators: false`) because it sat on the Play tab.
+- **Play zone** (`home/PlayZone.tsx`): one primary — Continue (local save, else the MP game waiting on you) > Quick Deal (saved lineup, once a game was ever started, nothing in progress) > New Game — with New Game demoted beside it when it isn't primary. Fixed height in every state (caption line always present) so hydration only swaps labels.
+- **Your games** (`home/HomeGames.tsx`): MP turns + invites only (the local save is the Continue button). Collapses when empty; its skeleton is only shown when the last visit had games (`localStorage booksAndRuns:hadMpGames` → `html[data-had-games]`).
+- **Today card** (`home/TodayCard.tsx`, `lib/todayTab.ts`): Daily / Weekly / Quests segments (ARIA tabs, arrow keys). Streak text + `StreakShields` (`daily-shields` / `weekly-shields`) render once for the selected Daily/Weekly tab. Remembered tab: `booksAndRuns:todayTab` (also stamped on `<html data-today-tab>` by `init.js`; CSS reserves `.today-body` height from it). No stored choice -> a default computed once when data is ready: Quests after a fresh quest payout, else Daily if unplayed, else Weekly if unplayed, else Quests. Dots (signed in only) mark unplayed segments / a fresh payout. The Quests segment keeps the first-session calm: prerendered with `data-home-quests` (hidden until `html[data-started]`) and `hidden` once React knows it's a first session.
+- **Home `<html>` hints** (public/init.js, restored by `HtmlAttrsRestore`): `data-started`, `data-signed-in`, `data-had-games`, `data-today-tab`, `data-signin-dismissed`. `data-home-signin` (the dismissible guest card; key `booksAndRuns:signInPromptDismissed`), `data-home-signin-chip` and `data-home-identity-skeleton` (top bar) are keyed off them in `globals.css`.
+- **Moved off Home**: identity/level card + closest achievement -> Progress hub; Clubs/Tournaments/Friends -> Social; Settings/Account/Sign out/reference links -> Profile hub (Settings also the top-bar gear; How to Play / Scorekeeper / History / legal also a footer row on Home). The old "More" menu, progress tile row and `QuickPlayCard` are gone.
+- **Tests**: `e2e/app-nav.spec.ts` (tabs, hidden flows, 375px no-overlap audit of every routed screen, rail, intro, de/ru/ja/fr fit), `home-progress.spec.ts`, `navigation.spec.ts`; unit: `navVisibility`, `todayTab`, `AppNav`, `TodayCard`, `hubs` (Progress/Social/Profile/PlayZone).
 
 ### 3d. Stores & helpers (`app/lib/`)
 
@@ -1134,3 +1149,6 @@ Block/report/mute (`app/lib/safetyStore.ts`, `SafetyMenu`/`ReportDialog`, Accoun
 - **Solo replay idempotency**: after crediting, solo-verify stores SHA-256(seed, seats sans names, contracts, move-log fields) in `solo_game_hashes` (0084); a repeat returns `{tracked:false, duplicate:true}`. Daily/Weekly keep their own once-per-period rows.
 - **`mp_bump_rate_limit`** revoked from `authenticated` (0082); only SECURITY DEFINER RPCs call it.
 - **E2E harness**: `signIn` (e2e/helpers/testAccounts.ts) stops the `justSignedUp` flag being set so the WelcomeOnboarding modal never blocks throwaway accounts; multiplayer specs use `openHand()` (dock on wide screens, drawer on phones). All `live-*.spec.ts` self-skip without the Supabase env.
+
+### 2026-09-26 — Home reorganisation + persistent app navigation
+- Slim Home top bar, one Play zone, Your games right under it, a single Today card (Daily · Weekly · Quests), two-column desktop layout; bottom tab bar / left rail (`AppNav`) with new `/progress`, `/social`, `/profile` hubs. Details, hidden-route list and layout-stability hints: "Home & navigation" in §3. New i18n keys: `nav.*`, `today.*`, `home.play.*`, `home.viewProgress`, `progress.*`, `social.*`, `profile.*` (ru today.daily/weekly are short "День"/"Неделя" so the segments don't truncate). Shared `NotificationsProvider` replaces Home's own `useNotifications()`.
