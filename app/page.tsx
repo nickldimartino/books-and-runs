@@ -20,6 +20,7 @@ import { HomeIdentity } from "./components/home/HomeIdentity";
 import { QuestsCard } from "./components/home/QuestsCard";
 import { QuickPlayCard } from "./components/home/QuickPlayCard";
 import { QuestToast } from "./components/home/QuestToast";
+import { NotificationBell } from "./components/NotificationBell";
 import { WelcomeBackCard } from "./components/home/WelcomeBackCard";
 import { WelcomeOnboarding } from "./components/WelcomeOnboarding";
 import { formatRemaining, timerState } from "@/mp/turnTimer";
@@ -777,6 +778,14 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
       <IntroSplash />
       <QuestToast quests={quests.justClaimed} onDismiss={quests.dismissClaimed} />
+      {configured && user && (
+        <NotificationBell
+          userId={user.id}
+          notifications={notifications}
+          shieldSaveDay={shieldSaveDay}
+          claimedQuests={quests.justClaimed}
+        />
+      )}
       <WelcomeOnboarding
         open={showWelcome}
         onDismiss={() => {
@@ -880,7 +889,7 @@ export default function HomePage() {
             {dailyShieldCovering && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.dailyDeal.shieldCovering")}</p>
             )}
-            {configured && user && dailyDeal && (dailyDeal.shields > 0 || dailyShownStreak > 0) && (
+            {configured && user && dailyDeal && (
               <StreakShields
                 count={dailyDeal.shields}
                 max={2}
@@ -931,7 +940,7 @@ export default function HomePage() {
             {weeklyShieldCovering && (
               <p className="mt-0.5 text-[10px] text-[var(--faint)]">{t("home.weeklyChallenge.shieldCovering")}</p>
             )}
-            {configured && user && weeklyChallenge && (weeklyChallenge.shields > 0 || weeklyShownStreak > 0) && (
+            {configured && user && weeklyChallenge && (
               <StreakShields
                 count={weeklyChallenge.shields}
                 max={1}

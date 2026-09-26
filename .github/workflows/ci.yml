@@ -24,6 +24,8 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
+      # Translation guards (also part of `npm test`; listed separately so a failure is labeled).
+      - run: npm run i18n:check
       - run: npm test
       - run: npm run build
       - run: node scripts/check-bundle.mjs
@@ -51,6 +53,8 @@ jobs:
       # to fail on rendering noise, not a real regression). Run those
       # locally with `npm run test:e2e:visual` instead; see the spec file's
       # own doc for what it'd take to run them here too.
+      # Includes e2e/pseudo-locale.spec.ts (no secrets needed): every guest route in the
+      # dev-only pseudo-locale must show no plain-English runs.
       - run: npm run test:e2e:ci
         env:
           # The dev server reads these; absent, "With friends" shows the

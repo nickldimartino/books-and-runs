@@ -124,16 +124,16 @@ const en: CopyTable = {
 };
 
 const zh: CopyTable = {
-  your_turn: { title: "轮到你了", body: "轮到你在 Books & Runs 中出牌了。", named: "{name}出牌了——第 {round} 轮,该你了。" },
+  your_turn: { title: "轮到你了", body: "轮到你在 Books & Runs 中出牌了。", named: "{name}出牌了——第 {round} 轮，该你了。" },
   game_request: { title: "游戏邀请", body: "有人邀请你加入多人游戏。", named: "{name}邀请你加入一场对局。" },
   nudge: { title: "提醒", body: "有人在等你出牌。", named: "{name}在等你出牌。" },
   turn_warning: { title: "时间快到了", body: "你还有{time}来完成本回合。" },
-  auto_played: { title: "已替你出牌", body: "你超时了,系统已替你走了一步。请尽快回来,以免被判弃权。" },
+  auto_played: { title: "已替你出牌", body: "你超时了，系统已替你走了一步。请尽快回来，以免被判弃权。" },
   forfeited: { title: "对局已弃权", body: "你因超时而退出了一场对局。" },
   friend_request: { title: "好友请求", body: "有人想加你为好友。", named: "{name}想加你为好友。" },
   friend_accepted: { title: "新好友", body: "你的好友请求已被接受。", named: "{name}接受了你的好友请求。" },
-  streak_daily: { title: "你的连续纪录有中断风险!", body: "今天玩一局每日挑战,保住你的连续纪录。🔥 {streak}" },
-  streak_weekly: { title: "你的每周连续纪录有中断风险!", body: "本周玩一局每周挑战,保住你的连续纪录。🔥 {streak}" },
+  streak_daily: { title: "你的连续纪录有中断风险！", body: "今天玩一局每日挑战，保住你的连续纪录。🔥 {streak}" },
+  streak_weekly: { title: "你的每周连续纪录有中断风险！", body: "本周玩一局每周挑战，保住你的连续纪录。🔥 {streak}" },
 };
 
 const ja: CopyTable = {
@@ -177,12 +177,12 @@ const de: CopyTable = {
 
 const fr: CopyTable = {
   your_turn: { title: "À toi de jouer", body: "C'est ton tour dans Books & Runs.", named: "{name} a joué — manche {round}, à toi." },
-  game_request: { title: "Invitation à une partie", body: "Tu as été invité à une partie multijoueur.", named: "{name} t'a invité à une partie." },
+  game_request: { title: "Invitation à une partie", body: "Tu as reçu une invitation à une partie multijoueur.", named: "{name} t'a envoyé une invitation à une partie." },
   nudge: { title: "Relance", body: "Quelqu'un attend ton coup.", named: "{name} attend ton coup." },
-  turn_warning: { title: "Le temps presque écoulé", body: "Il te reste {time} pour jouer ton tour." },
+  turn_warning: { title: "Le temps est presque écoulé", body: "Il te reste {time} pour jouer ton tour." },
   auto_played: { title: "Un tour a été joué pour toi", body: "Ton temps est écoulé, un coup a donc été joué à ta place. Reviens vite pour ne pas déclarer forfait." },
   forfeited: { title: "Partie abandonnée", body: "Ton temps est écoulé et tu as abandonné une partie." },
-  friend_request: { title: "Demande d'ami", body: "Quelqu'un veut devenir ton ami.", named: "{name} veut devenir ton ami." },
+  friend_request: { title: "Demande d'ami", body: "Tu as reçu une demande d'ami.", named: "{name} t'a envoyé une demande d'ami." },
   friend_accepted: { title: "Nouvel ami", body: "Ta demande d'ami a été acceptée.", named: "{name} a accepté ta demande d'ami." },
   streak_daily: { title: "Ta série est en danger !", body: "Joue le défi du jour pour garder ta série. 🔥 {streak}" },
   streak_weekly: { title: "Ta série hebdomadaire est en danger !", body: "Joue le défi de la semaine pour garder ta série. 🔥 {streak}" },
@@ -190,12 +190,12 @@ const fr: CopyTable = {
 
 const es: CopyTable = {
   your_turn: { title: "Tu turno", body: "Es tu turno en Books & Runs.", named: "{name} jugó — ronda {round}, es tu turno." },
-  game_request: { title: "Invitación a una partida", body: "Te han invitado a una partida multijugador.", named: "{name} te invitó a una partida." },
+  game_request: { title: "Invitación a una partida", body: "Tienes una invitación a una partida multijugador.", named: "{name} te envió una invitación a una partida." },
   nudge: { title: "Recordatorio", body: "Alguien está esperando tu jugada.", named: "{name} está esperando tu jugada." },
   turn_warning: { title: "Se acaba el tiempo", body: "Te quedan {time} para jugar tu turno." },
   auto_played: { title: "Se jugó un turno por ti", body: "Se acabó tu tiempo, así que se hizo una jugada por ti. Juega pronto para no perder por abandono." },
   forfeited: { title: "Partida abandonada", body: "Se acabó tu tiempo y abandonaste una partida." },
-  friend_request: { title: "Solicitud de amistad", body: "Alguien quiere ser tu amigo.", named: "{name} quiere ser tu amigo." },
+  friend_request: { title: "Solicitud de amistad", body: "Tienes una nueva solicitud de amistad.", named: "{name} te envió una solicitud de amistad." },
   friend_accepted: { title: "Nuevo amigo", body: "Tu solicitud de amistad fue aceptada.", named: "{name} aceptó tu solicitud de amistad." },
   streak_daily: { title: "¡Tu racha está en peligro!", body: "Juega el Reparto Diario de hoy para mantener tu racha. 🔥 {streak}" },
   streak_weekly: { title: "¡Tu racha semanal está en peligro!", body: "Juega el Desafío Semanal de esta semana para mantener tu racha. 🔥 {streak}" },
@@ -203,24 +203,24 @@ const es: CopyTable = {
 
 const ptBR: CopyTable = {
   your_turn: { title: "Sua vez", body: "É a sua vez em Books & Runs.", named: "{name} jogou — rodada {round}, sua vez." },
-  game_request: { title: "Convite para jogo", body: "Você foi convidado para uma partida multijogador.", named: "{name} convidou você para uma partida." },
+  game_request: { title: "Convite para jogo", body: "Você recebeu um convite para uma partida multijogador.", named: "{name} enviou um convite para uma partida." },
   nudge: { title: "Cutucada", body: "Alguém está esperando sua jogada.", named: "{name} está esperando sua jogada." },
   turn_warning: { title: "O tempo está acabando", body: "Você tem {time} para jogar sua vez." },
   auto_played: { title: "Uma jogada foi feita por você", body: "Seu tempo acabou, então uma jogada foi feita por você. Jogue logo para não perder por abandono." },
   forfeited: { title: "Partida abandonada", body: "Seu tempo acabou e você abandonou uma partida." },
-  friend_request: { title: "Pedido de amizade", body: "Alguém quer ser seu amigo.", named: "{name} quer ser seu amigo." },
+  friend_request: { title: "Pedido de amizade", body: "Você recebeu um pedido de amizade.", named: "{name} enviou um pedido de amizade." },
   friend_accepted: { title: "Novo amigo", body: "Seu pedido de amizade foi aceito.", named: "{name} aceitou seu pedido de amizade." },
   streak_daily: { title: "Sua sequência está em risco!", body: "Jogue a Rodada Diária de hoje para manter sua sequência. 🔥 {streak}" },
   streak_weekly: { title: "Sua sequência semanal está em risco!", body: "Jogue o Desafio Semanal desta semana para manter sua sequência. 🔥 {streak}" },
 };
 
 const ru: CopyTable = {
-  your_turn: { title: "Твой ход", body: "Твой ход в Books & Runs.", named: "{name} сходил — раунд {round}, твой ход." },
+  your_turn: { title: "Твой ход", body: "Твой ход в Books & Runs.", named: "{name} сделал(а) ход — раунд {round}, твой ход." },
   game_request: { title: "Приглашение в игру", body: "Тебя пригласили в многопользовательскую игру.", named: "{name} приглашает тебя в игру." },
   nudge: { title: "Напоминание", body: "Кто-то ждёт твоего хода.", named: "{name} ждёт твоего хода." },
   turn_warning: { title: "Время на исходе", body: "На твой ход осталось {time}." },
   auto_played: { title: "Ход сделан за тебя", body: "Время вышло, поэтому за тебя сделали ход. Возвращайся скорее, иначе засчитают сдачу." },
-  forfeited: { title: "Игра сдана", body: "Время вышло, и ты сдал игру." },
+  forfeited: { title: "Игра сдана", body: "Время вышло — игра засчитана как сдача." },
   friend_request: { title: "Заявка в друзья", body: "Кто-то хочет добавить тебя в друзья.", named: "{name} хочет добавить тебя в друзья." },
   friend_accepted: { title: "Новый друг", body: "Твою заявку в друзья приняли.", named: "{name} принял(а) твою заявку в друзья." },
   streak_daily: { title: "Твоя серия под угрозой!", body: "Сыграй «Расклад дня», чтобы не потерять серию. 🔥 {streak}" },
@@ -229,12 +229,12 @@ const ru: CopyTable = {
 
 const it: CopyTable = {
   your_turn: { title: "Tocca a te", body: "È il tuo turno in Books & Runs.", named: "{name} ha giocato — round {round}, tocca a te." },
-  game_request: { title: "Invito a una partita", body: "Sei stato invitato a una partita multigiocatore.", named: "{name} ti ha invitato a una partita." },
+  game_request: { title: "Invito a una partita", body: "Hai ricevuto un invito a una partita multigiocatore.", named: "{name} ti ha inviato un invito a una partita." },
   nudge: { title: "Sollecito", body: "Qualcuno aspetta la tua mossa.", named: "{name} aspetta la tua mossa." },
   turn_warning: { title: "Il tempo sta per scadere", body: "Ti restano {time} per giocare il tuo turno." },
   auto_played: { title: "Un turno è stato giocato per te", body: "Il tuo tempo è scaduto, quindi è stata fatta una mossa al posto tuo. Gioca presto per non perdere a tavolino." },
   forfeited: { title: "Partita abbandonata", body: "Il tuo tempo è scaduto e hai abbandonato una partita." },
-  friend_request: { title: "Richiesta di amicizia", body: "Qualcuno vuole essere tuo amico.", named: "{name} vuole essere tuo amico." },
+  friend_request: { title: "Richiesta di amicizia", body: "Hai ricevuto una richiesta di amicizia.", named: "{name} ti ha inviato una richiesta di amicizia." },
   friend_accepted: { title: "Nuovo amico", body: "La tua richiesta di amicizia è stata accettata.", named: "{name} ha accettato la tua richiesta di amicizia." },
   streak_daily: { title: "La tua striscia è a rischio!", body: "Gioca la Partita del giorno per mantenere la tua striscia. 🔥 {streak}" },
   streak_weekly: { title: "La tua striscia settimanale è a rischio!", body: "Gioca la Sfida settimanale di questa settimana per mantenere la striscia. 🔥 {streak}" },

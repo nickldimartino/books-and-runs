@@ -1207,6 +1207,12 @@ export default function MultiplayerPlayPage() {
         </div>
       )}
 
+      {/* Wide: piles + status form a centered band across the full width,
+          above the melds | hand pair (piles first, as in solo). Narrow:
+          display:contents, DOM order unchanged. */}
+      <div className={isWide ? "flex flex-col gap-6" : "contents"}>
+      <div className={isWide ? "mx-auto flex w-full max-w-xl flex-col items-stretch gap-6" : "contents"}>
+      <div className={isWide ? "order-2 flex flex-col gap-3" : "contents"}>
       {!isMyTurn ? (
         <div className="rounded-lg bg-[var(--panel-soft)] px-4 py-3 text-center text-sm text-[var(--muted)]">
           <p>
@@ -1247,9 +1253,8 @@ export default function MultiplayerPlayPage() {
         </p>
       )}
 
-      <div className={isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-start gap-6" : "contents"}>
-      <div className={isWide ? "flex min-w-0 flex-col gap-5" : "contents"}>
-      <section data-nav-zone="piles" className="flex items-start justify-center gap-8">
+      </div>
+      <section data-nav-zone="piles" className={`flex items-start justify-center gap-8 ${isWide ? "order-1" : ""}`}>
         <div className="flex flex-col items-center gap-1">
           <button
             ref={(el) => {
@@ -1285,14 +1290,18 @@ export default function MultiplayerPlayPage() {
       </section>
 
       {gameId && (
+        <div className={isWide ? "order-3" : "contents"}>
         <MpTableExtras
           gameId={gameId}
           players={view.players}
           myUserId={user?.id}
         />
+        </div>
       )}
+      </div>
 
-      <section ref={tableMeldsElRef} data-nav-zone="melds" className="rounded-xl bg-[var(--panel-soft)] p-4">
+      <div className={isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-stretch gap-6" : "contents"}>
+      <section ref={tableMeldsElRef} data-nav-zone="melds" className="panel-elevated rounded-xl bg-[var(--panel-soft)] p-4">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("game.tableMelds.heading")}</h2>
         {view.melds.length === 0 ? (
           <p className="text-sm text-[var(--faint)]">{t("multiplayer.noMeldsThisRound")}</p>
@@ -1336,19 +1345,21 @@ export default function MultiplayerPlayPage() {
           on screen, not just on your turn — unlike solo, this is always
           *your own* hand (opponents' are redacted), so there's no reason to
           hide it while waiting. */}
-      </div>
       {isWide && (
-        // Wide screens: the hand is a permanent dock beside the table (see
+        // Wide screens: the hand is a permanent dock beside the melds (see
         // solo's game/page.tsx). Phones keep the modal drawer below.
+        <div className="min-w-0">
         <aside
           data-tutorial="hand-bar"
           data-testid="hand-dock"
           aria-label={t("game.manageHand")}
-          className="panel-elevated sticky top-28 flex max-h-[calc(100vh-8rem)] flex-col gap-4 overflow-y-auto rounded-2xl bg-[var(--panel)] p-4"
+          className="panel-elevated sticky top-28 flex max-h-[calc(100vh-8rem)] flex-col gap-4 overflow-y-auto rounded-xl bg-[var(--panel-soft)] p-4"
         >
           {drawerBody}
         </aside>
+        </div>
       )}
+      </div>
       </div>
 
       {!isWide && <HandPreviewBar cards={orderedVisibleHand} onTap={() => setHandDrawerOpen(true)} />}

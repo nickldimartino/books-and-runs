@@ -31,7 +31,7 @@ const es = {
   "settingsPicker.matchThemeHint": "Siempre sigue el tema activo de arriba.",
   "settingsPicker.tabClassic": "Clásicos",
   "settingsPicker.tabHoliday": "Festivos",
-  "settingsPicker.signature": "Signature",
+  "settingsPicker.signature": "Exclusivos",
   "settingsPicker.unlocksAtLevel": "Se desbloquea en el nivel {level}",
   "settingsPicker.boutiqueLocked": "Boutique — aún no disponible para comprar",
   "player.badge.free": "Gratis",
@@ -52,7 +52,7 @@ const es = {
   "cosmeticReq.cat.accountStats": "Estadísticas de la cuenta",
   "cosmeticReq.cat.aiRivals": "Rivales de IA",
   "cosmeticReq.cat.melding": "Combinaciones",
-  "cosmeticReq.cat.layingOff": "Descartes en mesa",
+  "cosmeticReq.cat.layingOff": "Añadir cartas",
   "cosmeticReq.cat.drawDiscard": "Robar y descartar",
   "cosmeticReq.cat.goingOut": "Salir",
   "cosmeticReq.cat.contracts": "Contratos",
@@ -467,7 +467,7 @@ const es = {
   "shortcuts.moveFocus": "Moverte entre cartas y botones",
   "shortcuts.selectCard": "Seleccionar / deseleccionar la carta enfocada",
   "shortcuts.draw": "Robar del mazo",
-  "shortcuts.drawDiscard": "Coger la carta superior del descarte",
+  "shortcuts.drawDiscard": "Tomar la carta superior del descarte",
   "shortcuts.focusHand": "Ir a tu mano",
   "shortcuts.group": "Agrupar selección / confirmar combinación / añadir",
   "shortcuts.discard": "Descartar la carta seleccionada",
@@ -716,8 +716,19 @@ const es = {
   "welcomeBack.dailyReady": "El Reparto Diario de hoy está listo cuando quieras.",
   "welcomeBack.quests": "Hay misiones nuevas listas.",
   "streakShield.label": "Escudos de racha: {count} de {max}",
-  "streakShield.dailyExplainer": "Ganas un escudo cada 7 días seguidos (hasta 2). Cubre en silencio un día que te saltes.",
-  "streakShield.weeklyExplainer": "Ganas un escudo cada 4 semanas seguidas. Cubre en silencio una semana que te saltes.",
+  "streakShield.dailyExplainer": "Ganas un escudo cada 7 días de racha (hasta 2). Cubre en silencio un día que te saltes.",
+  "streakShield.weeklyExplainer": "Ganas uno con una racha de 4 semanas (puedes tener 1). Cubre en silencio una semana que te saltes.",
+  "notifications.title": "Notificaciones",
+  "notifications.bellCount": "Notificaciones, nuevas: {count}",
+  "notifications.friends.one": "{count} solicitud de amistad",
+  "notifications.friends.other": "{count} solicitudes de amistad",
+  "notifications.empty": "Estás al día",
+  "notifications.emptyHint": "Aquí aparecerán los turnos nuevos, las invitaciones y las solicitudes de amistad.",
+  "notifications.settings": "Ajustes de notificaciones",
+  "notifications.pushTitle": "Recibe un aviso cuando sea tu turno",
+  "notifications.pushEnable": "Activar",
+  "notifications.pushBusy": "Activando…",
+  "notifications.pushError": "No se pudieron activar las notificaciones. Revisa los ajustes de tu navegador.",
   "streakShield.savedTitle": "Tu escudo salvó tu racha",
   "streakShield.savedBody": "Se te pasó un día, así que un escudo entró en acción. Tu racha de {count} días sigue en marcha.",
   "welcomeBack.shieldSaved": "Un escudo cubrió un día perdido, así que tu racha de {count} días está a salvo.",
@@ -1143,8 +1154,7 @@ const es = {
     "Bloquear",
   "safety.block.confirmTitle":
     "¿Bloquear a {name}?",
-  "safety.block.confirmBody":
-    "Dejaréis de ser amigos y os ocultaréis mutuamente: sin solicitudes de amistad, invitaciones ni filas en la clasificación, en ambos sentidos. No se le avisará. Puedes desbloquear cuando quieras desde tu página de Cuenta.",
+  "safety.block.confirmBody": "Dejarán de ser amigos y se ocultarán mutuamente: sin solicitudes de amistad, invitaciones ni filas en la clasificación, en ambos sentidos. No se le avisará. Puedes desbloquear cuando quieras desde tu página de Cuenta.",
   "safety.block.error":
     "No se pudo bloquear; inténtalo de nuevo.",
   "safety.block.done":
@@ -1197,8 +1207,7 @@ const es = {
     "Jugadores bloqueados",
   "safety.blocked.empty":
     "No has bloqueado a nadie.",
-  "safety.blocked.description":
-    "Los jugadores bloqueados no pueden enviarte solicitudes de amistad ni invitaciones, y no aparecéis en la clasificación del otro.",
+  "safety.blocked.description": "Los jugadores bloqueados no pueden enviarte solicitudes de amistad ni invitaciones, y no aparecen en la clasificación del otro.",
   "safety.blocked.unblock":
     "Desbloquear",
   "safety.players.heading":
@@ -1941,6 +1950,7 @@ const es = {
   "card.newBadge": "NUEVA",
   "meta.homeTitle": "Books & Runs — juego de cartas Contract Rummy gratis",
   "privacy.title": "Política de privacidad",
+  "card.standInAs": "como {rank}",
 } satisfies Record<string, string>;
 
 export default es;

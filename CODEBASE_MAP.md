@@ -306,7 +306,12 @@ theme/colorblind/text-scale, plus `Intl.PluralRules` for CLDR plurals.
 - **Deliberately untranslated proper nouns:** "Books & Runs", AI opponent names, cosmetic item names (badges/frames/titles/banners/themes/card faces/backs), song names.
 - Server components (`terms`, `privacy`, `history`, `how-to-play`) keep `page.tsx` as a thin shell (for `metadata`) and put the prose in a sibling `*Content.tsx` client component.
 - Never bake a translated string into `useState` at mount — the dictionary can still be loading on a hard page load (see `new-game/local`'s `defaultYouRef` re-sync).
-- Adding a string: add the key to `en.ts`, use it, then add it to the other 9 files. `node` diff of `^  "([^"]+)":` keys per file (plus a `{token}` set comparison per key) is the completeness check.
+- Adding a string — the mandatory checklist lives in `AGENTS.md` ("Adding user-visible text"): `t()`, key in `en.ts` then all 9 locales, `tPlural`, server text via codes/`serverErrors.ts`/`_shared/push.ts`, no translated text in mount-time state, `*Content.tsx` for new pages, `npm run i18n:check`, de/ru/ja mobile screenshot check.
+- **Guards (all run in CI):**
+  - `app/lib/i18n/dictionaries/parity.test.tsx` — identical key sets and `{placeholder}` sets in all 10 locales, plural forms complete per `Intl.PluralRules`, no empty values, and a "looks untranslated" check (non-en value identical to English) with the reasoned exceptions in `app/lib/i18n/sameAsEnglishAllowlist.ts`.
+  - `app/lib/i18n/hardcodedText.test.tsx` — `@babel/parser` scan of `app/**/*.tsx` for JSX text, `{"literal"}` children, `aria-label/title/placeholder/alt/label` literals and `setError("...")`-style calls; reasoned exceptions in `app/lib/i18n/hardcodedAllowlist.ts`. (typescript-eslint and the TS 7 JS API are unavailable here, hence Babel; `eslint-plugin-i18next` was not added because it would duplicate this scan.)
+  - Dev-only **pseudo-locale** (`app/lib/i18n/pseudoLocale.ts`): `?lang=xx` (or `localStorage["booksAndRuns:pseudoLocale"]="1"`) in non-production builds turns every `t()` string into `[Àççéñţéď ţéxţ]` with placeholders intact; it is never a `LocaleId`, never in the picker, and dead-code-eliminated from production. `e2e/pseudo-locale.spec.ts` loads every guest-reachable route (plus a local game) in it and fails on any run of 3+ plain-ASCII English words. Guest-only: signed-in bodies rely on the source scanner.
+  - `npm run i18n:check` runs the three vitest files.
 
 ## 4. Data flows
 

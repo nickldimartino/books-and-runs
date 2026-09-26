@@ -113,7 +113,7 @@ export function PlayingCard({
       )}
       {standInRank && (
         <span className="card-enter absolute -bottom-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--highlight)] px-1.5 text-[11px] font-bold leading-tight text-[var(--on-accent)] shadow">
-          as {standInRank}
+          {t("card.standInAs", { rank: standInRank })}
         </span>
       )}
       <div

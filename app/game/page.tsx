@@ -1572,12 +1572,10 @@ export default function GamePage() {
         </div>
       ) : (
         <>
-          <div
-            className={
-              isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-start gap-6" : "contents"
-            }
-          >
-          <div className={isWide ? "flex min-w-0 flex-col gap-6" : "contents"}>
+          <div className={isWide ? "flex flex-col gap-6" : "contents"}>
+          {/* Wide: piles + status form a centered band across the full width,
+              above the melds | hand pair. Narrow: display:contents (unchanged). */}
+          <div className={isWide ? "mx-auto flex w-full max-w-xl flex-col items-stretch gap-6" : "contents"}>
           <section
             data-tutorial="draw-piles"
             data-nav-zone="piles"
@@ -1679,6 +1677,12 @@ export default function GamePage() {
             </div>
           )}
 
+          </div>
+
+          {/* Wide: melds | hand share one row, top-aligned; the hand column
+              stretches and its dock is sticky so it stays reachable while a
+              tall melds list scrolls. */}
+          <div className={isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-stretch gap-6" : "contents"}>
           <section
             data-tutorial="table-melds"
             data-nav-zone="melds"
@@ -1818,7 +1822,6 @@ export default function GamePage() {
               </div>
             )}
           </section>
-          </div>
 
           {isWide && (
             // Wide screens: the hand is a permanent, non-modal dock beside the
@@ -1826,17 +1829,20 @@ export default function GamePage() {
             // a drawer, with the piles and melds staying in view. (Phones keep
             // the modal drawer below.) data-tutorial="hand-bar" so the
             // tutorial's "your hand" step has something to spotlight here.
+            <div className="min-w-0">
             <aside
               data-tutorial="hand-bar"
               data-testid="hand-dock"
               aria-label={t("game.manageHand")}
-              className="panel-elevated sticky top-28 flex max-h-[calc(100vh-8rem)] flex-col gap-4 overflow-y-auto rounded-2xl bg-[var(--panel)] p-4"
+              className="panel-elevated sticky top-28 flex max-h-[calc(100vh-8rem)] flex-col gap-4 overflow-y-auto rounded-xl bg-[var(--panel-soft)] p-4"
             >
               {buildMeldSection}
               {discardSection}
               {handSection}
             </aside>
+            </div>
           )}
+          </div>
           </div>
 
           {!isWide && <HandPreviewBar cards={visibleHand} onTap={() => setHandDrawerOpen(true)} />}

@@ -20,6 +20,13 @@ describe("StreakShields", () => {
     expect(screen.getByTestId("daily-shields").getAttribute("title")).toContain("Streak shields: 1 of 2");
   });
 
+  it("shows an empty outline slot when no shield is held (the weekly row before the first one is earned)", () => {
+    const { container } = render(<StreakShields count={0} max={1} explainer="Earn one at a 4-week streak." testId="weekly-shields" />);
+    expect(container.querySelectorAll('svg[data-filled="true"]')).toHaveLength(0);
+    expect(container.querySelectorAll('svg[data-filled="false"]')).toHaveLength(1);
+    expect(screen.getByRole("img", { name: "Streak shields: 0 of 1" })).toBeTruthy();
+  });
+
   it("clamps the held count to the slots", () => {
     render(<StreakShields count={5} max={2} explainer="x" testId="s" />);
     expect(screen.getByRole("img", { name: "Streak shields: 2 of 2" })).toBeTruthy();

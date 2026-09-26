@@ -45,6 +45,20 @@ export async function loadTranslator(locale: LocaleId): Promise<(key: Translatio
   return (key, vars) => interpolate(d[key] ?? en[key] ?? key, vars);
 }
 
+/** Dev-only pseudo-locale switch (see pseudoLocale.ts). Always false in
+ * production builds, and the pseudo module is then dead-code-eliminated. */
+function pseudoRequested(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+  try {
+    const q = new URLSearchParams(window.location.search).get("lang");
+    if (q === "xx") window.localStorage.setItem("booksAndRuns:pseudoLocale", "1");
+    else if (q) window.localStorage.removeItem("booksAndRuns:pseudoLocale");
+    return window.localStorage.getItem("booksAndRuns:pseudoLocale") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export type Vars = Record<string, string | number>;
 
 interface LocaleContextValue {
@@ -72,6 +86,7 @@ function interpolate(template: string, vars?: Vars): string {
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleId] = useState<LocaleId>(DEFAULT_LOCALE);
   const [dict, setDict] = useState<Dict>(en);
+  const [pseudo, setPseudo] = useState(false);
 
   // Picks up whatever init.js already applied before first paint — a
   // plain client mount effect, not a layout effect, since data-lang is
@@ -79,6 +94,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   // React's own idea of the locale (for the dictionary fetch below) with
   // the DOM attribute that's already there.
   useEffect(() => {
+    if (pseudoRequested()) setPseudo(true);
     setLocaleId(loadLocalLocale());
     // Re-reads after AccountSettingsSync.tsx pulls a signed-in account's
     // saved language down onto this device — applyAccountSettings()
@@ -90,6 +106,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    if (process.env.NODE_ENV !== "production" && pseudo) {
+      import("./pseudoLocale").then((m) => {
+        if (!cancelled) setDict(m.buildPseudoDictionary(en));
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
     DICTIONARY_LOADERS[locale]()
       .then((mod) => {
         if (!cancelled) setDict(mod.default);
@@ -102,7 +126,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [locale]);
+  }, [locale, pseudo]);
 
   function setLocale(id: LocaleId) {
     saveLocalLocale(id);

@@ -59,7 +59,7 @@ export function QuickPlayCard({ onStarted }: { onStarted: () => void }) {
     <section className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-left">
       <div className="min-w-0">
         <h2 className="text-sm font-semibold text-[var(--heading)]">{t("newGame.quickDeal")}</h2>
-        <p className="mt-0.5 truncate text-xs text-[var(--muted)]">
+        <p className="mt-0.5 line-clamp-2 text-xs text-[var(--muted)]">
           {describeFavoriteGameConfig(favorite, t, tPlural)}
         </p>
       </div>
