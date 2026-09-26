@@ -1208,8 +1208,6 @@ const es = {
   "safety.blocked.description": "Los jugadores bloqueados no pueden enviarte solicitudes de amistad ni invitaciones, y no aparecen en la clasificación del otro.",
   "safety.blocked.unblock":
     "Desbloquear",
-  "safety.players.heading":
-    "Jugadores: denunciar o bloquear",
   "safety.err.connect":
     "No puedes conectar con este jugador.",
   "safety.err.tooMany":

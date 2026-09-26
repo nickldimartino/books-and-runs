@@ -6,6 +6,7 @@
 // Controlled: the parent owns `open` and both callbacks.
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useFocusTrap } from "../lib/useFocusTrap";
 import { useT } from "../lib/i18n/LocaleProvider";
 
@@ -46,7 +47,10 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  // Portalled to <body> so it always covers the viewport, even when opened
+  // from inside a sticky/backdrop-blur ancestor (a containing block for
+  // fixed descendants).
+  return createPortal(
     <div
       className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4"
       onClick={(e) => {
@@ -84,6 +88,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

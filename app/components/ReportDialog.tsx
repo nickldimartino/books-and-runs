@@ -6,6 +6,7 @@
 // Controlled by the parent (`open` / `onClose`); rendered by SafetyMenu.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFocusTrap } from "../lib/useFocusTrap";
 import { useT } from "../lib/i18n/LocaleProvider";
 import type { TranslationKey } from "../lib/i18n/keys";
@@ -84,7 +85,10 @@ export function ReportDialog({
 
   const reasons = photoOnly ? (["inappropriate_photo"] as ReportReason[]) : REPORT_REASONS;
 
-  return (
+  // Portalled to <body>: a dialog opened from inside a sticky/backdrop-blur
+  // ancestor (the opponent strip) would otherwise be positioned relative to
+  // that ancestor instead of the viewport.
+  return createPortal(
     <div
       className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4"
       onClick={(e) => {
@@ -183,6 +187,7 @@ export function ReportDialog({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1257,8 +1257,6 @@ const ja = {
     "ブロックしたプレイヤーはフレンド申請やゲーム招待を送れず、お互いのランキングにも表示されません。",
   "safety.blocked.unblock":
     "ブロック解除",
-  "safety.players.heading":
-    "プレイヤー — 報告・ブロック",
   "safety.err.connect":
     "このプレイヤーとはつながれません。",
   "safety.err.tooMany":

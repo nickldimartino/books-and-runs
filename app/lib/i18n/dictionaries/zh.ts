@@ -1284,8 +1284,6 @@ const zh = {
     "被屏蔽的玩家无法向你发送好友请求或游戏邀请，你们也不会出现在彼此的排行榜上。",
   "safety.blocked.unblock":
     "取消屏蔽",
-  "safety.players.heading":
-    "玩家 — 举报或屏蔽",
   "safety.err.connect":
     "你无法与该玩家建立联系。",
   "safety.err.tooMany":

@@ -1319,8 +1319,6 @@ const de = {
     "Blockierte Spieler können dir keine Freundschaftsanfragen oder Spieleinladungen schicken, und ihr taucht nicht in den Bestenlisten des anderen auf.",
   "safety.blocked.unblock":
     "Entsperren",
-  "safety.players.heading":
-    "Spieler – melden oder blockieren",
   "safety.err.connect":
     "Mit diesem Spieler kannst du dich nicht verbinden.",
   "safety.err.tooMany":

@@ -1265,8 +1265,6 @@ const it = {
     "I giocatori bloccati non possono inviarti richieste di amicizia o inviti, e non comparite nelle classifiche l'uno dell'altro.",
   "safety.blocked.unblock":
     "Sblocca",
-  "safety.players.heading":
-    "Giocatori — segnala o blocca",
   "safety.err.connect":
     "Non puoi collegarti con questo giocatore.",
   "safety.err.tooMany":

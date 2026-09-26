@@ -32,7 +32,7 @@ import { HandSortButtons } from "../../components/HandSortButtons";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { OpponentStrip } from "../../components/OpponentStrip";
 import { PageTip } from "../../components/PageTip";
-import { MpTableExtras } from "../../components/MpTableExtras";
+import { SafetyMenu } from "../../components/SafetyMenu";
 import { TurnTimerBadge } from "../../components/TurnTimerBadge";
 import { SoundQuickToggle } from "../../components/SoundQuickToggle";
 import { DiscardPile, DrawPile } from "../../components/Piles";
@@ -1133,6 +1133,20 @@ export default function MultiplayerPlayPage() {
           aiStatus={null}
           aiThinking={false}
           bios={bioBySeatId}
+          renderPlayerActions={(p) => {
+            // Report / Block live in the opponent's popover (tap their chip)
+            // rather than on the table — human opponents only.
+            const seatPlayer = view.players[Number(p.id.replace("seat-", ""))];
+            if (!gameId || !seatPlayer || seatPlayer.isAI || !seatPlayer.userId || seatPlayer.userId === user?.id) return null;
+            return (
+              <SafetyMenu
+                targetUserId={seatPlayer.userId}
+                targetName={seatPlayer.name}
+                context="mp_game"
+                gameId={gameId}
+              />
+            );
+          }}
         />
       </div>
 
@@ -1289,15 +1303,6 @@ export default function MultiplayerPlayPage() {
         </div>
       </section>
 
-      {gameId && (
-        <div className={isWide ? "order-3" : "contents"}>
-        <MpTableExtras
-          gameId={gameId}
-          players={view.players}
-          myUserId={user?.id}
-        />
-        </div>
-      )}
       </div>
 
       <div className={isWide ? "grid grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)] items-stretch gap-6" : "contents"}>

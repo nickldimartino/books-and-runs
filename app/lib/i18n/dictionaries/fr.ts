@@ -1264,8 +1264,6 @@ const fr = {
     "Les joueurs bloqués ne peuvent pas t'envoyer de demandes d'ami ni d'invitations, et vous n'apparaissez pas dans le classement l'un de l'autre.",
   "safety.blocked.unblock":
     "Débloquer",
-  "safety.players.heading":
-    "Joueurs — signaler ou bloquer",
   "safety.err.connect":
     "Tu ne peux pas te connecter avec ce joueur.",
   "safety.err.tooMany":

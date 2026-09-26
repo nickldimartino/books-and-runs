@@ -1263,8 +1263,6 @@ const ko = {
     "차단한 플레이어는 친구 요청이나 게임 초대를 보낼 수 없고, 서로의 순위표에도 나타나지 않아요.",
   "safety.blocked.unblock":
     "차단 해제",
-  "safety.players.heading":
-    "플레이어 — 신고 또는 차단",
   "safety.err.connect":
     "이 플레이어와는 연결할 수 없어요.",
   "safety.err.tooMany":

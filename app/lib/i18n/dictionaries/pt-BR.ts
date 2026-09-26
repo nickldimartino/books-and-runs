@@ -1298,8 +1298,6 @@ const ptBR = {
     "Jogadores bloqueados não podem enviar pedidos de amizade ou convites, e vocês não aparecem no ranking um do outro.",
   "safety.blocked.unblock":
     "Desbloquear",
-  "safety.players.heading":
-    "Jogadores — denunciar ou bloquear",
   "safety.err.connect":
     "Você não pode se conectar com este jogador.",
   "safety.err.tooMany":

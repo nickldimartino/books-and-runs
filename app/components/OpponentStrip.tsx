@@ -7,7 +7,7 @@
 // three columns: who they are + bio, their last discard, their last pickup
 // — which closes on the ✕, another tap, or a tap anywhere outside.
 
-import { useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { DiscardEvent, Player } from "@/types";
 import { PlayingCard } from "./PlayingCard";
 import { personaBlurbFor } from "../lib/aiPersonas";
@@ -28,6 +28,10 @@ interface OpponentStripProps {
    * persona's blurb is. Omitted (or missing a given id) shows nothing,
    * same as an AI with no persona blurb. */
   bios?: Record<string, string>;
+  /** Extra per-player controls shown at the foot of the open popover (the
+   * multiplayer screen puts Report / Block here for human opponents).
+   * Return null for a player that has none. */
+  renderPlayerActions?: (player: Player) => ReactNode;
 }
 
 /**
@@ -90,6 +94,7 @@ export function OpponentStrip({
   aiStatus,
   aiThinking,
   bios,
+  renderPlayerActions,
 }: OpponentStripProps) {
   const { t, tPlural } = useT();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -216,6 +221,9 @@ export function OpponentStrip({
             <ActivityCard label={t("opponentStrip.lastDiscard")} card={latestCardFor(discardHistory, open.id)} />
             <ActivityCard label={t("opponentStrip.lastPickup")} card={latestCardFor(pickupHistory, open.id)} />
           </div>
+          {renderPlayerActions?.(open) && (
+            <div className="mt-2 flex justify-end border-t border-[var(--border)] pt-2">{renderPlayerActions(open)}</div>
+          )}
         </div>
       )}
     </div>

@@ -1310,8 +1310,6 @@ const en = {
     "Blocked players can't send you friend requests or game invites, and you don't appear on each other's leaderboards.",
   "safety.blocked.unblock":
     "Unblock",
-  "safety.players.heading":
-    "Players — report or block",
   "safety.err.connect":
     "You can't connect with this player.",
   "safety.err.tooMany":
