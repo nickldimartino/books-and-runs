@@ -29,16 +29,10 @@ test("home screen shows the hero and the main entry points", async ({ page }) =>
   // The slim top bar and the persistent nav.
   await expect(page.getByTestId("home-topbar").getByRole("link", { name: "Sign in" })).toBeVisible();
   await expect(page.getByTestId("app-nav")).toBeVisible();
-  // The reference pages sit in a collapsed "More" at the bottom; the legal
-  // links stay in one line beneath it.
-  const more = page.locator("details", { hasText: "More" });
-  await more.locator("summary").click();
-  await expect(more.getByRole("link", { name: "How to Play" })).toBeVisible();
-  await expect(more.getByRole("link", { name: "Scorekeeper" })).toBeVisible();
+  // The legal links sit in one line at the bottom (no "More" dropdown).
+  await expect(page.getByText("More", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Privacy" })).toBeVisible();
-  // Quick links back on Home.
-  await expect(page.getByTestId("progress-tiles").getByRole("link", { name: "Leaderboard" })).toBeVisible();
-  await expect(page.getByTestId("progress-tiles").getByRole("link", { name: "Friends" })).toBeVisible();
+
 });
 
 test("New Game leads to the solo / with-friends fork", async ({ page }) => {

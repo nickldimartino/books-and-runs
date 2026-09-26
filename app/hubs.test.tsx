@@ -81,7 +81,7 @@ describe("Profile hub", () => {
     expect(screen.queryByRole("link", { name: /^Account/ })).toBeNull();
     const help = screen.getByRole("region", { name: "Help & about" });
     const hrefs = Array.from(help.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(["/how-to-play", "/scorecard", "/history", "/privacy", "/terms", "/support"]);
+    expect(hrefs).toEqual(["/how-to-play", "/history", "/privacy", "/terms", "/support"]);
   });
   it("signed in: Account, My profile and Sign out appear", () => {
     const signOut = vi.fn();

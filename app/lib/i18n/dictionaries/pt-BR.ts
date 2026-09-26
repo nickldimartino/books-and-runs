@@ -678,7 +678,6 @@ const ptBR = {
   "home.progressTile.achievements": "Conquistas",
   "home.progressTile.leaderboard": "Ranking",
   "home.progressTile.friends": "Amigos",
-  "home.progressTiles.aria": "Atalhos",
 
   "home.closestAchievement": "Conquista mais próxima",
   "home.reward.badge": "emblema {name}",
@@ -2106,6 +2105,7 @@ const ptBR = {
   "social.playDesc": "Comece uma partida por turnos com amigos",
   "social.clubsDesc": "Grupos fixos com placar próprio",
   "social.tournamentsDesc": "Séries de todos contra todos com seus amigos",
+  "social.scorekeeperDesc": "Anote a pontuação de um jogo de cartas de verdade",
   "profile.myProfile": "Meu perfil",
   "profile.myProfileDesc": "Avatar, nome, bio e estatísticas públicas",
   "profile.accountDesc": "E-mail, senha, verificação em duas etapas e seus dados",

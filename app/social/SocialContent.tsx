@@ -52,6 +52,12 @@ export function SocialContent() {
           description={t("social.tournamentsDesc")}
           icon={HubIcons.tournaments}
         />
+        <HubLink
+          href="/scorecard"
+          title={t("home.scorekeeper")}
+          description={t("social.scorekeeperDesc")}
+          icon={HubIcons.stats}
+        />
       </div>
     </main>
   );

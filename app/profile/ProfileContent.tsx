@@ -2,7 +2,7 @@
 
 // The Profile hub: who you are (identity card), doors to your public profile,
 // Account and Settings, sign out, and a "Help & about" list holding the
-// rarely-used links that used to crowd Home (How to Play, Scorekeeper, History
+// rarely-used links that used to crowd Home (How to Play, History
 // of Books & Runs, Privacy, Terms, Support).
 
 import Link from "next/link";
@@ -21,7 +21,6 @@ export function ProfileContent() {
 
   const help: { href: string; label: string }[] = [
     { href: "/how-to-play", label: t("common.howToPlay") },
-    { href: "/scorecard", label: t("home.scorekeeper") },
     { href: "/history", label: t("home.historyOfBooksAndRuns") },
     { href: "/privacy", label: t("common.privacy") },
     { href: "/terms", label: t("common.terms") },

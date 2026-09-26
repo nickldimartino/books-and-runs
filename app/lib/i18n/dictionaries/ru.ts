@@ -707,7 +707,6 @@ const ru = {
   "home.progressTile.achievements": "Достижения",
   "home.progressTile.leaderboard": "Таблица лидеров",
   "home.progressTile.friends": "Друзья",
-  "home.progressTiles.aria": "Быстрые ссылки",
 
   "home.closestAchievement": "Ближайшее достижение",
   "home.reward.badge": "значок {name}",
@@ -2511,6 +2510,7 @@ const ru = {
   "social.playDesc": "Начни пошаговую игру с друзьями",
   "social.clubsDesc": "Постоянные группы со своей таблицей",
   "social.tournamentsDesc": "Круговые серии игр с друзьями",
+  "social.scorekeeperDesc": "Ведите счёт настоящей карточной игры за столом",
   "profile.myProfile": "Мой профиль",
   "profile.myProfileDesc": "Аватар, имя, о себе и публичная статистика",
   "profile.accountDesc": "Почта, пароль, двухфакторная защита и твои данные",

@@ -670,7 +670,6 @@ const ja = {
   "home.progressTile.achievements": "実績",
   "home.progressTile.leaderboard": "リーダーボード",
   "home.progressTile.friends": "フレンド",
-  "home.progressTiles.aria": "クイックリンク",
 
   "home.closestAchievement": "もうすぐ達成できる実績",
   "home.reward.badge": "{name} バッジ",
@@ -1962,6 +1961,7 @@ const ja = {
   "social.playDesc": "フレンドとターン制ゲームを始める",
   "social.clubsDesc": "専用スコアボード付きの固定グループ",
   "social.tournamentsDesc": "フレンドとの総当たりシリーズ",
+  "social.scorekeeperDesc": "実際のカードゲームのスコアを記録",
   "profile.myProfile": "マイプロフィール",
   "profile.myProfileDesc": "アバター、名前、自己紹介、公開統計",
   "profile.accountDesc": "メール、パスワード、2段階認証、データ",

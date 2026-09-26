@@ -676,7 +676,6 @@ const fr = {
   "home.progressTile.achievements": "Succès",
   "home.progressTile.leaderboard": "Classement",
   "home.progressTile.friends": "Amis",
-  "home.progressTiles.aria": "Accès rapide",
 
   "home.closestAchievement": "Succès le plus proche",
   "home.reward.badge": "badge {name}",
@@ -1972,6 +1971,7 @@ const fr = {
   "social.playDesc": "Lance une partie au tour par tour avec des amis",
   "social.clubsDesc": "Des groupes permanents avec leur propre classement",
   "social.tournamentsDesc": "Séries en championnat avec tes amis",
+  "social.scorekeeperDesc": "Noter les scores d'une vraie partie de cartes",
   "profile.myProfile": "Mon profil",
   "profile.myProfileDesc": "Avatar, nom, bio et stats publiques",
   "profile.accountDesc": "E-mail, mot de passe, double authentification et tes données",

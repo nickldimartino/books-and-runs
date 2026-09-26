@@ -690,7 +690,6 @@ const en = {
   "home.progressTile.achievements": "Achievements",
   "home.progressTile.leaderboard": "Leaderboard",
   "home.progressTile.friends": "Friends",
-  "home.progressTiles.aria": "Quick links",
 
   "home.closestAchievement": "Closest achievement",
   "home.reward.badge": "{name} badge",
@@ -2120,6 +2119,7 @@ const en = {
   "social.playDesc": "Start a turn-based game with friends",
   "social.clubsDesc": "Standing groups with their own scoreboard",
   "social.tournamentsDesc": "Round-robin series with your friends",
+  "social.scorekeeperDesc": "Keep score for a real card game at the table",
   "profile.myProfile": "My profile",
   "profile.myProfileDesc": "Avatar, name, bio and public stats",
   "profile.accountDesc": "Email, password, two-factor and your data",

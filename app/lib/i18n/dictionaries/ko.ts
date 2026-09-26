@@ -672,7 +672,6 @@ const ko = {
   "home.progressTile.achievements": "업적",
   "home.progressTile.leaderboard": "리더보드",
   "home.progressTile.friends": "친구",
-  "home.progressTiles.aria": "바로가기",
 
   "home.closestAchievement": "가장 가까운 업적",
   "home.reward.badge": "{name} 배지",
@@ -1969,6 +1968,7 @@ const ko = {
   "social.playDesc": "친구와 턴제 게임 시작하기",
   "social.clubsDesc": "자체 점수판이 있는 고정 그룹",
   "social.tournamentsDesc": "친구들과 하는 리그전 시리즈",
+  "social.scorekeeperDesc": "실제 카드 게임 점수 기록",
   "profile.myProfile": "내 프로필",
   "profile.myProfileDesc": "아바타, 이름, 소개, 공개 통계",
   "profile.accountDesc": "이메일, 비밀번호, 2단계 인증, 내 데이터",

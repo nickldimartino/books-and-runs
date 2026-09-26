@@ -676,7 +676,6 @@ const es = {
   "home.progressTile.achievements": "Logros",
   "home.progressTile.leaderboard": "Clasificación",
   "home.progressTile.friends": "Amigos",
-  "home.progressTiles.aria": "Accesos rápidos",
 
   "home.closestAchievement": "Logro más cercano",
   "home.reward.badge": "insignia {name}",
@@ -1970,6 +1969,7 @@ const es = {
   "social.playDesc": "Empieza una partida por turnos con amigos",
   "social.clubsDesc": "Grupos fijos con su propio marcador",
   "social.tournamentsDesc": "Series de todos contra todos con tus amigos",
+  "social.scorekeeperDesc": "Anota los puntos de una partida de cartas real",
   "profile.myProfile": "Mi perfil",
   "profile.myProfileDesc": "Avatar, nombre, bio y estadísticas públicas",
   "profile.accountDesc": "Correo, contraseña, verificación en dos pasos y tus datos",

@@ -668,7 +668,6 @@ const zh = {
   "home.progressTile.achievements": "成就",
   "home.progressTile.leaderboard": "排行榜",
   "home.progressTile.friends": "好友",
-  "home.progressTiles.aria": "快捷入口",
 
   "home.closestAchievement": "最接近的成就",
   "home.reward.badge": "{name} 徽章",
@@ -2082,6 +2081,7 @@ const zh = {
   "social.playDesc": "和朋友开一局回合制游戏",
   "social.clubsDesc": "拥有独立排行榜的固定小组",
   "social.tournamentsDesc": "与好友的循环赛系列",
+  "social.scorekeeperDesc": "为实体牌局记分",
   "profile.myProfile": "我的资料",
   "profile.myProfileDesc": "头像、名称、简介和公开统计",
   "profile.accountDesc": "邮箱、密码、双重验证和你的数据",
