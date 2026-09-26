@@ -295,7 +295,7 @@ export default function NewLocalGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <BackLink href="/new-game" label={t("newGame.title")} />
+      <BackLink href="/new-game" label={t("newGame.title")} smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("newGame.soloAndPassAndPlay")}</h1>
 

@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CONTRACTS, ContractRequirement, SHORT_GAME_CONTRACTS } from "@/types";
-import { BackLink } from "../components/BackLink";
+import { BackLink, BottomBackLink } from "../components/BackLink";
 import { PageTip } from "../components/PageTip";
 import { contractNeedLabel } from "../lib/contractDisplay";
 import { useT } from "../lib/i18n/LocaleProvider";
@@ -131,7 +131,7 @@ export default function ScorecardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-10">
-      <BackLink href="/" />
+      <BackLink href="/social" smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("scorecard.title")}</h1>
 
@@ -400,9 +400,7 @@ export default function ScorecardPage() {
         </>
       )}
 
-      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/social" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </main>
   );
 }

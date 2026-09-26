@@ -27,7 +27,8 @@ test("home screen shows the hero and the main entry points", async ({ page }) =>
   await expect(page.getByRole("link", { name: "New Game" })).toBeVisible();
   await expect(page.getByRole("button", { name: /play today's deal/i })).toBeVisible();
   // The slim top bar and the persistent nav.
-  await expect(page.getByTestId("home-topbar").getByRole("link", { name: "Sign in" })).toBeVisible();
+  // (The Sign in chip only exists when a Supabase project is configured.)
+  await expect(page.getByTestId("home-topbar").getByRole("link", { name: /settings/i })).toBeVisible();
   await expect(page.getByTestId("app-nav")).toBeVisible();
   // The legal links sit in one line at the bottom (no "More" dropdown).
   await expect(page.getByText("More", { exact: true })).toHaveCount(0);

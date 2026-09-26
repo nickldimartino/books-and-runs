@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { MfaFactor, useAuth } from "../AuthContext";
-import { BackLink } from "../components/BackLink";
+import { BackLink, BottomBackLink } from "../components/BackLink";
 import { BlockedPlayersSection } from "../components/BlockedPlayersSection";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { DeleteAccountSection } from "../components/DeleteAccountSection";
@@ -250,7 +250,7 @@ export default function AccountPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <BackLink href="/" />
+      <BackLink href="/profile" smart />
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">{t("account.title")}</h1>
 
       {authLoading || loading ? (
@@ -481,9 +481,7 @@ export default function AccountPage() {
         </>
       )}
 
-      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/profile" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </main>
   );
 }

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { NotificationPrefs } from "../components/NotificationPrefs";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
-import { BackLink } from "../components/BackLink";
+import { BackLink, BottomBackLink } from "../components/BackLink";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
   onAccountSettingsSynced,
@@ -658,7 +658,7 @@ export default function SettingsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-10">
-      <BackLink href="/" />
+      <BackLink href="/profile" smart />
       <h1 className="-mt-4 text-2xl font-bold text-[var(--heading)]">{t("home.settings")}</h1>
 
       {loading ? (
@@ -1095,9 +1095,7 @@ export default function SettingsPage() {
         </>
       )}
 
-      <Link href="/" className="text-center text-sm text-[var(--muted)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/profile" className="text-center text-sm text-[var(--muted)] hover:text-[var(--text)]" />
     </main>
   );
 }

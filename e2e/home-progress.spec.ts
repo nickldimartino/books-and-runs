@@ -121,6 +121,10 @@ test.describe("Home progression (guest)", () => {
   test("the guest sign-in card is dismissible and stays dismissed", async ({ page }) => {
     await seedReturningPlayer(page);
     await page.goto("/");
+    // Sign-in only exists when the build has a Supabase project configured
+    // (CI runs without one — there's nothing to sign in to).
+    const configured = (await page.getByTestId("home-topbar").getByRole("link", { name: "Sign in" }).count()) > 0;
+    test.skip(!configured, "Supabase isn't configured in this environment");
     const card = page.locator("[data-home-signin]");
     await expect(card).toBeVisible();
     await card.getByRole("button", { name: "Dismiss" }).click();

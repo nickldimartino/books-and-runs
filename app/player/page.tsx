@@ -42,7 +42,7 @@ import { usePlayerLevel } from "../PlayerLevelContext";
 import { loadPendingSessionCounters, withSessionCounters } from "../lib/pendingProgress";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { AvatarFrame } from "../components/AvatarFrame";
-import { BackLink } from "../components/BackLink";
+import { BackLink, BottomBackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -2278,9 +2278,7 @@ export default function PlayerProfilePage() {
         </>
       )}
 
-      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </main>
   );
 }

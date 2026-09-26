@@ -16,7 +16,7 @@ import {
 } from "@/achievements";
 import { useAuth } from "../AuthContext";
 import { AvatarFrame } from "../components/AvatarFrame";
-import { BackLink } from "../components/BackLink";
+import { BackLink, BottomBackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -326,7 +326,7 @@ export default function LeaderboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
-      <BackLink href="/" />
+      <BackLink href="/progress" smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("home.progressTile.leaderboard")}</h1>
 
@@ -524,9 +524,7 @@ export default function LeaderboardPage() {
         <p className="text-center text-xs text-[var(--faint)]">{t("leaderboard.notOnBoardYet")}</p>
       )}
 
-      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/progress" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </main>
   );
 }

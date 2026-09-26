@@ -60,7 +60,7 @@ export default function TipPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
-      <BackLink href="/" />
+      <BackLink href="/profile" smart />
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--heading)]">{t("settings.supportDeveloper")}</h1>

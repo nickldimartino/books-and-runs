@@ -204,7 +204,7 @@ export default function SupportPage() {
       {cameFromReviewPrompt ? (
         <BackLink onClick={() => router.back()} label={t("howToPlay.backToGame")} />
       ) : (
-        <BackLink href="/" />
+        <BackLink href="/profile" smart />
       )}
 
       <div>

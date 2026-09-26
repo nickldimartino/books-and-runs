@@ -1,5 +1,7 @@
 "use client";
 
+import { BottomBackLink } from "../components/BackLink";
+
 // All of History's translated prose, split out of page.tsx so that file can
 // stay a Server Component for its metadata export (same reason
 // how-to-play/HowToPlayContent.tsx is split out — see its own comment).
@@ -86,12 +88,7 @@ export function HistoryContent() {
         </section>
       </div>
 
-      <Link
-        href="/"
-        className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]"
-      >
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/profile" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </>
   );
 }

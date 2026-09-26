@@ -11,6 +11,7 @@ import { GameProvider } from "./GameContext";
 import { AppNav } from "./components/AppNav";
 import { DocumentTitleLocalizer } from "./components/DocumentTitleLocalizer";
 import { InstallHint } from "./components/InstallHint";
+import { NavTrailTracker } from "./components/NavTrailTracker";
 import { ShellEffects } from "./components/ShellEffects";
 import { ToastHost } from "./components/ToastHost";
 import { GamepadNavigation } from "./components/GamepadNavigation";
@@ -148,6 +149,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <AccountSwitchGuard />
             <AccountSettingsSync />
+            <NavTrailTracker />
             <ShellEffects />
             <InstallHint />
             <PlayerLevelProvider>

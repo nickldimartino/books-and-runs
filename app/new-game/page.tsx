@@ -90,7 +90,7 @@ export default function NewGamePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
-      <BackLink href="/" />
+      <BackLink href="/" smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("newGame.title")}</h1>
 

@@ -13,7 +13,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { Card } from "@/types";
 import type { RedactedView } from "@/mp/types";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/multiplayer/play" }));
 vi.mock("../../AuthContext", () => ({ useAuth: () => ({ user: { id: "u-me" }, loading: false }) }));
 vi.mock("../../PlayerLevelContext", () => ({ usePlayerLevel: () => ({ level: null }) }));
 vi.mock("../../lib/sound", () => ({

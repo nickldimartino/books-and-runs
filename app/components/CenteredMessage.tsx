@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
+import { useSmartBack } from "./BackLink";
 import { useT } from "../lib/i18n/LocaleProvider";
 
 // The centered "this needs X" screen — a heading, optional body text, an
@@ -38,12 +39,20 @@ export function CenteredMessage({
   title,
   body,
   signIn,
-  backHref = "/",
+  backHref,
   backLabel,
   backOnClick,
 }: CenteredMessageProps) {
   const { t } = useT();
-  const resolvedBackLabel = backLabel ?? t("common.backToHome");
+  // Back goes to the page you came from when there is one; `backHref` (Home
+  // by default) is the fallback for a page opened directly.
+  const fallbackHref = backHref ?? "/";
+  const smart = useSmartBack(fallbackHref, !backOnClick);
+  const resolvedBackHref = smart.href;
+  const cameFromElsewhere = smart.href !== fallbackHref;
+  const resolvedBackLabel = cameFromElsewhere
+    ? `← ${t(smart.labelKey)}`
+    : (backLabel ?? t("common.backToHome"));
   const signInHref = typeof signIn === "string" ? signIn : "/sign-in";
   // Whichever CTA renders first gets the extra breathing room above it (the
   // parent's own gap-4 handles spacing between two CTAs) — matches every
@@ -65,7 +74,7 @@ export function CenteredMessage({
           {resolvedBackLabel}
         </button>
       ) : (
-        <Link href={backHref} className={backClassName}>
+        <Link href={resolvedBackHref} className={backClassName}>
           {resolvedBackLabel}
         </Link>
       )}

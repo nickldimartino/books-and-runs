@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
-import { BackLink } from "../components/BackLink";
+import { BackLink, BottomBackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -387,7 +387,7 @@ export default function FriendsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
-      <BackLink href="/" />
+      <BackLink href="/social" smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("home.progressTile.friends")}</h1>
 
@@ -635,9 +635,7 @@ export default function FriendsPage() {
         </>
       )}
 
-      <Link href="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/social" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </main>
   );
 }

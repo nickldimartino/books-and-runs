@@ -1,5 +1,7 @@
 "use client";
 
+import { BottomBackLink } from "../components/BackLink";
+
 // All of Terms of Service's translated prose, split out of page.tsx so that
 // file can stay a Server Component for its metadata export (same pattern as
 // app/how-to-play/HowToPlayContent.tsx — see its own comment).
@@ -88,9 +90,7 @@ export function TermsContent() {
         </section>
       </div>
 
-      <Link href="/" className="text-sm text-[var(--faint)] hover:text-[var(--text)]">
-        {t("common.backToHome")}
-      </Link>
+      <BottomBackLink fallback="/profile" className="text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </>
   );
 }

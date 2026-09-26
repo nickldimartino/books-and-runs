@@ -182,3 +182,45 @@ test("the nav stays hidden while the first-visit intro plays", async ({ page }) 
     .toBe(false);
   await expect(nav(page)).toBeVisible();
 });
+
+test.describe("Back returns to where you came from", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        sessionStorage.setItem("booksAndRuns:introSeen", "1");
+      } catch {
+        /* ignore */
+      }
+    });
+  });
+
+  test("Progress → Leaderboard → Back lands on Progress, not Home", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("app-nav").getByRole("link", { name: "Progress" }).click();
+    await page.getByRole("link", { name: /leaderboard/i }).first().click();
+    await expect(page).toHaveURL(/\/leaderboard\/?$/);
+    const back = page.getByRole("link", { name: /^←/ }).first();
+    await expect(back).toHaveText(/progress/i);
+    await back.click();
+    await expect(page).toHaveURL(/\/progress\/?$/);
+  });
+
+  test("Social → Play with friends → Back lands on Social", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("app-nav").getByRole("link", { name: "Social" }).click();
+    await page.getByRole("link", { name: /play with friends/i }).first().click();
+    await expect(page).toHaveURL(/\/new-game\/multiplayer\/?$/);
+    const back = page.getByRole("link", { name: /^←/ }).first();
+    await expect(back).toHaveText(/social/i); // the trail resolves right after mount
+    await back.click();
+    await expect(page).toHaveURL(/\/social\/?$/);
+  });
+
+  test("a page opened directly falls back to its hub", async ({ page }) => {
+    // History is always available (Achievements etc. become a "not set up"
+    // gate when no Supabase project is configured, as in CI).
+    await page.goto("/history");
+    await page.getByRole("link", { name: /^←/ }).first().click();
+    await expect(page).toHaveURL(/\/profile\/?$/);
+  });
+});

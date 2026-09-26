@@ -112,7 +112,7 @@ function TournamentList() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-10">
-      <BackLink href="/" />
+      <BackLink href="/social" smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("tournaments.title")}</h1>
 

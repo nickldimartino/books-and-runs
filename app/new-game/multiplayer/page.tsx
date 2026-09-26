@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { track } from "../../lib/analytics";
-import { BackLink } from "../../components/BackLink";
+import { BackLink, BottomBackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { PageTip } from "../../components/PageTip";
 import { pickAiPersonas } from "../../lib/aiPersonas";
@@ -130,19 +130,17 @@ export default function NewMultiplayerGamePage() {
         <Link href="/sign-in" className="mt-2 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] shadow hover:bg-[var(--accent-hover)]">
           {t("signIn.title")}
         </Link>
-        <Link
-          href="/new-game"
+        <BottomBackLink
+          fallback="/new-game"
           className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-        >
-          {t("newGameMultiplayer.backToNewGame")}
-        </Link>
+        />
       </main>
     );
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-7 px-6 py-10">
-      <BackLink href="/new-game" label={t("newGame.title")} />
+      <BackLink href="/new-game" label={t("newGame.title")} smart />
 
       <h1 className="text-2xl font-bold text-[var(--heading)]">{t("newGameMultiplayer.title")}</h1>
 

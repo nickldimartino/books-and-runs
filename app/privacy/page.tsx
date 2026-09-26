@@ -17,7 +17,7 @@ export const metadata = routeMetadata({
 export default function PrivacyPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
-      <BackLink href="/" />
+      <BackLink href="/profile" smart />
       <PrivacyContent />
     </main>
   );
