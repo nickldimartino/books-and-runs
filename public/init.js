@@ -144,4 +144,17 @@
       }
     }
   } catch (e) {}
+
+  // Snapshot every attribute set on <html> above. React 19 clears the
+  // attributes it doesn't own on <html> when it hydrates (a fresh profile
+  // loses data-intro, data-seen-tips, data-started, data-signed-in,
+  // data-reduce-motion… ~60 ms in), which cut the intro short, re-showed
+  // dismissed tips and hid the Quests card. components/HtmlAttrsRestore.tsx
+  // puts back whatever is missing, in a layout effect (before paint).
+  try {
+    var snap = {};
+    var attrs = document.documentElement.attributes;
+    for (var a = 0; a < attrs.length; a++) snap[attrs[a].name] = attrs[a].value;
+    window.__brHtmlAttrs = snap;
+  } catch (e) {}
 })();

@@ -17,6 +17,7 @@ import { LocaleProvider } from "./lib/i18n/LocaleProvider";
 import { LocalSaveSync } from "./LocalSaveSync";
 import { PendingSaveSync } from "./PendingSaveSync";
 import { PlayerLevelProvider } from "./PlayerLevelContext";
+import { HtmlAttrsRestore } from "./components/HtmlAttrsRestore";
 import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
 import { UpdateAvailableBanner } from "./UpdateAvailableBanner";
 import { DEFAULT_THEME, THEME_BG } from "./lib/themeStore";
@@ -134,6 +135,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src={`/init.js?v=${process.env.NEXT_PUBLIC_APP_VERSION}`} />
       </head>
       <body className="min-h-screen antialiased">
+        <HtmlAttrsRestore />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
         <ServiceWorkerRegistrar />
         <LocaleProvider>

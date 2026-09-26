@@ -499,7 +499,6 @@ const zh = {
   "roundSummary.achievementsUnlocked.other": "本回合解锁了成就",
   "roundSummary.player": "玩家",
   "roundSummary.thisRound": "本回合",
-  "roundSummary.penaltyNote": "“本轮”是每位玩家手中剩余牌的罚分 — 总分最低者获胜。",
   "roundSummary.total": "总计",
   "roundSummary.leading": "领先",
   "roundSummary.startNextRound": "开始下一回合",

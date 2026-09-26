@@ -533,8 +533,6 @@ const ru = {
   "roundSummary.achievementsUnlocked.other": "Достижения открыты в этом раунде",
   "roundSummary.player": "Игрок",
   "roundSummary.thisRound": "Этот раунд",
-  "roundSummary.penaltyNote":
-    "«В этом раунде» — это штрафные очки за карты, оставшиеся на руках; побеждает тот, у кого итог меньше всего.",
   "roundSummary.total": "Итого",
   "roundSummary.leading": "Лидирует",
   "roundSummary.startNextRound": "Начать следующий раунд",

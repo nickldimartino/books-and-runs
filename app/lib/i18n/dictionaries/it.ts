@@ -511,8 +511,6 @@ const it = {
   "roundSummary.achievementsUnlocked.other": "Obiettivi sbloccati in questa manche",
   "roundSummary.player": "Giocatore",
   "roundSummary.thisRound": "Questa manche",
-  "roundSummary.penaltyNote":
-    "«Questo round» sono i punti di penalità per le carte rimaste in mano: vince il totale più basso.",
   "roundSummary.total": "Totale",
   "roundSummary.leading": "In testa",
   "roundSummary.startNextRound": "Inizia la prossima manche",

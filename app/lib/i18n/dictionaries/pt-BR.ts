@@ -510,8 +510,6 @@ const ptBR = {
   "roundSummary.achievementsUnlocked.other": "Conquistas desbloqueadas nesta rodada",
   "roundSummary.player": "Jogador",
   "roundSummary.thisRound": "Esta rodada",
-  "roundSummary.penaltyNote":
-    "“Esta rodada” são os pontos de penalidade das cartas que sobraram na mão — vence quem tiver o menor total.",
   "roundSummary.total": "Total",
   "roundSummary.leading": "Na liderança",
   "roundSummary.startNextRound": "Iniciar próxima rodada",

@@ -510,8 +510,6 @@ const fr = {
   "roundSummary.achievementsUnlocked.other": "Succès débloqués cette manche",
   "roundSummary.player": "Joueur",
   "roundSummary.thisRound": "Cette manche",
-  "roundSummary.penaltyNote":
-    "« Cette manche » correspond aux points de pénalité des cartes restées en main — le total le plus bas gagne.",
   "roundSummary.total": "Total",
   "roundSummary.leading": "En tête",
   "roundSummary.startNextRound": "Commencer la manche suivante",

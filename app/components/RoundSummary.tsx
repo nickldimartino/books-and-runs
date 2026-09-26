@@ -185,7 +185,6 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
         </table>
       </div>
 
-      <p className="text-center text-xs text-[var(--faint)]">{t("roundSummary.penaltyNote")}</p>
 
       <button
         onClick={onNextRound}

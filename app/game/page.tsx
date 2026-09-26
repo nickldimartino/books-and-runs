@@ -1135,9 +1135,11 @@ export default function GamePage() {
           </button>
         )}
       </div>
-      {showLegalMoves && whyMeld && (
-        <p role="status" aria-live="polite" className="text-xs text-[var(--faint)]" data-testid="why-meld">
-          {whyMeld}
+      {/* Always mounted (one line reserved) so the hint appearing or clearing
+          never nudges the hand drawer up and down. */}
+      {showLegalMoves && (
+        <p role="status" aria-live="polite" className="min-h-4 text-xs text-[var(--faint)]" data-testid="why-meld">
+          {whyMeld ?? ""}
         </p>
       )}
     </section>
@@ -1189,11 +1191,6 @@ export default function GamePage() {
           >
             {t("game.discard.discardSelected")}
           </button>
-          {showLegalMoves && whyDiscard && (
-            <p role="status" aria-live="polite" className="w-full text-center text-xs text-[var(--faint)]" data-testid="why-discard">
-              {whyDiscard}
-            </p>
-          )}
         </>
       )}
     </section>

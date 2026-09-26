@@ -503,7 +503,6 @@ const ko = {
   "roundSummary.achievementsUnlocked.other": "이번 라운드에 업적 달성",
   "roundSummary.player": "플레이어",
   "roundSummary.thisRound": "이번 라운드",
-  "roundSummary.penaltyNote": "“이번 라운드”는 각자 손에 남은 카드의 벌점이에요. 합계가 가장 낮은 사람이 이겨요.",
   "roundSummary.total": "합계",
   "roundSummary.leading": "선두",
   "roundSummary.startNextRound": "다음 라운드 시작",

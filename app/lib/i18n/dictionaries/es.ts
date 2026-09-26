@@ -510,8 +510,6 @@ const es = {
   "roundSummary.achievementsUnlocked.other": "Logros desbloqueados esta ronda",
   "roundSummary.player": "Jugador",
   "roundSummary.thisRound": "Esta ronda",
-  "roundSummary.penaltyNote":
-    "«Esta ronda» son los puntos de penalización por las cartas que quedan en la mano: gana el total más bajo.",
   "roundSummary.total": "Total",
   "roundSummary.leading": "Al frente",
   "roundSummary.startNextRound": "Iniciar siguiente ronda",

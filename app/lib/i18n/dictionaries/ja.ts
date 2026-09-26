@@ -504,7 +504,6 @@ const ja = {
   "roundSummary.achievementsUnlocked.other": "このラウンドで実績を獲得しました",
   "roundSummary.player": "プレイヤー",
   "roundSummary.thisRound": "このラウンド",
-  "roundSummary.penaltyNote": "「今ラウンド」は各自の手札に残ったカードの罰点です。合計が最も低い人が勝ちます。",
   "roundSummary.total": "合計",
   "roundSummary.leading": "首位",
   "roundSummary.startNextRound": "次のラウンドを開始",

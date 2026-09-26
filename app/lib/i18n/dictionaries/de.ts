@@ -518,8 +518,6 @@ const de = {
   "roundSummary.achievementsUnlocked.other": "Erfolge in dieser Runde freigeschaltet",
   "roundSummary.player": "Spieler",
   "roundSummary.thisRound": "Diese Runde",
-  "roundSummary.penaltyNote":
-    "„Diese Runde“ sind Strafpunkte für die Karten, die noch in der Hand sind — wer die niedrigste Summe hat, gewinnt.",
   "roundSummary.total": "Gesamt",
   "roundSummary.leading": "Führend",
   "roundSummary.startNextRound": "Nächste Runde starten",

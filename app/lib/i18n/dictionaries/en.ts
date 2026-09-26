@@ -521,8 +521,6 @@ const en = {
   "roundSummary.achievementsUnlocked.other": "Achievements unlocked this round",
   "roundSummary.player": "Player",
   "roundSummary.thisRound": "This round",
-  "roundSummary.penaltyNote":
-    "\"This round\" is penalty points for the cards still left in each hand — the lowest total wins.",
   "roundSummary.total": "Total",
   "roundSummary.leading": "Leading",
   "roundSummary.startNextRound": "Start next round",
