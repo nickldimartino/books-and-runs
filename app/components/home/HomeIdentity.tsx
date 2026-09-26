@@ -21,6 +21,7 @@ import {
   nameOf,
   playerProfileHref,
 } from "../../lib/leaderboardStore";
+import { identityIsFresh, readIdentity, writeIdentity } from "../../lib/identityCache";
 import { supabase } from "../../lib/supabaseClient";
 
 export function HomeIdentity({
@@ -35,15 +36,18 @@ export function HomeIdentity({
   variant?: "chip" | "card";
 }) {
   const { t } = useT();
-  const [name, setName] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<AvatarInfo | null>(null);
+  // Seeded from the last known identity so navigating between pages doesn't
+  // flash the default avatar/name while the fetch below revalidates it.
+  const [name, setName] = useState<string | null>(() => readIdentity(userId)?.name ?? null);
+  const [avatar, setAvatar] = useState<AvatarInfo | null>(() => readIdentity(userId)?.avatar ?? null);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || identityIsFresh(userId)) return;
     const client = supabase;
     let cancelled = false;
     Promise.all([fetchOwnDisplayName(client, userId), fetchAvatarsFor(client, [userId])])
       .then(([displayName, avatars]) => {
+        writeIdentity(userId, { name: displayName, avatar: avatars[userId] ?? null });
         if (cancelled) return;
         setName(displayName);
         setAvatar(avatars[userId] ?? null);
