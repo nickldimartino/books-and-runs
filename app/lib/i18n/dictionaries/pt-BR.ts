@@ -678,6 +678,7 @@ const ptBR = {
   "home.progressTile.achievements": "Conquistas",
   "home.progressTile.leaderboard": "Ranking",
   "home.progressTile.friends": "Amigos",
+  "home.progressTiles.aria": "Atalhos",
 
   "home.closestAchievement": "Conquista mais próxima",
   "home.reward.badge": "emblema {name}",
@@ -756,7 +757,7 @@ const ptBR = {
   "home.turnEndsIn": "turno acaba em {time}",
   "home.turnOverdue": "atrasado",
 
-  "home.yourGames": "Suas partidas",
+  "home.yourGames": "Suas partidas multijogador",
   "home.respondError": "Não foi possível responder — verifique sua conexão.",
   "home.invitedYou": "{name} te convidou",
   "home.someone": "Alguém",

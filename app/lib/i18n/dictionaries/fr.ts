@@ -676,6 +676,7 @@ const fr = {
   "home.progressTile.achievements": "Succès",
   "home.progressTile.leaderboard": "Classement",
   "home.progressTile.friends": "Amis",
+  "home.progressTiles.aria": "Accès rapide",
 
   "home.closestAchievement": "Succès le plus proche",
   "home.reward.badge": "badge {name}",
@@ -754,7 +755,7 @@ const fr = {
   "home.turnEndsIn": "fin du tour dans {time}",
   "home.turnOverdue": "en retard",
 
-  "home.yourGames": "Tes parties",
+  "home.yourGames": "Tes parties multijoueur",
   "home.respondError": "Impossible de répondre — vérifie ta connexion.",
   "home.invitedYou": "{name} t'a invité",
   "home.someone": "Quelqu'un",

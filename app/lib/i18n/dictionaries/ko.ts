@@ -672,6 +672,7 @@ const ko = {
   "home.progressTile.achievements": "업적",
   "home.progressTile.leaderboard": "리더보드",
   "home.progressTile.friends": "친구",
+  "home.progressTiles.aria": "바로가기",
 
   "home.closestAchievement": "가장 가까운 업적",
   "home.reward.badge": "{name} 배지",
@@ -750,7 +751,7 @@ const ko = {
   "home.turnEndsIn": "{time} 남음",
   "home.turnOverdue": "시간 초과",
 
-  "home.yourGames": "내 게임",
+  "home.yourGames": "내 멀티플레이 게임",
   "home.respondError": "응답하지 못했어요 — 연결 상태를 확인해 주세요.",
   "home.invitedYou": "{name}님이 초대했어요",
   "home.someone": "누군가",

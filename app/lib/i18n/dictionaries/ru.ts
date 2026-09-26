@@ -707,6 +707,7 @@ const ru = {
   "home.progressTile.achievements": "Достижения",
   "home.progressTile.leaderboard": "Таблица лидеров",
   "home.progressTile.friends": "Друзья",
+  "home.progressTiles.aria": "Быстрые ссылки",
 
   "home.closestAchievement": "Ближайшее достижение",
   "home.reward.badge": "значок {name}",
@@ -789,7 +790,7 @@ const ru = {
   "home.turnEndsIn": "ход закончится через {time}",
   "home.turnOverdue": "просрочен",
 
-  "home.yourGames": "Твои игры",
+  "home.yourGames": "Твои многопользовательские игры",
   "home.respondError": "Не удалось ответить — проверь подключение.",
   "home.invitedYou": "Приглашение от {name}",
   "home.someone": "Кто-то",

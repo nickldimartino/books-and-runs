@@ -676,6 +676,7 @@ const es = {
   "home.progressTile.achievements": "Logros",
   "home.progressTile.leaderboard": "Clasificación",
   "home.progressTile.friends": "Amigos",
+  "home.progressTiles.aria": "Accesos rápidos",
 
   "home.closestAchievement": "Logro más cercano",
   "home.reward.badge": "insignia {name}",
@@ -754,7 +755,7 @@ const es = {
   "home.turnEndsIn": "el turno termina en {time}",
   "home.turnOverdue": "vencido",
 
-  "home.yourGames": "Tus partidas",
+  "home.yourGames": "Tus partidas multijugador",
   "home.respondError": "No se pudo responder — comprueba tu conexión.",
   "home.invitedYou": "{name} te invitó",
   "home.someone": "Alguien",

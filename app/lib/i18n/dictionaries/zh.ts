@@ -668,6 +668,7 @@ const zh = {
   "home.progressTile.achievements": "成就",
   "home.progressTile.leaderboard": "排行榜",
   "home.progressTile.friends": "好友",
+  "home.progressTiles.aria": "快捷入口",
 
   "home.closestAchievement": "最接近的成就",
   "home.reward.badge": "{name} 徽章",
@@ -746,7 +747,7 @@ const zh = {
   "home.turnEndsIn": "还剩 {time}",
   "home.turnOverdue": "已超时",
 
-  "home.yourGames": "你的游戏",
+  "home.yourGames": "你的多人对局",
   "home.respondError": "无法响应 — 请检查网络连接。",
   "home.invitedYou": "{name} 邀请了你",
   "home.someone": "某人",

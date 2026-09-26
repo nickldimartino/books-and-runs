@@ -2674,14 +2674,14 @@ body:has([aria-modal="true"]) .app-nav {
 /* Today card: reserve the height of the remembered tab before hydration, so
    picking it up from localStorage after the fact doesn't shift the page. */
 .today-body {
-  min-height: 8.5rem;
+  min-height: 6.9rem;
 }
 /* Signed in: streak line, notes and the shield row sit above the button. */
 html[data-signed-in] .today-body {
-  min-height: 11.5rem;
+  min-height: 9.75rem;
 }
 html[data-today-tab="quests"] .today-body {
-  min-height: 21rem;
+  min-height: 20.5rem;
 }
 html:not([data-signed-in]) [data-home-identity-skeleton],
 html[data-signed-in] [data-home-signin-chip] {

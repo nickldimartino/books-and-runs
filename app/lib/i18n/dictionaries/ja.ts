@@ -670,6 +670,7 @@ const ja = {
   "home.progressTile.achievements": "実績",
   "home.progressTile.leaderboard": "リーダーボード",
   "home.progressTile.friends": "フレンド",
+  "home.progressTiles.aria": "クイックリンク",
 
   "home.closestAchievement": "もうすぐ達成できる実績",
   "home.reward.badge": "{name} バッジ",
@@ -748,7 +749,7 @@ const ja = {
   "home.turnEndsIn": "あと{time}",
   "home.turnOverdue": "時間切れ",
 
-  "home.yourGames": "あなたのゲーム",
+  "home.yourGames": "マルチプレイのゲーム",
   "home.respondError": "応答できませんでした。接続を確認してください。",
   "home.invitedYou": "{name}があなたを招待しました",
   "home.someone": "誰か",

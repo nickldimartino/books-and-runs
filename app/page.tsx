@@ -41,6 +41,7 @@ import {
   markShieldNoticeSeen,
   unseenShieldSave,
 } from "./lib/dailyDealStore";
+import { ProgressTiles } from "./components/home/ProgressTiles";
 import { useQuests } from "./lib/useQuests";
 import { isReturningAfterAbsence, readLastHomeVisit, touchHomeVisit } from "./lib/welcomeBackStore";
 import { clearJustSignedUp, hasJustSignedUp } from "./lib/onboardingStore";
@@ -230,6 +231,7 @@ export default function HomePage() {
     null;
 
   const footerLink = "inline-block py-2.5 underline hover:text-[var(--muted)]";
+  const moreLink = "rounded-md px-3 py-2.5 text-sm text-[var(--muted)] hover:bg-[var(--panel-soft)]";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 px-4 py-3 sm:px-6 lg:max-w-5xl lg:gap-6 lg:px-10">
@@ -315,6 +317,7 @@ export default function HomePage() {
             questsAvailable={questsAvailable}
             isFirstSession={isFirstSession}
           />
+          <ProgressTiles userId={configured && user ? user.id : undefined} friendRequests={notifications.friendRequests} />
           {configured && user && (
             <div className="hidden flex-col gap-2 lg:flex">
               <HomeIdentity userId={user.id} level={level} loading={levelLoading} variant="card" />
@@ -326,26 +329,40 @@ export default function HomePage() {
         </div>
       </div>
 
-      <footer className="mt-auto flex flex-wrap justify-center gap-x-3 pt-2 text-xs text-[var(--faint)]">
-        <Link href="/how-to-play?from=home" className={footerLink}>
-          {t("common.howToPlay")}
-        </Link>
-        <Link href="/scorecard" className={footerLink}>
-          {t("home.scorekeeper")}
-        </Link>
-        <Link href="/history" className={footerLink}>
-          {t("home.historyOfBooksAndRuns")}
-        </Link>
-        <Link href="/privacy" className={footerLink}>
-          {t("common.privacy")}
-        </Link>
-        <Link href="/terms" className={footerLink}>
-          {t("common.terms")}
-        </Link>
-        <Link href="/support" className={footerLink}>
-          {t("common.contact")}
-        </Link>
-      </footer>
+      <div className="mt-auto flex flex-col gap-1 pt-2">
+        {/* Reference pages: a collapsed "More" at the bottom of the screen. */}
+        <details className="group mx-auto w-full max-w-xs rounded-lg border border-[var(--border)]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-sm font-medium text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+            {t("home.more")}
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 transition group-open:rotate-180" aria-hidden="true">
+              <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </summary>
+          <div className="flex flex-col gap-0.5 border-t border-[var(--border)] p-2">
+            <Link href="/how-to-play?from=home" className={moreLink}>
+              {t("common.howToPlay")}
+            </Link>
+            <Link href="/scorecard" className={moreLink}>
+              {t("home.scorekeeper")}
+            </Link>
+            <Link href="/history" className={moreLink}>
+              {t("home.historyOfBooksAndRuns")}
+            </Link>
+          </div>
+        </details>
+
+        <footer className="flex flex-wrap justify-center gap-x-3 text-xs text-[var(--faint)]">
+          <Link href="/privacy" className={footerLink}>
+            {t("common.privacy")}
+          </Link>
+          <Link href="/terms" className={footerLink}>
+            {t("common.terms")}
+          </Link>
+          <Link href="/support" className={footerLink}>
+            {t("common.contact")}
+          </Link>
+        </footer>
+      </div>
     </main>
   );
 }

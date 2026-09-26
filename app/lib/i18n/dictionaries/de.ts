@@ -687,6 +687,7 @@ const de = {
   "home.progressTile.achievements": "Erfolge",
   "home.progressTile.leaderboard": "Bestenliste",
   "home.progressTile.friends": "Freunde",
+  "home.progressTiles.aria": "Schnellzugriff",
 
   "home.closestAchievement": "Nächster Erfolg",
   "home.reward.badge": "{name}-Abzeichen",
@@ -765,7 +766,7 @@ const de = {
   "home.turnEndsIn": "Zug endet in {time}",
   "home.turnOverdue": "überfällig",
 
-  "home.yourGames": "Deine Spiele",
+  "home.yourGames": "Deine Multiplayer-Spiele",
   "home.respondError": "Antwort fehlgeschlagen — überprüfe deine Verbindung.",
   "home.invitedYou": "{name} hat dich eingeladen",
   "home.someone": "Jemand",

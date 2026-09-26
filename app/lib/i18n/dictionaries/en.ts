@@ -690,6 +690,7 @@ const en = {
   "home.progressTile.achievements": "Achievements",
   "home.progressTile.leaderboard": "Leaderboard",
   "home.progressTile.friends": "Friends",
+  "home.progressTiles.aria": "Quick links",
 
   "home.closestAchievement": "Closest achievement",
   "home.reward.badge": "{name} badge",
@@ -768,7 +769,7 @@ const en = {
   "home.turnEndsIn": "turn ends in {time}",
   "home.turnOverdue": "overdue",
 
-  "home.yourGames": "Your games",
+  "home.yourGames": "Your multiplayer games",
   "home.respondError": "Couldn't respond — check your connection.",
   "home.invitedYou": "{name} invited you",
   "home.someone": "Someone",
