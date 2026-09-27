@@ -99,19 +99,26 @@ export const BANNER_OPTIONS: readonly BannerOption[] = [
   // ⚖️/📈 and profileCosmetics.ts's steadyhand/hotstreak frame + title.
   { id: "steadyhand", label: "Glacier", css: "linear-gradient(135deg, #0c4a6e, #7dd3fc)", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Blaze", css: "linear-gradient(135deg, #9a3412, #fbbf24)", unlock: { kind: "mpWinStreak", streak: 8 } },
-  // Boutique — 10 total, every css pair unique from every other banner's
+  // Boutique — 15 total, every css pair unique from every other banner's
   // above (and from each other). Kept to exactly 2 stops like every banner
-  // above, for the same shareCard.ts canvas-parsing reason.
-  { id: "velvet", label: "Velvet", css: "linear-gradient(135deg, #4c0519, #86198f)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "moonlight", label: "Moonlight", css: "linear-gradient(135deg, #1e1b4b, #64748b)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "champagne", label: "Champagne", css: "linear-gradient(135deg, #a16207, #fef3c7)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "smokedquartz", label: "Smoked Quartz", css: "linear-gradient(135deg, #27272a, #a1a1aa)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "rosewood", label: "Rosewood", css: "linear-gradient(135deg, #431407, #9f1239)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "sapphirevein", label: "Sapphire Vein", css: "linear-gradient(135deg, #172554, #3b82f6)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "amberglass", label: "Amberglass", css: "linear-gradient(135deg, #8a5a1f, #f0c76a)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "charcoalbloom", label: "Charcoal Bloom", css: "linear-gradient(135deg, #18181b, #f472b6)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "peacock", label: "Peacock", css: "linear-gradient(135deg, #065f46, #8b5cf6)", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "cassis", label: "Cassis", css: "linear-gradient(135deg, #3f0d33, #be185d)", source: "boutique", unlock: { kind: "boutique" } },
+  // above, for the same shareCard.ts canvas-parsing reason. Rarity spans the
+  // full common→apex ladder (store.md) rather than the flat "unset"
+  // (defaulting to rare) every item launched with.
+  { id: "smokedquartz", label: "Smoked Quartz", css: "linear-gradient(135deg, #27272a, #a1a1aa)", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "smokedquartz" } },
+  { id: "moonlight", label: "Moonlight", css: "linear-gradient(135deg, #1e1b4b, #64748b)", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "moonlight" } },
+  { id: "amberglass", label: "Amberglass", css: "linear-gradient(135deg, #8a5a1f, #f0c76a)", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "amberglass" } },
+  { id: "rosewood", label: "Rosewood", css: "linear-gradient(135deg, #431407, #9f1239)", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "rosewood" } },
+  { id: "charcoalbloom", label: "Charcoal Bloom", css: "linear-gradient(135deg, #18181b, #f472b6)", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "charcoalbloom" } },
+  { id: "cassis", label: "Cassis", css: "linear-gradient(135deg, #3f0d33, #be185d)", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "cassis" } },
+  { id: "velvet", label: "Velvet", css: "linear-gradient(135deg, #4c0519, #86198f)", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "velvet" } },
+  { id: "obsidiantide", label: "Obsidian Tide", css: "linear-gradient(135deg, #0a0e27, #1e3a5f)", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "obsidiantide" } },
+  { id: "wildberry", label: "Wildberry", css: "linear-gradient(135deg, #5b1a3f, #e0729a)", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "wildberry" } },
+  { id: "sapphirevein", label: "Sapphire Vein", css: "linear-gradient(135deg, #172554, #3b82f6)", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "sapphirevein" } },
+  { id: "peacock", label: "Peacock", css: "linear-gradient(135deg, #065f46, #8b5cf6)", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "peacock" } },
+  { id: "goldenhour", label: "Golden Hour", css: "linear-gradient(135deg, #7a3b12, #ffb648)", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "goldenhour" } },
+  { id: "champagne", label: "Champagne", css: "linear-gradient(135deg, #a16207, #fef3c7)", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "champagne" } },
+  { id: "glacialrift", label: "Glacial Rift", css: "linear-gradient(135deg, #04293a, #7fd8e8)", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "glacialrift" } },
+  { id: "solarflare", label: "Solar Flare", css: "linear-gradient(135deg, #1a0500, #ff5e00)", rarity: "apex", source: "boutique", unlock: { kind: "boutique", category: "banner", itemId: "solarflare" } },
 ];
 
 export function findBannerOption(id: string | null): BannerOption | null {

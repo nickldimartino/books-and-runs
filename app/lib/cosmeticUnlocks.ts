@@ -11,6 +11,7 @@
 // requirement or a cosmetic option ever changes.
 
 import { AchievementCategory, AchievementProgressState, allAchievements } from "@/achievements";
+import { CosmeticCategory, itemSkuFor } from "./storeSku";
 
 export type CosmeticUnlockRule =
   | { kind: "level"; level: number }
@@ -63,18 +64,17 @@ export type CosmeticUnlockRule =
    * migration 0050. The first cosmetic gated on live multiplayer skill
    * specifically, rather than solo play or a Daily/Weekly streak. */
   | { kind: "mpWinStreak"; streak: number }
-  /** A Boutique item (see boutiqueCatalog.test.tsx) — not earnable by
-   * grinding, meant to eventually be a real purchase. No purchase flow
-   * exists yet, so today this reads exactly like creatorOnly — is_creator
-   * only — but is kept as its own kind rather than reusing creatorOnly
-   * outright: creatorOnly also gates genuinely permanent creator-exclusive
-   * items (Dealer's Table) that should never become purchasable, and
-   * conflating the two would mean "flipping on" real payments later has to
-   * carefully split them back apart. With a dedicated kind, flipping it on
-   * is a single-branch change to cosmetic_unlocked() (checking a purchases
-   * table instead of is_creator) — no catalog or cosmetic_unlocks row ever
-   * has to move. */
-  | { kind: "boutique" };
+  /** A Boutique item — real-money purchasable (see storeSku.ts), always
+   * free for is_creator. `category`/`itemId` (this item's own sku parts,
+   * e.g. category "card_back", itemId "aurora") are optional so existing
+   * `{ kind: "boutique" }` literals a catalog hasn't been updated with yet
+   * keep compiling — they just can't be individually owned via a purchase
+   * until their catalog entry supplies them, and fall back to is_creator
+   * only, same as before this field existed. Kept as its own kind rather
+   * than reusing creatorOnly outright: creatorOnly also gates a genuinely
+   * permanent creator-exclusive item (Dealer's Table) that should never
+   * become purchasable. */
+  | { kind: "boutique"; category?: CosmeticCategory; itemId?: string };
 
 /** Everything a rule might need to check itself against. Callers that
  * don't have every field yet (e.g. allCosmetics.ts's before/after unlock-
@@ -99,6 +99,10 @@ export interface UnlockContext {
   gamesTied: number;
   /** leaderboard_entries.mp_best_win_streak. */
   mpBestWinStreak: number;
+  /** Every sku (see storeSku.ts) this account currently owns — a real
+   * Stripe purchase or a launch-grandfather grant, from `my_entitlements()`.
+   * Empty (never "unlocks everything") until that RPC actually loads. */
+  ownedSkus: ReadonlySet<string>;
 }
 
 export function makeUnlockContext(
@@ -116,8 +120,11 @@ export function makeUnlockContext(
     averageScore: partial.averageScore ?? null,
     gamesTied: partial.gamesTied ?? 0,
     mpBestWinStreak: partial.mpBestWinStreak ?? 0,
+    ownedSkus: partial.ownedSkus ?? EMPTY_OWNED_SKUS,
   };
 }
+
+const EMPTY_OWNED_SKUS: ReadonlySet<string> = new Set();
 
 function categoryMastered(progress: AchievementProgressState, category: AchievementCategory): boolean {
   const inCategory = allAchievements(progress).filter((a) => a.category === category);
@@ -167,7 +174,8 @@ export function isCosmeticUnlocked(rule: CosmeticUnlockRule, ctx: UnlockContext)
     case "mpWinStreak":
       return ctx.mpBestWinStreak >= rule.streak;
     case "boutique":
-      return ctx.isCreator;
+      if (ctx.isCreator) return true;
+      return rule.category != null && rule.itemId != null && ctx.ownedSkus.has(itemSkuFor(rule.category, rule.itemId));
   }
 }
 

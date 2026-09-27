@@ -38,15 +38,17 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CosmeticUnlockRule, cosmeticRequirementLabel, isCosmeticUnlocked, makeUnlockContext } from "./cosmeticUnlocks";
+import { useEntitlements } from "./entitlementsStore";
 import { EMPTY_PROGRESS_STATE } from "@/achievements";
 
 export function isCardCosmeticUnlocked(
   unlock: CosmeticUnlockRule | undefined,
   level: number,
-  isCreator = false
+  isCreator = false,
+  ownedSkus: ReadonlySet<string> = new Set()
 ): boolean {
   if (!unlock) return true;
-  return isCosmeticUnlocked(unlock, makeUnlockContext({ level, isCreator, progress: EMPTY_PROGRESS_STATE }));
+  return isCosmeticUnlocked(unlock, makeUnlockContext({ level, isCreator, ownedSkus, progress: EMPTY_PROGRESS_STATE }));
 }
 
 export function cardCosmeticRequirementLabel(unlock: CosmeticUnlockRule): string {
@@ -56,6 +58,11 @@ export function cardCosmeticRequirementLabel(unlock: CosmeticUnlockRule): string
 interface CardUnlockContext {
   level: number;
   isCreator: boolean;
+  /** This account's owned Boutique skus (a real purchase or the launch
+   * grandfather) — needed alongside `isCreator` for the "boutique" unlock
+   * kind now that it's a real purchase, not creator-only. See
+   * entitlementsStore.ts. */
+  ownedSkus: ReadonlySet<string>;
 }
 
 /**
@@ -70,7 +77,8 @@ export function useCardUnlockContext(
   supabase: SupabaseClient | null,
   userId: string | null | undefined
 ): CardUnlockContext {
-  const [ctx, setCtx] = useState<CardUnlockContext>({ level: 0, isCreator: false });
+  const [ctx, setCtx] = useState<{ level: number; isCreator: boolean }>({ level: 0, isCreator: false });
+  const { ownedSkus } = useEntitlements(supabase, userId);
   useEffect(() => {
     if (!supabase || !userId) {
       setCtx({ level: 0, isCreator: false });
@@ -90,5 +98,5 @@ export function useCardUnlockContext(
       cancelled = true;
     };
   }, [supabase, userId]);
-  return ctx;
+  return { ...ctx, ownedSkus };
 }

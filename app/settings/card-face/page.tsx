@@ -21,7 +21,7 @@ export default function CardFaceSettingsPage() {
   const { t } = useT();
   const { user } = useAuth();
   const [cardFace, setCardFace, loading] = useSyncedLocalPreference(loadLocalCardFace);
-  const { level, isCreator } = useCardUnlockContext(supabase, user?.id);
+  const { level, isCreator, ownedSkus } = useCardUnlockContext(supabase, user?.id);
 
   function handleChange(id: CardFaceId) {
     setCardFace(id);
@@ -42,7 +42,7 @@ export default function CardFaceSettingsPage() {
       {loading ? (
         <LoadingSpinner />
       ) : (
-        <CardFacePicker active={cardFace} onSelect={handleChange} level={level} isCreator={isCreator} />
+        <CardFacePicker active={cardFace} onSelect={handleChange} level={level} isCreator={isCreator} ownedSkus={ownedSkus} />
       )}
     </main>
   );

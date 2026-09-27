@@ -33,7 +33,7 @@ const de = {
   "settingsPicker.tabHoliday": "Feiertage",
   "settingsPicker.signature": "Signatur",
   "settingsPicker.unlocksAtLevel": "Ab Stufe {level} freigeschaltet",
-  "settingsPicker.boutiqueLocked": "Boutique — noch nicht kaufbar",
+  "settingsPicker.boutiqueLocked": "Boutique — im Shop ansehen",
   "player.badge.free": "Kostenlos",
   "cosmeticReq.categoryMastered": "Meistere alle Erfolge der Kategorie {category}",
   "cosmeticReq.categoriesMasteredCount": "Meistere {count} von {total} Erfolgskategorien",
@@ -1429,7 +1429,7 @@ const de = {
 
   // terms.*
   "terms.title": "Nutzungsbedingungen",
-  "terms.lastUpdated": "Zuletzt aktualisiert am 25. September 2026",
+  "terms.lastUpdated": "Zuletzt aktualisiert am 27. September 2026",
   "terms.intro":
     "Durch die Nutzung von Books & Runs („die App“) stimmen Sie diesen Bedingungen zu. Wenn Sie nicht zustimmen, nutzen Sie die App bitte nicht.",
   "terms.app.title": "Die App",
@@ -1439,6 +1439,13 @@ const de = {
   "terms.accounts.title": "Konten",
   "terms.accounts.body":
     "Wenn Sie ein Konto erstellen, sind Sie dafür verantwortlich, Ihre Zugangsdaten sicher aufzubewahren, sowie für alles, was unter Ihrem Konto geschieht. Machen Sie bei der Registrierung korrekte Angaben. Sie müssen nach den Altersregeln der Datenschutzrichtlinie alt genug sein, um die App zu nutzen.",
+  "terms.purchases.title": "Käufe",
+  "terms.purchases.body":
+    "Im Boutique-Shop können Sie optionale digitale kosmetische Artikel kaufen – zum Beispiel Kartendesigns und Profil-Dekorationen; das genaue Angebot ändert sich mit der Zeit. Sie sind rein kosmetisch und wirken sich nie auf das Gameplay, das Matchmaking, die Bestenliste oder ein anderes Wettbewerbsergebnis aus. Preise werden in US-Dollar angezeigt und abgerechnet, und die Zahlung wird von Stripe verarbeitet – wir sehen oder speichern Ihre Kartennummer nie. Sobald die Zahlung erfolgreich war, wird Ihr Kauf automatisch und sofort Ihrem Konto gutgeschrieben. Nach der Zustellung ist der Kauf endgültig; wir bieten keine Rückerstattung an, außer wenn das Gesetz dies vorschreibt. Der Kauf eines kosmetischen Artikels begründet kein Abonnement, und nichts verlängert sich oder wird automatisch erneut abgebucht.",
+  "terms.purchases.euWithdrawal":
+    "Wenn Sie sich in der EU oder im Vereinigten Königreich befinden: Mit Abschluss des Bezahlvorgangs verlangen Sie ausdrücklich die sofortige Lieferung des digitalen Inhalts und erkennen an, dass Sie dadurch Ihr 14-tägiges Widerrufsrecht für diesen Kauf verlieren, weil er sofort geliefert wird.",
+  "terms.purchases.contactBody":
+    "Problem mit der Abrechnung – eine Doppelbuchung oder ein Artikel, der nie angekommen ist? Kontaktieren Sie",
   "terms.acceptableUse.title": "Zulässige Nutzung",
   "terms.acceptableUse.body":
     "Nutzen Sie die App nicht, um ihren normalen Betrieb zu stören, versuchen Sie nicht, auf die Daten anderer Nutzer zuzugreifen, betrügen Sie nicht und manipulieren Sie keine Spielergebnisse, Statistiken oder die Bestenliste, und verwenden Sie die App nicht für rechtswidrige Zwecke.",
@@ -1467,7 +1474,7 @@ const de = {
   "terms.contact.body": "Fragen zu diesen Bedingungen? Kontaktieren Sie",
 
   // privacy.*
-  "privacy.lastUpdated": "Zuletzt aktualisiert am 25. September 2026",
+  "privacy.lastUpdated": "Zuletzt aktualisiert am 27. September 2026",
   "privacy.overview.title": "Überblick",
   "privacy.overview.body":
     "Books & Runs ist ein Kartenspiel, das Sie vollständig offline, auf einem Gerät und ohne Konto spielen können. Diese Richtlinie erklärt, was passiert, wenn Sie sich entscheiden, ein Konto zu erstellen, und bestätigt, was wir niemals erheben.",
@@ -1506,6 +1513,8 @@ const de = {
     "Sicherheitsdaten: die Spieler, die Sie blockieren (Sie sind füreinander unsichtbar), und Meldungen, die Sie über andere Spieler einreichen (wer wen gemeldet hat, der Grund, eine optionale kurze Notiz, wo gemeldet wurde und Name und Bio der gemeldeten Person zu diesem Zeitpunkt). Meldungen sieht nur der Entwickler; sie werden so lange aufbewahrt, wie zur Prüfung nötig. Die gemeldete Person erfährt nicht, wer sie gemeldet hat. Anzeigenamen, Bios und Clubnamen werden außerdem automatisch anhand einer Liste gesperrter Wörter und Regeln gegen Identitätsvortäuschung geprüft.",
   "privacy.account.item.support":
     "Wenn Sie über die Seite „Den Entwickler unterstützen“ ein Trinkgeld senden, wird die Zahlung vollständig von Stripe abgewickelt, und wir sehen Ihre Kartendaten nie. Wir speichern nur, dass eine Zahlung erfolgt ist (die Stripe-Sitzungsreferenz, den Betrag und die Währung), damit wir Ihnen das Unterstützer-Abzeichen geben können.",
+  "privacy.account.item.purchases":
+    "Wenn Sie einen kosmetischen Artikel oder ein Bundle im Shop kaufen, wird die Zahlung vollständig von Stripe abgewickelt, und wir sehen Ihre Kartendaten nie. Wir speichern, welche Artikel oder Bundles Sie gekauft haben, die Stripe-Sitzungsreferenz, den Betrag und die Währung. Für einen Kauf müssen Sie angemeldet sein – Gäste können nichts kaufen.",
   "privacy.account.item.security":
     "Kurzlebige technische Datensätze: In-App-Benachrichtigungen und Anfragezähler zur Missbrauchsvermeidung (höchstens einige Wochen aufbewahrt) und, bei angemeldeten Nutzern, Fehlerberichte, die mit Ihrem Konto verknüpft sein können, damit wir ein Problem untersuchen können.",
   "privacy.account.item.friendsPrefix": "Ein pro Konto vergebener",
@@ -1524,7 +1533,7 @@ const de = {
   "privacy.processors.bodySuffix":
     ", geschützt durch Row-Level-Security, sodass außer dem Anzeigenamen und den Statistiken, die bewusst auf der Bestenliste gezeigt werden, nur Sie Ihre eigenen Zeilen lesen oder schreiben können. Rundenbasierte Mehrspieler-Züge werden von einer Supabase Edge Function validiert, die dieselbe Spiel-Engine ausführt; sie ist die einzige Stelle, die den vollständigen verborgenen Spielzustand sehen kann.",
   "privacy.processors.others":
-    "Weitere Dienstleister handeln nur zu den hier beschriebenen Zwecken: Stripe verarbeitet freiwillige Trinkgelder, und ein E-Mail-Zustelldienst dient dazu, Nachrichten zuzustellen, die Sie über die Support-Seite senden. Wir verkaufen Ihre personenbezogenen Daten nicht und geben sie nicht zu Werbezwecken weiter.",
+    "Weitere Dienstleister handeln nur zu den hier beschriebenen Zwecken: Stripe verarbeitet freiwillige Trinkgelder und Käufe im Shop, und ein E-Mail-Zustelldienst dient dazu, Nachrichten zuzustellen, die Sie über die Support-Seite senden. Wir verkaufen Ihre personenbezogenen Daten nicht und geben sie nicht zu Werbezwecken weiter.",
   "privacy.legalBases.title": "Warum wir Ihre Daten verwenden (Rechtsgrundlagen)",
   "privacy.legalBases.body":
     "Wir verwenden Ihre Kontodaten, um den Dienst bereitzustellen, um den Sie beim Erstellen eines Kontos gebeten haben (Erfüllung unserer Vereinbarung mit Ihnen gemäß den Nutzungsbedingungen). Wo Sie einwilligen — zum Beispiel in Push-Benachrichtigungen oder in ein öffentliches Profilfoto —, stützen wir uns auf Ihre Einwilligung, die Sie jederzeit widerrufen können. Fehlerberichte, anonyme Nutzungszählungen und Aufzeichnungen zur Missbrauchsvermeidung verwenden wir auf Grundlage unserer berechtigten Interessen daran, die App sicher, fair und funktionsfähig zu halten; dem können Sie widersprechen (siehe unten). Wo das örtliche Recht es verlangt, verarbeiten wir Daten außerdem zur Erfüllung rechtlicher Verpflichtungen. Dies ist eine allgemeinverständliche Zusammenfassung und keine Behauptung einer Zertifizierung nach einem bestimmten Gesetz.",
@@ -1632,6 +1641,46 @@ const de = {
   "tip.afterTip.profileLink": "Profil",
   "tip.afterTip.suffix":
     "innerhalb weniger Minuten — rüste es über den Tab „Abzeichen“ im Profil bearbeiten aus.",
+
+  // boutique.*
+  "boutique.subtitle": "Nur Kosmetik — nichts hier verändert das Spiel selbst.",
+  "boutique.guestBanner.body": "Melde dich an, um Kosmetik zu kaufen — sie gehört danach für immer zu deinem Konto.",
+  "boutique.hero.badge": "Bestes Angebot",
+  "boutique.hero.includes": "Enthält:",
+  "boutique.bundle.discount": "Spare {percent}%",
+  "boutique.bundle.itemCount.one": "{count} Artikel",
+  "boutique.bundle.itemCount.other": "{count} Artikel",
+  "boutique.category.all": "Alle",
+  "boutique.category.badge": "Abzeichen",
+  "boutique.category.avatar_frame": "Avatar-Rahmen",
+  "boutique.category.title": "Titel",
+  "boutique.category.banner": "Banner",
+  "boutique.category.avatar_emoji": "Avatar-Emoji",
+  "boutique.category.card_face": "Kartengesichter",
+  "boutique.category.card_back": "Kartenrückseiten",
+  "boutique.item.buy": "Kaufen — {price}",
+  "boutique.item.signInToBuy": "Zum Kaufen anmelden",
+  "boutique.item.owned": "Im Besitz",
+  "boutique.item.equip": "Ausrüsten",
+  "boutique.item.tryOn": "Anprobieren",
+  "boutique.item.tryOnEnd": "Vorschau beenden",
+  "boutique.item.tryOnBadge": "Vorschau — wird nicht gespeichert",
+  "boutique.purchase.processing.title": "Wird abgeschlossen …",
+  "boutique.purchase.processing.body": "Dein Kauf wird bestätigt — das dauert normalerweise nur ein paar Sekunden.",
+  "boutique.purchase.success.one": "Dein neuer Artikel ist bereit!",
+  "boutique.purchase.success.other": "Deine {count} neuen Artikel sind bereit!",
+  "boutique.purchase.stillProcessing":
+    "Wird noch verarbeitet — schau gleich noch mal vorbei. Falls sich das nicht klärt, wende dich mit deinen Bestelldetails an den Support.",
+  "boutique.purchase.equipNow": "Jetzt ausrüsten",
+  "boutique.purchase.checkAgain": "Erneut prüfen",
+  "boutique.finePrint.prefix":
+    "Zahlungen werden sicher über Stripe abgewickelt. Käufe sind rein kosmetisch, werden sofort geliefert und sind endgültig — Details dazu in unseren",
+  "boutique.finePrint.suffix": ".",
+  "boutique.error.purchaseFailed": "Beim Starten des Bezahlvorgangs ist etwas schiefgelaufen — versuch es gleich noch mal.",
+  "boutique.empty": "In dieser Kategorie gibt es noch nichts.",
+  "boutique.getInBoutique": "In der Boutique holen →",
+  "profile.boutique": "Boutique",
+  "profile.boutiqueDesc": "Kaufe Abzeichen, Rahmen, Titel, Banner und mehr.",
 
   // tournaments.*
   "tournaments.title": "Turniere",
@@ -1804,11 +1853,12 @@ const de = {
     "Ein breiter Farbstreifen hinter deinem Namen und Bild — die meisten kannst du kostenlos wählen; einer ist eine Prestige-Belohnung fürs Meistern jeder Erfolgskategorie.",
 
   "player.boutique.descriptionCreator":
-    "Eine Vorschau auf das, was irgendwann käuflich sein wird — ausgewählt aus denselben Abzeichen-/Rahmen-/Titel-/Banner-Katalogen wie alles andere, nur hier an einem Ort gesammelt. Als Erschaffer kannst du alles sehen und nutzen; alle anderen sehen es gesperrt, bis es zum Verkauf steht.",
+    "Alles hier unten ist echt käuflich — ausgewählt aus denselben Abzeichen-/Rahmen-/Titel-/Banner-Katalogen wie alles andere, nur hier an einem Ort gesammelt. Als Erschaffer kannst du alles kostenlos sehen und nutzen; alle anderen können es in der Boutique kaufen.",
   "player.boutique.description":
-    "Eine Vorschau auf das, was hier irgendwann käuflich sein wird — ausgewählt aus denselben Abzeichen-/Rahmen-/Titel-/Banner-Katalogen wie alles andere. Noch nicht käuflich.",
+    "Alles hier unten ist echt käuflich — ausgewählt aus denselben Abzeichen-/Rahmen-/Titel-/Banner-Katalogen wie alles andere. Tippe auf ein gesperrtes, um es in der Boutique zu kaufen.",
   "player.boutique.empty": "Die Boutique ist noch leer — schau bald wieder vorbei.",
   "player.boutique.badges": "Abzeichen",
+  "player.boutique.pictures": "Bilder",
   "player.boutique.frames": "Rahmen",
   "player.boutique.titles": "Titel",
   "player.boutique.banners": "Banner",

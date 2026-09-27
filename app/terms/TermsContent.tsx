@@ -40,6 +40,16 @@ export function TermsContent() {
           <p>{t("terms.accounts.body")}</p>
         </section>
 
+        <section id="purchases">
+          <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.purchases.title")}</h2>
+          <p>{t("terms.purchases.body")}</p>
+          <p className="mt-2">{t("terms.purchases.euWithdrawal")}</p>
+          <p className="mt-2">
+            {t("terms.purchases.contactBody")}{" "}
+            <span className="text-[var(--heading)]">nick.l.dimartino@icloud.com</span>.
+          </p>
+        </section>
+
         <section>
           <h2 className="mb-1 text-base font-semibold text-[var(--heading)]">{t("terms.acceptableUse.title")}</h2>
           <p>{t("terms.acceptableUse.body")}</p>

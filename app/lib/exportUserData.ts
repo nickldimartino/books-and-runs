@@ -64,6 +64,8 @@ export async function buildUserDataExport(supabase: SupabaseClient, user: User):
     mpGames,
     mpHistory,
     mpStats,
+    boutiquePurchases,
+    boutiqueEntitlements,
   ] = await Promise.all([
     attempt("profile", () => single(supabase, "profiles", uid)),
     attempt("friend code", () => getMyFriendCode(supabase)),
@@ -95,6 +97,8 @@ export async function buildUserDataExport(supabase: SupabaseClient, user: User):
     attempt("multiplayer games", () => getMyMpGames(supabase)),
     attempt("multiplayer history", () => getMyMpHistory(supabase, 100)),
     attempt("multiplayer stats", () => getMyMpStats(supabase)),
+    attempt("boutique purchases", () => many(supabase, "purchases", uid)),
+    attempt("boutique entitlements", () => many(supabase, "entitlements", uid)),
   ]);
 
   return {
@@ -126,6 +130,14 @@ export async function buildUserDataExport(supabase: SupabaseClient, user: User):
     friends,
     friend_requests: friendRequests,
     push_subscriptions: pushSubscriptions,
+    // The boutique store's receipts (one row per completed Checkout
+    // Session — see migration 0085) and the resulting owned skus. Neither
+    // table has anything a client can write directly, so this is exactly
+    // the account's real purchase history, not anything self-reported.
+    boutique: {
+      purchases: boutiquePurchases,
+      owned_skus: boutiqueEntitlements,
+    },
   };
 }
 

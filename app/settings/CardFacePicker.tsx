@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { Card } from "@/types";
 import { CardFace } from "../components/CardFace";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
 import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
 import { CARD_FACES, CardFaceId, CardFaceOption } from "../lib/cardFaceStore";
+import { itemSkuFor } from "../lib/storeSku";
 import { cardFaceDescKey, cardUnlockText } from "./pickerText";
 import { CheckBadge } from "./SwatchPicker";
 
@@ -32,16 +34,17 @@ function CardFaceTile({
   onClick: () => void;
 }) {
   const { t, tPlural } = useT();
-  const title = unlocked || !option.unlock ? t(cardFaceDescKey(option.id)) : cardUnlockText(t, tPlural, option.unlock);
-  return (
-    <button
-      onClick={unlocked ? onClick : undefined}
-      aria-current={isActive}
-      title={title}
-      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
-        !unlocked ? LOCKED_ITEM_CLASS : isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
-      }`}
-    >
+  const boutiqueLocked = !unlocked && option.source === "boutique";
+  const title = unlocked || !option.unlock
+    ? t(cardFaceDescKey(option.id))
+    : boutiqueLocked
+      ? `${cardUnlockText(t, tPlural, option.unlock)} — ${t("boutique.getInBoutique")}`
+      : cardUnlockText(t, tPlural, option.unlock);
+  const className = `relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
+    !unlocked ? LOCKED_ITEM_CLASS : isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
+  }`;
+  const content = (
+    <>
       <span className="flex h-11 items-center justify-center bg-[var(--panel-soft)]" aria-hidden="true">
         <span className="card-face h-9 w-7 overflow-hidden rounded-md shadow-sm">
           <CardFace card={PREVIEW_CARD} style={option.id} />
@@ -57,6 +60,17 @@ function CardFaceTile({
           <CheckBadge className="h-2.5 w-2.5" />
         </span>
       )}
+    </>
+  );
+  // A locked Boutique style is a real thing to go buy, not a dead end —
+  // tapping it deep-links into the store instead of doing nothing.
+  return boutiqueLocked ? (
+    <Link href={`/boutique?item=${itemSkuFor("card_face", option.id)}`} title={title} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button onClick={unlocked ? onClick : undefined} aria-current={isActive} title={title} className={className}>
+      {content}
     </button>
   );
 }
@@ -66,6 +80,7 @@ export function CardFacePicker({
   onSelect,
   level,
   isCreator = false,
+  ownedSkus,
 }: {
   active: CardFaceId;
   onSelect: (id: CardFaceId) => void;
@@ -75,6 +90,9 @@ export function CardFacePicker({
   level: number;
   /** Gates the Boutique style (Outline) — same source as `level`. */
   isCreator?: boolean;
+  /** This account's owned Boutique skus — also gates the Boutique styles,
+   * now that they're real purchases. See useCardUnlockContext. */
+  ownedSkus?: ReadonlySet<string>;
 }) {
   const { t } = useT();
   const activeOption = CARD_FACES.find((f) => f.id === active);
@@ -89,7 +107,7 @@ export function CardFacePicker({
             key={f.id}
             option={f}
             isActive={active === f.id}
-            unlocked={isCardCosmeticUnlocked(f.unlock, level, isCreator)}
+            unlocked={isCardCosmeticUnlocked(f.unlock, level, isCreator, ownedSkus)}
             onClick={() => onSelect(f.id)}
           />
         ))}

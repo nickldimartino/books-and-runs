@@ -274,6 +274,22 @@ below)
 | `avatarUpload.ts` | Client-side prep for an uploaded profile photo — center-cropped to a square and downsized via `<canvas>` before it ever leaves the device, then uploaded to the `avatars` Storage bucket (migration 0024) at a fixed per-account path so a re-upload replaces the old file in place. |
 | `profileShareCard.ts` | `buildProfileShareCardInput` — the one place a `leaderboard_entries` row becomes a `ProfileShareCardInput` (`shareCard.ts`), so `/player`'s own share button and `/friends`' "share to add me" button (a friend-code footer swapped in) can't drift into two differently-rendered cards. |
 
+**Boutique store** (`/boutique`, real-money cosmetics — Sept 2026 wave; see
+`/tmp/wave/store.md` for the full product spec) — `entitlements`/
+`purchases` tables + `my_entitlements()` RPC (migrations 0085–0089) are the
+server side; a boutique item's `CosmeticUnlockRule` kind ("boutique") now
+resolves against those instead of `is_creator` alone.
+
+| File | Role |
+|---|---|
+| `app/boutique/BoutiqueContent.tsx` | The store page itself: hero Supporter Pack, per-category bundles, a filterable item grid. Every preview reuses the same rendering components the real, equipped cosmetic uses elsewhere (`PlayerAvatar`/`AvatarFrame`, `ProfileBanner`, `EmojiOrBadge`, `CardFace`, the `[data-cardback]` CSS attribute) — never a separate drawing. A `compact` mode swaps text-bearing previews (title, banner) for a minimal icon inside a bundle's small "included items" strip, where the full-size treatment wouldn't fit. Single-tap buy, not a cart (see the file's own header comment for why). |
+| `app/lib/storeCatalog.ts` | A client-side *rendering* adapter over `src/store/catalog.ts`'s authoritative `CATALOG` (sku → name/price, ideally also category/id/rarity — see that file's own header) — never invents a price/name; derives category/rarity/bundle-includes for display, falling back to cross-referencing each category's own existing option list (`avatarPresets.ts` etc.) when the catalog entry itself doesn't carry `rarity`. |
+| `app/lib/storeSku.ts` | The `"<category>:<itemId>"` / `"bundle:<id>"` sku convention (`itemSkuFor`/`parseSku`) — shared by the store page, `cosmeticUnlocks.ts`'s "boutique" check, and (server-side) `create-checkout-session`/`stripe-webhook`. |
+| `app/lib/purchasing.ts` | `startPurchase(skus)` — the ONE function that knows how a purchase happens today (POST to `create-checkout-session`, redirect to the Stripe Checkout URL it returns). **Native (iOS/Android) readiness:** this is deliberately the only place that would need to change for a native wrapper — swap its internals for a StoreKit/Play Billing call that resolves locally instead of redirecting; every caller (the store page, picker deep-links) stays unchanged, since they only ever ask `ownedSkus.has(sku)`, never "did this come from Stripe" (see `entitlements.source`, which already anticipates `'apple'`/`'google'` values). |
+| `app/lib/entitlementsStore.ts` | Fetches/caches `my_entitlements()` → `ownedSkus`; `useEntitlements()` for a live account-scoped hook, `pollForEntitlements()` for the post-checkout-return retry-with-backoff (the webhook that actually grants the row runs asynchronously). |
+| Picker deep-links | `player/page.tsx`'s Boutique tab and `CardFacePicker.tsx`/`SignatureCardBackPicker.tsx` render a locked Boutique-sourced item as a `Link` to `/boutique?item=<sku>` (was a dead button) — `/boutique` reads that query param to filter to, scroll to, and highlight the item. `player/page.tsx`'s Boutique tab also has a Pictures section (`BOUTIQUE_AVATAR_EMOJI_OPTIONS`) equipping via the same `chooseEmoji` the free picture grid uses. |
+| Owning → equipping | The reverse direction (a completed purchase becoming pickable, not just the "go buy it" link) needed `UnlockContext.ownedSkus` threaded into every unlock check that renders a picker — the wave built the backend/store but left this unwired: `player/page.tsx`'s `unlockCtx` (badge/frame/title/banner/picture) and `useCardUnlockContext` (card face/back, via `useEntitlements` internally) both now pull `ownedSkus` from `entitlementsStore.ts` and pass it through `makeUnlockContext`/`isCardCosmeticUnlocked`. Without this, a real purchase would charge the card and grant the `entitlements` row, but the item would show as permanently locked everywhere except inside `/boutique` itself. |
+
 **Small pure formatters** — `formatNames.ts` (`joinNames`), `formatScore.ts`
 (shared int/decimal/`—` rendering), `text.ts` (`capitalize` — "medium" ->
 "Medium", including for `<select>`/`<option>` labels specifically, where
@@ -441,6 +457,11 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 | 0055 | Adds the nullable `settings.language` column (same nullable-column-means-"use local default" pattern as every synced setting since 0022) so the chosen display language follows the account across devices. |
 | 0056 | Bonus-XP ledger + quests: `xp_ledger` (user_id, ref PK, kind, xp — service-role-only writes, owner read), `quest_baselines` (per-period metric snapshot, same RLS), `my_bonus_xp()` RPC, service-role-only `solo_verify_set_counters()` (atomic jsonb merge), and `compute_total_xp()` re-created with the ledger sum. Apply BEFORE redeploying `solo-verify`. |
 | 0057 | Four Daily/Weekly achievement families (`daily_deals_completed`, `daily_deal_best_streak`, `weekly_challenges_completed`, `weekly_challenge_best_streak`, new category `challenges`) added to `achievement_thresholds`, plus a backfill of the counters from existing `daily_deal_completions` / `weekly_challenge_completions` (gaps-and-islands for the streaks). Existing completions do not earn retroactive completion XP. |
+| 0085 | Boutique store ground truth — `entitlements` (user_id, sku, source `'stripe'`\|`'launch_grandfather'`\|`'apple'`\|`'google'`, PK `(user_id, sku)`) and `purchases` (the receipt/order log, one row per Checkout Session). Same "service-role-write-only, owner read" RLS shape as `supporter_payments`. |
+| 0086 | `my_entitlements()` — `security definer` RPC returning `setof text`, the caller's own owned skus (`auth.uid()`-scoped), granted to `authenticated` only. |
+| 0087 | Flips `cosmetic_unlocked()`'s `boutique` branch from "is_creator only" to "is_creator OR an `entitlements` row for `cosmetic_type || ':' || cosmetic_key`" — exactly the single-branch change 0053's own comment anticipated. |
+| 0088 | The launch fairness grandfather (run once, by hand, LAST — after the launch catalog is final): every account already in `leaderboard_entries` gets a free `entitlements` row (source `launch_grandfather`) for every launch-catalog item sku (not bundle skus). Idempotent (`ON CONFLICT DO NOTHING`). |
+| 0089 | Reconciliation fix, found integrating the store wave: the catalog expansion (15 items/category) added 5 new badge/avatar_frame/title/banner items and a whole new `avatar_emoji` (profile picture) category, none of which had a `cosmetic_unlocks` row or a widened `leaderboard_badge_ok`/`leaderboard_banner_ok`/`leaderboard_avatar_emoji_ok` yet — so buying one would either be rejected by the CHECK constraint or (avatar_frame/title, which have none) succeed for free for anyone. Also gives the `avatar_emoji` (picture) column its first-ever entitlement check (`validate_cosmetic_columns()` never validated it before this — only the CHECK constraint did, and that constraint used to allow only the 46 free values). Reuses `cosmetic_type = 'avatar_emoji'` for the new rows (safe — 0031 already moved every old row of that type to `'badge'`) so the sku derivation needs no special-casing. Extends 0088's grandfather to the 40 skus it ran too early to know about. Verified against a scratch Postgres 16 (not the real project) — see the migration's own header. Run once, after 0085–0088. |
 
 > **Realtime gotcha:** an RLS policy that filters on non-PK columns needs
 > `REPLICA IDENTITY FULL` on that table or UPDATE/DELETE events are dropped
@@ -509,22 +530,52 @@ stored — unlock = current value ≥ tier threshold, always recomputed.
 - Deploy: `npx supabase secrets set RESEND_API_KEY=... SUPPORT_EMAIL=...`
   then `npx supabase functions deploy contact`.
 
+### Edge Function (`supabase/functions/create-checkout-session/`)
+
+- `index.ts` — Deno, single route, real-user JWT required. Starts a Stripe
+  Checkout Session for a cart of boutique cosmetic skus: resolves each
+  sku's price/name from the bundled `src/store/catalog.ts` (never a
+  client-submitted price), rejects an unknown or already-owned sku, and
+  calls Stripe's REST API directly (no SDK, same low-dependency style as
+  `stripe-webhook`) via the pure, unit-tested `src/store/checkout.ts`
+  (`resolveLineItems`/`buildCheckoutSessionParams`/`toStripeFormBody`).
+  Returns `{ url }` for the client to redirect to. `_engine/store/` is a
+  bundled copy of `src/store/` — run `scripts/bundle-checkout-catalog.mjs`
+  before every deploy, same idea as `mp`'s/`solo-verify`'s own engine copy.
+- Deploy: `node scripts/bundle-checkout-catalog.mjs && npx supabase
+  functions deploy create-checkout-session` then `npx supabase secrets set
+  STRIPE_SECRET_KEY=...`. Requires migrations 0085–0087.
+
 ### Edge Function (`supabase/functions/stripe-webhook/`)
 
 - `index.ts` — Deno, single route, no Supabase JWT auth (Stripe calls this
   directly — deployed with `--no-verify-jwt`). Verifies the
   `Stripe-Signature` header manually via Web Crypto (no Stripe SDK — the
-  scheme is simple enough not to need one), then records a completed
-  `checkout.session.completed` into `supporter_payments` (migration 0043)
-  with the service-role client. `client_reference_id` on the Payment
-  Link's own URL (appended by `app/tip/page.tsx`) is what ties a payment
-  back to an account — Payment Links have no server-side "create
-  checkout" step of their own to attach metadata another way. No
-  `_engine/` copy — self-contained.
+  scheme is simple enough not to need one), then branches on
+  `session.metadata.skus`: present → a boutique store purchase, writes
+  `purchases` + `entitlements` (migrations 0085/0087, service-role
+  client); absent → the original tip-jar behavior, unchanged, records
+  `checkout.session.completed` into `supporter_payments` (migration 0043).
+  `client_reference_id` (set server-side by `create-checkout-session`, or
+  appended to the Payment Link's own URL by `app/tip/page.tsx`) is what
+  ties either kind of payment back to an account. No `_engine/` copy —
+  self-contained.
 - Deploy: `npx supabase functions deploy stripe-webhook --no-verify-jwt`
   then `npx supabase secrets set STRIPE_WEBHOOK_SECRET=...` — see
   `supabase/functions/README.md` for the one-time Stripe Dashboard setup
-  (Payment Links + the webhook endpoint itself).
+  (Payment Links + the webhook endpoint itself — the same endpoint now
+  carries both flows, no second subscription needed).
+
+**Boutique store — Native IAP path.** The entire cosmetic-unlock and
+store-UI stack only ever asks "is this sku in `ownedSkus` /
+`my_entitlements()`", never "did this come from Stripe" —
+`entitlements.source` already anticipates `'apple'`/`'google'` alongside
+`'stripe'`/`'launch_grandfather'`. A future native wrapper needs only a
+`verify-apple-receipt`/`verify-google-purchase` Edge Function that
+validates a receipt server-side and inserts the same shape of
+`entitlements` row; `app/lib/purchasing.ts`'s `startPurchase(skus)` is the
+one place a native call would swap in for `create-checkout-session`.
+Nothing else in the unlock check, the RPC, or the client changes.
 
 ---
 

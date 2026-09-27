@@ -20,7 +20,13 @@ export type SignatureCardBackId =
   | "starfield"
   | "brushed"
   | "chevron"
-  | "basketweave";
+  | "basketweave"
+  | "damask"
+  | "confetti"
+  | "filigree"
+  | "obsidianweave"
+  | "prismveil"
+  | "goldleaf";
 
 export type CardBackId = ThemeId | "match" | SignatureCardBackId;
 
@@ -51,64 +57,121 @@ export const SIGNATURE_CARD_BACKS: readonly SignatureCardBackOption[] = [
     id: "static",
     name: "Static",
     description: "A scattered dot pattern, like an old TV between channels.",
+    rarity: "common",
     source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "houndstooth",
-    name: "Houndstooth",
-    description: "A classic crossed-diagonal tweed pattern.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "marble",
-    name: "Marbled Vein",
-    description: "A soft, irregular stone-vein texture.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "tartan",
-    name: "Tartan",
-    description: "A crossed-grid plaid, like a classic card-room table cloth.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "quilted",
-    name: "Quilted Diamond",
-    description: "A crossed diamond-grid stitch pattern.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "starfield",
-    name: "Starfield",
-    description: "Scattered points of light at two different sizes, on near-black.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
+    unlock: { kind: "boutique", category: "card_back", itemId: "static" },
   },
   {
     id: "brushed",
     name: "Brushed Steel",
     description: "Fine parallel lines, like brushed metal catching the light.",
+    rarity: "common",
     source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "chevron",
-    name: "Chevron",
-    description: "An alternating diagonal checker, like a zigzag herringbone.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
+    unlock: { kind: "boutique", category: "card_back", itemId: "brushed" },
   },
   {
     id: "basketweave",
     name: "Basketweave",
     description: "Thick crossed bands, like a woven basket.",
+    rarity: "uncommon",
     source: "boutique",
-    unlock: { kind: "boutique" },
+    unlock: { kind: "boutique", category: "card_back", itemId: "basketweave" },
+  },
+  {
+    id: "houndstooth",
+    name: "Houndstooth",
+    description: "A classic crossed-diagonal tweed pattern.",
+    rarity: "uncommon",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "houndstooth" },
+  },
+  {
+    id: "tartan",
+    name: "Tartan",
+    description: "A crossed-grid plaid, like a classic card-room table cloth.",
+    rarity: "uncommon",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "tartan" },
+  },
+  {
+    id: "chevron",
+    name: "Chevron",
+    description: "An alternating diagonal checker, like a zigzag herringbone.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "chevron" },
+  },
+  {
+    id: "quilted",
+    name: "Quilted Diamond",
+    description: "A crossed diamond-grid stitch pattern.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "quilted" },
+  },
+  {
+    id: "damask",
+    name: "Damask",
+    description: "An ornate repeating floral-scroll pattern, like fine upholstery.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "damask" },
+  },
+  {
+    id: "confetti",
+    name: "Confetti",
+    description: "Scattered flecks of color on a dark ground, like a card just dealt at a party.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "confetti" },
+  },
+  {
+    id: "marble",
+    name: "Marbled Vein",
+    description: "A soft, irregular stone-vein texture.",
+    rarity: "epic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "marble" },
+  },
+  {
+    id: "starfield",
+    name: "Starfield",
+    description: "Scattered points of light at two different sizes, on near-black.",
+    rarity: "epic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "starfield" },
+  },
+  {
+    id: "filigree",
+    name: "Filigree",
+    description: "A delicate lattice of curling metallic lines.",
+    rarity: "epic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "filigree" },
+  },
+  {
+    id: "obsidianweave",
+    name: "Obsidian Weave",
+    description: "A near-black woven texture with a faint glossy sheen.",
+    rarity: "mythic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "obsidianweave" },
+  },
+  {
+    id: "prismveil",
+    name: "Prism Veil",
+    description: "Soft shifting bands of color, like light through a curtain.",
+    rarity: "mythic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "prismveil" },
+  },
+  {
+    id: "goldleaf",
+    name: "Gold Leaf",
+    description: "Cracked gold-leaf fragments over a deep lacquer black.",
+    rarity: "apex",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_back", itemId: "goldleaf" },
   },
 ];
 

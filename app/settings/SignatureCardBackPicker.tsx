@@ -1,10 +1,12 @@
 "use client";
 
 import { CSSProperties } from "react";
+import Link from "next/link";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { isCardCosmeticUnlocked } from "../lib/cardCosmeticUnlocks";
 import { SIGNATURE_CARD_BACKS, SignatureCardBackId, SignatureCardBackOption } from "../lib/cardBackStore";
 import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
+import { itemSkuFor } from "../lib/storeSku";
 import { cardBackDescKey, cardUnlockText } from "./pickerText";
 import { CheckBadge } from "./SwatchPicker";
 
@@ -26,16 +28,17 @@ function SignatureCardBackTile({
   onClick: () => void;
 }) {
   const { t, tPlural } = useT();
-  const title = unlocked || !option.unlock ? t(cardBackDescKey(option.id)) : cardUnlockText(t, tPlural, option.unlock);
-  return (
-    <button
-      onClick={unlocked ? onClick : undefined}
-      aria-current={isActive}
-      title={title}
-      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
-        !unlocked ? LOCKED_ITEM_CLASS : isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
-      }`}
-    >
+  const boutiqueLocked = !unlocked && option.source === "boutique";
+  const title = unlocked || !option.unlock
+    ? t(cardBackDescKey(option.id))
+    : boutiqueLocked
+      ? `${cardUnlockText(t, tPlural, option.unlock)} — ${t("boutique.getInBoutique")}`
+      : cardUnlockText(t, tPlural, option.unlock);
+  const className = `relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
+    !unlocked ? LOCKED_ITEM_CLASS : isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
+  }`;
+  const content = (
+    <>
       <span
         data-cardback={option.id}
         className="card-back flex h-11 items-center justify-center"
@@ -52,6 +55,17 @@ function SignatureCardBackTile({
           <CheckBadge className="h-2.5 w-2.5" />
         </span>
       )}
+    </>
+  );
+  // A locked Boutique style is a real thing to go buy, not a dead end —
+  // tapping it deep-links into the store instead of doing nothing.
+  return boutiqueLocked ? (
+    <Link href={`/boutique?item=${itemSkuFor("card_back", option.id)}`} title={title} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button onClick={unlocked ? onClick : undefined} aria-current={isActive} title={title} className={className}>
+      {content}
     </button>
   );
 }
@@ -61,6 +75,7 @@ export function SignatureCardBackPicker({
   onSelect,
   level,
   isCreator = false,
+  ownedSkus,
 }: {
   active: SignatureCardBackId | null;
   onSelect: (id: SignatureCardBackId) => void;
@@ -68,6 +83,8 @@ export function SignatureCardBackPicker({
   level: number;
   /** Gates the Boutique style (Static) — same source as `level`. */
   isCreator?: boolean;
+  /** See CardFacePicker's own doc on this same prop. */
+  ownedSkus?: ReadonlySet<string>;
 }) {
   const { t } = useT();
   return (
@@ -79,7 +96,7 @@ export function SignatureCardBackPicker({
             key={s.id}
             option={s}
             isActive={active === s.id}
-            unlocked={isCardCosmeticUnlocked(s.unlock, level, isCreator)}
+            unlocked={isCardCosmeticUnlocked(s.unlock, level, isCreator, ownedSkus)}
             onClick={() => onSelect(s.id)}
           />
         ))}

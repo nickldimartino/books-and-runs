@@ -36,7 +36,13 @@ export type CardFaceId =
   | "mono"
   | "ribbon"
   | "halo"
-  | "ledger";
+  | "ledger"
+  | "engraved"
+  | "chalk"
+  | "blueprint"
+  | "marquee"
+  | "inked"
+  | "royal";
 
 export interface CardFaceOption {
   id: CardFaceId;
@@ -93,64 +99,121 @@ export const CARD_FACES: CardFaceOption[] = [
     id: "outline",
     name: "Outline",
     description: "The Classic layout drawn in a clean stroke only, nothing filled in.",
+    rarity: "common",
     source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "shadow",
-    name: "Shadow",
-    description: "A huge embossed rank, with a soft offset copy behind it for depth.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "neon",
-    name: "Neon",
-    description: "A stroke-only face with a soft glow pass behind the crisp line.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "deco",
-    name: "Deco",
-    description: "An Art Deco double border with corner ticks around a slim rank.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "sketch",
-    name: "Sketch",
-    description: "A loose hand-drawn feel — a dashed border and a slightly skewed rank.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
+    unlock: { kind: "boutique", category: "card_face", itemId: "outline" },
   },
   {
     id: "mono",
     name: "Mono",
     description: "A quiet monospace rank over a faint baseline grid.",
+    rarity: "common",
     source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "ribbon",
-    name: "Ribbon",
-    description: "A diagonal ribbon band carries the rank at an angle across the card.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
-  },
-  {
-    id: "halo",
-    name: "Halo",
-    description: "The suit sits inside two faint concentric rings, like a target.",
-    source: "boutique",
-    unlock: { kind: "boutique" },
+    unlock: { kind: "boutique", category: "card_face", itemId: "mono" },
   },
   {
     id: "ledger",
     name: "Ledger",
     description: "Horizontal rule lines and a right-aligned rank, like a ledger column.",
+    rarity: "uncommon",
     source: "boutique",
-    unlock: { kind: "boutique" },
+    unlock: { kind: "boutique", category: "card_face", itemId: "ledger" },
+  },
+  {
+    id: "sketch",
+    name: "Sketch",
+    description: "A loose hand-drawn feel — a dashed border and a slightly skewed rank.",
+    rarity: "uncommon",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "sketch" },
+  },
+  {
+    id: "shadow",
+    name: "Shadow",
+    description: "A huge embossed rank, with a soft offset copy behind it for depth.",
+    rarity: "uncommon",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "shadow" },
+  },
+  {
+    id: "neon",
+    name: "Neon",
+    description: "A stroke-only face with a soft glow pass behind the crisp line.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "neon" },
+  },
+  {
+    id: "ribbon",
+    name: "Ribbon",
+    description: "A diagonal ribbon band carries the rank at an angle across the card.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "ribbon" },
+  },
+  {
+    id: "engraved",
+    name: "Engraved",
+    description: "A fine cross-hatched engraving fills the rank, like old currency.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "engraved" },
+  },
+  {
+    id: "chalk",
+    name: "Chalkboard",
+    description: "A rough chalk-textured rank on a dark slate background.",
+    rarity: "rare",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "chalk" },
+  },
+  {
+    id: "halo",
+    name: "Halo",
+    description: "The suit sits inside two faint concentric rings, like a target.",
+    rarity: "epic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "halo" },
+  },
+  {
+    id: "deco",
+    name: "Deco",
+    description: "An Art Deco double border with corner ticks around a slim rank.",
+    rarity: "epic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "deco" },
+  },
+  {
+    id: "blueprint",
+    name: "Blueprint",
+    description: "A technical-drawing rank with fine grid lines and crisp corner marks.",
+    rarity: "epic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "blueprint" },
+  },
+  {
+    id: "marquee",
+    name: "Marquee",
+    description: "The rank framed by a ring of bulb-like dots, like a theater marquee.",
+    rarity: "mythic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "marquee" },
+  },
+  {
+    id: "inked",
+    name: "Inked",
+    description: "A bold brush-stroke rank with a slightly uneven, hand-inked edge.",
+    rarity: "mythic",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "inked" },
+  },
+  {
+    id: "royal",
+    name: "Royal Seal",
+    description: "The rank set inside an ornate wax-seal medallion border.",
+    rarity: "apex",
+    source: "boutique",
+    unlock: { kind: "boutique", category: "card_face", itemId: "royal" },
   },
 ];
 

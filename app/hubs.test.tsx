@@ -92,6 +92,10 @@ describe("Profile hub", () => {
     screen.getByRole("button", { name: "Sign out" }).click();
     expect(signOut).toHaveBeenCalled();
   });
+  it("shows a Boutique row linking to /boutique, even signed out (browsing needs no account)", () => {
+    render(<ProfileContent />);
+    expect(screen.getByRole("link", { name: /^Boutique/ }).getAttribute("href")).toBe("/boutique");
+  });
 });
 
 describe("PlayZone", () => {

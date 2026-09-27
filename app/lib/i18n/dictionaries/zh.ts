@@ -33,7 +33,7 @@ const zh = {
   "settingsPicker.tabHoliday": "节日",
   "settingsPicker.signature": "专属",
   "settingsPicker.unlocksAtLevel": "{level} 级解锁",
-  "settingsPicker.boutiqueLocked": "精品店 — 暂未开放购买",
+  "settingsPicker.boutiqueLocked": "精品店——在商店查看",
   "player.badge.free": "免费",
   "cosmeticReq.categoryMastered": "精通「{category}」类别的所有成就",
   "cosmeticReq.categoriesMasteredCount": "精通 {total} 个成就类别中的 {count} 个",
@@ -1393,7 +1393,7 @@ const zh = {
 
   // terms.*
   "terms.title": "服务条款",
-  "terms.lastUpdated": "最后更新于 2026 年 9 月 25 日",
+  "terms.lastUpdated": "最后更新于 2026 年 9 月 27 日",
   "terms.intro": "使用 Books & Runs（以下简称“本应用”）即表示您同意本条款。如果您不同意，请不要使用本应用。",
   "terms.app.title": "本应用",
   "terms.app.bodyPrefix":
@@ -1402,6 +1402,12 @@ const zh = {
   "terms.accounts.title": "账号",
   "terms.accounts.body":
     "如果您创建了账号，您需自行负责保管好账号凭证的安全，并对您账号下发生的一切行为负责。注册时请提供准确的信息。您的年龄必须达到隐私政策中年龄规定所要求的使用本应用的年龄。",
+  "terms.purchases.title": "购买",
+  "terms.purchases.body":
+    "精品店出售可选的数字化装饰性物品——例如卡牌图案和个人资料装饰，具体商品会随时间变化。它们纯属装饰性质，绝不会影响游戏玩法、匹配、排行榜或任何其他竞技结果。价格以美元显示和收取，付款由 Stripe 处理——我们绝不会看到或存储您的银行卡号。付款成功后，您购买的物品会自动且立即发放到您的账号。物品发放后，本次交易即为最终交易；除法律另有规定外，我们不提供退款。购买装饰性物品不会产生订阅，也不会自动续费或再次扣款。",
+  "terms.purchases.euWithdrawal":
+    "如果您位于欧盟或英国：完成结账即表示您明确要求立即交付该数字内容，并确认由于内容会被立即交付，您将失去该笔购买通常享有的 14 天撤回权。",
+  "terms.purchases.contactBody": "遇到账单问题——比如重复扣款，或物品一直未到账？请联系",
   "terms.acceptableUse.title": "可接受的使用方式",
   "terms.acceptableUse.body":
     "请勿使用本应用干扰其正常运行、试图访问其他用户的数据、作弊或篡改游戏结果、统计数据或排行榜，或将其用于任何非法用途。",
@@ -1430,7 +1436,7 @@ const zh = {
   "terms.contact.body": "对本条款有疑问？请联系",
 
   // privacy.*
-  "privacy.lastUpdated": "最后更新于 2026 年 9 月 25 日",
+  "privacy.lastUpdated": "最后更新于 2026 年 9 月 27 日",
   "privacy.overview.title": "概述",
   "privacy.overview.body":
     "Books & Runs 是一款可以完全离线、在单台设备上游玩、无需账号的纸牌游戏。本政策说明了如果您选择创建账号会发生什么，并确认哪些信息我们绝不会收集。",
@@ -1477,6 +1483,8 @@ const zh = {
     "安全记录：您屏蔽的玩家（使您们彼此不可见），以及您针对其他玩家提交的举报（谁举报了谁、原因、可选的简短说明、举报来源，以及被举报玩家当时的名称和简介）。举报仅开发者可见，并在审核所需的时间内保留；被举报的玩家不会知道是谁举报的。显示名称、简介和俱乐部名称还会根据屏蔽词列表和冒充规则自动检查。",
   "privacy.account.item.support":
     "如果您通过“支持开发者”页面发送打赏，付款完全由 Stripe 处理，我们绝不会看到您的银行卡信息。我们只存储一笔付款已发生这一事实（Stripe 会话编号、金额和币种），以便向您授予支持者徽章。",
+  "privacy.account.item.purchases":
+    "如果您在商店购买装饰性物品或礼包，付款完全由 Stripe 处理，我们绝不会看到您的银行卡信息。我们会存储您购买的物品或礼包、Stripe 会话编号、金额和币种。购买需要先登录——访客无法购买。",
   "privacy.account.item.security":
     "短期技术记录：应用内通知和用于防止滥用的请求计数器（最多保留几周），并且对于已登录用户，错误报告可能会与您的账号关联，以便我们调查问题。",
   "privacy.account.outro":
@@ -1487,7 +1495,7 @@ const zh = {
   "privacy.processors.bodySuffix":
     "托管的 Postgres 数据库中，并受行级安全策略保护，因此除了刻意在排行榜上展示的显示名称和统计数据外，只有您本人可以读取或写入自己的数据行。回合制多人游戏的每一步操作，都由运行相同游戏引擎的 Supabase Edge Function 进行校验；它是唯一能够看到完整隐藏游戏状态的部分。",
   "privacy.processors.others":
-    "其他服务提供商仅为本文所述目的行事：Stripe 处理可选的打赏，并使用电子邮件投递服务来发送您通过支持页面发出的消息。我们不会出售您的个人数据，也不会将其用于广告目的而共享。",
+    "其他服务提供商仅为本文所述目的行事：Stripe 处理可选的打赏和商店购买，并使用电子邮件投递服务来发送您通过支持页面发出的消息。我们不会出售您的个人数据，也不会将其用于广告目的而共享。",
   "privacy.legalBases.title": "我们为何使用您的数据（法律依据）",
   "privacy.legalBases.body":
     "我们使用您的账号数据来提供您在创建账号时所要求的服务（根据《服务条款》履行我们与您之间的协议）。凡您选择开启的情形 — 例如推送通知或公开个人资料照片 — 我们依赖您的同意，您可以随时撤回。我们出于保障应用安全、公平和正常运行的正当利益而使用错误报告、匿名使用计数和防滥用记录；您可以对此提出异议（见下文）。在当地法律要求时，我们还会为履行法定义务而处理数据。这是一份通俗易懂的概述，并非声称已获得任何特定法律下的认证。",
@@ -1587,6 +1595,45 @@ const zh = {
   "tip.afterTip.prefix": "打赏成功后，☕ 支持者徽章会在几分钟内出现在你的",
   "tip.afterTip.profileLink": "个人资料",
   "tip.afterTip.suffix": "中 — 在“编辑个人资料”的徽章标签页中装备它。",
+
+  // boutique.*
+  "boutique.subtitle": "仅限外观道具 — 这里的一切都不会改变游戏玩法。",
+  "boutique.guestBanner.body": "登录后即可购买外观道具 — 它们将永久绑定在你的账号上。",
+  "boutique.hero.badge": "超值",
+  "boutique.hero.includes": "包含：",
+  "boutique.bundle.discount": "省 {percent}%",
+  "boutique.bundle.itemCount.one": "{count} 件",
+  "boutique.bundle.itemCount.other": "{count} 件",
+  "boutique.category.all": "全部",
+  "boutique.category.badge": "徽章",
+  "boutique.category.avatar_frame": "头像框",
+  "boutique.category.title": "称号",
+  "boutique.category.banner": "横幅",
+  "boutique.category.avatar_emoji": "头像表情",
+  "boutique.category.card_face": "牌面样式",
+  "boutique.category.card_back": "牌背样式",
+  "boutique.item.buy": "购买 — {price}",
+  "boutique.item.signInToBuy": "登录后购买",
+  "boutique.item.owned": "已拥有",
+  "boutique.item.equip": "装备",
+  "boutique.item.tryOn": "试穿",
+  "boutique.item.tryOnEnd": "结束预览",
+  "boutique.item.tryOnBadge": "预览中 — 不会保存",
+  "boutique.purchase.processing.title": "即将完成…",
+  "boutique.purchase.processing.body": "正在确认你的购买 — 通常只需几秒钟。",
+  "boutique.purchase.success.one": "你的新道具已就绪！",
+  "boutique.purchase.success.other": "你的 {count} 件新道具已就绪！",
+  "boutique.purchase.stillProcessing": "仍在处理中 — 请稍后再回来看看。如果一直没有解决，请联系支持团队并提供订单详情。",
+  "boutique.purchase.equipNow": "立即装备",
+  "boutique.purchase.checkAgain": "再次检查",
+  "boutique.finePrint.prefix":
+    "付款由 Stripe 安全处理。购买内容仅为外观道具，付款后会立即到账，且一经购买概不退款 — 详见",
+  "boutique.finePrint.suffix": "了解详情。",
+  "boutique.error.purchaseFailed": "启动付款时出了点问题 — 请稍后再试。",
+  "boutique.empty": "该分类下暂时还没有道具。",
+  "boutique.getInBoutique": "前往精品店获取 →",
+  "profile.boutique": "精品店",
+  "profile.boutiqueDesc": "购买徽章、头像框、称号、横幅等更多内容。",
 
   // tournaments.*
   "tournaments.title": "锦标赛",
@@ -1755,11 +1802,12 @@ const zh = {
     "位于你名字和头像后方的一条宽色带 — 大多数可免费选择；其中一款是精通所有成就分类的荣誉奖励。",
 
   "player.boutique.descriptionCreator":
-    "预览未来可购买的内容 — 从与其他内容相同的徽章/相框/称号/横幅目录中挑选，只是集中展示在这里。作为创作者，你可以查看并使用全部内容；其他人在正式发售前只能看到锁定状态。",
+    "下面这些都是真实可购买的道具 — 从与其他内容相同的徽章/相框/称号/横幅目录中挑选，只是集中展示在这里。作为创作者，你可以免费查看并使用全部内容；其他人可以在精品店中购买。",
   "player.boutique.description":
-    "预览未来会在此处开放购买的内容 — 从与其他内容相同的徽章/相框/称号/横幅目录中挑选。目前尚未开放购买。",
+    "下面这些都是真实可购买的道具 — 从与其他内容相同的徽章/相框/称号/横幅目录中挑选。点击锁定的道具即可前往精品店购买。",
   "player.boutique.empty": "精品店暂时还没有内容 — 请稍后再来看看。",
   "player.boutique.badges": "徽章",
+  "player.boutique.pictures": "头像图案",
   "player.boutique.frames": "相框",
   "player.boutique.titles": "称号",
   "player.boutique.banners": "横幅",

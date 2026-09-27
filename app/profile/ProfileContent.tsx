@@ -51,6 +51,12 @@ export function ProfileContent() {
       )}
 
       <div className="flex flex-col gap-2">
+        <HubLink
+          href="/boutique"
+          title={t("profile.boutique")}
+          description={t("profile.boutiqueDesc")}
+          icon={HubIcons.boutique}
+        />
         {signedIn && user && (
           <HubLink
             href={playerProfileHref(user.id)}

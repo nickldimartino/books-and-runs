@@ -24,4 +24,5 @@ export const HARDCODED_ALLOWLIST: AllowedText[] = [
   { file: "history/HistoryContent.tsx", text: "Nick DiMartino", reason: "Author name" },
   { file: "privacy/PrivacyContent.tsx", text: "nick.l.dimartino@icloud.com", reason: "Contact email address" },
   { file: "terms/TermsContent.tsx", text: "nick.l.dimartino@icloud.com", reason: "Contact email address" },
+  { file: "boutique/BoutiqueContent.tsx", text: "Aa", reason: "Decorative glyph standing in for a title's text at icon size (aria-hidden), not prose" },
 ];

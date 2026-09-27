@@ -77,18 +77,25 @@ export const AVATAR_FRAME_OPTIONS: readonly AvatarFrameOption[] = [
   { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
   // Boutique — see avatarPresets.ts's own doc on the "boutique" rule kind.
-  // 10 total, every color (AVATAR_FRAME_COLOR below) unique from the 16
-  // free flat colors above and from every earned tier's own color.
-  { id: "opal", label: "Opal", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "jade", label: "Jade", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "aurumveil", label: "Aurum Veil", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "obsidianrim", label: "Obsidian Rim", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "seaglass", label: "Sea Glass", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "copperline", label: "Copperline", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "duskgrove", label: "Dusk Grove", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "ashwood", label: "Ashwood", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "cinderglow", label: "Cinder Glow", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "winterpearl", label: "Winter Pearl", source: "boutique", unlock: { kind: "boutique" } },
+  // 15 total, every color (AVATAR_FRAME_COLOR below) unique from the 16
+  // free flat colors above and from every earned tier's own color. Rarity
+  // spans the full common→apex ladder (store.md) rather than the flat
+  // "unset" (defaulting to rare) every item launched with.
+  { id: "ashwood", label: "Ashwood", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "ashwood" } },
+  { id: "copperline", label: "Copperline", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "copperline" } },
+  { id: "jade", label: "Jade", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "jade" } },
+  { id: "duskgrove", label: "Dusk Grove", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "duskgrove" } },
+  { id: "seaglass", label: "Sea Glass", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "seaglass" } },
+  { id: "opal", label: "Opal", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "opal" } },
+  { id: "cinderglow", label: "Cinder Glow", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "cinderglow" } },
+  { id: "garnetvein", label: "Garnet Vein", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "garnetvein" } },
+  { id: "stormpewter", label: "Storm Pewter", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "stormpewter" } },
+  { id: "obsidianrim", label: "Obsidian Rim", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "obsidianrim" } },
+  { id: "winterpearl", label: "Winter Pearl", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "winterpearl" } },
+  { id: "verdigris", label: "Verdigris", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "verdigris" } },
+  { id: "aurumveil", label: "Aurum Veil", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "aurumveil" } },
+  { id: "amethystfrost", label: "Amethyst Frost", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "amethystfrost" } },
+  { id: "voidhalo", label: "Void Halo", rarity: "apex", source: "boutique", unlock: { kind: "boutique", category: "avatar_frame", itemId: "voidhalo" } },
 ];
 
 /** Solid ring colors for each frame — "grandmaster" instead gets a
@@ -152,6 +159,13 @@ export const AVATAR_FRAME_COLOR: Record<string, string> = {
   ashwood: "#8B7D6B",
   cinderglow: "#E25822",
   winterpearl: "#A8C0D6",
+  // Boutique — the 5 new frames added alongside the rarity expansion
+  // (store.md).
+  garnetvein: "#7A1F3D",
+  stormpewter: "#5C6B73",
+  verdigris: "#5B8C7B",
+  amethystfrost: "#9D7FBF",
+  voidhalo: "#2D0A4E",
 };
 
 export function findAvatarFrameOption(id: string | null): AvatarFrameOption | null {
@@ -240,17 +254,24 @@ export const TITLE_OPTIONS: readonly TitleOption[] = [
   { id: "steadyhand", label: "Steady Hand", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { id: "hotstreak", label: "Hot Streak", unlock: { kind: "mpWinStreak", streak: 8 } },
   // Boutique — see avatarPresets.ts's own doc on the "boutique" rule kind.
-  // 10 total, every label unique from every other title in this list.
-  { id: "night_owl", label: "Night Owl", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "the_bluffer", label: "The Bluffer", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "velvet_hand", label: "Velvet Hand", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "silk_road", label: "Silk Road", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "midnight_dealer", label: "Midnight Dealer", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "the_collector", label: "The Collector", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "gilded_tongue", label: "Gilded Tongue", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "backroom_regular", label: "Backroom Regular", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "the_fixer", label: "The Fixer", source: "boutique", unlock: { kind: "boutique" } },
-  { id: "diamond_cut", label: "Diamond Cut", source: "boutique", unlock: { kind: "boutique" } },
+  // 15 total, every label unique from every other title in this list. Rarity
+  // spans the full common→apex ladder (store.md) rather than the flat
+  // "unset" (defaulting to rare) every item launched with.
+  { id: "night_owl", label: "Night Owl", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "night_owl" } },
+  { id: "backroom_regular", label: "Backroom Regular", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "backroom_regular" } },
+  { id: "the_bluffer", label: "The Bluffer", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "the_bluffer" } },
+  { id: "silk_road", label: "Silk Road", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "silk_road" } },
+  { id: "velvet_hand", label: "Velvet Hand", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "velvet_hand" } },
+  { id: "midnight_dealer", label: "Midnight Dealer", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "midnight_dealer" } },
+  { id: "the_fixer", label: "The Fixer", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "the_fixer" } },
+  { id: "the_sharp", label: "The Sharp", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "the_sharp" } },
+  { id: "last_call", label: "Last Call", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "last_call" } },
+  { id: "the_collector", label: "The Collector", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "the_collector" } },
+  { id: "gilded_tongue", label: "Gilded Tongue", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "gilded_tongue" } },
+  { id: "quiet_storm", label: "Quiet Storm", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "quiet_storm" } },
+  { id: "diamond_cut", label: "Diamond Cut", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "diamond_cut" } },
+  { id: "smoke_and_mirrors", label: "Smoke and Mirrors", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "smoke_and_mirrors" } },
+  { id: "table_legend", label: "Table Legend", rarity: "apex", source: "boutique", unlock: { kind: "boutique", category: "title", itemId: "table_legend" } },
 ];
 
 export function findTitleOption(id: string | null): TitleOption | null {

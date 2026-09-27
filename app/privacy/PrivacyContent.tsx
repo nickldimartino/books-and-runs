@@ -59,6 +59,7 @@ export function PrivacyContent() {
             <li>{t("privacy.account.item.push")}</li>
             <li>{t("privacy.account.item.safety")}</li>
             <li>{t("privacy.account.item.support")}</li>
+            <li>{t("privacy.account.item.purchases")}</li>
             <li>{t("privacy.account.item.security")}</li>
           </ul>
           <p className="mt-2">{t("privacy.account.outro")}</p>

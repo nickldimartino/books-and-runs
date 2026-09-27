@@ -47,7 +47,7 @@ const en = {
   "settingsPicker.tabHoliday": "Holiday",
   "settingsPicker.signature": "Signature",
   "settingsPicker.unlocksAtLevel": "Unlocks at Level {level}",
-  "settingsPicker.boutiqueLocked": "Boutique — not yet available for purchase",
+  "settingsPicker.boutiqueLocked": "Boutique — see it in the store",
   "player.badge.free": "Free",
   "cosmeticReq.categoryMastered": "Master every {category} achievement",
   "cosmeticReq.categoriesMasteredCount": "Master {count} of {total} achievement categories",
@@ -1420,7 +1420,7 @@ const en = {
 
   // terms.*
   "terms.title": "Terms of Service",
-  "terms.lastUpdated": "Last updated September 25, 2026",
+  "terms.lastUpdated": "Last updated September 27, 2026",
   "terms.intro":
     "By using Books & Runs (\"the app\"), you agree to these terms. If you don't agree, please don't use the app.",
   "terms.app.title": "The app",
@@ -1430,6 +1430,12 @@ const en = {
   "terms.accounts.title": "Accounts",
   "terms.accounts.body":
     "If you create an account, you're responsible for keeping your credentials secure and for anything that happens under your account. Provide accurate information when signing up. You must be old enough to use the app under the Privacy Policy's age rules.",
+  "terms.purchases.title": "Purchases",
+  "terms.purchases.body":
+    "The Boutique store sells optional digital cosmetic items — things like card designs and profile decorations, with the exact catalog changing over time. They're purely cosmetic and never affect gameplay, matchmaking, rankings, or any other competitive outcome. Prices are shown and charged in US dollars, and payment is processed by Stripe — we never see or store your card number. Once payment succeeds, your purchase is delivered to your account automatically and immediately. Once delivered, the sale is final; we don't offer refunds except where required by law. Buying a cosmetic item doesn't create a subscription, and nothing renews or charges again automatically.",
+  "terms.purchases.euWithdrawal":
+    "If you're in the EU or UK: by completing checkout, you expressly request immediate delivery of the digital item and acknowledge that, because it's delivered immediately, you lose your usual 14-day right to withdraw from that purchase.",
+  "terms.purchases.contactBody": "Billing problem — a double charge, or an item that never arrived? Contact",
   "terms.acceptableUse.title": "Acceptable use",
   "terms.acceptableUse.body":
     "Don't use the app to interfere with its normal operation, attempt to access other users' data, cheat or tamper with game results, stats, or the Leaderboard, or use it for anything unlawful.",
@@ -1459,7 +1465,7 @@ const en = {
   "terms.contact.body": "Questions about these terms? Contact",
 
   // privacy.*
-  "privacy.lastUpdated": "Last updated September 25, 2026",
+  "privacy.lastUpdated": "Last updated September 27, 2026",
   "privacy.overview.title": "Overview",
   "privacy.overview.body":
     "Books & Runs is a card game you can play entirely offline, on one device, with no account required. This policy explains what happens if you choose to create an account, and confirms what we never collect.",
@@ -1498,6 +1504,8 @@ const en = {
     "Safety records: the players you block (so you're hidden from each other), and reports you file about other players (who reported whom, the reason, an optional short note, where it was filed, and the reported player's name and bio at that moment). Reports are visible only to the developer and kept for as long as needed to review them; the reported player is not told who reported them. Display names, bios and club names are also checked automatically against a list of blocked words and impersonation rules.",
   "privacy.account.item.support":
     "If you send a tip through the Support the developer page, payment is handled entirely by Stripe, and we never see your card details. We store only that a payment happened (the Stripe session reference, amount, and currency) so we can give you the supporter badge.",
+  "privacy.account.item.purchases":
+    "If you buy a cosmetic item or bundle from the store, payment is handled entirely by Stripe, and we never see your card details. We store which items or bundles you bought, the Stripe session reference, amount, and currency. Buying requires being signed in — guests can't make purchases.",
   "privacy.account.item.security":
     "Short-lived technical records: in-app notifications and request counters used to prevent abuse (kept for a few weeks at most), and, for signed-in users, error reports may be linked to your account so we can investigate a problem.",
   "privacy.account.item.friendsPrefix": "A per-account",
@@ -1516,7 +1524,7 @@ const en = {
   "privacy.processors.bodySuffix":
     ", protected by row-level security so, other than the display name and stats that are deliberately shown on the Leaderboard, only you can read or write your own rows. Turn-based multiplayer moves are validated by a Supabase Edge Function that runs the same game engine; it is the only thing that can see the full hidden game state.",
   "privacy.processors.others":
-    "Other service providers act only for the purposes described here: Stripe processes optional tips, and an email delivery service is used to deliver messages you send through the Support page. We don't sell your personal data or share it for advertising.",
+    "Other service providers act only for the purposes described here: Stripe processes optional tips and store purchases, and an email delivery service is used to deliver messages you send through the Support page. We don't sell your personal data or share it for advertising.",
   "privacy.legalBases.title": "Why we use your data (legal bases)",
   "privacy.legalBases.body":
     "We use your account data to provide the service you asked for when you created an account (performance of our agreement with you under the Terms of Service). Where you opt in — for example to push notifications or to a public profile photo — we rely on your consent, which you can withdraw at any time. We use error reports, anonymous usage counts, and abuse-prevention records for our legitimate interests in keeping the app secure, fair, and working; you can object to this (see below). Where local law requires it, we also process data to meet legal obligations. This is a plain-language summary and not a claim of certification under any particular law.",
@@ -1620,6 +1628,49 @@ const en = {
   "tip.afterTip.prefix": "After a tip goes through, the ☕ Supporter badge shows up on your",
   "tip.afterTip.profileLink": "profile",
   "tip.afterTip.suffix": "within a few minutes — equip it from the Badge tab on Edit profile.",
+
+  // boutique.* — the real-money cosmetic store (/boutique). Item and
+  // bundle NAMES come from the catalog itself (src/store/catalog.ts) and
+  // stay English there (Stripe's own checkout chrome is English
+  // regardless of locale) — only this page's own chrome needs translating.
+  "boutique.subtitle": "Cosmetics only — nothing here changes how the game plays.",
+  "boutique.guestBanner.body": "Sign in to buy cosmetics — they're yours forever, tied to your account.",
+  "boutique.hero.badge": "Best value",
+  "boutique.hero.includes": "Includes:",
+  "boutique.bundle.discount": "Save {percent}%",
+  "boutique.bundle.itemCount.one": "{count} item",
+  "boutique.bundle.itemCount.other": "{count} items",
+  "boutique.category.all": "All",
+  "boutique.category.badge": "Badges",
+  "boutique.category.avatar_frame": "Avatar frames",
+  "boutique.category.title": "Titles",
+  "boutique.category.banner": "Banners",
+  "boutique.category.avatar_emoji": "Avatar emoji",
+  "boutique.category.card_face": "Card faces",
+  "boutique.category.card_back": "Card backs",
+  "boutique.item.buy": "Buy — {price}",
+  "boutique.item.signInToBuy": "Sign in to buy",
+  "boutique.item.owned": "Owned",
+  "boutique.item.equip": "Equip",
+  "boutique.item.tryOn": "Try on",
+  "boutique.item.tryOnEnd": "End preview",
+  "boutique.item.tryOnBadge": "Previewing — not saved",
+  "boutique.purchase.processing.title": "Finishing up…",
+  "boutique.purchase.processing.body": "Confirming your purchase — this usually takes a few seconds.",
+  "boutique.purchase.success.one": "Your new item is ready!",
+  "boutique.purchase.success.other": "Your {count} new items are ready!",
+  "boutique.purchase.stillProcessing":
+    "Still processing — check back in a moment. If this doesn't clear up, contact support with your order details.",
+  "boutique.purchase.equipNow": "Equip now",
+  "boutique.purchase.checkAgain": "Check again",
+  "boutique.finePrint.prefix":
+    "Payments are processed securely by Stripe. Purchases are cosmetic only, delivered immediately, and final — see our",
+  "boutique.finePrint.suffix": " for details.",
+  "boutique.error.purchaseFailed": "Something went wrong starting checkout — try again in a moment.",
+  "boutique.empty": "No items in this category yet.",
+  "boutique.getInBoutique": "Get this in the Boutique →",
+  "profile.boutique": "Boutique",
+  "profile.boutiqueDesc": "Buy badges, frames, titles, banners and more.",
 
   // tournaments.*
   "tournaments.title": "Tournaments",
@@ -1789,11 +1840,12 @@ const en = {
     "A wide strip of color behind your name and picture — most are free to pick; one is a prestige reward for mastering every achievement category.",
 
   "player.boutique.descriptionCreator":
-    "A preview of what'll eventually be purchasable — picked from the same badge/frame/title/banner catalogs as everything else, just gathered here in one place. You can see and use all of it as the creator; everyone else sees it locked until it's for sale.",
+    "Everything below is real — picked from the same badge/frame/title/banner catalogs as everything else, gathered here in one place. You can see and use all of it for free as the creator; everyone else can buy it from the Boutique.",
   "player.boutique.description":
-    "A preview of what'll eventually be purchasable here — picked from the same badge/frame/title/banner catalogs as everything else. Not for sale yet.",
+    "Everything below is a real purchase — picked from the same badge/frame/title/banner catalogs as everything else. Tap a locked one to buy it from the Boutique.",
   "player.boutique.empty": "Nothing in the Boutique yet — check back soon.",
   "player.boutique.badges": "Badges",
+  "player.boutique.pictures": "Pictures",
   "player.boutique.frames": "Frames",
   "player.boutique.titles": "Titles",
   "player.boutique.banners": "Banners",

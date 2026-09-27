@@ -53,6 +53,7 @@ import { ProfileBanner } from "../components/ProfileBanner";
 import { fetchAchievementRarity, formatRarity, RarityMap } from "../lib/achievementRarity";
 import {
   COLOR_OPTIONS,
+  BOUTIQUE_AVATAR_EMOJI_OPTIONS,
   EMOJI_OPTIONS,
   findPremiumEmojiOption,
   isPremiumEmojiUnlocked,
@@ -109,6 +110,8 @@ import {
 import { RoundHistoryEntry } from "../lib/recordGameResult";
 import { renderProfileShareCard } from "../lib/shareCard";
 import { supabase } from "../lib/supabaseClient";
+import { useEntitlements } from "../lib/entitlementsStore";
+import { itemSkuFor } from "../lib/storeSku";
 import { capitalize } from "../lib/text";
 import { translateError } from "../lib/i18n/serverErrors";
 
@@ -480,6 +483,17 @@ export default function PlayerProfilePage() {
     "picture" | "badge" | "trophies" | "frame" | "title" | "banner" | "boutique" | "name"
   >("picture");
 
+  // A Boutique purchase's "Equip now"/"Equip" link (see app/boutique's
+  // equipHrefFor) lands here as `?edit=1&tab=<tab>` — jump straight to the
+  // right tab, already expanded, instead of making someone re-find it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const validTabs = ["picture", "badge", "trophies", "frame", "title", "banner", "boutique", "name"] as const;
+    if (params.get("edit") === "1") setEditingProfile(true);
+    if (tab && (validTabs as readonly string[]).includes(tab)) setEditTab(tab as (typeof validTabs)[number]);
+  }, []);
+
   // ── Achievement rarity ("Only N% of players have this") ────────────────
   // Global, so it can't be computed client-side (see achievementRarity.ts) —
   // fetched once from the daily-refreshed summary table.
@@ -803,8 +817,9 @@ export default function PlayerProfilePage() {
   const [progress, setProgress] = useState<AchievementProgressState>(EMPTY_PROGRESS_STATE);
   const [dailyDealBestStreak, setDailyDealBestStreak] = useState<number | null>(null);
   // Whether this account has ever completed a tip (migration 0043's
-  // supporter_payments — written only by the stripe-webhook function, so
-  // this is a read of real ground truth, not anything self-reported).
+  // supporter_payments) or a Boutique purchase (migration 0085's
+  // purchases) — both written only by the stripe-webhook function, so this
+  // is a read of real ground truth, not anything self-reported.
   const [isSupporter, setIsSupporter] = useState(false);
   const [mpStats, setMpStats] = useState<MpStats | null>(null);
   const [mpHistory, setMpHistory] = useState<MpHistoryEntry[]>([]);
@@ -854,7 +869,19 @@ export default function PlayerProfilePage() {
         .eq("user_id", user.id)
         .limit(1)
         .then((res) => res.data ?? []),
-    ]).then(([statsRes, historyRes, countersRes, dailyDealRes, mp, supporterRows]) => {
+      // Any completed Boutique purchase also counts as supporting the
+      // developer, same as a tip — needs migration 0085. `purchases` rows
+      // only ever come from a real Stripe checkout (the launch-grandfather
+      // migration writes `entitlements` only, never `purchases`), so this
+      // is exactly "has this account ever paid for anything," not "owns a
+      // grandfathered item."
+      client
+        .from("purchases")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .then((res) => res.data ?? []),
+    ]).then(([statsRes, historyRes, countersRes, dailyDealRes, mp, supporterRows, purchaseRows]) => {
       if (statsRes.error) {
         setPrivateStatsError(true);
       } else {
@@ -873,7 +900,7 @@ export default function PlayerProfilePage() {
         mpBestWinStreak: mp.bestWinStreak,
       });
       setDailyDealBestStreak(dailyDealRes.data?.daily_deal_best_streak ?? 0);
-      setIsSupporter(supporterRows.length > 0);
+      setIsSupporter(supporterRows.length > 0 || purchaseRows.length > 0);
       setPrivateLoading(false);
     });
 
@@ -886,6 +913,10 @@ export default function PlayerProfilePage() {
   // own doc) plus whatever this account's entry/progress already say.
   // Only ever meaningful in a self-view, but harmless to compute either
   // way since nothing outside isSelf-gated code reads it.
+  // Only ever meaningful (and only ever fetched) in a self-view — a
+  // signed-out or someone-else's-profile read costs nothing extra since
+  // useEntitlements reads as an empty set without a matching userId.
+  const { ownedSkus } = useEntitlements(supabase, isSelf ? user?.id : undefined);
   const unlockCtx = useMemo(
     () =>
       makeUnlockContext({
@@ -896,6 +927,7 @@ export default function PlayerProfilePage() {
         weeklyChallengeBestStreak: entry?.weekly_challenge_best_streak ?? 0,
         isCreator: entry?.is_creator ?? false,
         isSupporter,
+        ownedSkus,
         // Both already loaded on this page for the Stats section below —
         // no new fetch needed for any of the 4 newer requirement_kinds.
         worstScore: privateStats?.worst_score ?? null,
@@ -903,7 +935,7 @@ export default function PlayerProfilePage() {
         gamesTied: privateStats?.games_tied ?? 0,
         mpBestWinStreak: entry?.mp_best_win_streak ?? 0,
       }),
-    [level, entry, progress, isSupporter, privateStats]
+    [level, entry, progress, isSupporter, privateStats, ownedSkus]
   );
 
   // Self-heal: an equipped cosmetic can end up over-privileged relative to
@@ -1707,11 +1739,13 @@ export default function PlayerProfilePage() {
                 // visible-but-locked treatment as every other gated tab
                 // instead of being unconditionally pickable.
                 const boutiqueBadges = PREMIUM_EMOJI_OPTIONS.filter((o) => o.source === "boutique");
+                const boutiquePictures = BOUTIQUE_AVATAR_EMOJI_OPTIONS;
                 const boutiqueFrames = AVATAR_FRAME_OPTIONS.filter((o) => o.source === "boutique");
                 const boutiqueTitles = TITLE_OPTIONS.filter((o) => o.source === "boutique");
                 const boutiqueBanners = BANNER_OPTIONS.filter((o) => o.source === "boutique");
                 const isEmpty =
                   boutiqueBadges.length === 0 &&
+                  boutiquePictures.length === 0 &&
                   boutiqueFrames.length === 0 &&
                   boutiqueTitles.length === 0 &&
                   boutiqueBanners.length === 0;
@@ -1735,20 +1769,15 @@ export default function PlayerProfilePage() {
                           {boutiqueBadges.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
                             const requirement = req(option.unlock!);
-                            return (
-                              <button
-                                key={option.emoji}
-                                onClick={() => unlocked && chooseBadge(option.emoji)}
-                                aria-label={unlocked ? t("player.badge.useEmoji", { emoji: option.emoji }) : t("player.badge.lockedAriaLabel", { emoji: option.emoji, requirement })}
-                                title={unlocked ? undefined : requirement}
-                                className={`relative grid aspect-square w-11 place-items-center rounded-lg text-[var(--heading)] transition ${
-                                  !unlocked
-                                    ? `bg-[var(--panel-soft)] ${LOCKED_ITEM_CLASS}`
-                                    : entry.badge === option.emoji
-                                      ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
-                                      : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
-                                }`}
-                              >
+                            const className = `relative grid aspect-square w-11 place-items-center rounded-lg text-[var(--heading)] transition ${
+                              !unlocked
+                                ? `bg-[var(--panel-soft)] ${LOCKED_ITEM_CLASS}`
+                                : entry.badge === option.emoji
+                                  ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
+                                  : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                            }`;
+                            const content = (
+                              <>
                                 <PremiumBadgeIcon option={option} className="block h-2/3 w-2/3" />
                                 {!unlocked && (
                                   <span
@@ -1758,7 +1787,82 @@ export default function PlayerProfilePage() {
                                     🔒
                                   </span>
                                 )}
+                              </>
+                            );
+                            // A locked Boutique item is now a real thing to
+                            // go buy, not a dead end — tapping it deep-links
+                            // into the store instead of doing nothing.
+                            return unlocked ? (
+                              <button
+                                key={option.emoji}
+                                onClick={() => chooseBadge(option.emoji)}
+                                aria-label={t("player.badge.useEmoji", { emoji: option.emoji })}
+                                className={className}
+                              >
+                                {content}
                               </button>
+                            ) : (
+                              <Link
+                                key={option.emoji}
+                                href={`/boutique?item=${itemSkuFor("badge", option.emoji)}`}
+                                aria-label={`${t("player.badge.lockedAriaLabel", { emoji: option.emoji, requirement })} — ${t("boutique.getInBoutique")}`}
+                                title={`${requirement} — ${t("boutique.getInBoutique")}`}
+                                className={className}
+                              >
+                                {content}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    )}
+                    {boutiquePictures.length > 0 && (
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">{t("player.boutique.pictures")}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {boutiquePictures.map((option) => {
+                            const unlocked = isCosmeticUnlocked(option.unlock, unlockCtx);
+                            const equipped = entry.avatar_kind === "emoji" && entry.avatar_emoji === option.emoji;
+                            const requirement = req(option.unlock);
+                            const className = `relative grid aspect-square w-11 place-items-center rounded-full text-lg transition ${
+                              !unlocked
+                                ? `bg-[var(--panel-soft)] ${LOCKED_ITEM_CLASS}`
+                                : equipped
+                                  ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
+                                  : "bg-[var(--panel-soft)] hover:bg-[var(--panel)]"
+                            }`;
+                            const content = (
+                              <>
+                                {option.emoji}
+                                {!unlocked && (
+                                  <span
+                                    aria-hidden="true"
+                                    className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-[var(--bg)] text-[8px] leading-none"
+                                  >
+                                    🔒
+                                  </span>
+                                )}
+                              </>
+                            );
+                            return unlocked ? (
+                              <button
+                                key={option.emoji}
+                                onClick={() => chooseEmoji(option.emoji)}
+                                aria-label={t("player.picture.useEmoji", { emoji: option.emoji })}
+                                className={className}
+                              >
+                                {content}
+                              </button>
+                            ) : (
+                              <Link
+                                key={option.emoji}
+                                href={`/boutique?item=${itemSkuFor("avatar_emoji", option.emoji)}`}
+                                aria-label={`${t("player.picture.useEmoji", { emoji: option.emoji })}: ${requirement} — ${t("boutique.getInBoutique")}`}
+                                title={`${requirement} — ${t("boutique.getInBoutique")}`}
+                                className={className}
+                              >
+                                {content}
+                              </Link>
                             );
                           })}
                         </div>
@@ -1770,24 +1874,34 @@ export default function PlayerProfilePage() {
                         <div className="flex flex-wrap gap-3">
                           {boutiqueFrames.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
-                            return (
-                              <button
-                                key={option.id}
-                                onClick={() => unlocked && chooseFrame(option.id)}
-                                title={unlocked ? undefined : req(option.unlock!)}
-                                className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                                  !unlocked
-                                    ? LOCKED_ITEM_CLASS
-                                    : entry.avatar_frame === option.id
-                                      ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
-                                      : "hover:bg-[var(--panel-soft)]"
-                                }`}
-                              >
+                            const className = `flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                              !unlocked
+                                ? LOCKED_ITEM_CLASS
+                                : entry.avatar_frame === option.id
+                                  ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                                  : "hover:bg-[var(--panel-soft)]"
+                            }`;
+                            const content = (
+                              <>
                                 <AvatarFrame frame={option.id} size={44}>
                                   <PlayerAvatar avatar={avatarInfo} updatedAt={entry.updated_at} size={44} />
                                 </AvatarFrame>
                                 <span className="text-[10px] text-[var(--faint)]">{lockedCaption(option.label, unlocked)}</span>
+                              </>
+                            );
+                            return unlocked ? (
+                              <button key={option.id} onClick={() => chooseFrame(option.id)} className={className}>
+                                {content}
                               </button>
+                            ) : (
+                              <Link
+                                key={option.id}
+                                href={`/boutique?item=${itemSkuFor("avatar_frame", option.id)}`}
+                                title={`${req(option.unlock!)} — ${t("boutique.getInBoutique")}`}
+                                className={className}
+                              >
+                                {content}
+                              </Link>
                             );
                           })}
                         </div>
@@ -1799,21 +1913,26 @@ export default function PlayerProfilePage() {
                         <div className="flex flex-wrap gap-2">
                           {boutiqueTitles.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
-                            return (
-                              <button
-                                key={option.id}
-                                onClick={() => unlocked && chooseTitle(option.id)}
-                                title={unlocked ? undefined : req(option.unlock!)}
-                                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                                  !unlocked
-                                    ? `border-[var(--border)] text-[var(--faint)] ${LOCKED_ITEM_CLASS}`
-                                    : entry.title === option.id
-                                      ? "border-[var(--accent)] text-[var(--accent)]"
-                                      : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
-                                }`}
-                              >
+                            const className = `rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                              !unlocked
+                                ? `border-[var(--border)] text-[var(--faint)] ${LOCKED_ITEM_CLASS}`
+                                : entry.title === option.id
+                                  ? "border-[var(--accent)] text-[var(--accent)]"
+                                  : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel-soft)]"
+                            }`;
+                            return unlocked ? (
+                              <button key={option.id} onClick={() => chooseTitle(option.id)} className={className}>
                                 {lockedCaption(option.label, unlocked)}
                               </button>
+                            ) : (
+                              <Link
+                                key={option.id}
+                                href={`/boutique?item=${itemSkuFor("title", option.id)}`}
+                                title={`${req(option.unlock!)} — ${t("boutique.getInBoutique")}`}
+                                className={className}
+                              >
+                                {lockedCaption(option.label, unlocked)}
+                              </Link>
                             );
                           })}
                         </div>
@@ -1825,22 +1944,32 @@ export default function PlayerProfilePage() {
                         <div className="flex flex-wrap gap-3">
                           {boutiqueBanners.map((option) => {
                             const unlocked = isCosmeticUnlocked(option.unlock!, unlockCtx);
-                            return (
-                              <button
-                                key={option.id}
-                                onClick={() => unlocked && chooseBanner(option.id)}
-                                title={unlocked ? undefined : req(option.unlock!)}
-                                className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
-                                  !unlocked
-                                    ? LOCKED_ITEM_CLASS
-                                    : entry.banner === option.id
-                                      ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
-                                      : "hover:bg-[var(--panel-soft)]"
-                                }`}
-                              >
+                            const className = `flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${
+                              !unlocked
+                                ? LOCKED_ITEM_CLASS
+                                : entry.banner === option.id
+                                  ? "bg-[var(--accent)]/15 ring-2 ring-[var(--accent)]"
+                                  : "hover:bg-[var(--panel-soft)]"
+                            }`;
+                            const content = (
+                              <>
                                 <div className="h-10 w-16 rounded-md" style={{ background: option.css }} />
                                 <span className="text-[10px] text-[var(--faint)]">{lockedCaption(option.label, unlocked)}</span>
+                              </>
+                            );
+                            return unlocked ? (
+                              <button key={option.id} onClick={() => chooseBanner(option.id)} className={className}>
+                                {content}
                               </button>
+                            ) : (
+                              <Link
+                                key={option.id}
+                                href={`/boutique?item=${itemSkuFor("banner", option.id)}`}
+                                title={`${req(option.unlock!)} — ${t("boutique.getInBoutique")}`}
+                                className={className}
+                              >
+                                {content}
+                              </Link>
                             );
                           })}
                         </div>

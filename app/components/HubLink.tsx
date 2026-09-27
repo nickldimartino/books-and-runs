@@ -75,6 +75,13 @@ export const HubIcons = {
       <circle cx="8" cy="17" r="2" />
     </svg>
   ),
+  // A price tag — the Boutique store's entry point (Profile hub).
+  boutique: (
+    <svg {...SVG}>
+      <path d="M12.6 3.5H6.5a2 2 0 0 0-2 2v6.1c0 .5.2 1 .6 1.4l8.4 8.4c.8.8 2 .8 2.8 0l5.5-5.5c.8-.8.8-2 0-2.8l-8.4-8.4a2 2 0 0 0-1.4-.6z" />
+      <circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  ),
 };
 
 export function HubLink({

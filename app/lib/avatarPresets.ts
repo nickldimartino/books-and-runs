@@ -104,22 +104,72 @@ export const PREMIUM_EMOJI_OPTIONS: readonly PremiumEmojiOption[] = [
   { emoji: "🤝", unlock: { kind: "gamesTied", count: 3 } },
   { emoji: "⚖️", unlock: { kind: "averageScoreUnder", score: 70, minGames: 15 } },
   { emoji: "📈", unlock: { kind: "mpWinStreak", streak: 8 } },
-  // Boutique — a future real purchase, simulated for now as creator-only
-  // (see cosmeticUnlocks.ts's own doc on the "boutique" rule kind and
-  // player/page.tsx's Boutique tab) rather than left unconditionally free.
-  // 10 total, every emoji unique from each other and from every free/
-  // earned badge and free avatar emoji above.
-  { emoji: "🎩", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🕶️", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🎻", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🧨", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🔮", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🛸", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🧿", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🗝️", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🎆", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
-  { emoji: "🏹", source: "boutique", rarity: "rare", unlock: { kind: "boutique" } },
+  // Boutique — a real purchase (see src/store/catalog.ts for the sku/price
+  // catalog, cosmeticUnlocks.ts's "boutique" rule kind for how owning that
+  // sku unlocks it, and player/page.tsx's Boutique tab). 15 total, every
+  // emoji unique from each other and from every free/earned badge and free
+  // avatar emoji above. Rarity spans the full common→apex ladder (store.md)
+  // rather than the flat "rare" every item launched with.
+  { emoji: "🎻", source: "boutique", rarity: "common", unlock: { kind: "boutique", category: "badge", itemId: "🎻" } },
+  { emoji: "🗝️", source: "boutique", rarity: "common", unlock: { kind: "boutique", category: "badge", itemId: "🗝️" } },
+  { emoji: "🎩", source: "boutique", rarity: "uncommon", unlock: { kind: "boutique", category: "badge", itemId: "🎩" } },
+  { emoji: "🕶️", source: "boutique", rarity: "uncommon", unlock: { kind: "boutique", category: "badge", itemId: "🕶️" } },
+  { emoji: "🥃", source: "boutique", rarity: "uncommon", unlock: { kind: "boutique", category: "badge", itemId: "🥃" } },
+  { emoji: "🧨", source: "boutique", rarity: "rare", unlock: { kind: "boutique", category: "badge", itemId: "🧨" } },
+  { emoji: "🧿", source: "boutique", rarity: "rare", unlock: { kind: "boutique", category: "badge", itemId: "🧿" } },
+  { emoji: "🏹", source: "boutique", rarity: "rare", unlock: { kind: "boutique", category: "badge", itemId: "🏹" } },
+  { emoji: "🦉", source: "boutique", rarity: "rare", unlock: { kind: "boutique", category: "badge", itemId: "🦉" } },
+  { emoji: "🛸", source: "boutique", rarity: "epic", unlock: { kind: "boutique", category: "badge", itemId: "🛸" } },
+  { emoji: "🎰", source: "boutique", rarity: "epic", unlock: { kind: "boutique", category: "badge", itemId: "🎰" } },
+  { emoji: "🀄", source: "boutique", rarity: "epic", unlock: { kind: "boutique", category: "badge", itemId: "🀄" } },
+  { emoji: "🎆", source: "boutique", rarity: "mythic", unlock: { kind: "boutique", category: "badge", itemId: "🎆" } },
+  { emoji: "🎴", source: "boutique", rarity: "mythic", unlock: { kind: "boutique", category: "badge", itemId: "🎴" } },
+  { emoji: "🔮", source: "boutique", rarity: "apex", unlock: { kind: "boutique", category: "badge", itemId: "🔮" } },
 ] as const;
+
+/** A boutique-purchased whole avatar picture — the paid sibling of
+ * EMOJI_OPTIONS above (a competing picture, not a badge overlay), same
+ * distinction the file's own header draws between the two. Every emoji here
+ * is unique from EMOJI_OPTIONS, from PREMIUM_EMOJI_OPTIONS (both free and
+ * boutique), and from each other — see boutiqueCatalog.test.tsx. Prices and
+ * skus live in src/store/catalog.ts's "avatar_emoji" category; this array is
+ * only the presentation-layer catalog (which emoji exist, and their
+ * rarity), same split as every other boutique catalog in this file. */
+export interface BoutiqueAvatarEmojiOption {
+  emoji: string;
+  rarity: CosmeticRarity;
+  unlock: CosmeticUnlockRule;
+  /** Always "boutique" — every item in this list is a real purchase, there
+   * is no free/earned avatar_emoji tier. Kept as an explicit field anyway
+   * (rather than implied) so this catalog has the same
+   * `source`/`unlock.kind` shape every other boutique catalog in this file
+   * does, for boutiqueCatalog.test.tsx's shared consistency check. */
+  source: "boutique";
+}
+
+export const BOUTIQUE_AVATAR_EMOJI_OPTIONS: readonly BoutiqueAvatarEmojiOption[] = [
+  { emoji: "🐢", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🐢" } },
+  { emoji: "🐌", rarity: "common", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🐌" } },
+  { emoji: "🦥", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦥" } },
+  { emoji: "🦔", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦔" } },
+  { emoji: "🐿️", rarity: "uncommon", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🐿️" } },
+  { emoji: "🦦", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦦" } },
+  { emoji: "🦫", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦫" } },
+  { emoji: "🦭", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦭" } },
+  { emoji: "🦜", rarity: "rare", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦜" } },
+  { emoji: "🦩", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦩" } },
+  { emoji: "🐊", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🐊" } },
+  { emoji: "🐳", rarity: "epic", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🐳" } },
+  { emoji: "🦈", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦈" } },
+  { emoji: "🦑", rarity: "mythic", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦑" } },
+  { emoji: "🦅", rarity: "apex", source: "boutique", unlock: { kind: "boutique", category: "avatar_emoji", itemId: "🦅" } },
+] as const;
+
+/** Whether `emoji` is a purchased boutique avatar picture the account
+ * already owns — mirrors findPremiumEmojiOption's shape for the picker. */
+export function findBoutiqueAvatarEmojiOption(emoji: string): BoutiqueAvatarEmojiOption | null {
+  return BOUTIQUE_AVATAR_EMOJI_OPTIONS.find((o) => o.emoji === emoji) ?? null;
+}
 
 /** Ring/disc color for every badge that still renders as MedalIcon (see
  * PremiumBadgeIcon.tsx) — the original 4 level milestones, Supporter, and
@@ -143,6 +193,16 @@ export const LEVEL_MEDAL_COLOR: Record<string, string> = {
   "🕶️": "#1e293b",
   "🧊": "#7dd3fc",
   "🤝": "#d97706",
+  // Boutique — the 5 new badges added alongside the rarity expansion
+  // (store.md). The 8 older boutique badges (🎻🧨🔮🛸🧿🗝️🎆🏹) were never
+  // given their own color and still render with the plain currentColor
+  // fallback below — left as-is rather than retroactively recoloring an
+  // existing item's art.
+  "🥃": "#8B5A2B",
+  "🦉": "#6B4F3B",
+  "🎰": "#B8272C",
+  "🀄": "#8B0000",
+  "🎴": "#C9A227",
 };
 
 /** The premium option for a given emoji, or null for a free (or unknown)

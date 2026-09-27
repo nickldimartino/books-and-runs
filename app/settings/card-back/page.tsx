@@ -36,7 +36,7 @@ export default function CardBackSettingsPage() {
     cardBack: loadLocalCardBack(),
     theme: loadLocalTheme(),
   }));
-  const { level, isCreator } = useCardUnlockContext(supabase, user?.id);
+  const { level, isCreator, ownedSkus } = useCardUnlockContext(supabase, user?.id);
 
   function handleCardBackChange(id: CardBackId) {
     setCardBackState({ cardBack: id, theme });
@@ -62,6 +62,7 @@ export default function CardBackSettingsPage() {
       ) : (
         <>
           <SignatureCardBackPicker
+            ownedSkus={ownedSkus}
             active={activeSignature}
             onSelect={(id: SignatureCardBackId) => handleCardBackChange(id)}
             level={level}

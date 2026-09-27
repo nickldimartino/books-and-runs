@@ -90,9 +90,17 @@ describe("isCosmeticUnlocked", () => {
     expect(isCosmeticUnlocked(rule, ctx({ mpBestWinStreak: 8 }))).toBe(true);
   });
 
-  it("gates a boutique rule purely on is_creator, same as creatorOnly — simulating a future purchase for now", () => {
+  it("gates a boutique rule on is_creator when it carries no sku (not yet updated by the catalog)", () => {
     const rule = { kind: "boutique" as const };
     expect(isCosmeticUnlocked(rule, ctx({ level: 999, dailyDealBestStreak: 999 }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ isCreator: true }))).toBe(true);
+  });
+
+  it("gates a boutique rule with a sku on ownership OR is_creator", () => {
+    const rule = { kind: "boutique" as const, category: "card_back" as const, itemId: "aurora" };
+    expect(isCosmeticUnlocked(rule, ctx())).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ ownedSkus: new Set(["card_back:other"]) }))).toBe(false);
+    expect(isCosmeticUnlocked(rule, ctx({ ownedSkus: new Set(["card_back:aurora"]) }))).toBe(true);
     expect(isCosmeticUnlocked(rule, ctx({ isCreator: true }))).toBe(true);
   });
 });

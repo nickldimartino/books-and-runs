@@ -33,7 +33,7 @@ const ptBR = {
   "settingsPicker.tabHoliday": "Datas festivas",
   "settingsPicker.signature": "Exclusivos",
   "settingsPicker.unlocksAtLevel": "Desbloqueia no nível {level}",
-  "settingsPicker.boutiqueLocked": "Boutique — ainda não disponível para compra",
+  "settingsPicker.boutiqueLocked": "Boutique — ver na loja",
   "player.badge.free": "Grátis",
   "cosmeticReq.categoryMastered": "Domine todas as conquistas da categoria {category}",
   "cosmeticReq.categoriesMasteredCount": "Domine {count} de {total} categorias de conquistas",
@@ -1408,7 +1408,7 @@ const ptBR = {
 
   // terms.*
   "terms.title": "Termos de Serviço",
-  "terms.lastUpdated": "Última atualização em 25 de setembro de 2026",
+  "terms.lastUpdated": "Última atualização em 27 de setembro de 2026",
   "terms.intro":
     "Ao usar o Books & Runs (\"o aplicativo\"), você concorda com estes termos. Se você não concordar, não use o aplicativo.",
   "terms.app.title": "O aplicativo",
@@ -1418,6 +1418,13 @@ const ptBR = {
   "terms.accounts.title": "Contas",
   "terms.accounts.body":
     "Se você criar uma conta, você é responsável por manter suas credenciais seguras e por qualquer coisa que aconteça sob sua conta. Forneça informações precisas ao se cadastrar. Você precisa ter idade suficiente para usar o aplicativo de acordo com as regras de idade da Política de Privacidade.",
+  "terms.purchases.title": "Compras",
+  "terms.purchases.body":
+    "A loja Boutique vende itens cosméticos digitais opcionais — como desenhos de cartas e decorações de perfil —, e o catálogo exato muda com o tempo. Eles são puramente cosméticos e nunca afetam a jogabilidade, o emparelhamento, o ranking ou qualquer outro resultado competitivo. Os preços são exibidos e cobrados em dólares americanos, e o pagamento é processado pela Stripe — nunca vemos nem armazenamos o número do seu cartão. Assim que o pagamento é concluído com sucesso, sua compra é entregue à sua conta automática e imediatamente. Depois de entregue, a venda é final; não oferecemos reembolso, exceto quando exigido por lei. Comprar um item cosmético não cria uma assinatura, e nada é renovado ou cobrado novamente de forma automática.",
+  "terms.purchases.euWithdrawal":
+    "Se você está na UE ou no Reino Unido: ao concluir a compra, você solicita expressamente a entrega imediata do item digital e reconhece que, por ser entregue imediatamente, você perde o seu direito de arrependimento de 14 dias para essa compra.",
+  "terms.purchases.contactBody":
+    "Problema na cobrança — uma cobrança duplicada, ou um item que nunca chegou? Fale conosco em",
   "terms.acceptableUse.title": "Uso aceitável",
   "terms.acceptableUse.body":
     "Não use o aplicativo para interferir em seu funcionamento normal, tentar acessar dados de outros usuários, trapacear ou adulterar resultados de partidas, estatísticas ou o Ranking, nem para qualquer finalidade ilegal.",
@@ -1447,7 +1454,7 @@ const ptBR = {
   "terms.contact.body": "Dúvidas sobre estes termos? Fale conosco em",
 
   // privacy.*
-  "privacy.lastUpdated": "Última atualização em 25 de setembro de 2026",
+  "privacy.lastUpdated": "Última atualização em 27 de setembro de 2026",
   "privacy.overview.title": "Visão geral",
   "privacy.overview.body":
     "Books & Runs é um jogo de cartas que você pode jogar totalmente offline, em um único dispositivo, sem necessidade de conta. Esta política explica o que acontece se você optar por criar uma conta, e confirma o que nunca coletamos.",
@@ -1494,6 +1501,8 @@ const ptBR = {
     "Registros de segurança: os jogadores que você bloqueia (vocês ficam ocultos um para o outro) e as denúncias que você faz sobre outros jogadores (quem denunciou quem, o motivo, uma nota curta opcional, onde foi feita e o nome e a bio do jogador denunciado naquele momento). As denúncias só são vistas pelo desenvolvedor e mantidas pelo tempo necessário para análise; o jogador denunciado não sabe quem denunciou. Nomes de exibição, bios e nomes de clubes também são verificados automaticamente com uma lista de palavras bloqueadas e regras contra falsa identidade.",
   "privacy.account.item.support":
     "Se você enviar uma gorjeta pela página Apoiar o desenvolvedor, o pagamento é tratado inteiramente pela Stripe, e nunca vemos os dados do seu cartão. Armazenamos apenas que um pagamento ocorreu (a referência da sessão da Stripe, o valor e a moeda), para que possamos conceder a você o emblema de apoiador.",
+  "privacy.account.item.purchases":
+    "Se você comprar um item cosmético ou um pacote na loja, o pagamento é tratado inteiramente pela Stripe, e nunca vemos os dados do seu cartão. Armazenamos quais itens ou pacotes você comprou, a referência da sessão da Stripe, o valor e a moeda. Para comprar é preciso estar com a sessão iniciada — visitantes não podem comprar.",
   "privacy.account.item.security":
     "Registros técnicos de curta duração: notificações no aplicativo e contadores de requisições usados para prevenir abusos (mantidos por algumas semanas, no máximo) e, para usuários com sessão iniciada, relatórios de erro que podem ser vinculados à sua conta para que possamos investigar um problema.",
   "privacy.account.outro":
@@ -1504,7 +1513,7 @@ const ptBR = {
   "privacy.processors.bodySuffix":
     ", protegido por segurança em nível de linha, de modo que, além do nome de exibição e das estatísticas deliberadamente mostradas no Ranking, só você pode ler ou gravar suas próprias linhas. As jogadas multiplayer por turnos são validadas por uma Supabase Edge Function que executa o mesmo motor do jogo; ela é o único componente capaz de ver o estado completo e oculto da partida.",
   "privacy.processors.others":
-    "Outros prestadores de serviços atuam somente para as finalidades descritas aqui: a Stripe processa gorjetas opcionais, e um serviço de envio de e-mails é usado para entregar as mensagens que você envia pela página de Suporte. Não vendemos seus dados pessoais nem os compartilhamos para fins de publicidade.",
+    "Outros prestadores de serviços atuam somente para as finalidades descritas aqui: a Stripe processa gorjetas opcionais e compras na loja, e um serviço de envio de e-mails é usado para entregar as mensagens que você envia pela página de Suporte. Não vendemos seus dados pessoais nem os compartilhamos para fins de publicidade.",
   "privacy.legalBases.title": "Por que usamos seus dados (bases legais)",
   "privacy.legalBases.body":
     "Usamos os dados da sua conta para prestar o serviço que você pediu ao criar uma conta (execução do nosso contrato com você, nos termos dos Termos de Serviço). Quando você opta por ativar algo — por exemplo, notificações push ou uma foto de perfil pública — baseamo-nos no seu consentimento, que você pode retirar a qualquer momento. Usamos relatórios de erro, contagens de uso anônimas e registros de prevenção de abusos para atender aos nossos interesses legítimos em manter o aplicativo seguro, justo e funcionando; você pode se opor a esse uso (veja abaixo). Quando a lei local exigir, também tratamos dados para cumprir obrigações legais. Este é um resumo em linguagem simples e não uma declaração de certificação em conformidade com qualquer lei específica.",
@@ -1608,6 +1617,46 @@ const ptBR = {
   "tip.afterTip.prefix": "Depois que uma contribuição for concluída, o emblema ☕ Apoiador aparece no seu",
   "tip.afterTip.profileLink": "perfil",
   "tip.afterTip.suffix": "em alguns minutos — equipe-o na aba Emblema em Editar perfil.",
+
+  // boutique.*
+  "boutique.subtitle": "Apenas itens cosméticos — nada aqui muda a forma de jogar.",
+  "boutique.guestBanner.body": "Entre na sua conta para comprar itens cosméticos — eles ficam ligados à sua conta para sempre.",
+  "boutique.hero.badge": "Melhor custo-benefício",
+  "boutique.hero.includes": "Inclui:",
+  "boutique.bundle.discount": "Economize {percent}%",
+  "boutique.bundle.itemCount.one": "{count} item",
+  "boutique.bundle.itemCount.other": "{count} itens",
+  "boutique.category.all": "Tudo",
+  "boutique.category.badge": "Emblemas",
+  "boutique.category.avatar_frame": "Molduras de avatar",
+  "boutique.category.title": "Títulos",
+  "boutique.category.banner": "Banners",
+  "boutique.category.avatar_emoji": "Emoji de avatar",
+  "boutique.category.card_face": "Faces de carta",
+  "boutique.category.card_back": "Versos de carta",
+  "boutique.item.buy": "Comprar — {price}",
+  "boutique.item.signInToBuy": "Entre para comprar",
+  "boutique.item.owned": "Você tem",
+  "boutique.item.equip": "Equipar",
+  "boutique.item.tryOn": "Experimentar",
+  "boutique.item.tryOnEnd": "Encerrar pré-visualização",
+  "boutique.item.tryOnBadge": "Pré-visualização — não é salva",
+  "boutique.purchase.processing.title": "Finalizando…",
+  "boutique.purchase.processing.body": "Confirmando sua compra — isso costuma levar só alguns segundos.",
+  "boutique.purchase.success.one": "Seu novo item está pronto!",
+  "boutique.purchase.success.other": "Seus {count} novos itens estão prontos!",
+  "boutique.purchase.stillProcessing":
+    "Ainda em processamento — volte a conferir em instantes. Se isso não se resolver, entre em contato com o suporte com os detalhes do pedido.",
+  "boutique.purchase.equipNow": "Equipar agora",
+  "boutique.purchase.checkAgain": "Verificar de novo",
+  "boutique.finePrint.prefix":
+    "Os pagamentos são processados com segurança pelo Stripe. As compras são apenas cosméticas, entregues imediatamente, e definitivas — consulte nossos",
+  "boutique.finePrint.suffix": " para mais detalhes.",
+  "boutique.error.purchaseFailed": "Algo deu errado ao iniciar o pagamento — tente de novo em instantes.",
+  "boutique.empty": "Ainda não há itens nesta categoria.",
+  "boutique.getInBoutique": "Consiga na Boutique →",
+  "profile.boutique": "Boutique",
+  "profile.boutiqueDesc": "Compre emblemas, molduras, títulos, banners e mais.",
 
   // tournaments.*
   "tournaments.title": "Torneios",
@@ -1777,11 +1826,12 @@ const ptBR = {
     "Uma faixa larga de cor atrás do seu nome e foto — a maioria pode ser escolhida gratuitamente; uma é uma recompensa de prestígio por dominar todas as categorias de conquistas.",
 
   "player.boutique.descriptionCreator":
-    "Uma prévia do que eventualmente poderá ser comprado — escolhido dos mesmos catálogos de emblemas/molduras/títulos/banners que tudo mais, só reunidos aqui em um só lugar. Como criador(a), você pode ver e usar tudo; todos os outros veem bloqueado até entrar à venda.",
+    "Tudo o que está abaixo pode ser comprado de verdade — escolhido dos mesmos catálogos de emblemas/molduras/títulos/banners que tudo mais, só reunidos aqui em um só lugar. Como criador(a), você pode ver e usar tudo de graça; todos os outros podem comprar na Boutique.",
   "player.boutique.description":
-    "Uma prévia do que eventualmente poderá ser comprado aqui — escolhido dos mesmos catálogos de emblemas/molduras/títulos/banners que tudo mais. Ainda não está à venda.",
+    "Tudo o que está abaixo pode ser comprado de verdade — escolhido dos mesmos catálogos de emblemas/molduras/títulos/banners que tudo mais. Toque em um item bloqueado para comprá-lo na Boutique.",
   "player.boutique.empty": "Nada na Boutique ainda — volte em breve.",
   "player.boutique.badges": "Emblemas",
+  "player.boutique.pictures": "Imagens",
   "player.boutique.frames": "Molduras",
   "player.boutique.titles": "Títulos",
   "player.boutique.banners": "Banners",

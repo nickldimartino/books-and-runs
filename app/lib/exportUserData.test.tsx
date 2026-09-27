@@ -44,6 +44,35 @@ describe("buildUserDataExport", () => {
     expect((result.stats as { multiplayer: { played: number } }).multiplayer.played).toBe(4);
   });
 
+  it("includes boutique purchases and owned skus", async () => {
+    const supabase = fakeSupabase({
+      purchases: {
+        select: () => ({
+          eq: async () => ({
+            data: [{ user_id: USER.id, stripe_session_id: "cs_1", amount_cents: 499, currency: "usd", sku_ids: ["badge:🎩"] }],
+            error: null,
+          }),
+        }),
+      },
+      entitlements: {
+        select: () => ({
+          eq: async () => ({
+            data: [{ user_id: USER.id, sku: "badge:🎩", source: "stripe" }],
+            error: null,
+          }),
+        }),
+      },
+    });
+
+    const result = await buildUserDataExport(supabase, USER);
+    const boutique = result.boutique as { purchases: unknown[]; owned_skus: unknown[] };
+
+    expect(boutique.purchases).toEqual([
+      { user_id: "u-1", stripe_session_id: "cs_1", amount_cents: 499, currency: "usd", sku_ids: ["badge:🎩"] },
+    ]);
+    expect(boutique.owned_skus).toEqual([{ user_id: "u-1", sku: "badge:🎩", source: "stripe" }]);
+  });
+
   it("redacts push subscription keys, keeping only a truncated endpoint", async () => {
     const supabase = fakeSupabase({
       push_subscriptions: {
