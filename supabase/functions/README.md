@@ -206,15 +206,84 @@ npx supabase secrets set RESEND_API_KEY=re_xxx SUPPORT_EMAIL=you@example.com
 npx supabase functions deploy contact
 ```
 
-## `stripe-webhook` — the tip jar
+## `create-checkout-session` — the boutique store
 
-Records a completed Stripe Payment Link checkout from the "Support the
-developer" page (`app/tip/page.tsx`) into `supporter_payments` (migration
-0043) — the ☕ Supporter badge unlocks off that table, never off anything
-the client claims. No Stripe SDK: verifies the `Stripe-Signature` header
-directly with Deno's Web Crypto (see the function's own doc for why).
+Starts a real-money Stripe Checkout for a cart of boutique cosmetics
+(badges, avatar frames, titles, banners, avatar emoji, card faces, card
+backs — see migrations 0085–0088 and `src/store/catalog.ts`). Auth
+required (a real signed-in user's JWT, not anon). No Stripe SDK — same
+"call the REST API directly with the secret key" approach `stripe-webhook`
+already uses.
 
-Requires migration 0043 to have run first.
+**Request:** `POST /functions/v1/create-checkout-session` with
+`Authorization: Bearer <user JWT>` and body `{ "skus": string[] }` (one
+item, a bundle sku, or several single items in one cart).
+
+**Response:** `200 { "url": string }` (redirect the browser here — it's the
+Stripe Checkout Session URL) or an error body `{ "error": string }` with
+`400` (bad request / unknown sku), `401` (not signed in), `409` (a sku in
+the cart is already owned), or `500`/`502` (server/Stripe-side failure).
+
+Every price and display name comes from the bundled catalog, never from
+the request — see `src/store/checkout.ts` (pure, unit-tested in
+`src/store/checkout.test.ts`) for the exact request-building logic, and
+that file's own doc for why prices can never be client-submitted.
+
+### Deploy
+
+```bash
+node scripts/bundle-checkout-catalog.mjs
+npx supabase functions deploy create-checkout-session
+npx supabase secrets set STRIPE_SECRET_KEY=sk_live_or_test_...
+```
+
+Re-run the bundle step whenever `src/store/catalog.ts` changes — same
+reasoning as `mp`'s/`solo-verify`'s own engine bundle (the deploy bundler
+doesn't resolve the app's extension-less relative imports).
+
+Requires migrations 0085–0087 to have run first (0088, the launch
+grandfather, can run any time after — see the migrations README). The
+Stripe Dashboard webhook endpoint doesn't need a new subscription: it's the
+same endpoint `stripe-webhook` already uses, already subscribed to
+`checkout.session.completed` (just confirm that's still true).
+
+Optional: `SITE_URL` overrides the success/cancel redirect origin
+(defaults to the production app — set this for testing against a local dev
+server with a Stripe test key). `STRIPE_AUTOMATIC_TAX=1` turns on Stripe
+Tax for these sessions — only meaningful once Stripe Tax is configured in
+the Stripe Dashboard first.
+
+### Smoke test after deploy
+
+```bash
+export $(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | xargs)
+curl -X POST "$NEXT_PUBLIC_SUPABASE_URL/functions/v1/create-checkout-session" \
+  -H "Authorization: Bearer <a real signed-in user's access token>" \
+  -H "Content-Type: application/json" \
+  -d '{"skus":["badge:🎩"]}'
+```
+
+Expect `{"url":"https://checkout.stripe.com/..."}` — open it and confirm
+the item/price shown matches the catalog, then complete a test-mode
+payment and confirm `stripe-webhook` grants the entitlement (see below).
+
+## `stripe-webhook` — the tip jar AND the boutique store
+
+Shared by both real-money flows: Stripe calls this directly (never the
+app's own client) the moment a checkout completes, whether that's a
+tip-jar Payment Link (`app/tip/page.tsx`) or a store Checkout Session
+(`create-checkout-session` above). It verifies the request really came
+from Stripe, then branches on whether `session.metadata.skus` is set (only
+a store checkout ever sets it): a store purchase writes `purchases` +
+`entitlements` (migrations 0085/0087 — the boutique unlock check reads
+`entitlements`, never anything a browser could claim); anything else
+(every tip, exactly as before) keeps writing `supporter_payments`
+(migration 0043) — the ☕ Supporter badge is unaffected by this change. No
+Stripe SDK: verifies the `Stripe-Signature` header directly with Deno's
+Web Crypto (see the function's own doc for why).
+
+Requires migration 0043 to have run first for the tip jar, and 0085/0087
+for the store branch.
 
 ### Deploy
 
@@ -234,7 +303,8 @@ Then, one-time setup in the Stripe Dashboard:
    `PAYMENT_LINKS` array — fill in the real URLs in `app/tip/page.tsx`).
 3. **Developers → Webhooks → Add endpoint** → paste this function's URL
    (`$SUPABASE_URL/functions/v1/stripe-webhook`) → subscribe to
-   `checkout.session.completed` only.
+   `checkout.session.completed` only. This SAME endpoint now also carries
+   store purchases — no second endpoint or subscription needed.
 4. Copy the endpoint's own "Signing secret" (starts `whsec_`, different
    from any API key) into `STRIPE_WEBHOOK_SECRET` above.
 
@@ -272,3 +342,25 @@ Optional scheduled sweep (forfeits games nobody opens, 75% reminder, expires 7-d
 **`delete-account`** (new): `npx supabase functions deploy delete-account`. Re-verifies the password server-side, calls `mp/resign_all`, `delete_account_prepare()`, removes the avatar object, then `auth.admin.deleteUser`.
 
 **`daily-deal-reminder`** now words each push in the recipient's saved language and skips accounts with streak reminders off / in quiet hours. Redeploy. **`contact`** accepts `type: "privacy"` (redeploy).
+
+## Boutique store (migrations 0085–0088)
+
+`create-checkout-session` (new, see its own section above) and
+`stripe-webhook` (extended, not regressed — the tip jar keeps working
+exactly as before) implement real-money cosmetic purchases. New tables
+`entitlements`/`purchases` (0085), the `my_entitlements()` RPC (0086), and
+`cosmetic_unlocked()`'s `boutique` requirement kind now checking
+`entitlements` OR `is_creator` (0087, updating 0053). 0088 is the one-time
+launch-fairness grandfather — every account already on the leaderboard when
+it runs gets every launch-catalog sku for free; run it LAST, by hand, after
+confirming the final catalog (see that migration file's own header for what
+to edit first). See `app/lib/storeSku.ts` for the sku-naming convention and
+`src/store/catalog.ts` for the price/name catalog `create-checkout-session`
+bundles in.
+
+Native (iOS/Android) IAP readiness: `entitlements.source` already
+anticipates `'apple'`/`'google'` values — a future verify-receipt Edge
+Function would insert the same shape of row after validating a receipt
+server-side, and nothing else (the unlock check, `my_entitlements()`, the
+client) would need to change. See CODEBASE_MAP.md's "Boutique store" /
+"Native IAP path" note.

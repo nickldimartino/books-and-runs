@@ -1,21 +1,27 @@
-// Books & Runs — Stripe webhook for the "Support the developer" tip jar.
+// Books & Runs — Stripe webhook, shared by the "Support the developer" tip
+// jar AND the boutique store.
 //
 // Stripe calls this directly (never the app's own client) the moment a
-// Payment Link checkout completes. The only thing this does is verify the
-// request really came from Stripe, then record the payment as ground
-// truth in supporter_payments (migration 0043) with the service-role
-// client — the ☕ Supporter badge unlocks off that table, never off
-// anything a browser could claim on its own. No Stripe SDK: the signature
-// scheme is a documented HMAC-SHA256 over "timestamp.body", small enough
-// to verify directly with Deno's own Web Crypto rather than pulling in a
-// dependency for one function (same "dependency-free where it's this
-// simple" choice errorReporter.ts/analytics.ts already made).
+// checkout completes — either a tip-jar Payment Link (app/tip/page.tsx) or
+// a store Checkout Session (the create-checkout-session Edge Function).
+// The only thing this does is verify the request really came from Stripe,
+// then branch on whether session.metadata carries a `skus` field (only a
+// store checkout ever sets it) to decide which ground truth to write:
+// store purchases go to `purchases`/`entitlements` (migrations 0085+),
+// everything else (every tip, past and future) keeps writing
+// supporter_payments (migration 0043) exactly as before — the ☕ Supporter
+// badge unlocks off that table, never off anything a browser could claim
+// on its own. No Stripe SDK: the signature scheme is a documented
+// HMAC-SHA256 over "timestamp.body", small enough to verify directly with
+// Deno's own Web Crypto rather than pulling in a dependency for one
+// function (same "dependency-free where it's this simple" choice
+// errorReporter.ts/analytics.ts already made).
 //
 // app/tip/page.tsx appends `?client_reference_id=<uid>` to the Payment
-// Link URL for a signed-in visitor before sending them to Stripe — that's
-// the one thing tying a completed checkout back to an account, since a
-// Payment Link itself has no server-side "create checkout" step for the
-// app to attach metadata to another way.
+// Link URL for a signed-in visitor before sending them to Stripe; a store
+// Checkout Session sets the same `client_reference_id` server-side
+// instead (see create-checkout-session/index.ts) — either way, that's the
+// one thing tying a completed checkout back to an account.
 //
 // Deploy:
 //   npx supabase functions deploy stripe-webhook --no-verify-jwt
@@ -120,6 +126,46 @@ Deno.serve(async (req) => {
   // attribute, so acknowledge it rather than erroring Stripe into retrying
   // a delivery that will never resolve differently.
   if (!sessionId || !userId || !UUID_RE.test(userId) || amountTotal === null || !currency) {
+    return new Response("ok", { status: 200 });
+  }
+
+  // Boutique store purchase vs. tip jar: create-checkout-session (unlike
+  // the tip jar's bare Stripe Payment Links) always sets
+  // metadata.skus — a comma-separated sku list — so that field alone tells
+  // the two apart on the one shared webhook endpoint. Anything without it
+  // (every tip-jar Payment Link checkout, past and future) falls through
+  // to the unchanged tip-jar write below.
+  const skusMeta = (session?.metadata as Record<string, unknown> | undefined)?.skus;
+  if (typeof skusMeta === "string" && skusMeta.length > 0) {
+    const skus = skusMeta.split(",").map((s) => s.trim()).filter(Boolean);
+    if (skus.length === 0) return new Response("ok", { status: 200 });
+
+    // Idempotent the same way supporter_payments is: a retried delivery of
+    // the same session must not double-write. The receipt row uses the
+    // session id as its own natural idempotency key; the entitlement rows
+    // use their (user_id, sku) primary key.
+    const { error: purchaseErr } = await admin.from("purchases").upsert(
+      { user_id: userId, stripe_session_id: sessionId, amount_cents: amountTotal, currency, sku_ids: skus },
+      { onConflict: "stripe_session_id", ignoreDuplicates: true }
+    );
+    if (purchaseErr) {
+      console.error("Failed to record purchase:", purchaseErr);
+      return new Response("db error", { status: 500 });
+    }
+
+    const { error: entitlementsErr } = await admin.from("entitlements").upsert(
+      skus.map((sku) => ({ user_id: userId, sku, source: "stripe", stripe_session_id: sessionId })),
+      { onConflict: "user_id,sku", ignoreDuplicates: true }
+    );
+    if (entitlementsErr) {
+      console.error("Failed to grant entitlements:", entitlementsErr);
+      // 500 so Stripe retries — the purchases row above already landed
+      // (upsert + ignoreDuplicates means the retry won't double it), so a
+      // retry here safely just finishes granting whichever skus didn't
+      // make it the first time.
+      return new Response("db error", { status: 500 });
+    }
+
     return new Response("ok", { status: 200 });
   }
 
