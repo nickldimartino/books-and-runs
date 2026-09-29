@@ -319,6 +319,10 @@ const it = {
   "game.hand.contractMelded": "— contratto calato",
   "game.hand.dragToReorder": "Trascina una carta per riordinare la mano.",
 
+  "game.tip.title": "Gioca come preferisci",
+  "game.tip.body":
+    "Le carte e i mazzi evidenziati mostrano le mosse possibili in questo momento, e premendo ? apri le scorciatoie da tastiera e controller. Vuoi una partita più veloce o più lenta, meno movimento, o disattivare le evidenziazioni? Trovi tutto in Impostazioni, sotto Gioco e Accessibilità.",
+
   "game.whoseTurn": "Di chi è il turno?",
   "game.jennysTurn": "È il turno di Jenny!",
   "game.roundOf": "Manche {round} di {total}",
@@ -1531,12 +1535,16 @@ const it = {
 
   // boutique.*
   "boutique.subtitle": "Solo oggetti estetici — niente qui cambia il modo di giocare.",
+  "boutique.tip.title": "Prima di acquistare",
+  "boutique.tip.body":
+    "Tutto qui è facoltativo e puramente estetico — niente cambia il modo in cui si gioca. Un acquisto è tuo per sempre, su ogni dispositivo in cui accedi. Usa “Prova” per vedere in anteprima un avatar, una cornice o un banner prima di comprarlo, poi indossalo quando vuoi dalla sua schermata di scelta.",
   "boutique.guestBanner.body": "Accedi per acquistare oggetti estetici — resteranno legati al tuo account per sempre.",
   "boutique.hero.badge": "Il migliore affare",
   "boutique.hero.includes": "Include:",
   "boutique.bundle.discount": "Risparmia il {percent}%",
   "boutique.bundle.itemCount.one": "{count} oggetto",
   "boutique.bundle.itemCount.other": "{count} oggetti",
+  "boutique.category.bundles": "Pacchetti",
   "boutique.category.all": "Tutti",
   "boutique.category.badge": "Badge",
   "boutique.category.avatar_frame": "Cornici avatar",
@@ -1657,7 +1665,7 @@ const it = {
   "player.loadError": "Impossibile caricare questo profilo — controlla la connessione.",
   "player.tip.selfTitle": "Il tuo profilo",
   "player.tip.otherTitle": "Profili dei giocatori",
-  "player.tip.selfBody": "La parte in alto è ciò che vedono gli altri giocatori nella Classifica e nella lista Amici — tocca Modifica profilo per le schede con cui cambiare immagine, badge, cornice, titolo, banner, nome, bio o fissare obiettivi nella tua Bacheca dei trofei. Salire di livello e completare le categorie di obiettivi sblocca badge, cornici e titoli esclusivi. Tutto ciò che è sotto “La tua attività” è visibile solo a te.",
+  "player.tip.selfBody": "La parte in alto è ciò che vedono gli altri giocatori nella Classifica e nella lista Amici — tocca Modifica profilo per le schede con cui cambiare immagine, badge, cornice, titolo, banner, nome, bio, fissare obiettivi nella tua Bacheca dei trofei, o indossare ciò che hai comprato nella Boutique. Salire di livello e completare le categorie di obiettivi sblocca badge, cornici e titoli esclusivi. Tutto ciò che è sotto “La tua attività” è visibile solo a te.",
   "player.tip.otherBody": "Ogni giocatore con accesso effettuato ne ha uno — tocca un nome ovunque (Classifica, Amici) per aprirlo. Aggiungilo come amico direttamente da qui.",
   "player.editProfile.done": "Fine modifica profilo",
   "player.editProfile.edit": "Modifica profilo",

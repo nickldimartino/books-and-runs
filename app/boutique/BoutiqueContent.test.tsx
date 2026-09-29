@@ -41,7 +41,7 @@ vi.mock("../lib/purchasing", async () => {
 // known skus/prices to assert against rather than hardcoding the full
 // count, so this test doesn't need updating every time the catalog's
 // roster changes.
-const BADGE_SKU = "badge:🎩"; // Top Hat Badge — uncommon, $3.49
+const BADGE_SKU = "badge:🎩"; // Top Hat Badge — flat $0.99, same as every item
 const badgeEntry = CATALOG[BADGE_SKU];
 
 afterEach(() => {
@@ -52,18 +52,23 @@ afterEach(() => {
 });
 
 describe("BoutiqueContent", () => {
-  it("renders the hero Supporter Pack and a category bundle with prices", () => {
+  it("defaults to the Bundles filter, showing the hero Supporter Pack and a category bundle with prices", () => {
     render(<BoutiqueContent />);
+    expect(screen.getByRole("button", { name: "Bundles" }).className).toContain("bg-[var(--accent)]");
     expect(screen.getByText("Supporter Pack")).toBeTruthy();
-    expect(screen.getByText("$24.99")).toBeTruthy();
+    expect(screen.getByText("$5.99")).toBeTruthy();
     expect(screen.getByText(CATALOG["bundle:badge"].name)).toBeTruthy();
     // A discount badge only shows once savings are computable — the real
     // catalog's category bundles always are.
     expect(screen.getAllByText(/Save \d+%/).length).toBeGreaterThan(0);
+    // The individual-item grid isn't shown until a category (or "All") is
+    // picked — the Bundles default replaces it, not sits above it.
+    expect(screen.queryByText(badgeEntry.name)).toBeNull();
   });
 
   it("shows every catalog item's price via Intl currency formatting", () => {
     render(<BoutiqueContent />);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
     const card = screen.getByText(badgeEntry.name).closest("div")!.parentElement!;
     expect(within(card).getByText(`$${(badgeEntry.priceCents / 100).toFixed(2)}`)).toBeTruthy();
   });
@@ -71,9 +76,16 @@ describe("BoutiqueContent", () => {
   it("guest: every item and bundle prompts sign-in instead of buying", () => {
     auth = { configured: true, user: null };
     render(<BoutiqueContent />);
-    const signInLinks = screen.getAllByRole("link", { name: "Sign in to buy" });
+    // Default Bundles view.
+    let signInLinks = screen.getAllByRole("link", { name: "Sign in to buy" });
     expect(signInLinks.length).toBeGreaterThan(0);
     for (const link of signInLinks) expect(link.getAttribute("href")).toBe("/sign-in");
+    expect(screen.queryByRole("button", { name: /^Buy —/ })).toBeNull();
+
+    // Individual-item grid.
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    signInLinks = screen.getAllByRole("link", { name: "Sign in to buy" });
+    expect(signInLinks.length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /^Buy —/ })).toBeNull();
   });
 
@@ -81,6 +93,7 @@ describe("BoutiqueContent", () => {
     auth = { configured: true, user: { id: "u1" } };
     ownedSkus = new Set();
     render(<BoutiqueContent />);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
     const card = screen.getByText(badgeEntry.name).closest("div")!.parentElement!;
     const buyButton = within(card).getByRole("button", { name: /^Buy —/ });
     fireEvent.click(buyButton);
@@ -91,6 +104,7 @@ describe("BoutiqueContent", () => {
     auth = { configured: true, user: { id: "u1" } };
     ownedSkus = new Set([BADGE_SKU]);
     render(<BoutiqueContent />);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
     const card = screen.getByText(badgeEntry.name).closest("div")!.parentElement!;
     expect(within(card).getByText(/Owned/)).toBeTruthy();
     const equipLink = within(card).getByRole("link");
@@ -102,5 +116,15 @@ describe("BoutiqueContent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Card faces" }));
     expect(screen.queryByText(badgeEntry.name)).toBeNull();
     expect(screen.getByText(CATALOG["card_face:royal"].name)).toBeTruthy();
+  });
+
+  it("?item=<sku> deep-link overrides the Bundles default to that item's own category", () => {
+    const original = window.location.href;
+    window.history.replaceState(null, "", `/boutique?item=${encodeURIComponent(BADGE_SKU)}`);
+    render(<BoutiqueContent />);
+    expect(screen.getByRole("button", { name: "Badges" }).className).toContain("bg-[var(--accent)]");
+    expect(screen.getByRole("button", { name: "Bundles" }).className).not.toContain("bg-[var(--accent)]");
+    expect(screen.getByText(badgeEntry.name)).toBeTruthy();
+    window.history.replaceState(null, "", original);
   });
 });

@@ -317,6 +317,10 @@ const es = {
   "game.hand.contractMelded": "— contrato combinado",
   "game.hand.dragToReorder": "Arrastra una carta para reordenar tu mano.",
 
+  "game.tip.title": "Juega a tu manera",
+  "game.tip.body":
+    "Las cartas y pilas resaltadas muestran tus jugadas posibles, y con ? abres los atajos de teclado y mando. ¿Quieres una partida más rápida o más lenta, menos movimiento, o desactivar los resaltados? Todo eso está en Configuración, en Jugabilidad y Accesibilidad.",
+
   "game.whoseTurn": "¿De quién es el turno?",
   "game.jennysTurn": "¡Es el turno de Jenny!",
   "game.roundOf": "Ronda {round} de {total}",
@@ -1475,12 +1479,16 @@ const es = {
 
   // boutique.*
   "boutique.subtitle": "Solo objetos cosméticos — nada aquí cambia la forma de jugar.",
+  "boutique.tip.title": "Antes de comprar",
+  "boutique.tip.body":
+    "Todo aquí es opcional y puramente cosmético — nada afecta cómo se juega. Una compra es tuya para siempre, en cualquier dispositivo donde inicies sesión. Usa “Probar” para ver un avatar, marco o banner antes de comprarlo, y luego equípalo cuando quieras desde su propio selector.",
   "boutique.guestBanner.body": "Inicia sesión para comprar cosméticos — quedarán ligados a tu cuenta para siempre.",
   "boutique.hero.badge": "Mejor precio",
   "boutique.hero.includes": "Incluye:",
   "boutique.bundle.discount": "Ahorra {percent}%",
   "boutique.bundle.itemCount.one": "{count} artículo",
   "boutique.bundle.itemCount.other": "{count} artículos",
+  "boutique.category.bundles": "Paquetes",
   "boutique.category.all": "Todo",
   "boutique.category.badge": "Insignias",
   "boutique.category.avatar_frame": "Marcos de avatar",
@@ -1601,7 +1609,7 @@ const es = {
   "player.loadError": "No se pudo cargar este perfil. Revisa tu conexión.",
   "player.tip.selfTitle": "Tu perfil",
   "player.tip.otherTitle": "Perfiles de jugadores",
-  "player.tip.selfBody": "La parte superior es lo que ven los demás jugadores en la Clasificación y la lista de Amigos; toca Editar perfil para usar las pestañas y cambiar tu foto, insignia, marco, título, banner, nombre y bio, o fijar logros en tu Vitrina de trofeos. Subir de nivel y dominar categorías de logros desbloquea insignias, marcos y títulos exclusivos. Todo lo que aparece bajo «Tu actividad» más abajo solo lo ves tú.",
+  "player.tip.selfBody": "La parte superior es lo que ven los demás jugadores en la Clasificación y la lista de Amigos; toca Editar perfil para usar las pestañas y cambiar tu foto, insignia, marco, título, banner, nombre y bio, fijar logros en tu Vitrina de trofeos, o equipar algo que hayas comprado en la Boutique. Subir de nivel y dominar categorías de logros desbloquea insignias, marcos y títulos exclusivos. Todo lo que aparece bajo «Tu actividad» más abajo solo lo ves tú.",
   "player.tip.otherBody": "Todo jugador con sesión iniciada tiene uno de estos: toca un nombre en cualquier lugar (Clasificación, Amigos) para abrirlo. Añádelo como amigo desde aquí mismo.",
   "player.editProfile.done": "Terminar de editar perfil",
   "player.editProfile.edit": "Editar perfil",

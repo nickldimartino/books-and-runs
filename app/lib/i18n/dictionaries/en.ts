@@ -331,6 +331,10 @@ const en = {
   "game.hand.contractMelded": "— contract melded",
   "game.hand.dragToReorder": "Drag a card to reorder your hand.",
 
+  "game.tip.title": "Playing your way",
+  "game.tip.body":
+    "Cards and piles highlight to show your legal moves, and pressing ? opens keyboard and gamepad shortcuts. Want a faster or slower game, less motion, or the highlights off? It's all in Settings, under Gameplay and Accessibility.",
+
   "game.whoseTurn": "Whose turn is it?",
   "game.jennysTurn": "It's Jenny's turn!",
   "game.roundOf": "Round {round} of {total}",
@@ -1634,12 +1638,16 @@ const en = {
   // stay English there (Stripe's own checkout chrome is English
   // regardless of locale) — only this page's own chrome needs translating.
   "boutique.subtitle": "Cosmetics only — nothing here changes how the game plays.",
+  "boutique.tip.title": "Before you buy",
+  "boutique.tip.body":
+    "Everything here is optional and purely cosmetic — nothing affects how a game plays out. A purchase is yours for good, on every device you sign into. Use “Try on” to preview an avatar, frame, or banner first, then equip it anytime from its own picker.",
   "boutique.guestBanner.body": "Sign in to buy cosmetics — they're yours forever, tied to your account.",
   "boutique.hero.badge": "Best value",
   "boutique.hero.includes": "Includes:",
   "boutique.bundle.discount": "Save {percent}%",
   "boutique.bundle.itemCount.one": "{count} item",
   "boutique.bundle.itemCount.other": "{count} items",
+  "boutique.category.bundles": "Bundles",
   "boutique.category.all": "All",
   "boutique.category.badge": "Badges",
   "boutique.category.avatar_frame": "Avatar frames",
@@ -1772,7 +1780,7 @@ const en = {
   "player.tip.selfTitle": "Your profile",
   "player.tip.otherTitle": "Player profiles",
   "player.tip.selfBody":
-    "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, badge, frame, title, banner, name, bio, or pin achievements to your Trophy Case. Leveling up and mastering achievement categories unlocks exclusive badges, frames, and titles. Everything under “Your activity” further down is only ever visible to you.",
+    "The top is what other players see on the Leaderboard and Friends list — tap Edit profile for tabs to change your picture, badge, frame, title, banner, name, bio, pin achievements to your Trophy Case, or equip anything you've bought in the Boutique. Leveling up and mastering achievement categories unlocks exclusive badges, frames, and titles. Everything under “Your activity” further down is only ever visible to you.",
   "player.tip.otherBody":
     "Every signed-in player has one of these — tap a name anywhere (Leaderboard, Friends) to open it. Add them as a friend right from here.",
   "player.editProfile.done": "Done editing profile",

@@ -317,6 +317,10 @@ const fr = {
   "game.hand.contractMelded": "— contrat posé",
   "game.hand.dragToReorder": "Fais glisser une carte pour réorganiser ta main.",
 
+  "game.tip.title": "Joue à ta façon",
+  "game.tip.body":
+    "Les cartes et les piles qui brillent montrent ce que tu peux jouer en ce moment, et la touche ? ouvre les raccourcis clavier et manette. Tu veux une partie plus rapide ou plus lente, moins d'animations, ou désactiver ces surbrillances ? Tout ça se trouve dans Réglages, sous Jeu et Accessibilité.",
+
   "game.whoseTurn": "À qui le tour ?",
   "game.jennysTurn": "C'est le tour de Jenny !",
   "game.roundOf": "Manche {round} sur {total}",
@@ -1530,12 +1534,16 @@ const fr = {
 
   // boutique.*
   "boutique.subtitle": "Uniquement des objets cosmétiques — rien ici ne change la façon dont on joue.",
+  "boutique.tip.title": "Avant d'acheter",
+  "boutique.tip.body":
+    "Tout ici est facultatif et purement cosmétique — rien ne change la façon dont on joue. Un achat t'appartient pour de bon, sur chaque appareil où tu te connectes. Utilise « Essayer » pour prévisualiser un avatar, un cadre ou une bannière avant d'acheter, puis équipe-le à tout moment depuis son propre sélecteur.",
   "boutique.guestBanner.body": "Connecte-toi pour acheter des objets cosmétiques — ils resteront pour toujours liés à ton compte.",
   "boutique.hero.badge": "Meilleure offre",
   "boutique.hero.includes": "Inclut :",
   "boutique.bundle.discount": "Économise {percent} %",
   "boutique.bundle.itemCount.one": "{count} objet",
   "boutique.bundle.itemCount.other": "{count} objets",
+  "boutique.category.bundles": "Lots",
   "boutique.category.all": "Tout",
   "boutique.category.badge": "Badges",
   "boutique.category.avatar_frame": "Cadres d'avatar",
@@ -1656,7 +1664,7 @@ const fr = {
   "player.loadError": "Impossible de charger ce profil — vérifie ta connexion.",
   "player.tip.selfTitle": "Ton profil",
   "player.tip.otherTitle": "Profils des joueurs",
-  "player.tip.selfBody": "Le haut de la page est ce que les autres joueurs voient dans le Classement et la liste d'amis — touche Modifier le profil pour accéder aux onglets qui te permettent de changer ta photo, ton badge, ton cadre, ton titre, ta bannière, ton nom, ta bio, ou d'épingler des succès dans ta vitrine à trophées. Monter de niveau et maîtriser des catégories de succès débloque des badges, cadres et titres exclusifs. Tout ce qui se trouve sous « Ton activité » plus bas n'est visible que par toi.",
+  "player.tip.selfBody": "Le haut de la page est ce que les autres joueurs voient dans le Classement et la liste d'amis — touche Modifier le profil pour accéder aux onglets qui te permettent de changer ta photo, ton badge, ton cadre, ton titre, ta bannière, ton nom, ta bio, d'épingler des succès dans ta vitrine à trophées, ou d'équiper ce que tu as acheté dans la Boutique. Monter de niveau et maîtriser des catégories de succès débloque des badges, cadres et titres exclusifs. Tout ce qui se trouve sous « Ton activité » plus bas n'est visible que par toi.",
   "player.tip.otherBody": "Chaque joueur connecté en a un — touche un nom n'importe où (Classement, Amis) pour l'ouvrir. Ajoute-le comme ami directement d'ici.",
   "player.editProfile.done": "Terminer la modification du profil",
   "player.editProfile.edit": "Modifier le profil",

@@ -317,6 +317,10 @@ const ja = {
   "game.hand.contractMelded": "— コントラクトをメルド済み",
   "game.hand.dragToReorder": "カードをドラッグして手札を並べ替えられます。",
 
+  "game.tip.title": "自分のペースで",
+  "game.tip.body":
+    "光っているカードや山札は今できる操作を示しています。?キーでキーボード・ゲームパッドのショートカットを開けます。もっと速く／遅くしたい、視覚効果を減らしたい、ハイライトを消したいときは、設定の「ゲームプレイ」と「アクセシビリティ」から変更できます。",
+
   "game.whoseTurn": "今、誰の番？",
   "game.jennysTurn": "ジェニーの番です！",
   "game.roundOf": "ラウンド {round} / {total}",
@@ -1522,12 +1526,16 @@ const ja = {
 
   // boutique.*
   "boutique.subtitle": "見た目だけのアイテムです — ゲームの遊び方は何も変わりません。",
+  "boutique.tip.title": "購入する前に",
+  "boutique.tip.body":
+    "ここにあるものはすべて任意の見た目だけのアイテムで、ゲームの遊び方には影響しません。購入すればずっとあなたのもので、サインインしたどの端末でも使えます。「試着する」でアバター、フレーム、バナーを先にプレビューしてから、それぞれの選択画面でいつでも装着できます。",
   "boutique.guestBanner.body": "ログインするとアイテムを購入できます — 購入したアイテムはずっとあなたのアカウントのものになります。",
   "boutique.hero.badge": "お得",
   "boutique.hero.includes": "内容:",
   "boutique.bundle.discount": "{percent}% お得",
   "boutique.bundle.itemCount.one": "{count} 点",
   "boutique.bundle.itemCount.other": "{count} 点",
+  "boutique.category.bundles": "バンドル",
   "boutique.category.all": "すべて",
   "boutique.category.badge": "バッジ",
   "boutique.category.avatar_frame": "アバターフレーム",
@@ -1647,7 +1655,7 @@ const ja = {
   "player.loadError": "このプロフィールを読み込めませんでした。接続を確認してください。",
   "player.tip.selfTitle": "あなたのプロフィール",
   "player.tip.otherTitle": "プレイヤープロフィール",
-  "player.tip.selfBody": "上部は、ランキングやフレンドリストで他のプレイヤーに表示される内容です。「プロフィールを編集」をタップすると、タブから画像、バッジ、フレーム、称号、バナー、名前、自己紹介を変更したり、実績をトロフィーケースにピン留めしたりできます。レベルアップや実績カテゴリのマスターで、限定のバッジ、フレーム、称号が解放されます。さらに下の「あなたのアクティビティ」以下は、あなたにしか表示されません。",
+  "player.tip.selfBody": "上部は、ランキングやフレンドリストで他のプレイヤーに表示される内容です。「プロフィールを編集」をタップすると、タブから画像、バッジ、フレーム、称号、バナー、名前、自己紹介を変更したり、実績をトロフィーケースにピン留めしたり、ブティックで購入したアイテムを装着したりできます。レベルアップや実績カテゴリのマスターで、限定のバッジ、フレーム、称号が解放されます。さらに下の「あなたのアクティビティ」以下は、あなたにしか表示されません。",
   "player.tip.otherBody": "サインイン済みのプレイヤーには全員、こうしたプロフィールがあります。ランキングやフレンドなど、どこでも名前をタップすると開きます。ここからそのままフレンドに追加できます。",
   "player.editProfile.done": "プロフィールの編集を終了",
   "player.editProfile.edit": "プロフィールを編集",

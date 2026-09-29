@@ -48,18 +48,14 @@ export const STORE_CATEGORIES: readonly CosmeticCategory[] = [
 
 export type CosmeticRarity = "common" | "uncommon" | "rare" | "epic" | "mythic" | "apex";
 
-/** USD cents per rarity tier, charm-rounded — see store.md's pricing
- * ladder. The single source of truth every item's price below is computed
- * from (never hand-entered per item — see `mkItem`) and that
+/** Flat USD cents price for every single purchasable item, regardless of
+ * rarity — a product decision (Sept 2026 repricing) that replaced the old
+ * per-rarity ladder (`PRICE_CENTS_BY_RARITY`). Rarity still drives visual
+ * treatment only (foil/ring complexity — see `cosmeticRarity.ts`), never
+ * price, from here on. The single source of truth every item's price below
+ * is computed from (never hand-entered per item — see `mkItem`) and that
  * catalog.test.ts asserts every item still matches. */
-export const PRICE_CENTS_BY_RARITY: Record<CosmeticRarity, number> = {
-  common: 249,
-  uncommon: 349,
-  rare: 499,
-  epic: 699,
-  mythic: 1099,
-  apex: 1499,
-};
+export const SINGLE_ITEM_PRICE_CENTS = 99;
 
 export interface CatalogItem {
   /** English display name — becomes Stripe's `product_data.name`. Stripe's
@@ -78,7 +74,7 @@ export interface CatalogItem {
 }
 
 function mkItem(category: CosmeticCategory, id: string, name: string, rarity: CosmeticRarity): CatalogItem {
-  return { category, id, rarity, sku: `${category}:${id}`, name, priceCents: PRICE_CENTS_BY_RARITY[rarity] };
+  return { category, id, rarity, sku: `${category}:${id}`, name, priceCents: SINGLE_ITEM_PRICE_CENTS };
 }
 
 // ---------------------------------------------------------------------------
@@ -271,11 +267,11 @@ export interface CatalogBundle {
 /**
  * Rounds a raw cents amount up to the nearest "charm" ending — the smallest
  * value >= `rawCents` whose last two digits are 49 or 99 (e.g. 6721 → 6749,
- * 6750 → 6799). Used once, at author time, to derive each category bundle's
- * static price below — never called at runtime by the catalog itself (see
- * store.md: "compute once, store as a static cents value... never computed
- * live"). Exported only so catalog.test.ts can independently recompute and
- * assert the stored prices, not so a bundle price is ever derived live.
+ * 6750 → 6799). Still used, at author time, as the first step of
+ * `computeBundlePriceCents` below (see its own doc) — the discount is taken
+ * off this charm-rounded sum, not the raw sum. Exported so catalog.test.ts
+ * can independently recompute and assert the stored prices, not so a bundle
+ * price is ever derived live.
  */
 export function roundToCharmCents(rawCents: number): number {
   const rounded = Math.round(rawCents);
@@ -285,9 +281,41 @@ export function roundToCharmCents(rawCents: number): number {
   return dollars * 100 + 99;
 }
 
-function categoryBundlePriceCents(items: readonly CatalogItem[]): number {
-  const sum = items.reduce((total, item) => total + item.priceCents, 0);
-  return roundToCharmCents(sum * 0.72);
+/** The bundle discount off a flat per-item sum — 20% (Sept 2026 repricing,
+ * see `computeBundlePriceCents`). */
+const BUNDLE_DISCOUNT = 0.2;
+
+/** Rounds a raw cents amount DOWN to the nearest value whose last two
+ * digits are 99 (e.g. 639.2 → 599, 1199.2 → 1199) — the last step of
+ * `computeBundlePriceCents`. Unlike `roundToCharmCents` (which always
+ * rounds *up*, and can land on a 49 ending), a bundle's discounted price
+ * always rounds *down* onto a 99 ending specifically, so the sticker price
+ * never creeps above the nominal discount. */
+function roundDownToNinetyNineCents(rawCents: number): number {
+  return Math.floor((rawCents + 1) / 100) * 100 - 1;
+}
+
+/**
+ * A bundle's price, derived from nothing but the number of flat-priced
+ * items it contains — never hand-typed (see this file's header). Pipeline:
+ *   1. Sum `itemCount` items at `SINGLE_ITEM_PRICE_CENTS` each.
+ *   2. Charm-round that sum UP (`roundToCharmCents`) to a psychological
+ *      pre-discount sticker price, same convention as a single item's own
+ *      pricing used to follow under the old per-rarity ladder.
+ *   3. Apply the flat 20% bundle discount (`BUNDLE_DISCOUNT`).
+ *   4. Round the discounted result DOWN to the nearest 99-ending price
+ *      (`roundDownToNinetyNineCents`).
+ *
+ * Verified against the two worked examples the Sept 2026 repricing decision
+ * specifies: computeBundlePriceCents(15) === 1199 ($11.99, every 15-item
+ * category bundle) and computeBundlePriceCents(8) === 599 ($5.99, the
+ * 8-item Supporter Pack).
+ */
+export function computeBundlePriceCents(itemCount: number): number {
+  const sum = itemCount * SINGLE_ITEM_PRICE_CENTS;
+  const charmed = roundToCharmCents(sum);
+  const discounted = charmed * (1 - BUNDLE_DISCOUNT);
+  return roundDownToNinetyNineCents(discounted);
 }
 
 function categoryBundle(category: CosmeticCategory, displayName: string, items: readonly CatalogItem[]): CatalogBundle {
@@ -295,13 +323,12 @@ function categoryBundle(category: CosmeticCategory, displayName: string, items: 
     bundleId: category,
     sku: `bundle:${category}`,
     name: `${displayName} Bundle`,
-    // Every category has the identical 2/3/4/3/2/1 rarity distribution, so
-    // every category bundle lands on the identical price (6749 = round-to-
-    // charm(0.72 × 9335)) — a real consequence of the uniform distribution,
-    // not a copy/paste mistake. Still computed from `items` (never
-    // hand-entered) so a future change to any one category's roster keeps
-    // this correct automatically.
-    priceCents: categoryBundlePriceCents(items),
+    // Every category has the same 15-item count, so every category bundle
+    // lands on the identical price (1199 = computeBundlePriceCents(15)) —
+    // a real consequence of the uniform flat pricing, not a copy/paste
+    // mistake. Still computed from `items` (never hand-entered) so a future
+    // change to any one category's roster keeps this correct automatically.
+    priceCents: computeBundlePriceCents(items.length),
     skus: items.map((i) => i.sku!),
   };
 }
@@ -316,11 +343,26 @@ export const CATEGORY_BUNDLES: readonly CatalogBundle[] = [
   categoryBundle("card_back", "Card Back", CARD_BACK_ITEMS),
 ];
 
-/** Flat cents value the hero bundle is fixed at — store.md's own $24.99,
- * not derived from its member items' prices (those 8 items alone would sum
- * to far more; that gap is the whole point of a hero bundle). Kept as its
- * own export for backward compatibility with earlier scaffolding. */
-export const SUPPORTER_PACK_PRICE_CENTS = 2499;
+/** The hero bundle's 8 member skus, hand-picked below — pulled out on its
+ * own so its price can be derived from its own item count rather than
+ * hand-typed (see `SUPPORTER_PACK_PRICE_CENTS`). */
+const SUPPORTER_BUNDLE_SKUS = [
+  "badge:🔮",
+  "avatar_frame:voidhalo",
+  "title:smoke_and_mirrors",
+  "banner:solarflare",
+  "avatar_emoji:🦅",
+  "card_face:royal",
+  "card_back:goldleaf",
+  "banner:goldenhour",
+] as const;
+
+/** The hero bundle's price — since the Sept 2026 repricing, derived through
+ * the same `computeBundlePriceCents` every category bundle uses (599 =
+ * computeBundlePriceCents(8), one of the two worked examples that decision
+ * specifies), no longer a hand-typed flat $24.99. Kept as its own export
+ * for backward compatibility with earlier scaffolding. */
+export const SUPPORTER_PACK_PRICE_CENTS = computeBundlePriceCents(SUPPORTER_BUNDLE_SKUS.length);
 
 /**
  * The hero bundle — 8 hand-picked cross-category items, weighted toward
@@ -345,16 +387,7 @@ export const SUPPORTER_BUNDLE: CatalogBundle = {
   sku: "bundle:supporter",
   name: "Supporter Pack",
   priceCents: SUPPORTER_PACK_PRICE_CENTS,
-  skus: [
-    "badge:🔮",
-    "avatar_frame:voidhalo",
-    "title:smoke_and_mirrors",
-    "banner:solarflare",
-    "avatar_emoji:🦅",
-    "card_face:royal",
-    "card_back:goldleaf",
-    "banner:goldenhour",
-  ],
+  skus: SUPPORTER_BUNDLE_SKUS,
 };
 
 export const CATALOG_BUNDLES: readonly CatalogBundle[] = [...CATEGORY_BUNDLES, SUPPORTER_BUNDLE];

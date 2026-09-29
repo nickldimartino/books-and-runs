@@ -68,6 +68,16 @@ export function HomeTopBar({
           />
         )}
         <Link
+          href="/boutique"
+          aria-label={t("player.tab.boutique")}
+          className="grid h-10 w-10 place-items-center rounded-full border border-[var(--border)] bg-[var(--panel)] text-[var(--muted)] transition hover:bg-[var(--panel-soft)] hover:text-[var(--heading)]"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+            <path d="M6.5 8.5h11l-1 11.5a2 2 0 0 1-2 1.5H9.5a2 2 0 0 1-2-1.5z" />
+            <path d="M9 8.5V6.8a3 3 0 0 1 6 0v1.7" />
+          </svg>
+        </Link>
+        <Link
           href="/settings"
           aria-label={t("home.settings")}
           className="grid h-10 w-10 place-items-center rounded-full border border-[var(--border)] bg-[var(--panel)] text-[var(--muted)] transition hover:bg-[var(--panel-soft)] hover:text-[var(--heading)]"

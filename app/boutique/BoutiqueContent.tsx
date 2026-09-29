@@ -31,6 +31,7 @@ import { BackLink } from "../components/BackLink";
 import { EmptyState } from "../components/EmptyState";
 import { EmojiOrBadge } from "../components/PremiumBadgeIcon";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { ProfileBanner } from "../components/ProfileBanner";
 import { findBannerOption } from "../lib/bannerPresets";
@@ -56,6 +57,14 @@ import { PurchaseError, startPurchase } from "../lib/purchasing";
 import type { Card } from "@/types";
 
 const PREVIEW_CARD: Card = { id: "boutique-preview", suit: "hearts", rank: "7", isWild: false };
+
+/** The filter bar's selectable values — every per-cosmetic-category option,
+ * plus "all" (every single item) and "bundles" (the hero pack + every
+ * per-category bundle, in place of the individual-item grid). "bundles" is
+ * the default so a first-time visitor sees the best-value bundles
+ * immediately (see this component's own header) — a `?item=<sku>` deep
+ * link overrides that default to the item's own category instead. */
+type BoutiqueFilter = CosmeticCategory | "all" | "bundles";
 
 const CATEGORY_KEY: Record<CosmeticCategory, TranslationKey> = {
   badge: "boutique.category.badge",
@@ -404,7 +413,7 @@ export function BoutiqueContent() {
   const heroBundle = bundles.find((b) => b.kind === "supporter");
   const categoryBundles = bundles.filter((b) => b.kind === "category");
 
-  const [category, setCategory] = useState<CosmeticCategory | "all">("all");
+  const [category, setCategory] = useState<BoutiqueFilter>("bundles");
   const [tryOnSku, setTryOnSku] = useState<string | null>(null);
   const [purchasingSku, setPurchasingSku] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -496,8 +505,9 @@ export function BoutiqueContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn, user?.id]);
 
-  const filteredItems = category === "all" ? items : items.filter((i) => i.category === category);
-  const groupedItems = COSMETIC_CATEGORIES.filter((c) => category === "all" || c === category).map((c) => ({
+  const showBundles = category === "bundles";
+  const filteredItems = category === "all" || showBundles ? items : items.filter((i) => i.category === category);
+  const groupedItems = COSMETIC_CATEGORIES.filter((c) => category === "all" || showBundles || c === category).map((c) => ({
     category: c,
     items: filteredItems.filter((i) => i.category === c),
   }));
@@ -510,6 +520,44 @@ export function BoutiqueContent() {
         <h1 className="text-2xl font-bold text-[var(--heading)]">{t("player.tab.boutique")}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">{t("boutique.subtitle")}</p>
       </div>
+
+      {/* Filter/sort control bar — moved to the very top so a visitor never
+          has to scroll past every bundle to reach it. "Bundles" is one of
+          the selectable values here (default-selected — see `category`'s
+          initializer), not a separate section below. */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setCategory("bundles")}
+          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            showBundles ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--elevated)]"
+          }`}
+        >
+          {t("boutique.category.bundles")}
+        </button>
+        <button
+          onClick={() => setCategory("all")}
+          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            category === "all" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--elevated)]"
+          }`}
+        >
+          {t("boutique.category.all")}
+        </button>
+        {COSMETIC_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            onClick={() => setCategory(c)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              category === c ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--elevated)]"
+            }`}
+          >
+            {t(CATEGORY_KEY[c])}
+          </button>
+        ))}
+      </div>
+
+      <PageTip id="boutique" title={t("boutique.tip.title")}>
+        {t("boutique.tip.body")}
+      </PageTip>
 
       {configured && !signedIn && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3">
@@ -572,57 +620,37 @@ export function BoutiqueContent() {
       )}
       {purchaseError && <p className="text-xs text-[var(--danger)]">{purchaseError}</p>}
 
-      {heroBundle && (
-        <BundleCard
-          bundle={heroBundle}
-          items={items}
-          owned={ownedSkus.has(heroBundle.sku)}
-          signedIn={signedIn}
-          purchasing={purchasingSku === heroBundle.sku}
-          onBuy={() => buy(heroBundle.sku)}
-          hero
-        />
-      )}
-
-      {categoryBundles.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {categoryBundles.map((bundle) => (
+      {showBundles ? (
+        <>
+          {heroBundle && (
             <BundleCard
-              key={bundle.sku}
-              bundle={bundle}
+              bundle={heroBundle}
               items={items}
-              owned={ownedSkus.has(bundle.sku)}
+              owned={ownedSkus.has(heroBundle.sku)}
               signedIn={signedIn}
-              purchasing={purchasingSku === bundle.sku}
-              onBuy={() => buy(bundle.sku)}
+              purchasing={purchasingSku === heroBundle.sku}
+              onBuy={() => buy(heroBundle.sku)}
+              hero
             />
-          ))}
-        </div>
-      )}
+          )}
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setCategory("all")}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-            category === "all" ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--elevated)]"
-          }`}
-        >
-          {t("boutique.category.all")}
-        </button>
-        {COSMETIC_CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCategory(c)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-              category === c ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--elevated)]"
-            }`}
-          >
-            {t(CATEGORY_KEY[c])}
-          </button>
-        ))}
-      </div>
-
-      {filteredItems.length === 0 ? (
+          {categoryBundles.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {categoryBundles.map((bundle) => (
+                <BundleCard
+                  key={bundle.sku}
+                  bundle={bundle}
+                  items={items}
+                  owned={ownedSkus.has(bundle.sku)}
+                  signedIn={signedIn}
+                  purchasing={purchasingSku === bundle.sku}
+                  onBuy={() => buy(bundle.sku)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      ) : filteredItems.length === 0 ? (
         <EmptyState icon="🛍️">{t("boutique.empty")}</EmptyState>
       ) : (
         groupedItems.map(

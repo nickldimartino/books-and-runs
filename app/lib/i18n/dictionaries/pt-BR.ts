@@ -317,6 +317,10 @@ const ptBR = {
   "game.hand.contractMelded": "— contrato combinado",
   "game.hand.dragToReorder": "Arraste uma carta para reordenar sua mão.",
 
+  "game.tip.title": "Jogue do seu jeito",
+  "game.tip.body":
+    "Cartas e pilhas destacadas mostram suas jogadas possíveis, e apertar ? abre os atalhos de teclado e controle. Quer um jogo mais rápido ou mais lento, menos movimento, ou desligar os destaques? Está tudo em Configurações, em Jogabilidade e Acessibilidade.",
+
   "game.whoseTurn": "De quem é a vez?",
   "game.jennysTurn": "É a vez da Jenny!",
   "game.roundOf": "Rodada {round} de {total}",
@@ -1620,12 +1624,16 @@ const ptBR = {
 
   // boutique.*
   "boutique.subtitle": "Apenas itens cosméticos — nada aqui muda a forma de jogar.",
+  "boutique.tip.title": "Antes de comprar",
+  "boutique.tip.body":
+    "Tudo aqui é opcional e puramente cosmético — nada muda a forma de jogar. Uma compra é sua para sempre, em qualquer dispositivo em que você entrar. Use \"Experimentar\" para pré-visualizar um avatar, moldura ou banner antes de comprar, e depois equipe quando quiser na tela de seleção dele.",
   "boutique.guestBanner.body": "Entre na sua conta para comprar itens cosméticos — eles ficam ligados à sua conta para sempre.",
   "boutique.hero.badge": "Melhor custo-benefício",
   "boutique.hero.includes": "Inclui:",
   "boutique.bundle.discount": "Economize {percent}%",
   "boutique.bundle.itemCount.one": "{count} item",
   "boutique.bundle.itemCount.other": "{count} itens",
+  "boutique.category.bundles": "Pacotes",
   "boutique.category.all": "Tudo",
   "boutique.category.badge": "Emblemas",
   "boutique.category.avatar_frame": "Molduras de avatar",
@@ -1758,7 +1766,7 @@ const ptBR = {
   "player.tip.selfTitle": "Seu perfil",
   "player.tip.otherTitle": "Perfis de jogadores",
   "player.tip.selfBody":
-    "A parte de cima é o que os outros jogadores veem no Ranking e na lista de Amigos — toque em Editar perfil para acessar as abas e mudar sua foto, emblema, moldura, título, banner, nome, biografia, ou fixar conquistas na sua Vitrine de Troféus. Subir de nível e dominar categorias de conquistas desbloqueia emblemas, molduras e títulos exclusivos. Tudo o que está sob \"Sua atividade\" mais abaixo só é visível para você.",
+    "A parte de cima é o que os outros jogadores veem no Ranking e na lista de Amigos — toque em Editar perfil para acessar as abas e mudar sua foto, emblema, moldura, título, banner, nome, biografia, fixar conquistas na sua Vitrine de Troféus, ou equipar algo que você comprou na Boutique. Subir de nível e dominar categorias de conquistas desbloqueia emblemas, molduras e títulos exclusivos. Tudo o que está sob \"Sua atividade\" mais abaixo só é visível para você.",
   "player.tip.otherBody":
     "Todo jogador conectado tem um desses — toque em um nome em qualquer lugar (Ranking, Amigos) para abri-lo. Adicione-o como amigo direto por aqui.",
   "player.editProfile.done": "Concluir edição do perfil",

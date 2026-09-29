@@ -313,6 +313,10 @@ const zh = {
   "game.hand.contractMelded": "— 定约已出组",
   "game.hand.dragToReorder": "拖动卡牌以调整手牌顺序。",
 
+  "game.tip.title": "按你的节奏玩",
+  "game.tip.body":
+    "会发光的卡牌和牌堆表示你当前的可行操作，按 ? 键可查看键盘和手柄快捷键。想要更快或更慢的节奏、减少动效，或关掉高亮？都在“设置”的“游戏玩法”和“无障碍”标签页里。",
+
   "game.whoseTurn": "轮到谁了？",
   "game.jennysTurn": "轮到 Jenny 了！",
   "game.roundOf": "第 {round}/{total} 回合",
@@ -1598,12 +1602,16 @@ const zh = {
 
   // boutique.*
   "boutique.subtitle": "仅限外观道具 — 这里的一切都不会改变游戏玩法。",
+  "boutique.tip.title": "购买前先了解",
+  "boutique.tip.body":
+    "这里的一切都是可选的外观道具 — 不会影响游戏本身的玩法。买下后永久归你所有，登录任意设备都能用。先用“试穿”预览头像、头像框或横幅，之后随时可以在对应的选择页面装备它。",
   "boutique.guestBanner.body": "登录后即可购买外观道具 — 它们将永久绑定在你的账号上。",
   "boutique.hero.badge": "超值",
   "boutique.hero.includes": "包含：",
   "boutique.bundle.discount": "省 {percent}%",
   "boutique.bundle.itemCount.one": "{count} 件",
   "boutique.bundle.itemCount.other": "{count} 件",
+  "boutique.category.bundles": "礼包",
   "boutique.category.all": "全部",
   "boutique.category.badge": "徽章",
   "boutique.category.avatar_frame": "头像框",
@@ -1734,7 +1742,7 @@ const zh = {
   "player.tip.selfTitle": "你的个人资料",
   "player.tip.otherTitle": "玩家个人资料",
   "player.tip.selfBody":
-    "顶部是其他玩家在排行榜和好友列表中看到的内容 — 点击“编辑个人资料”可在各个标签页中更改你的头像、徽章、相框、称号、横幅、名称、简介，或将成就固定到你的奖杯柜中。升级和精通成就分类可解锁专属徽章、相框和称号。往下“你的活动”部分的内容只有你自己可见。",
+    "顶部是其他玩家在排行榜和好友列表中看到的内容 — 点击“编辑个人资料”可在各个标签页中更改你的头像、徽章、相框、称号、横幅、名称、简介，将成就固定到你的奖杯柜中，或装备你在精品店购买的物品。升级和精通成就分类可解锁专属徽章、相框和称号。往下“你的活动”部分的内容只有你自己可见。",
   "player.tip.otherBody":
     "每位已登录玩家都有一份这样的资料 — 在任何地方（排行榜、好友列表）点击名字即可打开。你也可以直接在这里添加对方为好友。",
   "player.editProfile.done": "完成编辑",

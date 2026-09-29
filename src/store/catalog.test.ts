@@ -5,9 +5,10 @@ import {
   CATALOG_ITEMS,
   CATEGORY_BUNDLES,
   catalogItem,
+  computeBundlePriceCents,
   ITEMS_BY_CATEGORY,
-  PRICE_CENTS_BY_RARITY,
   roundToCharmCents,
+  SINGLE_ITEM_PRICE_CENTS,
   STORE_CATEGORIES,
   SUPPORTER_BUNDLE,
 } from "./catalog";
@@ -36,15 +37,9 @@ describe("CATALOG", () => {
     expect(catalogItem("badge:does-not-exist")).toBeUndefined();
   });
 
-  it("PRICE_CENTS_BY_RARITY is every positive integer, strictly increasing with rarity", () => {
-    const values = Object.values(PRICE_CENTS_BY_RARITY);
-    for (const v of values) {
-      expect(Number.isInteger(v)).toBe(true);
-      expect(v).toBeGreaterThan(0);
-    }
-    for (let i = 1; i < values.length; i++) {
-      expect(values[i]).toBeGreaterThan(values[i - 1]);
-    }
+  it("SINGLE_ITEM_PRICE_CENTS is a positive integer (flat $0.99 — Sept 2026 repricing)", () => {
+    expect(Number.isInteger(SINGLE_ITEM_PRICE_CENTS)).toBe(true);
+    expect(SINGLE_ITEM_PRICE_CENTS).toBe(99);
   });
 });
 
@@ -59,10 +54,10 @@ describe("the real 105-item catalog", () => {
     expect(CATALOG_ITEMS).toHaveLength(105);
   });
 
-  it("every item's priceCents equals PRICE_CENTS_BY_RARITY[item.rarity] — never hand-entered", () => {
+  it("every item's priceCents equals SINGLE_ITEM_PRICE_CENTS, regardless of rarity — never hand-entered", () => {
     for (const item of CATALOG_ITEMS) {
       expect(item.rarity).toBeDefined();
-      expect(item.priceCents).toBe(PRICE_CENTS_BY_RARITY[item.rarity!]);
+      expect(item.priceCents).toBe(SINGLE_ITEM_PRICE_CENTS);
     }
   });
 
@@ -115,25 +110,31 @@ describe("category bundles", () => {
     expect(CATEGORY_BUNDLES).toHaveLength(7);
   });
 
-  it("each bundle's priceCents is round-to-charm(0.72 × the sum of its 15 items' prices) — recomputed, not snapshotted", () => {
+  it("each bundle's priceCents is computeBundlePriceCents(15) — recomputed, not snapshotted", () => {
     for (const bundle of CATEGORY_BUNDLES) {
-      const items = ITEMS_BY_CATEGORY[bundle.bundleId as keyof typeof ITEMS_BY_CATEGORY];
-      const sum = items.reduce((total, i) => total + i.priceCents, 0);
-      expect(bundle.priceCents).toBe(roundToCharmCents(sum * 0.72));
+      expect(bundle.priceCents).toBe(computeBundlePriceCents(15));
     }
   });
 
-  it("every category bundle lands on the same price, since every category has the identical rarity distribution", () => {
+  it("every category bundle lands on the same $11.99 price, since every category has 15 flat-priced items", () => {
     const prices = new Set(CATEGORY_BUNDLES.map((b) => b.priceCents));
     expect(prices.size).toBe(1);
-    expect([...prices][0]).toBe(6749);
+    expect([...prices][0]).toBe(1199);
+  });
+});
+
+describe("computeBundlePriceCents", () => {
+  it("matches the Sept 2026 repricing's worked examples", () => {
+    expect(computeBundlePriceCents(15)).toBe(1199); // $11.99 — every category bundle
+    expect(computeBundlePriceCents(8)).toBe(599); // $5.99 — the Supporter Pack
   });
 });
 
 describe("the Supporter Pack hero bundle", () => {
-  it("is a flat $24.99 (2499 cents), not derived from its items' prices", () => {
+  it("is $5.99 (599 cents) — computeBundlePriceCents(8), derived from its 8 flat-priced items", () => {
     expect(SUPPORTER_BUNDLE.sku).toBe("bundle:supporter");
-    expect(SUPPORTER_BUNDLE.priceCents).toBe(2499);
+    expect(SUPPORTER_BUNDLE.priceCents).toBe(computeBundlePriceCents(8));
+    expect(SUPPORTER_BUNDLE.priceCents).toBe(599);
   });
 
   it("references exactly 8 distinct, real skus", () => {

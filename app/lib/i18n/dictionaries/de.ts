@@ -323,6 +323,10 @@ const de = {
   "game.hand.contractMelded": "— Kontrakt gemeldet",
   "game.hand.dragToReorder": "Ziehe eine Karte, um deine Hand neu zu ordnen.",
 
+  "game.tip.title": "Spiel nach deinem Geschmack",
+  "game.tip.body":
+    "Leuchtende Karten und Stapel zeigen, was du gerade tun kannst, und mit ? öffnest du die Tastatur- und Controller-Kürzel. Willst du schneller oder langsamer spielen, weniger Bewegung oder die Hervorhebungen ausschalten? Das findest du in den Einstellungen unter Spielablauf und Barrierefreiheit.",
+
   "game.whoseTurn": "Wer ist dran?",
   "game.jennysTurn": "Jenny ist dran!",
   "game.roundOf": "Runde {round} von {total}",
@@ -1644,12 +1648,16 @@ const de = {
 
   // boutique.*
   "boutique.subtitle": "Nur Kosmetik — nichts hier verändert das Spiel selbst.",
+  "boutique.tip.title": "Bevor du kaufst",
+  "boutique.tip.body":
+    "Alles hier ist optional und rein kosmetisch — nichts davon verändert, wie das Spiel gespielt wird. Ein Kauf gehört dir für immer, auf jedem Gerät, auf dem du dich anmeldest. Probiere Avatar, Rahmen oder Banner vorher mit „Anprobieren“ aus und rüste sie danach jederzeit über die jeweilige Auswahl aus.",
   "boutique.guestBanner.body": "Melde dich an, um Kosmetik zu kaufen — sie gehört danach für immer zu deinem Konto.",
   "boutique.hero.badge": "Bestes Angebot",
   "boutique.hero.includes": "Enthält:",
   "boutique.bundle.discount": "Spare {percent}%",
   "boutique.bundle.itemCount.one": "{count} Artikel",
   "boutique.bundle.itemCount.other": "{count} Artikel",
+  "boutique.category.bundles": "Pakete",
   "boutique.category.all": "Alle",
   "boutique.category.badge": "Abzeichen",
   "boutique.category.avatar_frame": "Avatar-Rahmen",
@@ -1784,7 +1792,7 @@ const de = {
   "player.tip.selfTitle": "Dein Profil",
   "player.tip.otherTitle": "Spielerprofile",
   "player.tip.selfBody":
-    "Oben siehst du, was andere Spieler auf der Bestenliste und der Freundesliste sehen — tippe auf „Profil bearbeiten“ für Tabs, um dein Bild, Abzeichen, Rahmen, Titel, Banner, Namen oder deine Bio zu ändern oder Erfolge an deine Pokalvitrine zu heften. Stufenaufstiege und das Meistern von Erfolgskategorien schalten exklusive Abzeichen, Rahmen und Titel frei. Alles unter „Deine Aktivität“ weiter unten ist ausschließlich für dich sichtbar.",
+    "Oben siehst du, was andere Spieler auf der Bestenliste und der Freundesliste sehen — tippe auf „Profil bearbeiten“ für Tabs, um dein Bild, Abzeichen, Rahmen, Titel, Banner, Namen oder deine Bio zu ändern, Erfolge an deine Pokalvitrine zu heften oder Dinge auszurüsten, die du in der Boutique gekauft hast. Stufenaufstiege und das Meistern von Erfolgskategorien schalten exklusive Abzeichen, Rahmen und Titel frei. Alles unter „Deine Aktivität“ weiter unten ist ausschließlich für dich sichtbar.",
   "player.tip.otherBody":
     "Jeder angemeldete Spieler hat eins davon — tippe irgendwo (Bestenliste, Freunde) auf einen Namen, um es zu öffnen. Füge die Person direkt von hier aus als Freund hinzu.",
   "player.editProfile.done": "Profilbearbeitung beenden",

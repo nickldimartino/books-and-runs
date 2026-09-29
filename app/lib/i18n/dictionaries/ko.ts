@@ -317,6 +317,10 @@ const ko = {
   "game.hand.contractMelded": "— 계약 멜드 완료",
   "game.hand.dragToReorder": "카드를 드래그해서 손패 순서를 바꾸세요.",
 
+  "game.tip.title": "내 방식대로 플레이",
+  "game.tip.body":
+    "카드와 더미가 빛나면 지금 할 수 있는 동작을 보여주는 거예요. ? 키를 누르면 키보드와 게임패드 단축키를 볼 수 있어요. 게임을 더 빠르게나 느리게 하고 싶거나, 움직임을 줄이거나, 강조 표시를 끄고 싶다면 설정의 “게임 플레이”와 “접근성”에서 바꿀 수 있어요.",
+
   "game.whoseTurn": "지금 누구 차례?",
   "game.jennysTurn": "제니의 차례예요!",
   "game.roundOf": "{total} 라운드 중 {round}라운드",
@@ -1528,12 +1532,16 @@ const ko = {
 
   // boutique.*
   "boutique.subtitle": "꾸미기 아이템만 있어요 — 여기 있는 건 게임 플레이에 아무 영향도 주지 않아요.",
+  "boutique.tip.title": "구매하기 전에",
+  "boutique.tip.body":
+    "여기 있는 건 전부 선택 사항인 꾸미기 아이템이에요 — 게임 플레이에는 영향을 주지 않아요. 한 번 사면 계정에 영구히 남고, 로그인한 모든 기기에서 쓸 수 있어요. “미리 써보기”로 아바타, 프레임, 배너를 먼저 확인해 보고, 나중에 각자의 선택 화면에서 언제든 장착하세요.",
   "boutique.guestBanner.body": "로그인하면 꾸미기 아이템을 구매할 수 있어요 — 구매한 아이템은 영구히 계정에 귀속돼요.",
   "boutique.hero.badge": "최고 가성비",
   "boutique.hero.includes": "포함된 아이템:",
   "boutique.bundle.discount": "{percent}% 할인",
   "boutique.bundle.itemCount.one": "{count}개",
   "boutique.bundle.itemCount.other": "{count}개",
+  "boutique.category.bundles": "번들",
   "boutique.category.all": "전체",
   "boutique.category.badge": "배지",
   "boutique.category.avatar_frame": "아바타 프레임",
@@ -1654,7 +1662,7 @@ const ko = {
   "player.loadError": "이 프로필을 불러오지 못했어요 — 연결 상태를 확인해 주세요.",
   "player.tip.selfTitle": "내 프로필",
   "player.tip.otherTitle": "플레이어 프로필",
-  "player.tip.selfBody": "맨 위는 다른 플레이어가 리더보드와 친구 목록에서 보는 모습이에요 — 프로필 편집을 누르면 탭에서 사진, 배지, 프레임, 칭호, 배너, 이름, 소개를 바꾸거나 업적을 트로피 진열장에 고정할 수 있어요. 레벨을 올리고 업적 분야를 마스터하면 전용 배지, 프레임, 칭호가 잠금 해제돼요. 아래쪽 “내 활동”의 모든 내용은 나에게만 보여요.",
+  "player.tip.selfBody": "맨 위는 다른 플레이어가 리더보드와 친구 목록에서 보는 모습이에요 — 프로필 편집을 누르면 탭에서 사진, 배지, 프레임, 칭호, 배너, 이름, 소개를 바꾸거나 업적을 트로피 진열장에 고정하거나, 부티크에서 구매한 아이템을 장착할 수 있어요. 레벨을 올리고 업적 분야를 마스터하면 전용 배지, 프레임, 칭호가 잠금 해제돼요. 아래쪽 “내 활동”의 모든 내용은 나에게만 보여요.",
   "player.tip.otherBody": "로그인한 모든 플레이어에게 이런 프로필이 있어요 — 리더보드나 친구 목록 등 어디서든 이름을 탭하면 열려요. 여기에서 바로 친구로 추가할 수도 있어요.",
   "player.editProfile.done": "프로필 편집 완료",
   "player.editProfile.edit": "프로필 편집",
