@@ -2531,23 +2531,16 @@ html[data-intro] .intro-splash {
   outline-offset: 2px;
   border-radius: 0.5rem;
 }
-/* Plain `:focus` too, but ONLY inside a modal — Safari doesn't reliably
-   match `:focus-visible` for the programmatic `.focus()` call
-   useFocusTrap.ts makes when a dialog opens, so without this a dialog
-   opening could flash the browser's own default focus ring (solid blue,
-   square-cornered, most visible on the ✕ close button) instead of this
-   app's themed one. Scoped to dialogs on purpose, not applied globally:
-   `:focus` (unlike `:focus-visible`) also matches an ordinary mouse click
-   on some browsers, and ringing every button on every tap would be a much
-   worse regression than the rare glitch this fixes. Never `outline: none`
-   anywhere — that would remove the indicator entirely wherever
-   `:focus-visible` isn't recognized. */
-[role="dialog"] :focus,
-[role="alertdialog"] :focus {
-  outline: 2px solid var(--highlight, var(--accent));
-  outline-offset: 2px;
-  border-radius: 0.5rem;
-}
+/* NOTE: a previous version of this rule also matched plain `:focus` (not
+   just `:focus-visible`) inside dialogs, to work around Safari not always
+   matching `:focus-visible` for the programmatic `.focus()` call
+   useFocusTrap.ts makes when a dialog opens. That traded a rare Safari
+   glitch for a worse one everywhere else: `:focus` (unlike `:focus-visible`)
+   also matches an ordinary mouse click, so the auto-focused first control
+   in *every* dialog opened by tapping/clicking showed a permanent-looking
+   ring the instant it opened. Reverted — `:focus-visible` only, everywhere,
+   including inside dialogs. Never `outline: none` anywhere — that would
+   remove the indicator entirely wherever `:focus-visible` isn't matched. */
 /* A gamepad (or 10-foot) session gets a much bolder ring — you're steering
    with a D-pad from across a room, so the focused control must be obvious. */
 :root[data-input="gamepad"] :focus,
