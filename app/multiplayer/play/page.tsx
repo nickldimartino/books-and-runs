@@ -951,7 +951,8 @@ export default function MultiplayerPlayPage() {
                     </button>
                     <button
                       onClick={() => setConfirmingDiscard(null)}
-                      className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)]"
+                      disabled={g.busy}
+                      className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {t("common.cancel")}
                     </button>

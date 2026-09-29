@@ -117,7 +117,17 @@ test("create → accept → one full turn between two real accounts", async ({ b
   // (see multiplayer/play/page.tsx's confirmingDiscard) — picking a card
   // to discard doesn't commit the turn by itself, tapping Confirm does.
   await pageA.getByRole("button", { name: /discard selected card/i }).click();
-  await pageA.getByRole("button", { name: /^confirm$/i }).click();
+  const confirmDiscardButton = pageA.getByRole("button", { name: /^confirm$/i });
+  const cancelDiscardButton = pageA.getByRole("button", { name: /^cancel$/i });
+  await confirmDiscardButton.click();
+  // Regression test: once Confirm is tapped, the discard is already in
+  // flight to the server (a real network round trip, unlike solo's
+  // synchronous local discard) and can no longer actually be aborted — so
+  // Cancel must not stay clickable during that window. It used to (see
+  // multiplayer/play/page.tsx's Cancel button gaining `disabled={g.busy}`),
+  // which let a player tap Cancel, see the confirm row vanish, and then
+  // have their turn end and the card discard anyway a moment later.
+  await expect(cancelDiscardButton).toBeDisabled();
 
   // The turn genuinely passed server-side: A's own view now says it's
   // waiting on B, and B — opening the exact same game — sees it's their
