@@ -825,10 +825,12 @@ async function handleState(uid: string, body: Record<string, unknown>): Promise<
 async function handleMove(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
   const action = body.action as Record<string, unknown>;
-  let game = await loadGame(gameId);
+  // These two reads are independent (different tables, no data dependency) —
+  // run them together instead of one-after-another. Every move pays this
+  // round trip, so it's worth not serializing it needlessly.
+  let [game, mine] = await Promise.all([loadGame(gameId), myParticipant(gameId, uid)]);
   if (!game) return json({ error: "no such game" }, 404);
   if (game.status !== "active") return json({ error: "this game isn't active" }, 409);
-  const mine = await myParticipant(gameId, uid);
   if (!mine || mine.invite_status !== "accepted") return json({ error: "you're not in this game" }, 403);
 
   // Someone else's clock may have run out before this move — settle that first
@@ -947,21 +949,26 @@ async function handleMove(uid: string, body: Record<string, unknown>): Promise<R
   if (!(await writeState(gameId, engine, stateRow.version))) {
     return json({ error: "the game moved on — refresh" }, 409);
   }
-  await syncPublicColumns(gameId, engine, config);
-  await creditAchievementCounters(uid, counterDeltas);
-  // A real move clears the AFK strike count (no-op / harmless before 0061).
-  await admin
-    .from("mp_participants")
-    .update({ missed_turns: 0 })
-    .eq("game_id", gameId)
-    .eq("user_id", uid)
-    .gt("missed_turns", 0);
-
-  if (engine.state.gameOver) {
-    await finalizeParticipants(gameId, engine, config);
-  } else {
-    await notifyTurn(gameId, prevTurnUserId, engine, config, uid);
-  }
+  // The move itself is now durably saved — everything below is independent
+  // follow-up bookkeeping (different tables/rows, no data dependency between
+  // them), so it runs together instead of as 3-4 more sequential round
+  // trips. This was the biggest chunk of a move's latency: on the client,
+  // a lay-off could take ~2s to visibly land with nothing indicating a
+  // request was even in flight (see MultiplayerPlay's pendingMeldId).
+  await Promise.all([
+    syncPublicColumns(gameId, engine, config),
+    creditAchievementCounters(uid, counterDeltas),
+    // A real move clears the AFK strike count (no-op / harmless before 0061).
+    admin
+      .from("mp_participants")
+      .update({ missed_turns: 0 })
+      .eq("game_id", gameId)
+      .eq("user_id", uid)
+      .gt("missed_turns", 0),
+    engine.state.gameOver
+      ? finalizeParticipants(gameId, engine, config)
+      : notifyTurn(gameId, prevTurnUserId, engine, config, uid),
+  ]);
 
   return json({
     status: engine.state.gameOver ? "complete" : "active",

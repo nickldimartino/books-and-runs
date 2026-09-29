@@ -114,6 +114,11 @@ export default function MultiplayerPlayPage() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [respondBusy, setRespondBusy] = useState<"accept" | "decline" | null>(null);
   const [layoffArmed, setLayoffArmed] = useState(false);
+  // The meld a lay-off was just sent to, until the server responds — the
+  // table-meld button had no visual difference at all while the request was
+  // in flight (only disabled={!armed}, no g.busy check), so a lay-off could
+  // look like it did nothing for the full round-trip. See onMeldClick.
+  const [pendingMeldId, setPendingMeldId] = useState<string | null>(null);
   const [roundSummaryFor, setRoundSummaryFor] = useState<number | null>(null);
   // Same hand-drawer treatment as solo/pass-and-play's game screen (see
   // game/page.tsx) — a bottom-sheet modal holding the hand + meld builder,
@@ -753,7 +758,10 @@ export default function MultiplayerPlayPage() {
     const opts = layOffOptions(selectedCard, meld);
     if (opts.length === 0) return;
     setLayoffArmed(false);
-    void g.layOff(selectedCard.id, meld.id, opts.length === 1 ? opts[0] : "low");
+    setPendingMeldId(meld.id);
+    void g
+      .layOff(selectedCard.id, meld.id, opts.length === 1 ? opts[0] : "low")
+      .finally(() => setPendingMeldId(null));
   }
 
   // Arming a lay-off means tapping a meld on the page *behind* the drawer's
@@ -1308,13 +1316,15 @@ export default function MultiplayerPlayPage() {
                     // as soon as a card is selected, with no arming step —
                     // see onMeldClick's own comment on why.
                     const armed = (layoffArmed || isWide) && layoffTargets.includes(meld.id);
+                    const pending = pendingMeldId === meld.id;
                     return (
                       <button
                         key={meld.id}
                         data-meld-id={meld.id}
                         onClick={() => onMeldClick(meld)}
-                        disabled={!armed}
-                        className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""}`}
+                        disabled={!armed || g.busy}
+                        aria-busy={pending}
+                        className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""} ${pending ? "animate-pulse opacity-70" : ""}`}
                       >
                         <span className="flex items-end gap-1">
                           {meld.cards.map((c) => (
