@@ -1324,7 +1324,7 @@ export default function MultiplayerPlayPage() {
                         onClick={() => onMeldClick(meld)}
                         disabled={!armed || g.busy}
                         aria-busy={pending}
-                        className={`rounded-lg p-1 text-left transition ${armed ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""} ${pending ? "animate-pulse opacity-70" : ""}`}
+                        className={`rounded-lg p-1 text-left transition ${armed ? "armed-target" : ""} ${pending ? "animate-pulse opacity-70" : ""}`}
                       >
                         <span className="flex items-end gap-1">
                           {meld.cards.map((c) => (

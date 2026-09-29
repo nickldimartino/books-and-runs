@@ -1723,9 +1723,7 @@ export default function GamePage() {
                               data-meld-id={meld.id}
                               onClick={() => handleMeldClick(meld)}
                               disabled={!isValidTarget}
-                              className={`max-w-full rounded-lg p-1 transition ${
-                                isValidTarget ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]" : ""
-                              }`}
+                              className={`max-w-full rounded-lg p-1 transition ${isValidTarget ? "armed-target" : ""}`}
                               title={meldLabel(meld, t)}
                             >
                               {/* overflow-x-auto lives on this inner div, not the

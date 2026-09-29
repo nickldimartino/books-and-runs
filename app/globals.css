@@ -2587,6 +2587,48 @@ label {
     0 0 0 2px color-mix(in srgb, var(--highlight) 70%, transparent),
     0 4px 10px color-mix(in srgb, var(--highlight) 30%, transparent);
 }
+/* A meld/pile that's currently a valid lay-off target (solo's build-meld
+   section and multiplayer's table melds both use this instead of hand-
+   copying the same bg-tint + ring Tailwind pair) — shares forced-colors
+   handling with the three rules above. */
+.armed-target {
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: 0 0 0 2px var(--accent);
+  border-radius: 0.5rem;
+}
+
+/* Windows/browser forced-colors (high-contrast) mode strips box-shadow and
+   background-image outright and flattens most background-colors to a small
+   system palette — every "legal move" cue above relies on one of those, so
+   without this block a forced-colors user loses the assist feature (and the
+   armed lay-off target) entirely rather than just its accent color. System
+   color keywords (Highlight/ButtonText/Canvas) track the user's own chosen
+   high-contrast theme instead of hardcoding a color that might not exist in
+   it. */
+@media (forced-colors: active) {
+  .legal-pulse {
+    animation: none;
+    outline: 2px dashed Highlight;
+    outline-offset: 3px;
+  }
+  .legal-ring {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+  .hint-card > .card-face {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .armed-target {
+    background-color: Canvas;
+    box-shadow: none;
+    border: 2px solid Highlight;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+  }
+}
 
 /* Dismissed first-visit tips (PageTip.tsx): init.js / tipsStore.ts keep
    <html data-seen-tips="id id …"> current; PageTip is server-rendered
