@@ -55,17 +55,20 @@ import {
 import { COSMETIC_CATEGORIES, CosmeticCategory } from "../lib/storeSku";
 import { pollForEntitlements, useEntitlements } from "../lib/entitlementsStore";
 import { PurchaseError, startPurchase } from "../lib/purchasing";
+import { useWishlist } from "../lib/wishlistStore";
 import type { Card } from "@/types";
 
 const PREVIEW_CARD: Card = { id: "boutique-preview", suit: "hearts", rank: "7", isWild: false };
 
 /** The filter bar's selectable values — every per-cosmetic-category option,
- * plus "all" (every single item) and "bundles" (the hero pack + every
- * per-category bundle, in place of the individual-item grid). "bundles" is
- * the default so a first-time visitor sees the best-value bundles
- * immediately (see this component's own header) — a `?item=<sku>` deep
- * link overrides that default to the item's own category instead. */
-type BoutiqueFilter = CosmeticCategory | "all" | "bundles";
+ * plus "all" (every single item), "bundles" (the hero pack + every
+ * per-category bundle, in place of the individual-item grid), and
+ * "wishlist" (items this account starred, signed-in only — see
+ * wishlistStore.ts). "bundles" is the default so a first-time visitor sees
+ * the best-value bundles immediately (see this component's own header) — a
+ * `?item=<sku>` deep link overrides that default to the item's own
+ * category instead. */
+type BoutiqueFilter = CosmeticCategory | "all" | "bundles" | "wishlist";
 
 const CATEGORY_KEY: Record<CosmeticCategory, TranslationKey> = {
   badge: "boutique.category.badge",
@@ -273,17 +276,48 @@ interface ItemCardProps {
   onToggleTryOn: () => void;
   self: SelfProfile | null;
   highlighted: boolean;
+  wishlisted: boolean;
+  /** Undefined for a signed-out visitor — there's no account to save a
+   * wishlist against, so the star is hidden entirely rather than shown
+   * disabled (see the "sign in to buy" branch below, which already asks
+   * for sign-in for the one thing a guest here actually needs to do). */
+  onToggleWishlist?: () => void;
 }
 
-function ItemCard({ item, owned, signedIn, purchasing, onBuy, tryOnEnabled, tryOn, onToggleTryOn, self, highlighted }: ItemCardProps) {
+function ItemCard({
+  item,
+  owned,
+  signedIn,
+  purchasing,
+  onBuy,
+  tryOnEnabled,
+  tryOn,
+  onToggleTryOn,
+  self,
+  highlighted,
+  wishlisted,
+  onToggleWishlist,
+}: ItemCardProps) {
   const { t, locale } = useT();
   return (
     <div
       id={`boutique-item-${item.sku}`}
-      className={`flex flex-col gap-2 rounded-xl border p-3 transition ${
+      className={`relative flex flex-col gap-2 rounded-xl border p-3 transition ${
         highlighted ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)] bg-[var(--panel)]"
       }`}
     >
+      {onToggleWishlist && !owned && (
+        <button
+          onClick={onToggleWishlist}
+          aria-label={wishlisted ? t("boutique.item.wishlistRemove") : t("boutique.item.wishlistAdd")}
+          aria-pressed={wishlisted}
+          className={`absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-full text-sm transition ${
+            wishlisted ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel)]/80 text-[var(--faint)] hover:text-[var(--accent)]"
+          }`}
+        >
+          {wishlisted ? "★" : "☆"}
+        </button>
+      )}
       <RarityFrame rarity={item.rarity} className="self-start">
         <ItemPreview item={item} tryOn={tryOn} self={self} />
       </RarityFrame>
@@ -453,6 +487,7 @@ export function BoutiqueContent() {
   const { configured, user } = useAuth();
   const signedIn = configured && !!user;
   const { ownedSkus, refresh: refreshEntitlements } = useEntitlements(supabase, user?.id);
+  const { wishlistSkus, toggle: toggleWishlist } = useWishlist(supabase, user?.id);
   const self = useSelfProfile(signedIn ? user!.id : null);
 
   const items = useMemo(() => listStoreItems(), []);
@@ -554,8 +589,18 @@ export function BoutiqueContent() {
   }, [signedIn, user?.id]);
 
   const showBundles = category === "bundles";
-  const filteredItems = category === "all" || showBundles ? items : items.filter((i) => i.category === category);
-  const groupedItems = COSMETIC_CATEGORIES.filter((c) => category === "all" || showBundles || c === category).map((c) => ({
+  const showWishlist = category === "wishlist";
+  const filteredItems =
+    category === "all" || showBundles
+      ? items
+      : showWishlist
+        ? items.filter((i) => wishlistSkus.has(i.sku))
+        : items.filter((i) => i.category === category);
+  // Wishlist spans categories like "all" does, so it gets the same
+  // per-category headers instead of one flat, unlabeled grid.
+  const groupedItems = COSMETIC_CATEGORIES.filter(
+    (c) => category === "all" || showBundles || showWishlist || c === category
+  ).map((c) => ({
     category: c,
     items: filteredItems.filter((i) => i.category === c),
   }));
@@ -590,6 +635,16 @@ export function BoutiqueContent() {
         >
           {t("boutique.category.all")}
         </button>
+        {signedIn && (
+          <button
+            onClick={() => setCategory("wishlist")}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              showWishlist ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-[var(--panel-soft)] text-[var(--muted)] hover:bg-[var(--elevated)]"
+            }`}
+          >
+            ⭐ {t("boutique.category.wishlist")}
+          </button>
+        )}
         {COSMETIC_CATEGORIES.map((c) => (
           <button
             key={c}
@@ -711,13 +766,13 @@ export function BoutiqueContent() {
           )}
         </>
       ) : filteredItems.length === 0 ? (
-        <EmptyState icon="🛍️">{t("boutique.empty")}</EmptyState>
+        <EmptyState icon={showWishlist ? "⭐" : "🛍️"}>{showWishlist ? t("boutique.wishlist.empty") : t("boutique.empty")}</EmptyState>
       ) : (
         groupedItems.map(
           (group) =>
             group.items.length > 0 && (
               <section key={group.category} className="flex flex-col gap-2">
-                {category === "all" && (
+                {(category === "all" || showWishlist) && (
                   <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t(CATEGORY_KEY[group.category])}</h2>
                 )}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -728,6 +783,8 @@ export function BoutiqueContent() {
                         owned={ownedSkus.has(item.sku)}
                         signedIn={signedIn}
                         purchasing={purchasingSku === item.sku}
+                        wishlisted={wishlistSkus.has(item.sku)}
+                        onToggleWishlist={signedIn ? () => toggleWishlist(item.sku) : undefined}
                         onBuy={() => buy(item.sku)}
                         tryOnEnabled={item.category === "avatar_frame" || item.category === "avatar_emoji" || item.category === "banner"}
                         tryOn={tryOnSku === item.sku}
