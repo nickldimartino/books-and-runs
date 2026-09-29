@@ -274,13 +274,18 @@ app's own client) the moment a checkout completes, whether that's a
 tip-jar Payment Link (`app/tip/page.tsx`) or a store Checkout Session
 (`create-checkout-session` above). It verifies the request really came
 from Stripe, then branches on whether `session.metadata.skus` is set (only
-a store checkout ever sets it): a store purchase writes `purchases` +
-`entitlements` (migrations 0085/0087 — the boutique unlock check reads
-`entitlements`, never anything a browser could claim); anything else
-(every tip, exactly as before) keeps writing `supporter_payments`
-(migration 0043) — the ☕ Supporter badge is unaffected by this change. No
-Stripe SDK: verifies the `Stripe-Signature` header directly with Deno's
-Web Crypto (see the function's own doc for why).
+a store checkout ever sets it): a store purchase writes `purchases` (the
+ORIGINAL requested skus, e.g. one `"bundle:card_back"` — this table is
+exposed verbatim via the account data export) + `entitlements` (migrations
+0085/0087 — the EXPANDED skus, via `src/store/entitlements.ts`'s
+`expandPurchasedSkus`: a bundle sku grants its own sku plus every one of
+its real member-item skus, since every unlock check in the app reads a
+specific item sku, never a bundle wrapper sku — this is what actually lets
+a bundle buyer equip what they paid for); anything else (every tip,
+exactly as before) keeps writing `supporter_payments` (migration 0043) —
+the ☕ Supporter badge is unaffected by this change. No Stripe SDK:
+verifies the `Stripe-Signature` header directly with Deno's Web Crypto
+(see the function's own doc for why).
 
 Requires migration 0043 to have run first for the tip jar, and 0085/0087
 for the store branch.
@@ -288,9 +293,16 @@ for the store branch.
 ### Deploy
 
 ```bash
+node scripts/bundle-checkout-catalog.mjs
 npx supabase functions deploy stripe-webhook --no-verify-jwt
 npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx
 ```
+
+The bundle step matters here too, not just for `create-checkout-session`
+below — this function now imports `CATALOG_BUNDLES`/`expandPurchasedSkus`
+from `./_engine/store/` (same copy-with-`.ts`-extensions bundling), so a
+catalog change (a new bundle, a changed member list) needs a re-bundle +
+redeploy of BOTH functions to take effect, not just `create-checkout-session`.
 
 `--no-verify-jwt` matters — Stripe's own requests carry no Supabase JWT at
 all, so the platform's default auth gate would reject every delivery before

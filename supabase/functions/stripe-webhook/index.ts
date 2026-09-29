@@ -24,6 +24,7 @@
 // one thing tying a completed checkout back to an account.
 //
 // Deploy:
+//   node scripts/bundle-checkout-catalog.mjs
 //   npx supabase functions deploy stripe-webhook --no-verify-jwt
 //   npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx
 // Then in the Stripe Dashboard: Developers → Webhooks → Add endpoint,
@@ -38,6 +39,12 @@
 // Stripe signature check below is what actually authenticates the caller.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+// ./_engine/store is a copy of src/store/ with explicit .ts extensions —
+// same bundling as create-checkout-session/index.ts (see
+// scripts/bundle-checkout-catalog.mjs). Run
+// `node scripts/bundle-checkout-catalog.mjs` before every deploy of this
+// function too, not just create-checkout-session.
+import { expandPurchasedSkus } from "./_engine/store/entitlements.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -144,6 +151,15 @@ Deno.serve(async (req) => {
     // the same session must not double-write. The receipt row uses the
     // session id as its own natural idempotency key; the entitlement rows
     // use their (user_id, sku) primary key.
+    //
+    // `purchases.sku_ids` intentionally stores the ORIGINAL requested skus
+    // (exactly what Stripe's own line item(s) were for — e.g. one
+    // "bundle:card_back"), never the expanded set below: this table is
+    // exposed verbatim to the account itself via the "download my data"
+    // export (exportUserData.ts's `boutique.purchases`), where a receipt
+    // listing the 15 individual card backs a bundle happened to contain,
+    // instead of "Card Back Bundle", would be confusing rather than more
+    // useful — a receipt should read like what was actually bought.
     const { error: purchaseErr } = await admin.from("purchases").upsert(
       { user_id: userId, stripe_session_id: sessionId, amount_cents: amountTotal, currency, sku_ids: skus },
       { onConflict: "stripe_session_id", ignoreDuplicates: true }
@@ -153,8 +169,19 @@ Deno.serve(async (req) => {
       return new Response("db error", { status: 500 });
     }
 
+    // `entitlements`, unlike `purchases`, is what every unlock check in the
+    // app actually reads (cosmeticUnlocks.ts's "boutique" case, the
+    // avatar_emoji DB trigger, useCardUnlockContext) — always keyed to a
+    // SPECIFIC item sku, never a bundle wrapper sku. Expanding here (not at
+    // Checkout-Session-creation time — Stripe's own receipt still shows one
+    // clean "Card Back Bundle — $11.99" line item either way) is what
+    // actually grants a bundle buyer the individual items they paid for;
+    // see entitlements.ts's own doc for the bug this closes. A bundle's own
+    // sku is included alongside its members so "Owned" still shows on the
+    // bundle card and re-buying it is correctly blocked.
+    const expandedSkus = expandPurchasedSkus(skus);
     const { error: entitlementsErr } = await admin.from("entitlements").upsert(
-      skus.map((sku) => ({ user_id: userId, sku, source: "stripe", stripe_session_id: sessionId })),
+      expandedSkus.map((sku) => ({ user_id: userId, sku, source: "stripe", stripe_session_id: sessionId })),
       { onConflict: "user_id,sku", ignoreDuplicates: true }
     );
     if (entitlementsErr) {

@@ -1,20 +1,25 @@
 #!/usr/bin/env node
 /**
  * Copies the boutique store's pure pricing/request-building modules
- * (src/store/) into supabase/functions/create-checkout-session/_engine/
- * so the function can import them, adding the explicit `.ts` extensions
- * Deno requires on relative imports (the app's bundler/tsc don't need
- * them, so src/ stays extension-less) — same idea as
- * bundle-mp-engine.mjs/bundle-solo-verify-engine.mjs, kept as its own
- * script rather than a shared/parameterized one so nothing about those
- * already-working bundles can regress from a change made for this
- * function. Deliberately narrow (src/store/ only, not all of src/) since
- * create-checkout-session never touches the game engine.
+ * (src/store/) into _engine/ under BOTH Edge Functions that need them —
+ * create-checkout-session (price/name lookups, Checkout Session building)
+ * AND stripe-webhook (CATALOG_BUNDLES + expandPurchasedSkus, to expand a
+ * bundle sku into its member skus at entitlement-grant time — see
+ * entitlements.ts) — adding the explicit `.ts` extensions Deno requires on
+ * relative imports (the app's bundler/tsc don't need them, so src/ stays
+ * extension-less) — same idea as bundle-mp-engine.mjs/
+ * bundle-solo-verify-engine.mjs, kept as its own script rather than a
+ * shared/parameterized one so nothing about those already-working bundles
+ * can regress from a change made for this one. Deliberately narrow
+ * (src/store/ only, not all of src/) since neither function touches the
+ * game engine.
  *
- * Run before deploying the function:
- *   node scripts/bundle-checkout-catalog.mjs && supabase functions deploy create-checkout-session
+ * Run before deploying EITHER function (both read from the same source,
+ * so one run covers both):
+ *   node scripts/bundle-checkout-catalog.mjs && npx supabase functions deploy create-checkout-session
+ *   node scripts/bundle-checkout-catalog.mjs && npx supabase functions deploy stripe-webhook
  *
- * _engine/ is gitignored and fully regenerated each run.
+ * Both _engine/ dirs are gitignored and fully regenerated each run.
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -22,7 +27,10 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const SRC = join(root, "src/store");
-const OUT = join(root, "supabase/functions/create-checkout-session/_engine/store");
+const OUT_DIRS = [
+  join(root, "supabase/functions/create-checkout-session/_engine/store"),
+  join(root, "supabase/functions/stripe-webhook/_engine/store"),
+];
 
 function walk(dir) {
   const out = [];
@@ -52,12 +60,14 @@ function addExtensions(code, fileDir) {
   );
 }
 
-rmSync(OUT, { recursive: true, force: true });
 const files = walk(SRC);
-for (const file of files) {
-  const rel = relative(SRC, file);
-  const dest = join(OUT, rel);
-  mkdirSync(dirname(dest), { recursive: true });
-  writeFileSync(dest, addExtensions(readFileSync(file, "utf8"), dirname(file)));
+for (const OUT of OUT_DIRS) {
+  rmSync(OUT, { recursive: true, force: true });
+  for (const file of files) {
+    const rel = relative(SRC, file);
+    const dest = join(OUT, rel);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, addExtensions(readFileSync(file, "utf8"), dirname(file)));
+  }
+  console.log(`bundled ${files.length} store file(s) → ${relative(root, OUT)}/`);
 }
-console.log(`bundled ${files.length} store file(s) → ${relative(root, OUT)}/`);
