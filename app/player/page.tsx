@@ -49,6 +49,7 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageTip } from "../components/PageTip";
 import { PlayerAvatar } from "../components/PlayerAvatar";
 import { EmojiOrBadge, PremiumBadgeIcon } from "../components/PremiumBadgeIcon";
+import { BoutiqueAvatarIcon } from "../components/BoutiqueAvatarIcon";
 import { ProfileBanner } from "../components/ProfileBanner";
 import { fetchAchievementRarity, formatRarity, RarityMap } from "../lib/achievementRarity";
 import {
@@ -1824,7 +1825,7 @@ export default function PlayerProfilePage() {
                             const unlocked = isCosmeticUnlocked(option.unlock, unlockCtx);
                             const equipped = entry.avatar_kind === "emoji" && entry.avatar_emoji === option.emoji;
                             const requirement = req(option.unlock);
-                            const className = `relative grid aspect-square w-11 place-items-center rounded-full text-lg transition ${
+                            const className = `relative grid aspect-square w-11 place-items-center rounded-full text-[var(--heading)] transition ${
                               !unlocked
                                 ? `bg-[var(--panel-soft)] ${LOCKED_ITEM_CLASS}`
                                 : equipped
@@ -1833,7 +1834,7 @@ export default function PlayerProfilePage() {
                             }`;
                             const content = (
                               <>
-                                {option.emoji}
+                                <BoutiqueAvatarIcon option={option} className="block h-2/3 w-2/3" />
                                 {!unlocked && (
                                   <span
                                     aria-hidden="true"

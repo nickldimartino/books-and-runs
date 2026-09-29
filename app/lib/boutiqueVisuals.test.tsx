@@ -13,11 +13,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
+import { BOUTIQUE_AVATAR_EMOJI_OPTIONS, PREMIUM_EMOJI_OPTIONS } from "./avatarPresets";
 import { AVATAR_FRAME_OPTIONS, AVATAR_FRAME_COLOR } from "./profileCosmetics";
 import { SIGNATURE_CARD_BACKS } from "./cardBackStore";
 import { CARD_FACES } from "./cardFaceStore";
 import { RARITY_BADGE_ELEMENTS } from "../components/PremiumBadgeIcon";
+import { BOUTIQUE_AVATAR_ICON_ELEMENTS } from "../components/BoutiqueAvatarIcon";
 import { RARITY_BADGE_ICON_ELEMENTS } from "./shareCard";
 
 const GLOBALS_CSS = fs.readFileSync(path.resolve(__dirname, "../globals.css"), "utf8");
@@ -43,6 +44,34 @@ describe("every boutique badge has its own icon (not the generic medal fallback)
   it("no two boutique badges share the exact same icon (the original bug: a dozen identical shapes)", () => {
     const serialized = boutiqueBadges.map((o) => JSON.stringify(RARITY_BADGE_ELEMENTS[o.emoji]));
     expect(new Set(serialized).size).toBe(serialized.length);
+  });
+});
+
+describe("every boutique avatar picture has its own icon (not the raw emoji fallback)", () => {
+  it("sanity: the boutique avatar picture list isn't empty", () => {
+    expect(BOUTIQUE_AVATAR_EMOJI_OPTIONS.length).toBeGreaterThan(0);
+  });
+
+  it.each(BOUTIQUE_AVATAR_EMOJI_OPTIONS.map((o) => o.emoji))(
+    "%s has a BOUTIQUE_AVATAR_ICON_ELEMENTS entry (BoutiqueAvatarIcon.tsx)",
+    (emoji) => {
+      expect(BOUTIQUE_AVATAR_ICON_ELEMENTS[emoji]).toBeDefined();
+      expect(BOUTIQUE_AVATAR_ICON_ELEMENTS[emoji]!.length).toBeGreaterThan(0);
+    }
+  );
+
+  it("no two boutique avatar pictures share the exact same icon (the original bug: 15 identical plain emoji)", () => {
+    const serialized = BOUTIQUE_AVATAR_EMOJI_OPTIONS.map((o) => JSON.stringify(BOUTIQUE_AVATAR_ICON_ELEMENTS[o.emoji]));
+    expect(new Set(serialized).size).toBe(serialized.length);
+  });
+
+  it("no boutique avatar picture icon collides with a boutique badge icon (the two systems stay visually separate)", () => {
+    const boutiqueBadges = PREMIUM_EMOJI_OPTIONS.filter((o) => o.source === "boutique");
+    const badgeIcons = new Set(boutiqueBadges.map((o) => JSON.stringify(RARITY_BADGE_ELEMENTS[o.emoji])));
+    const collisions = BOUTIQUE_AVATAR_EMOJI_OPTIONS.filter((o) =>
+      badgeIcons.has(JSON.stringify(BOUTIQUE_AVATAR_ICON_ELEMENTS[o.emoji]))
+    );
+    expect(collisions).toEqual([]);
   });
 });
 
