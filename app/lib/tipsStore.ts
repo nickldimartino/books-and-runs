@@ -14,6 +14,7 @@ export type TipId =
   | "new-game"
   | "new-game-local"
   | "new-game-multiplayer"
+  | "game"
   | "multiplayer-play"
   | "settings"
   | "achievements"
@@ -24,7 +25,8 @@ export type TipId =
   | "scorecard"
   | "clubs"
   | "tournaments"
-  | "tournaments-new";
+  | "tournaments-new"
+  | "boutique";
 
 const KEY = "booksAndRuns:seenTips";
 

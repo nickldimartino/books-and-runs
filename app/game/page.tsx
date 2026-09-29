@@ -38,6 +38,7 @@ import { GameOverScreen } from "../components/GameOverScreen";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { UndoRing } from "../components/UndoRing";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { PageTip } from "../components/PageTip";
 import { contractNeedLabel, wildStandInLabel } from "../lib/contractDisplay";
 import { markGameStarted } from "../lib/firstSessionStore";
 import { useT, type Vars } from "../lib/i18n/LocaleProvider";
@@ -1383,6 +1384,12 @@ export default function GamePage() {
         >
           {t("game.jennysTurn")}
         </div>
+      )}
+
+      {!isTutorial && (
+        <PageTip id="game" title={t("game.tip.title")}>
+          {t("game.tip.body")}
+        </PageTip>
       )}
 
       <header
