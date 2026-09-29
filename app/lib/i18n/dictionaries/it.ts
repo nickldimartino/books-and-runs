@@ -355,11 +355,6 @@ const it = {
   "game.turnHint.drawn":
     "Forma la tua calata, oppure scegli una carta e scartala per finire il turno.",
   "game.turnHint.melded": "Attacca carte alle calate, poi scarta per finire il turno.",
-  "game.progress.books": "Tris {ready} su {need} pronti",
-  "game.progress.runs": "Scale {ready} su {need} pronte",
-  "game.progress.closestBook": "più vicino: {rank} ({have}/{need})",
-  "game.progress.closestRun": "più vicina: {suit} ({have}/{need})",
-  "game.progress.ready": "La tua mano può già calare il contratto di questo round.",
   "game.why.drawFirst": "Prima pesca una carta.",
   "game.why.finishWildChoice": "Scegli prima cosa sostituisce il jolly.",
   "game.why.tooManyGroups":

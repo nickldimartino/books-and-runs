@@ -354,11 +354,6 @@ const fr = {
     "Forme ta combinaison, ou choisis une carte et défausse-la pour finir ton tour.",
   "game.turnHint.melded":
     "Dépose des cartes sur les combinaisons, puis défausse pour finir ton tour.",
-  "game.progress.books": "Brelans {ready} sur {need} prêts",
-  "game.progress.runs": "Suites {ready} sur {need} prêtes",
-  "game.progress.closestBook": "le plus proche : {rank} ({have}/{need})",
-  "game.progress.closestRun": "la plus proche : {suit} ({have}/{need})",
-  "game.progress.ready": "Ta main peut poser le contrat de cette manche maintenant.",
   "game.why.drawFirst": "Pioche d'abord une carte.",
   "game.why.finishWildChoice": "Choisis d'abord ce que remplace la carte joker.",
   "game.why.tooManyGroups": "Tu as groupé plus que cette manche ne demande — retire un groupe.",

@@ -371,11 +371,6 @@ const ru = {
   "game.turnHint.drawn": "Собери комбинацию или выбери карту и сбрось её, чтобы закончить ход.",
   "game.turnHint.melded":
     "Подкладывай карты к комбинациям, затем сбрось карту, чтобы закончить ход.",
-  "game.progress.books": "Сеты: готово {ready} из {need}",
-  "game.progress.runs": "Стриты: готово {ready} из {need}",
-  "game.progress.closestBook": "ближе всего: {rank} ({have}/{need})",
-  "game.progress.closestRun": "ближе всего: {suit} ({have}/{need})",
-  "game.progress.ready": "Твоя рука уже позволяет выложить контракт этого раунда.",
   "game.why.drawFirst": "Сначала возьми карту.",
   "game.why.finishWildChoice": "Сначала выбери, что заменяет джокер.",
   "game.why.tooManyGroups": "Групп собрано больше, чем нужно в этом раунде — убери одну.",

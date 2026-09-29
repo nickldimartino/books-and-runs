@@ -354,11 +354,6 @@ const es = {
     "Arma tu combinación, o elige una carta y descártala para terminar tu turno.",
   "game.turnHint.melded":
     "Añade cartas a las combinaciones y luego descarta para terminar tu turno.",
-  "game.progress.books": "Grupos {ready} de {need} listos",
-  "game.progress.runs": "Escaleras {ready} de {need} listas",
-  "game.progress.closestBook": "más cercano: {rank} ({have}/{need})",
-  "game.progress.closestRun": "más cercana: {suit} ({have}/{need})",
-  "game.progress.ready": "Tu mano ya puede combinar el contrato de esta ronda.",
   "game.why.drawFirst": "Roba una carta primero.",
   "game.why.finishWildChoice": "Elige primero qué representa la carta comodín.",
   "game.why.tooManyGroups": "Has agrupado más de lo que pide esta ronda: quita un grupo.",

@@ -360,11 +360,6 @@ const de = {
     "Bilde deine Meldung oder wähle eine Karte und lege sie ab, um deinen Zug zu beenden.",
   "game.turnHint.melded":
     "Lege Karten an Meldungen an und lege dann ab, um deinen Zug zu beenden.",
-  "game.progress.books": "Sätze {ready} von {need} bereit",
-  "game.progress.runs": "Folgen {ready} von {need} bereit",
-  "game.progress.closestBook": "am nächsten: {rank} ({have}/{need})",
-  "game.progress.closestRun": "am nächsten: {suit} ({have}/{need})",
-  "game.progress.ready": "Deine Hand kann den Kontrakt dieser Runde jetzt melden.",
   "game.why.drawFirst": "Ziehe zuerst eine Karte.",
   "game.why.finishWildChoice": "Wähle zuerst, wofür die Wildcard steht.",
   "game.why.tooManyGroups":

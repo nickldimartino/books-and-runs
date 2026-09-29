@@ -53,11 +53,10 @@ import { getTournamentForGame } from "../../lib/tournamentsStore";
 import { useFocusTrap } from "../../lib/useFocusTrap";
 import { useGameShortcuts, type ShortcutHandlers } from "../../lib/useGameShortcuts";
 import { useMediaQuery, WIDE_TABLE_QUERY } from "../../lib/useMediaQuery";
-import { contractProgress, type ContractProgress } from "../../lib/contractProgress";
+import { contractProgress } from "../../lib/contractProgress";
 import { playError } from "../../lib/sound";
 import { speedFactor } from "../../lib/motion";
 import { hapticError } from "../../lib/haptics";
-import type { TranslationKey } from "../../lib/i18n/keys";
 import type { MpSeatMeta } from "../../lib/mpStore";
 import { groupMeldsByOwner, layOffOptions } from "@/meld";
 import { handPenalty } from "@/scorer";
@@ -658,27 +657,6 @@ export default function MultiplayerPlayPage() {
   const showLegalMoves = savedSettings.showLegalMoves;
   const confirmDiscardSetting = savedSettings.confirmDiscard;
   const progress = showLegalMoves && isMyTurn && !alreadyMelded ? contractProgress(view.yourHand, { ...view.contract, round: view.round, label: view.roundLabel }) : null;
-  const progressLine = progress ? progressLineFor(progress) : null;
-
-  function progressLineFor(p: ContractProgress): string {
-    if (p.booksReady >= p.booksNeeded && p.runsReady >= p.runsNeeded) return t("game.progress.ready");
-    const parts: string[] = [];
-    if (p.booksNeeded > 0) {
-      let part = t("game.progress.books", { ready: p.booksReady, need: p.booksNeeded });
-      if (p.booksReady < p.booksNeeded && p.nextBook) {
-        part += ` — ${t("game.progress.closestBook", { rank: p.nextBook.rank, have: p.nextBook.have, need: p.nextBook.need })}`;
-      }
-      parts.push(part);
-    }
-    if (p.runsNeeded > 0) {
-      let part = t("game.progress.runs", { ready: p.runsReady, need: p.runsNeeded });
-      if (p.runsReady < p.runsNeeded && p.nextRun) {
-        part += ` — ${t("game.progress.closestRun", { suit: t(`card.suit.${p.nextRun.suit}` as TranslationKey), have: p.nextRun.have, need: p.nextRun.need })}`;
-      }
-      parts.push(part);
-    }
-    return parts.join(" · ");
-  }
 
   // Why an action is greyed out, in words (Show legal moves assist).
   let whyMeld: string | null = null;
@@ -894,10 +872,6 @@ export default function MultiplayerPlayPage() {
                     {g.groupError}
                   </p>
                 )}
-                {progressLine && drawn && !isWide && (
-                  <p className="text-xs font-medium text-[var(--accent)]">{progressLine}</p>
-                )}
-
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     onClick={() => g.stageGroup()}
@@ -1272,7 +1246,9 @@ export default function MultiplayerPlayPage() {
         >
           {!drawn
             ? t("multiplayer.yourTurnDraw")
-            : (progressLine ?? (alreadyMelded ? t("game.turnHint.melded") : t("game.turnHint.drawn")))}
+            : alreadyMelded
+              ? t("game.turnHint.melded")
+              : t("game.turnHint.drawn")}
         </p>
       )}
 

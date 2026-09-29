@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { useGameShortcuts, type ShortcutHandlers } from "../lib/useGameShortcuts";
 import { KeyboardHelp } from "../components/KeyboardHelp";
 import { useMediaQuery, WIDE_TABLE_QUERY } from "../lib/useMediaQuery";
-import { contractProgress, type ContractProgress } from "../lib/contractProgress";
+import { contractProgress } from "../lib/contractProgress";
 import { playError } from "../lib/sound";
 import { speedFactor } from "../lib/motion";
 import { hapticError } from "../lib/haptics";
@@ -710,10 +710,9 @@ export default function GamePage() {
   const confirmDiscardSetting = isTutorial || savedSettings.confirmDiscard;
 
   // How close the hand is to this round's contract (Show legal moves assist) —
-  // the progress line in the turn-status slot and the soft ring on the cards
-  // that contribute. Nothing to show once the contract is melded.
+  // drives the soft ring on the cards that contribute (hintCardIds below).
+  // Nothing to show once the contract is melded.
   const progress = showLegalMoves && !player.hasMeldedContract ? contractProgress(player.hand, contract) : null;
-  const progressLine = progress ? progressLineFor(progress) : null;
 
   // Grouping books before runs is just how Table melds always renders now —
   // it used to be its own toggle, but there was never a good reason to turn
@@ -761,28 +760,6 @@ export default function GamePage() {
     );
   }
 
-  /** "Books 1 of 2 ready — closest: 5 (2/3) · Runs …" for the Show legal
-   * moves assist; the closing "ready" line once the hand can meld now. */
-  function progressLineFor(p: ContractProgress): string {
-    const done = p.booksReady >= p.booksNeeded && p.runsReady >= p.runsNeeded;
-    if (done) return t("game.progress.ready");
-    const parts: string[] = [];
-    if (p.booksNeeded > 0) {
-      let part = t("game.progress.books", { ready: p.booksReady, need: p.booksNeeded });
-      if (p.booksReady < p.booksNeeded && p.nextBook) {
-        part += ` — ${t("game.progress.closestBook", { rank: p.nextBook.rank, have: p.nextBook.have, need: p.nextBook.need })}`;
-      }
-      parts.push(part);
-    }
-    if (p.runsNeeded > 0) {
-      let part = t("game.progress.runs", { ready: p.runsReady, need: p.runsNeeded });
-      if (p.runsReady < p.runsNeeded && p.nextRun) {
-        part += ` — ${t("game.progress.closestRun", { suit: t(`card.suit.${p.nextRun.suit}` as TranslationKey), have: p.nextRun.have, need: p.nextRun.need })}`;
-      }
-      parts.push(part);
-    }
-    return parts.join(" · ");
-  }
 
   // Sound + haptic buzz whenever the game rejects a move, alongside the
   // written reason (groupError / layOffError, shown with aria-live).
@@ -1013,11 +990,9 @@ export default function GamePage() {
   // rendered (same height either way) so drawing doesn't shift the table.
   const turnHint = !hasDrawn
     ? t("game.drawToStart")
-    : progressLine && !player.hasMeldedContract
-      ? progressLine
-      : player.hasMeldedContract
-        ? t("game.turnHint.melded")
-        : t("game.turnHint.drawn");
+    : player.hasMeldedContract
+      ? t("game.turnHint.melded")
+      : t("game.turnHint.drawn");
 
   // Extracted as its own const purely for readability — this, discardSection,
   // and handSection all mount inside the hand drawer (see its render further
@@ -1095,12 +1070,6 @@ export default function GamePage() {
           {groupError}
         </p>
       )}
-      {progressLine && hasDrawn && !isWide && (
-        <p className="text-xs font-medium text-[var(--accent)]" data-testid="contract-progress">
-          {progressLine}
-        </p>
-      )}
-
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={handleGroupSelected}

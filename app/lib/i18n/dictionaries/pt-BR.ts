@@ -354,11 +354,6 @@ const ptBR = {
     "Monte sua combinação, ou escolha uma carta e descarte para encerrar seu turno.",
   "game.turnHint.melded":
     "Acrescente cartas às combinações e depois descarte para encerrar seu turno.",
-  "game.progress.books": "Trincas {ready} de {need} prontas",
-  "game.progress.runs": "Sequências {ready} de {need} prontas",
-  "game.progress.closestBook": "mais próxima: {rank} ({have}/{need})",
-  "game.progress.closestRun": "mais próxima: {suit} ({have}/{need})",
-  "game.progress.ready": "Sua mão já pode combinar o contrato desta rodada.",
   "game.why.drawFirst": "Compre uma carta primeiro.",
   "game.why.finishWildChoice": "Escolha primeiro o que o curinga representa.",
   "game.why.tooManyGroups": "Você agrupou mais do que esta rodada pede — remova um grupo.",
