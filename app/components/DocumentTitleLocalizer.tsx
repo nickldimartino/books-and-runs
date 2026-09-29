@@ -18,6 +18,7 @@ const PAGE_TITLE_KEYS: Record<string, TranslationKey> = {
   "/progress": "nav.progress",
   "/social": "nav.social",
   "/profile": "nav.profile",
+  "/releases": "releases.title",
 };
 
 export function DocumentTitleLocalizer() {

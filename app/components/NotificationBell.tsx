@@ -25,10 +25,15 @@ import {
   unseenCount,
 } from "../lib/notificationItems";
 import { getPushPermission, isPushSubscribed, isPushSupported, subscribeToPush } from "../lib/pushSubscriptions";
+import { notifiableReleases } from "../lib/releases";
 import { loadSupabase } from "../lib/supabaseClient";
 import type { Notifications } from "../lib/useNotifications";
 import type { ClaimedQuest } from "../lib/verifySoloGame";
 import { questLabel } from "./home/QuestToast";
+
+// Computed once per module load, not per render — RELEASES is static data,
+// and every caller of NotificationBell shares the same filtered list.
+const NOTIFIABLE_RELEASES = notifiableReleases();
 
 function names(g: MpGameSummary): string {
   return g.seats
@@ -73,6 +78,11 @@ export function NotificationBell({
         friendRequests: notifications.friendRequests,
         shieldSaveDay,
         claimedQuests,
+        // Guest-visible only if there's already something else to show them
+        // (every other source is account data) — releases mirror that: a
+        // signed-out visitor gets no bell at all, same as before this kind
+        // existed, rather than the bell suddenly appearing just for them.
+        releases: userId ? NOTIFIABLE_RELEASES : undefined,
       }),
     [userId, notifications.mpGames, notifications.friendRequests, shieldSaveDay, claimedQuests]
   );
@@ -332,6 +342,20 @@ function Row({
         {dot}
         <span className="text-sm font-medium text-[var(--heading)]">🛡️ {t("streakShield.savedTitle")}</span>
       </div>
+    );
+  }
+  if (item.kind === "release") {
+    const r = item.release;
+    return (
+      <Link href={`/releases#${r.version}`} onClick={onNavigate} className={`${card} hover:bg-[var(--panel)]`}>
+        {dot}
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[var(--heading)]">
+            📣 {r.kind === "feature" ? r.title : t("releases.badge.fix")}
+          </span>
+          {r.kind === "feature" && <span className="mt-0.5 block truncate text-xs text-[var(--faint)]">{r.description}</span>}
+        </span>
+      </Link>
     );
   }
   return (

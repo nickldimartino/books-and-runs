@@ -7,6 +7,7 @@
 
 import type { MpGameSummary } from "./mpStore";
 import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
+import type { ReleaseEntry } from "./releases";
 import type { ClaimedQuest } from "./verifySoloGame";
 
 export type NotificationItem =
@@ -14,7 +15,8 @@ export type NotificationItem =
   | { kind: "invite"; id: string; game: MpGameSummary }
   | { kind: "friends"; id: string; count: number }
   | { kind: "shield"; id: string; day: string }
-  | { kind: "quest"; id: string; quest: ClaimedQuest };
+  | { kind: "quest"; id: string; quest: ClaimedQuest }
+  | { kind: "release"; id: string; release: ReleaseEntry };
 
 export interface NotificationSources {
   userId: string | null;
@@ -24,6 +26,10 @@ export interface NotificationSources {
   shieldSaveDay?: string | null;
   /** Quests paid out on this visit (useQuests.justClaimed). */
   claimedQuests?: ClaimedQuest[];
+  /** Releases eligible to notify (releases.ts's notifiableReleases()) —
+   * optional/opt-in like shieldSaveDay/claimedQuests, so existing callers
+   * and tests that omit it are unaffected. */
+  releases?: ReleaseEntry[];
 }
 
 export function isYourTurn(g: MpGameSummary, userId: string | null): boolean {
@@ -48,6 +54,7 @@ export function buildNotificationItems(src: NotificationSources): NotificationIt
   }
   if (src.shieldSaveDay) items.push({ kind: "shield", id: `shield:${src.shieldSaveDay}`, day: src.shieldSaveDay });
   for (const q of src.claimedQuests ?? []) items.push({ kind: "quest", id: `quest:${q.period}:${q.id}`, quest: q });
+  for (const r of src.releases ?? []) items.push({ kind: "release", id: `release:${r.version}`, release: r });
   return items;
 }
 

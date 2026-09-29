@@ -328,6 +328,9 @@ export default function HomePage() {
 
       <div className="mt-4 flex flex-col gap-1">
         <footer className="flex flex-wrap justify-center gap-x-3 text-xs text-[var(--faint)]">
+          <Link href="/releases" className={footerLink}>
+            {t("releases.footerLink")}
+          </Link>
           <Link href="/privacy" className={footerLink}>
             {t("common.privacy")}
           </Link>

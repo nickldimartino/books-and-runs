@@ -20,10 +20,13 @@ const game: MpGameSummary = {
 const refresh = () => {};
 
 describe("NotificationBell", () => {
+  // Signed-in users also always carry the newest release(s) as a low-priority
+  // informational item (see releases.ts) — one more than the raw game/friend
+  // count these tests would otherwise total.
   it("shows a capped badge, opens a dialog, clears the badge but keeps the item; Esc closes", () => {
     render(<NotificationBell userId="me" notifications={{ friendRequests: 12, mpGames: [game], refresh }} />);
     expect(screen.getByTestId("notification-badge").textContent).toBe("9+");
-    fireEvent.click(screen.getByRole("button", { name: /Notifications, 13 new/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Notifications, 14 new/ }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByText("Ana")).toBeTruthy();
     expect(screen.queryByTestId("notification-badge")).toBeNull();
@@ -31,12 +34,13 @@ describe("NotificationBell", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("button", { name: "Notifications" })).toBeTruthy();
   });
-  it("shows the friendly empty state", () => {
+  it("falls back to just the newest release when there's nothing else — releases mean a signed-in user is never truly 'all caught up'", () => {
     render(<NotificationBell userId="me" notifications={{ friendRequests: 0, mpGames: [], refresh }} />);
-    fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
-    expect(screen.getByText("You're all caught up")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Notifications, 1 new" }));
+    expect(screen.queryByText("You're all caught up")).toBeNull();
+    expect(screen.getByText(/Release notes/)).toBeTruthy();
   });
-  it("renders nothing for a guest with nothing to show", () => {
+  it("renders nothing for a guest with nothing to show (releases don't count for a signed-out visitor)", () => {
     const { container } = render(<NotificationBell userId={null} notifications={{ friendRequests: 0, mpGames: [], refresh }} />);
     expect(container.firstChild).toBeNull();
   });
