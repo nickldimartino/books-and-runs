@@ -749,6 +749,323 @@ function LedgerFace({ card, label, isJoker }: StyleProps) {
   );
 }
 
+// `engraved` (Boutique) — a fine cross-hatch fill clipped to the suit/star
+// shape, like the hatched shading on printed currency, inside a thin
+// double-line border.
+function EngravedFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
+  const clipId = `engraved-clip-${card.id}`;
+  return (
+    <g>
+      <rect x="5" y="5" width="90" height="130" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+      <rect x="8" y="8" width="84" height="124" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
+      {isJoker ? (
+        <g>
+          <defs>
+            <clipPath id={clipId}>
+              <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" />
+            </clipPath>
+          </defs>
+          <g clipPath={`url(#${clipId})`} stroke="currentColor" strokeWidth="1.2" opacity="0.85">
+            {Array.from({ length: 10 }, (_, i) => (
+              <line key={i} x1={10 + i * 9} y1="10" x2={10 + i * 9} y2="110" />
+            ))}
+          </g>
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.58) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <text x="50" y="108" textAnchor="middle" fontSize="14" fontWeight="700" letterSpacing="2" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+            {jokerLabel}
+          </text>
+        </g>
+      ) : (
+        <g>
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            fontSize={isCourt ? "44" : label === "10" ? "40" : "48"}
+            fontWeight="800"
+            fontFamily="Georgia, 'Times New Roman', serif"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+          {isCourt && (card.rank === "K" || card.rank === "Q") && (
+            <path d={CROWN_PATH} transform="translate(16 6)" />
+          )}
+          <defs>
+            <clipPath id={clipId}>
+              <path d={SUIT_PATHS[card.suit]} transform="translate(50 96) scale(0.44) translate(-50 -50)" />
+            </clipPath>
+          </defs>
+          <g clipPath={`url(#${clipId})`} stroke="currentColor" strokeWidth="1.1" opacity="0.9">
+            {Array.from({ length: 9 }, (_, i) => (
+              <line key={i} x1={28 + i * 5.5} y1="74" x2={28 + i * 5.5} y2="118" />
+            ))}
+          </g>
+          <path d={SUIT_PATHS[card.suit]} transform="translate(50 96) scale(0.44) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="1" />
+        </g>
+      )}
+    </g>
+  );
+}
+
+// `chalk` (Boutique) — a handwritten face with a faint doubled offset pass
+// behind the crisp one (chalk dust) and dashed, uneven strokes instead of
+// Sketch's clean dashed border + skew.
+function ChalkFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
+  if (isJoker) {
+    return (
+      <g strokeLinecap="round">
+        <path d={STAR_PATH} transform="translate(50 58) scale(0.56) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="1.5 2.5" opacity="0.9" />
+        <path d={STAR_PATH} transform="translate(50.6 57.4) scale(0.56) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1 3" opacity="0.4" />
+        <text x="50" y="106" textAnchor="middle" fontSize="13" fontWeight="600" letterSpacing="2" fontFamily="'Comic Sans MS', 'Segoe Print', cursive" fill="currentColor" opacity="0.9">
+          {jokerLabel}
+        </text>
+      </g>
+    );
+  }
+  return (
+    <g strokeLinecap="round">
+      <text
+        x="49.4"
+        y="58.6"
+        textAnchor="middle"
+        fontSize={isCourt ? "43" : label === "10" ? "39" : "47"}
+        fontWeight="700"
+        fontFamily="'Comic Sans MS', 'Segoe Print', cursive"
+        fill="currentColor"
+        opacity="0.35"
+      >
+        {label}
+      </text>
+      <text
+        x="50"
+        y="58"
+        textAnchor="middle"
+        fontSize={isCourt ? "44" : label === "10" ? "40" : "48"}
+        fontWeight="700"
+        fontFamily="'Comic Sans MS', 'Segoe Print', cursive"
+        fill="currentColor"
+      >
+        {label}
+      </text>
+      {isCourt && (card.rank === "K" || card.rank === "Q") && (
+        <path d={CROWN_PATH} transform="translate(16 6)" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="1.2 2" />
+      )}
+      <path
+        d={SUIT_PATHS[card.suit]}
+        transform="translate(50 96) scale(0.44) translate(-50 -50)"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeDasharray="1.4 2.6"
+        opacity="0.9"
+      />
+    </g>
+  );
+}
+
+// `blueprint` (Boutique) — a technical-drawing schematic: a faint graph-paper
+// grid, corner crosshair ticks, a stroke-only monospace rank, and a
+// dimension line (with end ticks) under the suit.
+function BlueprintFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
+  const gridY = [20, 40, 60, 80, 100, 120];
+  const gridX = [20, 40, 60, 80];
+  const corners: [number, number][] = [
+    [4, 4],
+    [96, 4],
+    [4, 136],
+    [96, 136],
+  ];
+  return (
+    <g fill="none" stroke="currentColor">
+      <g opacity="0.15" strokeWidth="0.4">
+        {gridY.map((y) => (
+          <line key={`h${y}`} x1="4" y1={y} x2="96" y2={y} />
+        ))}
+        {gridX.map((x) => (
+          <line key={`v${x}`} x1={x} y1="4" x2={x} y2="136" />
+        ))}
+      </g>
+      <rect x="4" y="4" width="92" height="132" strokeWidth="1" opacity="0.6" />
+      {corners.map(([x, y], i) => (
+        <g key={i} strokeWidth="1">
+          <line x1={x === 4 ? x : x - 6} y1={y} x2={x === 4 ? x + 6 : x} y2={y} />
+          <line x1={x} y1={y === 4 ? y : y - 6} x2={x} y2={y === 4 ? y + 6 : y} />
+        </g>
+      ))}
+      {isJoker ? (
+        <g>
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.56) translate(-50 -50)" strokeWidth="1.5" />
+          <text x="50" y="106" textAnchor="middle" fontSize="12" fontWeight="600" letterSpacing="2" fontFamily="ui-monospace, 'Courier New', monospace" stroke="none" fill="currentColor">
+            {jokerLabel}
+          </text>
+        </g>
+      ) : (
+        <g>
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            fontSize={isCourt ? "40" : label === "10" ? "36" : "44"}
+            fontWeight="600"
+            fontFamily="ui-monospace, 'Courier New', monospace"
+            strokeWidth="1.3"
+          >
+            {label}
+          </text>
+          {isCourt && (card.rank === "K" || card.rank === "Q") && (
+            <path d={CROWN_PATH} transform="translate(16 8)" strokeWidth="1.3" />
+          )}
+          <path d={SUIT_PATHS[card.suit]} transform="translate(50 96) scale(0.4) translate(-50 -50)" strokeWidth="1.3" />
+          <g strokeWidth="0.6" opacity="0.6">
+            <line x1="30" y1="118" x2="70" y2="118" />
+            <line x1="30" y1="115" x2="30" y2="121" />
+            <line x1="70" y1="115" x2="70" y2="121" />
+          </g>
+        </g>
+      )}
+    </g>
+  );
+}
+
+// `marquee` (Boutique) — a ring of small "bulb" dots around the card border
+// and a thick outlined rank, like a theater marquee sign.
+function MarqueeFace({ card, label, isCourt, isJoker, jokerLabel }: StyleProps) {
+  const bulbs: [number, number][] = [];
+  const top = 10;
+  const bottom = 130;
+  const left = 10;
+  const right = 90;
+  for (let x = left; x <= right; x += 16) bulbs.push([x, top], [x, bottom]);
+  for (let y = top + 16; y < bottom; y += 16) bulbs.push([left, y], [right, y]);
+  return (
+    <g>
+      {bulbs.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="2" fill="currentColor" opacity="0.7" />
+      ))}
+      <rect x="10" y="10" width="80" height="120" rx="4" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.3" />
+      {isJoker ? (
+        <g>
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.56) translate(-50 -50)" fill="none" stroke="currentColor" strokeWidth="3" />
+          <text x="50" y="106" textAnchor="middle" fontSize="13" fontWeight="800" letterSpacing="3" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="none" stroke="currentColor" strokeWidth="1.5">
+            {jokerLabel}
+          </text>
+        </g>
+      ) : (
+        <g>
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            fontSize={isCourt ? "42" : label === "10" ? "38" : "46"}
+            fontWeight="800"
+            fontFamily="ui-sans-serif, system-ui, sans-serif"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            {label}
+          </text>
+          {isCourt && (card.rank === "K" || card.rank === "Q") && (
+            <path d={CROWN_PATH} transform="translate(16 6)" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          )}
+          <Pip suit={card.suit} cx={50} cy={96} size={36} outline />
+        </g>
+      )}
+    </g>
+  );
+}
+
+// `inked` (Boutique) — a bold slanted brush/calligraphy pass (the whole face
+// skewed, tattoo-flash style) with a couple of small ink-splatter dots,
+// distinct from Sketch's dashed-and-skewed *outline* treatment.
+function InkedFace({ card, label, isJoker, jokerLabel }: StyleProps) {
+  return (
+    <g transform="skewX(-6)">
+      {isJoker ? (
+        <g>
+          <path d={STAR_PATH} transform="translate(52 60) scale(0.6) translate(-50 -50)" opacity="0.45" />
+          <path d={STAR_PATH} transform="translate(50 58) scale(0.62) translate(-50 -50)" />
+          <text x="50" y="106" textAnchor="middle" fontSize="13" fontWeight="800" letterSpacing="1" fontFamily="Georgia, 'Times New Roman', serif" fill="currentColor">
+            {jokerLabel}
+          </text>
+        </g>
+      ) : (
+        <g>
+          <text
+            x="50"
+            y="64"
+            textAnchor="middle"
+            fontSize={label.length > 1 ? "48" : "60"}
+            fontWeight="900"
+            fontFamily="Georgia, 'Times New Roman', serif"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+          <path d={SUIT_PATHS[card.suit]} transform="translate(50 102) scale(0.46) translate(-50 -50)" fill="currentColor" />
+        </g>
+      )}
+      <circle cx="22" cy="118" r="1.6" fill="currentColor" opacity="0.5" />
+      <circle cx="78" cy="24" r="1.1" fill="currentColor" opacity="0.45" />
+    </g>
+  );
+}
+
+// `royal` (Boutique) — a double ornate border with curled corner flourishes
+// and a crown above the rank on every card (not just courts), for a
+// wax-seal-medallion, regal feel distinct from Retro's plain frame and
+// Deco's stepped geometric one.
+function RoyalFace({ card, label, isJoker, jokerLabel }: StyleProps) {
+  const flourishes: [number, number, number, number][] = [
+    [6, 6, 1, 1],
+    [94, 6, -1, 1],
+    [6, 134, 1, -1],
+    [94, 134, -1, -1],
+  ];
+  return (
+    <g>
+      <rect x="6" y="6" width="88" height="128" rx="10" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.7" />
+      <rect x="11" y="11" width="78" height="118" rx="7" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.4" />
+      {flourishes.map(([x, y, sx, sy], i) => (
+        <path
+          key={i}
+          d="M0 10c0-6 4-10 10-10"
+          transform={`translate(${x} ${y}) scale(${sx} ${sy})`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          opacity="0.6"
+        />
+      ))}
+      {isJoker ? (
+        <g>
+          <path d={STAR_PATH} transform="translate(50 60) scale(0.5) translate(-50 -50)" />
+          <text x="50" y="104" textAnchor="middle" fontSize="12" fontWeight="700" letterSpacing="2" fontFamily="Georgia, 'Times New Roman', serif" fill="currentColor">
+            {jokerLabel}
+          </text>
+        </g>
+      ) : (
+        <g>
+          <path d={CROWN_PATH} transform="translate(16 16) scale(0.9)" />
+          <text
+            x="50"
+            y="66"
+            textAnchor="middle"
+            fontSize={label.length > 1 ? "34" : "40"}
+            fontWeight="700"
+            fontFamily="Georgia, 'Times New Roman', serif"
+            fill="currentColor"
+          >
+            {label}
+          </text>
+          <Pip suit={card.suit} cx={50} cy={100} size={26} />
+        </g>
+      )}
+    </g>
+  );
+}
+
 export function CardFace({ card, style }: { card: Card; style?: CardFaceId }) {
   const { t } = useT();
   const liveStyle = useCardFace();
@@ -805,6 +1122,18 @@ export function CardFace({ card, style }: { card: Card; style?: CardFaceId }) {
             <HaloFace {...props} />
           ) : resolved === "ledger" ? (
             <LedgerFace {...props} />
+          ) : resolved === "engraved" ? (
+            <EngravedFace {...props} />
+          ) : resolved === "chalk" ? (
+            <ChalkFace {...props} />
+          ) : resolved === "blueprint" ? (
+            <BlueprintFace {...props} />
+          ) : resolved === "marquee" ? (
+            <MarqueeFace {...props} />
+          ) : resolved === "inked" ? (
+            <InkedFace {...props} />
+          ) : resolved === "royal" ? (
+            <RoyalFace {...props} />
           ) : (
             // `classic` (the default) and `foil` share this exact layout —
             // foil is a shimmer overlay above, not a different drawing.

@@ -19,13 +19,28 @@ import {
 import {
   AURORA_CROWN_ELEMENTS,
   APEX_STARBURST_ELEMENTS,
+  BOW_ELEMENTS,
+  CARD_FAN_ELEMENTS,
+  CRYSTAL_BALL_ELEMENTS,
   DAILY_FIRE_ELEMENTS,
+  DYNAMITE_ELEMENTS,
   ECLIPSE_ELEMENTS,
+  EVIL_EYE_ELEMENTS,
+  FIREWORK_ELEMENTS,
   FORGE_ELEMENTS,
+  MAHJONG_TILE_ELEMENTS,
   NOVA_ELEMENTS,
+  ORNATE_KEY_ELEMENTS,
+  OWL_ELEMENTS,
   SCALES_ELEMENTS,
+  SLOT_MACHINE_ELEMENTS,
   STREAK_ELEMENTS,
+  SUNGLASSES_ELEMENTS,
+  TOP_HAT_ELEMENTS,
+  TUMBLER_ELEMENTS,
+  UFO_ELEMENTS,
   VICTORY_LAP_ELEMENTS,
+  VIOLIN_ELEMENTS,
 } from "./rarityBadgeIconPaths";
 
 // Same map as PremiumBadgeIcon.tsx's RARITY_BADGE_ELEMENTS — kept as a
@@ -33,7 +48,9 @@ import {
 // component file this .ts module shouldn't import from; both read from the
 // same rarityBadgeIconPaths.ts source data, so they can't drift apart on
 // the actual icon shapes, only (in principle) on this lookup table itself.
-const RARITY_BADGE_ICON_ELEMENTS: Partial<Record<string, IconElement[]>> = {
+// Exported (only) so boutiqueVisuals.test.tsx can assert this stays in sync
+// with PremiumBadgeIcon.tsx's own RARITY_BADGE_ELEMENTS.
+export const RARITY_BADGE_ICON_ELEMENTS: Partial<Record<string, IconElement[]>> = {
   "🧭": ECLIPSE_ELEMENTS,
   "⚔️": FORGE_ELEMENTS,
   "🏵️": NOVA_ELEMENTS,
@@ -43,6 +60,21 @@ const RARITY_BADGE_ICON_ELEMENTS: Partial<Record<string, IconElement[]>> = {
   "💫": APEX_STARBURST_ELEMENTS,
   "⚖️": SCALES_ELEMENTS,
   "📈": STREAK_ELEMENTS,
+  "🎻": VIOLIN_ELEMENTS,
+  "🗝️": ORNATE_KEY_ELEMENTS,
+  "🎩": TOP_HAT_ELEMENTS,
+  "🕶️": SUNGLASSES_ELEMENTS,
+  "🥃": TUMBLER_ELEMENTS,
+  "🧨": DYNAMITE_ELEMENTS,
+  "🧿": EVIL_EYE_ELEMENTS,
+  "🏹": BOW_ELEMENTS,
+  "🦉": OWL_ELEMENTS,
+  "🛸": UFO_ELEMENTS,
+  "🎰": SLOT_MACHINE_ELEMENTS,
+  "🀄": MAHJONG_TILE_ELEMENTS,
+  "🎆": FIREWORK_ELEMENTS,
+  "🎴": CARD_FAN_ELEMENTS,
+  "🔮": CRYSTAL_BALL_ELEMENTS,
 };
 
 interface ShareRow {

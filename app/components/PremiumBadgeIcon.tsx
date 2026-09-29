@@ -2,13 +2,28 @@ import { findPremiumEmojiOption, LEVEL_MEDAL_COLOR, PremiumEmojiOption } from ".
 import {
   AURORA_CROWN_ELEMENTS,
   APEX_STARBURST_ELEMENTS,
+  BOW_ELEMENTS,
+  CARD_FAN_ELEMENTS,
+  CRYSTAL_BALL_ELEMENTS,
   DAILY_FIRE_ELEMENTS,
+  DYNAMITE_ELEMENTS,
   ECLIPSE_ELEMENTS,
+  EVIL_EYE_ELEMENTS,
+  FIREWORK_ELEMENTS,
   FORGE_ELEMENTS,
+  MAHJONG_TILE_ELEMENTS,
   NOVA_ELEMENTS,
+  ORNATE_KEY_ELEMENTS,
+  OWL_ELEMENTS,
   SCALES_ELEMENTS,
+  SLOT_MACHINE_ELEMENTS,
   STREAK_ELEMENTS,
+  SUNGLASSES_ELEMENTS,
+  TOP_HAT_ELEMENTS,
+  TUMBLER_ELEMENTS,
+  UFO_ELEMENTS,
   VICTORY_LAP_ELEMENTS,
+  VIOLIN_ELEMENTS,
 } from "../lib/rarityBadgeIconPaths";
 import { IconElement } from "../lib/achievementIconPaths";
 import { ACHIEVEMENT_ICON_PROPS, AchievementIcon } from "./AchievementIcons";
@@ -24,7 +39,10 @@ import { ACHIEVEMENT_ICON_PROPS, AchievementIcon } from "./AchievementIcons";
 // instead of reusing MedalIcon recolored — see cosmeticRarity.ts's own doc
 // for why a shape, not just a color, is what makes a rarer reward actually
 // read as rarer.
-const RARITY_BADGE_ELEMENTS: Partial<Record<string, IconElement[]>> = {
+// Exported (only) so boutiqueVisuals.test.tsx can assert every boutique
+// badge has an entry here — the exact gap that shipped 15 boutique badges
+// with no custom icon at all (see this file's own header comment).
+export const RARITY_BADGE_ELEMENTS: Partial<Record<string, IconElement[]>> = {
   "🧭": ECLIPSE_ELEMENTS,
   "⚔️": FORGE_ELEMENTS,
   "🏵️": NOVA_ELEMENTS,
@@ -34,6 +52,22 @@ const RARITY_BADGE_ELEMENTS: Partial<Record<string, IconElement[]>> = {
   "💫": APEX_STARBURST_ELEMENTS,
   "⚖️": SCALES_ELEMENTS,
   "📈": STREAK_ELEMENTS,
+  // Boutique (15) — see rarityBadgeIconPaths.ts's own doc on this block.
+  "🎻": VIOLIN_ELEMENTS,
+  "🗝️": ORNATE_KEY_ELEMENTS,
+  "🎩": TOP_HAT_ELEMENTS,
+  "🕶️": SUNGLASSES_ELEMENTS,
+  "🥃": TUMBLER_ELEMENTS,
+  "🧨": DYNAMITE_ELEMENTS,
+  "🧿": EVIL_EYE_ELEMENTS,
+  "🏹": BOW_ELEMENTS,
+  "🦉": OWL_ELEMENTS,
+  "🛸": UFO_ELEMENTS,
+  "🎰": SLOT_MACHINE_ELEMENTS,
+  "🀄": MAHJONG_TILE_ELEMENTS,
+  "🎆": FIREWORK_ELEMENTS,
+  "🎴": CARD_FAN_ELEMENTS,
+  "🔮": CRYSTAL_BALL_ELEMENTS,
 };
 
 function renderRarityElement(el: IconElement, i: number) {
