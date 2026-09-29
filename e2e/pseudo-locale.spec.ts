@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import en from "../app/lib/i18n/dictionaries/en";
 import { toPseudo } from "../app/lib/i18n/pseudoLocale";
+import { RELEASES } from "../app/lib/releases";
 
 // Catches hardcoded (never-through-t()) UI text on any guest-reachable route
 // without needing real translations: the dev-only pseudo-locale turns every
@@ -31,6 +32,7 @@ const ROUTES = [
   "/settings/card-face",
   "/settings/ambient-song",
   "/boutique",
+  "/releases",
   "/new-game",
   "/new-game/local",
   "/new-game/multiplayer",
@@ -70,6 +72,21 @@ const ALLOWED_RUNS: RegExp[] = [
   /Smoke and Mirrors$/,
 ];
 
+// /releases' entries (app/lib/releases.ts) are deliberately English-only —
+// same carve-out as the catalog names above, see that file's own doc. There
+// are 69+ entries of real prose, so a per-string regex isn't practical the
+// way it is for a handful of catalog names; instead, a matched run is
+// allowed here if it's literally a substring of some release's own title or
+// description (a genuinely untranslated string ELSEWHERE on /releases —
+// the page chrome — would still be caught, since it won't appear in this
+// text). "Bug fixes and improvements" (FIX_TITLE in releases.ts) is covered
+// automatically since it's inside `description`/`title` too.
+const RELEASE_TEXT = RELEASES.flatMap((r) => [r.title, r.description]);
+function isReleaseContent(found: string): boolean {
+  const text = found.replace(/^[a-z-]+:\s*/i, ""); // strip the "text: "/"aria-label: " prefix
+  return RELEASE_TEXT.some((s) => s.includes(text));
+}
+
 /** Finds runs of >= 3 plain-ASCII words in visible text nodes and in
  * user-visible attributes. Runs inside the page, returns offending strings. */
 async function findEnglish(page: Page): Promise<string[]> {
@@ -106,7 +123,7 @@ async function findEnglish(page: Page): Promise<string[]> {
 }
 
 async function report(page: Page, label: string) {
-  const found = (await findEnglish(page)).filter((f) => !ALLOWED_RUNS.some((r) => r.test(f)));
+  const found = (await findEnglish(page)).filter((f) => !ALLOWED_RUNS.some((r) => r.test(f)) && !isReleaseContent(f));
   expect(found, `Untranslated English on ${label} (route rendered in the pseudo-locale)`).toEqual([]);
 }
 
