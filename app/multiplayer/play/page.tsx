@@ -763,7 +763,15 @@ export default function MultiplayerPlayPage() {
   }
 
   function onMeldClick(meld: Meld) {
-    if (!layoffArmed || !selectedCard) return;
+    // Narrow/drawer layout: a meld click only counts once "Lay off card"
+    // has armed it (the drawer's own backdrop otherwise blocks the tap
+    // outright — see armLayoffFromDrawer). At isWide, table melds sit next
+    // to the always-visible hand with nothing covering them, so — same as
+    // solo's handleMeldClick, which needs no arming step at all — a click
+    // works immediately as soon as a card is selected. Without this OR,
+    // laying off was unreachable at desktop width: the only control that
+    // ever set layoffArmed (the button below) is itself hidden there.
+    if ((!layoffArmed && !isWide) || !selectedCard) return;
     const opts = layOffOptions(selectedCard, meld);
     if (opts.length === 0) return;
     setLayoffArmed(false);
@@ -1320,7 +1328,10 @@ export default function MultiplayerPlayPage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {melds.map((meld) => {
-                    const armed = layoffArmed && layoffTargets.includes(meld.id);
+                    // At isWide this highlights (and enables) a valid target
+                    // as soon as a card is selected, with no arming step —
+                    // see onMeldClick's own comment on why.
+                    const armed = (layoffArmed || isWide) && layoffTargets.includes(meld.id);
                     return (
                       <button
                         key={meld.id}
