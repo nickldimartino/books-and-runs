@@ -7,6 +7,7 @@ import {
   catalogItem,
   computeBundlePriceCents,
   EVERYTHING_BUNDLE,
+  EVERYTHING_BUNDLE_PRICE_CENTS,
   findBundle,
   ITEMS_BY_CATEGORY,
   roundToCharmCents,
@@ -225,13 +226,15 @@ describe("the Everything Bundle (top-tier anchor)", () => {
     for (const sku of EVERYTHING_BUNDLE.skus) expect(sku.startsWith("bundle:")).toBe(false);
   });
 
-  it("price is derived via the shared computeBundlePriceCents helper — asserting the exact math, not a snapshot", () => {
-    const expected = computeBundlePriceCents(135);
-    expect(EVERYTHING_BUNDLE.priceCents).toBe(expected);
-    // Worked out by hand from the same pipeline computeBundlePriceCents
-    // documents: 135 * 99 = 13365 -> charm-round up to 13399 -> * 0.8 =
-    // 10719.2 -> round down to the nearest 99-ending = 10699 ($106.99).
-    expect(EVERYTHING_BUNDLE.priceCents).toBe(10699);
+  it("price is a fixed $99.99 anchor, not derived via computeBundlePriceCents (a deliberate Sept 2026 override)", () => {
+    expect(EVERYTHING_BUNDLE.priceCents).toBe(EVERYTHING_BUNDLE_PRICE_CENTS);
+    expect(EVERYTHING_BUNDLE.priceCents).toBe(9999);
+    // The formula every other bundle uses would give $106.99 for 135 items
+    // — noted here so a future reader isn't confused when this bundle's
+    // price doesn't match that pipeline the way every sibling test in this
+    // file expects its own bundle to.
+    expect(computeBundlePriceCents(135)).toBe(10699);
+    expect(EVERYTHING_BUNDLE.priceCents).not.toBe(computeBundlePriceCents(135));
   });
 
   it("is included in CATALOG_BUNDLES and resolves through catalogItem/findBundle", () => {

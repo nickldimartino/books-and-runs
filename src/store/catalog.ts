@@ -461,14 +461,22 @@ export const SUPPORTER_BUNDLE: CatalogBundle = {
 };
 
 /**
+ * The top-tier anchor's fixed sticker price — $99.99, a deliberate product
+ * decision (Sept 2026), not derived from `computeBundlePriceCents` the way
+ * every other bundle's price is. That formula would give $106.99 for 135
+ * items; $99.99 is a cleaner, more attractive anchor for the "own
+ * everything" purchase and was chosen by hand instead. If the catalog
+ * grows, this price does NOT automatically track it — revisit by hand.
+ */
+export const EVERYTHING_BUNDLE_PRICE_CENTS = 9999;
+
+/**
  * The top-tier anchor: every individually-purchasable item in the entire
  * catalog (135 skus across all 8 categories — badge/avatar_frame/title/
  * banner/avatar_emoji/card_face/card_back at 15 each, plus 30 theme items),
- * flattened from `CATALOG_ITEMS` itself rather than hand-typed so it can
- * never drift from the real catalog. Priced through the exact same
- * `computeBundlePriceCents` every other bundle uses — one consistent
- * pricing rule for every bundle, this one included, rather than a bespoke
- * "buy everything" discount percentage.
+ * flattened from `CATALOG_ITEMS` itself rather than hand-typed so the item
+ * *list* can never drift from the real catalog, even though the *price*
+ * (above) is a fixed, hand-chosen number rather than formula-derived.
  *
  * Deliberately does NOT include the other bundle wrapper skus
  * (`bundle:supporter`, `bundle:card_back`, `bundle:theme`, …) in its own
@@ -485,7 +493,7 @@ export const EVERYTHING_BUNDLE: CatalogBundle = {
   bundleId: "everything",
   sku: "bundle:everything",
   name: "Everything Bundle",
-  priceCents: computeBundlePriceCents(CATALOG_ITEMS.length),
+  priceCents: EVERYTHING_BUNDLE_PRICE_CENTS,
   skus: CATALOG_ITEMS.map((i) => i.sku!),
 };
 
