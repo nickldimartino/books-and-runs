@@ -58,7 +58,7 @@ export interface StoreBundle {
    * where this comes from. Empty only when the catalog gives this adapter
    * no way to resolve it (a bare-minimum stub's "bundle:supporter"). */
   includes: string[];
-  kind: "category" | "supporter" | "other";
+  kind: "category" | "supporter" | "everything" | "other";
   /** Present only for a "category" bundle. */
   category?: CosmeticCategory;
 }
@@ -93,6 +93,11 @@ function rarityFromExistingCatalogs(category: CosmeticCategory, itemId: string):
       // No pre-existing purchasable-avatar-emoji option list to fall back
       // to (today's free EMOJI_OPTIONS are a different thing) — only
       // reached when the catalog entry itself has no `rarity` either.
+      return "common";
+    case "theme":
+      // THEME_ITEMS (catalog.ts) always sets its own `rarity` (see
+      // mkItem) — this branch exists only to satisfy CosmeticCategory's
+      // exhaustive switch, never actually reached in practice.
       return "common";
   }
 }
@@ -130,8 +135,9 @@ function catalogBundleSkus(sku: string): readonly string[] | undefined {
   return find?.(sku)?.skus;
 }
 
-/** Every bundle in the catalog, "bundle:supporter" first (the hero pack —
- * see store.md's "positioned as the top anchor"), then category bundles. */
+/** Every bundle in the catalog, "bundle:everything" first (the top-tier
+ * anchor), then "bundle:supporter" (the original hero pack — see
+ * store.md's "positioned as the top anchor"), then category bundles. */
 export function listBundles(): StoreBundle[] {
   const itemsByCategory = new Map<CosmeticCategory, string[]>();
   for (const item of listStoreItems()) {
@@ -144,6 +150,10 @@ export function listBundles(): StoreBundle[] {
     if (!isBundleSku(sku)) continue;
     const bundleId = sku.slice("bundle:".length);
     const fromCatalog = catalogBundleSkus(sku);
+    if (bundleId === "everything") {
+      bundles.push({ sku, name: entry.name, priceCents: entry.priceCents, includes: [...(fromCatalog ?? [])], kind: "everything" });
+      continue;
+    }
     if (bundleId === "supporter") {
       bundles.push({ sku, name: entry.name, priceCents: entry.priceCents, includes: [...(fromCatalog ?? [])], kind: "supporter" });
       continue;
@@ -161,7 +171,8 @@ export function listBundles(): StoreBundle[] {
       category: bundleId,
     });
   }
-  return bundles.sort((a, b) => (a.kind === "supporter" ? -1 : b.kind === "supporter" ? 1 : 0));
+  const rank: Record<StoreBundle["kind"], number> = { everything: 0, supporter: 1, category: 2, other: 2 };
+  return bundles.sort((a, b) => rank[a.kind] - rank[b.kind]);
 }
 
 export function findStoreItem(sku: string): StoreItem | undefined {

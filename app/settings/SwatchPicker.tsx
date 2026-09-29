@@ -1,7 +1,12 @@
 "use client";
 
 import { CSSProperties, useState } from "react";
+import Link from "next/link";
 import { useT } from "../lib/i18n/LocaleProvider";
+import { cosmeticRequirementText } from "../lib/cosmeticRequirementText";
+import { LOCKED_ITEM_CLASS, lockedCaption } from "../lib/cosmeticLockStyle";
+import { itemSkuFor } from "../lib/storeSku";
+import { isThemeUnlocked } from "../lib/themeCosmeticUnlocks";
 import { THEMES, ThemeCategory, ThemeId, ThemeOption } from "../lib/themeStore";
 import { themeDescKey } from "./pickerText";
 import { THEME_SWATCHES } from "./themeSwatches";
@@ -18,6 +23,25 @@ export function CheckBadge({ className }: { className: string }) {
   );
 }
 
+/** The color-block preview every theme swatch renders — the settings
+ * picker's own tile below AND the Boutique item card (BoutiqueContent.tsx's
+ * "theme" ItemPreview case) — a colored background with a small accent dot
+ * in the corner. Exported and shared by both rather than reimplemented in
+ * the Boutique, per this pass's own rule: a Boutique preview must never
+ * drift from the real thing a picker already renders. */
+export function ThemeSwatchBlock({ id, compact }: { id: ThemeId; compact?: boolean }) {
+  const swatch = THEME_SWATCHES[id];
+  return (
+    <span
+      className={`flex items-end justify-end rounded-lg p-1.5 ${compact ? "h-full w-full" : "h-14 w-14"}`}
+      style={{ background: swatch.bg }}
+      aria-hidden="true"
+    >
+      <span className={`rounded-full shadow ${compact ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}`} style={{ background: swatch.accent }} />
+    </span>
+  );
+}
+
 // A skin-picker tile — a color block up top (the actual preview, since a
 // theme's page background is the one thing every other choice below it
 // tints), a name label on its own strip in that theme's own panel/heading
@@ -25,24 +49,39 @@ export function CheckBadge({ className }: { className: string }) {
 // way a cosmetic grid in most modern games already does, and a genuine
 // color block (not a small dot) is a far more honest preview of what a
 // theme actually looks like once applied.
-function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActive: boolean; onClick: () => void }) {
-  const { t } = useT();
+//
+// A locked (unowned, purchasable) theme gets the same "dim + tap to go
+// buy it" treatment as every other picker this session — the real color
+// block still renders (dimmed, never hidden or swapped out), and tapping
+// deep-links into the Boutique instead of doing nothing (see
+// SignatureCardBackPicker.tsx's SignatureCardBackTile for the pattern this
+// mirrors).
+function SwatchTile({
+  option,
+  isActive,
+  unlocked,
+  onClick,
+}: {
+  option: ThemeOption;
+  isActive: boolean;
+  unlocked: boolean;
+  onClick: () => void;
+}) {
+  const { t, tPlural } = useT();
+  const title =
+    unlocked || !option.unlock
+      ? t(themeDescKey(option.id))
+      : `${cosmeticRequirementText(t, tPlural, option.unlock)} — ${t("boutique.getInBoutique")}`;
   const swatch = THEME_SWATCHES[option.id];
-  return (
-    <button
-      onClick={onClick}
-      aria-current={isActive}
-      title={t(themeDescKey(option.id))}
-      className={`relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
-        isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
-      }`}
-    >
-      <span className="flex h-11 items-end justify-end p-1.5" style={{ background: swatch.bg }} aria-hidden="true">
-        <span className="h-3.5 w-3.5 rounded-full shadow" style={{ background: swatch.accent }} />
-      </span>
+  const className = `relative flex flex-col overflow-hidden rounded-xl text-left ring-2 transition ${
+    !unlocked ? LOCKED_ITEM_CLASS : isActive ? "ring-[var(--accent)]" : "ring-transparent hover:ring-[var(--border)]"
+  }`;
+  const content = (
+    <>
+      <ThemeSwatchBlock id={option.id} />
       <span className="px-2 py-1.5" style={{ background: swatch.panel }}>
         <span className="block truncate text-xs font-medium" style={{ color: swatch.heading }}>
-          {option.name}
+          {lockedCaption(option.name, unlocked)}
         </span>
       </span>
       {isActive && (
@@ -50,6 +89,15 @@ function SwatchTile({ option, isActive, onClick }: { option: ThemeOption; isActi
           <CheckBadge className="h-2.5 w-2.5" />
         </span>
       )}
+    </>
+  );
+  return !unlocked ? (
+    <Link href={`/boutique?item=${itemSkuFor("theme", option.id)}`} title={title} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button onClick={onClick} aria-current={isActive} title={title} className={className}>
+      {content}
     </button>
   );
 }
@@ -180,10 +228,17 @@ export function SwatchPicker({
   active,
   onSelect,
   matchOption,
+  isCreator = false,
+  ownedSkus,
 }: {
   active: ThemeId | "match";
   onSelect: (id: ThemeId | "match") => void;
   matchOption?: boolean;
+  /** Gates a locked theme (the /settings/theme caller only — card backs
+   * derived from a theme are always free, so /settings/card-back never
+   * needs these). */
+  isCreator?: boolean;
+  ownedSkus?: ReadonlySet<string>;
 }) {
   const { t } = useT();
   const activeOption = active === "match" ? undefined : THEMES.find((o) => o.id === active);
@@ -221,7 +276,13 @@ export function SwatchPicker({
           matchOption ? (
             <CardBackTile key={o.id} option={o} isActive={active === o.id} onClick={() => onSelect(o.id)} />
           ) : (
-            <SwatchTile key={o.id} option={o} isActive={active === o.id} onClick={() => onSelect(o.id)} />
+            <SwatchTile
+              key={o.id}
+              option={o}
+              isActive={active === o.id}
+              unlocked={isThemeUnlocked(o.unlock, isCreator, ownedSkus)}
+              onClick={() => onSelect(o.id)}
+            />
           )
         )}
       </div>

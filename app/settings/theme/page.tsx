@@ -8,6 +8,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pushTheme } from "../../lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "../../lib/cardBackStore";
 import { supabase } from "../../lib/supabaseClient";
+import { useThemeUnlockContext } from "../../lib/themeCosmeticUnlocks";
 import { applyTheme, loadLocalTheme, saveLocalTheme, ThemeId } from "../../lib/themeStore";
 import { useSyncedLocalPreference } from "../../lib/useSyncedLocalPreference";
 import { SwatchPicker } from "../SwatchPicker";
@@ -29,6 +30,7 @@ export default function ThemeSettingsPage() {
   const { t } = useT();
   const { configured, loading: authLoading, user } = useAuth();
   const [theme, setTheme, loading] = useSyncedLocalPreference(loadLocalTheme);
+  const { isCreator, ownedSkus } = useThemeUnlockContext(supabase, user?.id);
 
   function handleThemeChange(id: ThemeId) {
     setTheme(id);
@@ -64,7 +66,12 @@ export default function ThemeSettingsPage() {
           </Link>
         </div>
       ) : (
-        <SwatchPicker active={theme} onSelect={(id) => id !== "match" && handleThemeChange(id)} />
+        <SwatchPicker
+          active={theme}
+          onSelect={(id) => id !== "match" && handleThemeChange(id)}
+          isCreator={isCreator}
+          ownedSkus={ownedSkus}
+        />
       )}
     </main>
   );

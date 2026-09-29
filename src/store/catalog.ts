@@ -34,7 +34,8 @@ export type CosmeticCategory =
   | "banner"
   | "avatar_emoji"
   | "card_face"
-  | "card_back";
+  | "card_back"
+  | "theme";
 
 export const STORE_CATEGORIES: readonly CosmeticCategory[] = [
   "badge",
@@ -44,6 +45,7 @@ export const STORE_CATEGORIES: readonly CosmeticCategory[] = [
   "avatar_emoji",
   "card_face",
   "card_back",
+  "theme",
 ];
 
 export type CosmeticRarity = "common" | "uncommon" | "rare" | "epic" | "mythic" | "apex";
@@ -233,7 +235,63 @@ export const CARD_BACK_ITEMS: readonly CatalogItem[] = [
   mkItem("card_back", "goldleaf", "Gold Leaf Card Back", "apex"),
 ];
 
-/** Every purchasable item across all 7 categories — 105 total (15 × 7). */
+// ---------------------------------------------------------------------------
+// theme — app/lib/themeStore.ts's THEMES. 30 of the 38 table themes are
+// purchasable here (the other 8 — midnight [the DEFAULT_THEME], daylight,
+// casino, pastel, noir, sakura, ember, lagoon — stay free forever for every
+// account, current and future; see themeStore.ts's own `unlock` field on
+// each ThemeOption, which must agree with this list exactly, checked by
+// themeBoutique.test.ts). Unlike every other category, this is modeled as
+// pure client-side-only enforcement (no DB trigger, no CHECK constraint,
+// no migration) — same as card_face/card_back, and for the same
+// proportionality reason cardCosmeticUnlocks.ts's own doc makes: a table
+// theme is nobody else's business but your own, purely personal-taste
+// client rendering with zero competitive stakes.
+//
+// Rarity here (common/uncommon for the more ordinary classic themes,
+// rare/epic for flashier ones, mythic/apex reserved for a couple of real
+// showcase holiday themes — New Year's Eve, Confetti) only affects visual
+// treatment (foil/ring complexity), never price — every theme is still
+// flat SINGLE_ITEM_PRICE_CENTS, same as every other category.
+// ---------------------------------------------------------------------------
+export const THEME_ITEMS: readonly CatalogItem[] = [
+  // Classic (12 of the 20 classic themes — midnight/daylight/casino/pastel/
+  // noir/sakura/ember/lagoon are the 8 free ones, not here).
+  mkItem("theme", "arcade", "Retro Arcade Theme", "rare"),
+  mkItem("theme", "citrus", "Citrus Grove Theme", "common"),
+  mkItem("theme", "frost", "Frost Theme", "common"),
+  mkItem("theme", "meadow", "Meadow Theme", "common"),
+  mkItem("theme", "sahara", "Sahara Dusk Theme", "uncommon"),
+  mkItem("theme", "coralsand", "Coral Sand Theme", "uncommon"),
+  mkItem("theme", "aurora", "Aurora Theme", "epic"),
+  mkItem("theme", "lilac", "Lilac Mist Theme", "uncommon"),
+  mkItem("theme", "jade", "Jade Imperial Theme", "rare"),
+  mkItem("theme", "champagne", "Champagne Theme", "uncommon"),
+  mkItem("theme", "verdigris", "Verdigris Theme", "rare"),
+  mkItem("theme", "alabaster", "Alabaster Theme", "common"),
+  // Holiday (all 18 holiday themes).
+  mkItem("theme", "valentines", "Valentine's Day Theme", "uncommon"),
+  mkItem("theme", "sweetheart", "Sweetheart Theme", "common"),
+  mkItem("theme", "stpatricks", "St. Patrick's Day Theme", "uncommon"),
+  mkItem("theme", "cloverfield", "Clover Field Theme", "common"),
+  mkItem("theme", "springdusk", "Spring Dusk Theme", "rare"),
+  mkItem("theme", "easter", "Easter Theme", "common"),
+  mkItem("theme", "july4th", "4th of July Theme", "rare"),
+  mkItem("theme", "starsandstripes", "Stars & Stripes Theme", "uncommon"),
+  mkItem("theme", "halloween", "Halloween Theme", "epic"),
+  mkItem("theme", "candycorn", "Candy Corn Theme", "uncommon"),
+  mkItem("theme", "thanksgiving", "Thanksgiving Theme", "common"),
+  mkItem("theme", "pumpkinspice", "Pumpkin Spice Theme", "common"),
+  mkItem("theme", "hanukkah", "Hanukkah Theme", "rare"),
+  mkItem("theme", "festivaloflights", "Festival of Lights Theme", "uncommon"),
+  mkItem("theme", "christmas", "Christmas Theme", "epic"),
+  mkItem("theme", "candycane", "Candy Cane Theme", "uncommon"),
+  mkItem("theme", "newyears", "New Year's Eve Theme", "mythic"),
+  mkItem("theme", "confetti", "Confetti Theme", "apex"),
+];
+
+/** Every purchasable item across all 8 categories — 135 total (15 × 7 +
+ * 30 theme). */
 export const CATALOG_ITEMS: readonly CatalogItem[] = [
   ...BADGE_ITEMS,
   ...AVATAR_FRAME_ITEMS,
@@ -242,6 +300,7 @@ export const CATALOG_ITEMS: readonly CatalogItem[] = [
   ...AVATAR_EMOJI_ITEMS,
   ...CARD_FACE_ITEMS,
   ...CARD_BACK_ITEMS,
+  ...THEME_ITEMS,
 ];
 
 /** `CATALOG_ITEMS` grouped by category — what the Store UI lists per tab. */
@@ -253,6 +312,7 @@ export const ITEMS_BY_CATEGORY: Readonly<Record<CosmeticCategory, readonly Catal
   avatar_emoji: AVATAR_EMOJI_ITEMS,
   card_face: CARD_FACE_ITEMS,
   card_back: CARD_BACK_ITEMS,
+  theme: THEME_ITEMS,
 };
 
 // ---------------------------------------------------------------------------
@@ -346,6 +406,11 @@ export const CATEGORY_BUNDLES: readonly CatalogBundle[] = [
   categoryBundle("avatar_emoji", "Avatar Emoji", AVATAR_EMOJI_ITEMS),
   categoryBundle("card_face", "Card Face", CARD_FACE_ITEMS),
   categoryBundle("card_back", "Card Back", CARD_BACK_ITEMS),
+  // 30 items, not 15 like every other category bundle — so this one lands
+  // on computeBundlePriceCents(30), a genuinely different (higher) price
+  // than the uniform $11.99 the other 7 share. Still derived the same way,
+  // never hand-typed.
+  categoryBundle("theme", "Theme", THEME_ITEMS),
 ];
 
 /** The hero bundle's 8 member skus, hand-picked below — pulled out on its
@@ -395,7 +460,36 @@ export const SUPPORTER_BUNDLE: CatalogBundle = {
   skus: SUPPORTER_BUNDLE_SKUS,
 };
 
-export const CATALOG_BUNDLES: readonly CatalogBundle[] = [...CATEGORY_BUNDLES, SUPPORTER_BUNDLE];
+/**
+ * The top-tier anchor: every individually-purchasable item in the entire
+ * catalog (135 skus across all 8 categories — badge/avatar_frame/title/
+ * banner/avatar_emoji/card_face/card_back at 15 each, plus 30 theme items),
+ * flattened from `CATALOG_ITEMS` itself rather than hand-typed so it can
+ * never drift from the real catalog. Priced through the exact same
+ * `computeBundlePriceCents` every other bundle uses — one consistent
+ * pricing rule for every bundle, this one included, rather than a bespoke
+ * "buy everything" discount percentage.
+ *
+ * Deliberately does NOT include the other bundle wrapper skus
+ * (`bundle:supporter`, `bundle:card_back`, `bundle:theme`, …) in its own
+ * `.skus` list — only the 135 real underlying items matter for unlocking
+ * anything (see cosmeticUnlocks.ts's "boutique" case), so granting the
+ * other bundles' wrapper skus too would just be noise. A Supporter Pack
+ * buyer's items are already all individually present in this list, so
+ * buying Everything correctly implies owning every Supporter Pack item —
+ * and, separately, a smaller bundle's own sku is only ever granted when
+ * THAT bundle's own sku is the one actually purchased (see
+ * entitlements.ts's expandPurchasedSkus).
+ */
+export const EVERYTHING_BUNDLE: CatalogBundle = {
+  bundleId: "everything",
+  sku: "bundle:everything",
+  name: "Everything Bundle",
+  priceCents: computeBundlePriceCents(CATALOG_ITEMS.length),
+  skus: CATALOG_ITEMS.map((i) => i.sku!),
+};
+
+export const CATALOG_BUNDLES: readonly CatalogBundle[] = [...CATEGORY_BUNDLES, SUPPORTER_BUNDLE, EVERYTHING_BUNDLE];
 
 // ---------------------------------------------------------------------------
 // Flat sku → {name, priceCents} map — the exact shape create-checkout-session

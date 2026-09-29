@@ -19,7 +19,8 @@ export type CosmeticCategory =
   | "banner"
   | "avatar_emoji"
   | "card_face"
-  | "card_back";
+  | "card_back"
+  | "theme";
 
 export const COSMETIC_CATEGORIES: readonly CosmeticCategory[] = [
   "badge",
@@ -29,6 +30,7 @@ export const COSMETIC_CATEGORIES: readonly CosmeticCategory[] = [
   "avatar_emoji",
   "card_face",
   "card_back",
+  "theme",
 ];
 
 /** The stable sku for a single catalog item — never for a bundle (see

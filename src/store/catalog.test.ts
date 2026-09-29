@@ -6,11 +6,14 @@ import {
   CATEGORY_BUNDLES,
   catalogItem,
   computeBundlePriceCents,
+  EVERYTHING_BUNDLE,
+  findBundle,
   ITEMS_BY_CATEGORY,
   roundToCharmCents,
   SINGLE_ITEM_PRICE_CENTS,
   STORE_CATEGORIES,
   SUPPORTER_BUNDLE,
+  THEME_ITEMS,
 } from "./catalog";
 
 describe("CATALOG", () => {
@@ -44,14 +47,19 @@ describe("CATALOG", () => {
 });
 
 // The store.md-mandated catalog expansion: 7 categories × 15 items = 105
-// purchasable items, plus 7 category bundles + 1 hero bundle = 113 total
-// skus in CATALOG.
-describe("the real 105-item catalog", () => {
-  it("has exactly 15 items in every one of the 7 categories", () => {
+// purchasable items, plus the Sept 2026 theme-category addition (30 more
+// theme items) = 135 total items, plus 8 category bundles + 1 hero bundle +
+// 1 Everything Bundle = 145 total skus in CATALOG.
+describe("the real 135-item catalog", () => {
+  it("has exactly 15 items in every one of the 7 non-theme categories, and 30 in theme", () => {
     for (const category of STORE_CATEGORIES) {
-      expect(ITEMS_BY_CATEGORY[category]).toHaveLength(15);
+      if (category === "theme") {
+        expect(ITEMS_BY_CATEGORY[category]).toHaveLength(30);
+      } else {
+        expect(ITEMS_BY_CATEGORY[category]).toHaveLength(15);
+      }
     }
-    expect(CATALOG_ITEMS).toHaveLength(105);
+    expect(CATALOG_ITEMS).toHaveLength(135);
   });
 
   it("every item's priceCents equals SINGLE_ITEM_PRICE_CENTS, regardless of rarity — never hand-entered", () => {
@@ -101,25 +109,34 @@ describe("roundToCharmCents", () => {
 });
 
 describe("category bundles", () => {
-  it("each of the 7 category bundles grants exactly that category's 15 skus", () => {
+  it("each of the 8 category bundles grants exactly that category's own items", () => {
     for (const bundle of CATEGORY_BUNDLES) {
       const category = bundle.bundleId;
       expect(bundle.sku).toBe(`bundle:${category}`);
       expect(bundle.skus).toEqual(ITEMS_BY_CATEGORY[category as keyof typeof ITEMS_BY_CATEGORY].map((i) => i.sku));
     }
-    expect(CATEGORY_BUNDLES).toHaveLength(7);
+    expect(CATEGORY_BUNDLES).toHaveLength(8);
   });
 
-  it("each bundle's priceCents is computeBundlePriceCents(15) — recomputed, not snapshotted", () => {
+  it("each of the 7 non-theme bundles' priceCents is computeBundlePriceCents(15) — recomputed, not snapshotted", () => {
     for (const bundle of CATEGORY_BUNDLES) {
+      if (bundle.bundleId === "theme") continue;
       expect(bundle.priceCents).toBe(computeBundlePriceCents(15));
     }
   });
 
-  it("every category bundle lands on the same $11.99 price, since every category has 15 flat-priced items", () => {
-    const prices = new Set(CATEGORY_BUNDLES.map((b) => b.priceCents));
+  it("every non-theme category bundle lands on the same $11.99 price, since every one of those categories has 15 flat-priced items", () => {
+    const prices = new Set(CATEGORY_BUNDLES.filter((b) => b.bundleId !== "theme").map((b) => b.priceCents));
     expect(prices.size).toBe(1);
     expect([...prices][0]).toBe(1199);
+  });
+
+  it("the Theme Bundle covers all 30 theme items at computeBundlePriceCents(30) — a genuinely different price", () => {
+    const themeBundle = findBundle("bundle:theme")!;
+    expect(themeBundle.skus).toHaveLength(30);
+    expect(themeBundle.skus).toEqual(THEME_ITEMS.map((i) => i.sku));
+    expect(themeBundle.priceCents).toBe(computeBundlePriceCents(30));
+    expect(themeBundle.priceCents).not.toBe(computeBundlePriceCents(15));
   });
 });
 
@@ -146,16 +163,80 @@ describe("the Supporter Pack hero bundle", () => {
     }
   });
 
-  it("spans every one of the 7 categories", () => {
+  it("spans every one of the original 7 categories (predates the theme category — never touches it)", () => {
     const categoriesRepresented = new Set(
       SUPPORTER_BUNDLE.skus.map((sku) => CATALOG_ITEMS.find((i) => i.sku === sku)!.category)
     );
     expect(categoriesRepresented.size).toBe(7);
-    for (const category of STORE_CATEGORIES) expect(categoriesRepresented.has(category)).toBe(true);
+    expect(categoriesRepresented.has("theme")).toBe(false);
+    for (const category of STORE_CATEGORIES.filter((c) => c !== "theme")) {
+      expect(categoriesRepresented.has(category)).toBe(true);
+    }
   });
 
   it("is weighted toward epic/mythic/apex", () => {
     const rarities = SUPPORTER_BUNDLE.skus.map((sku) => CATALOG_ITEMS.find((i) => i.sku === sku)!.rarity);
     for (const r of rarities) expect(["epic", "mythic", "apex"]).toContain(r);
+  });
+});
+
+// The Sept 2026 theme-category addition: 30 of the 38 table themes
+// (app/lib/themeStore.ts) become purchasable, priced flat like every other
+// item, with a bundle covering all 30. The 8 that stay free forever never
+// get a catalog entry here at all — see themeBoutique.test.ts for the
+// cross-check against themeStore.ts's own `unlock` field.
+describe("THEME_ITEMS (the Sept 2026 theme category)", () => {
+  it("has exactly 30 items, every one flat-priced and well-formed", () => {
+    expect(THEME_ITEMS).toHaveLength(30);
+    for (const item of THEME_ITEMS) {
+      expect(item.category).toBe("theme");
+      expect(item.sku).toBe(`theme:${item.id}`);
+      expect(item.priceCents).toBe(SINGLE_ITEM_PRICE_CENTS);
+      expect(item.rarity).toBeDefined();
+    }
+  });
+
+  it("every id is unique", () => {
+    const ids = THEME_ITEMS.map((i) => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("never includes one of the 8 always-free theme ids", () => {
+    const alwaysFree = ["midnight", "daylight", "casino", "pastel", "noir", "sakura", "ember", "lagoon"];
+    const themeIds = new Set(THEME_ITEMS.map((i) => i.id));
+    for (const id of alwaysFree) expect(themeIds.has(id)).toBe(false);
+  });
+});
+
+describe("the Everything Bundle (top-tier anchor)", () => {
+  it("its .skus length equals the total individual item count across every category, including theme", () => {
+    expect(EVERYTHING_BUNDLE.sku).toBe("bundle:everything");
+    expect(EVERYTHING_BUNDLE.skus).toHaveLength(135);
+    expect(EVERYTHING_BUNDLE.skus).toHaveLength(CATALOG_ITEMS.length);
+  });
+
+  it("contains every single item sku across all 8 categories, with no duplicates", () => {
+    const catalogSkus = new Set(CATALOG_ITEMS.map((i) => i.sku));
+    expect(new Set(EVERYTHING_BUNDLE.skus)).toEqual(catalogSkus);
+    expect(new Set(EVERYTHING_BUNDLE.skus).size).toBe(EVERYTHING_BUNDLE.skus.length);
+  });
+
+  it("never includes another bundle's own wrapper sku (only real items)", () => {
+    for (const sku of EVERYTHING_BUNDLE.skus) expect(sku.startsWith("bundle:")).toBe(false);
+  });
+
+  it("price is derived via the shared computeBundlePriceCents helper — asserting the exact math, not a snapshot", () => {
+    const expected = computeBundlePriceCents(135);
+    expect(EVERYTHING_BUNDLE.priceCents).toBe(expected);
+    // Worked out by hand from the same pipeline computeBundlePriceCents
+    // documents: 135 * 99 = 13365 -> charm-round up to 13399 -> * 0.8 =
+    // 10719.2 -> round down to the nearest 99-ending = 10699 ($106.99).
+    expect(EVERYTHING_BUNDLE.priceCents).toBe(10699);
+  });
+
+  it("is included in CATALOG_BUNDLES and resolves through catalogItem/findBundle", () => {
+    expect(CATALOG_BUNDLES).toContainEqual(EVERYTHING_BUNDLE);
+    expect(findBundle("bundle:everything")).toEqual(EVERYTHING_BUNDLE);
+    expect(catalogItem("bundle:everything")).toEqual({ name: EVERYTHING_BUNDLE.name, priceCents: EVERYTHING_BUNDLE.priceCents });
   });
 });

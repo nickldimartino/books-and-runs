@@ -30,6 +30,7 @@ const ROUTES = [
   "/settings/card-back",
   "/settings/card-face",
   "/settings/ambient-song",
+  "/boutique",
   "/new-game",
   "/new-game/local",
   "/new-game/multiplayer",
@@ -56,6 +57,17 @@ const ALLOWED_RUNS: RegExp[] = [
   // Proper nouns that are deliberately never translated.
   /Books & Runs/,
   /Contract Rummy/i, // game name used in prose that is data-driven (e.g. document meta)
+  // Boutique catalog names (src/store/catalog.ts) — AGENTS.md's "Adding
+  // user-visible text" checklist lists cosmetic item/theme/card-back/face
+  // names as deliberately untranslated (Stripe's own checkout chrome is
+  // English regardless of locale, so a sku's display name never goes
+  // through t() — see catalog.ts's own doc). A bundle's name is always
+  // "<Category> Bundle" (categoryBundle() in catalog.ts); a title item's
+  // bare name (no category suffix, e.g. "Smoke and Mirrors" — the one
+  // visible on /boutique's default Bundles view, inside the Supporter
+  // Pack's included-items strip) is TITLE_OPTIONS' own English label.
+  /\bBundle$/,
+  /Smoke and Mirrors$/,
 ];
 
 /** Finds runs of >= 3 plain-ASCII words in visible text nodes and in

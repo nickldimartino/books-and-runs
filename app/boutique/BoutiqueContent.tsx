@@ -37,7 +37,8 @@ import { ProfileBanner } from "../components/ProfileBanner";
 import { findBannerOption } from "../lib/bannerPresets";
 import { CardFace } from "../components/CardFace";
 import type { CardFaceId } from "../lib/cardFaceStore";
-import { CheckBadge } from "../settings/SwatchPicker";
+import { CheckBadge, ThemeSwatchBlock } from "../settings/SwatchPicker";
+import type { ThemeId } from "../lib/themeStore";
 import { useT } from "../lib/i18n/LocaleProvider";
 import type { TranslationKey } from "../lib/i18n/keys";
 import { fetchAvatarsFor, fetchOwnDisplayName, AvatarInfo } from "../lib/leaderboardStore";
@@ -74,6 +75,7 @@ const CATEGORY_KEY: Record<CosmeticCategory, TranslationKey> = {
   avatar_emoji: "boutique.category.avatar_emoji",
   card_face: "boutique.category.card_face",
   card_back: "boutique.category.card_back",
+  theme: "boutique.category.theme",
 };
 
 /** Where "Equip" sends you once an item is owned — the real picker page
@@ -95,6 +97,8 @@ function equipHrefFor(item: StoreItem): string {
       return "/settings/card-face";
     case "card_back":
       return "/settings/card-back";
+    case "theme":
+      return "/settings/theme";
   }
 }
 
@@ -250,6 +254,11 @@ function ItemPreview({
           style={{ background: "var(--panel-soft)" }}
         />
       );
+    case "theme":
+      // The exact same swatch-block the standalone theme picker
+      // (/settings/theme) renders per tile — see SwatchPicker.tsx's own
+      // doc on why this is shared rather than a one-off rendering here.
+      return <ThemeSwatchBlock id={item.itemId as ThemeId} compact={compact} />;
   }
 }
 
@@ -328,6 +337,7 @@ function BundleCard({
   purchasing,
   onBuy,
   hero,
+  topTier,
 }: {
   bundle: StoreBundle;
   items: StoreItem[];
@@ -336,27 +346,43 @@ function BundleCard({
   purchasing: boolean;
   onBuy: () => void;
   hero?: boolean;
+  /** The Everything Bundle — the top-tier anchor above the hero pack, not
+   * just another bundle card. Distinguished from `hero` (Supporter Pack)
+   * with an even bigger price/name, a gold-toned gradient instead of the
+   * plain accent one, and its own "complete collection" badge text rather
+   * than "Best value" (both are true, but this one's the bigger claim).
+   * Skips the included-items icon strip entirely — at 135 items it would
+   * be an unreadable wall of icons, where a plain item count line already
+   * says everything that matters ("all 135 items"). */
+  topTier?: boolean;
 }) {
   const { t, tPlural, locale } = useT();
   const savings = bundleSavingsPercent(bundle);
   const included = bundle.includes.map((sku) => items.find((i) => i.sku === sku)).filter((i): i is StoreItem => !!i);
+  const big = hero || topTier;
 
   return (
     <div
       className={`flex flex-col gap-3 rounded-2xl border p-4 ${
-        hero
-          ? "border-[var(--accent)] bg-gradient-to-br from-[var(--accent)]/15 to-transparent"
-          : "border-[var(--border)] bg-[var(--panel)]"
+        topTier
+          ? "border-[var(--accent)] bg-gradient-to-br from-[var(--accent)]/25 via-[var(--accent)]/10 to-transparent shadow-lg"
+          : hero
+            ? "border-[var(--accent)] bg-gradient-to-br from-[var(--accent)]/15 to-transparent"
+            : "border-[var(--border)] bg-[var(--panel)]"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className={`font-bold text-[var(--heading)] ${hero ? "text-lg" : "text-sm"}`}>{bundle.name}</p>
-          <p className={`font-semibold text-[var(--accent)] ${hero ? "text-base" : "text-sm"}`}>
+          <p className={`font-bold text-[var(--heading)] ${topTier ? "text-xl" : big ? "text-lg" : "text-sm"}`}>{bundle.name}</p>
+          <p className={`font-semibold text-[var(--accent)] ${big ? "text-base" : "text-sm"}`}>
             {formatPriceCents(bundle.priceCents, locale)}
           </p>
         </div>
-        {hero ? (
+        {topTier ? (
+          <span className="shrink-0 rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)]">
+            {t("boutique.everything.badge")}
+          </span>
+        ) : hero ? (
           <span className="shrink-0 rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)]">
             {t("boutique.hero.badge")}
           </span>
@@ -370,20 +396,26 @@ function BundleCard({
         )}
       </div>
 
-      {included.length > 0 && (
-        <div>
-          {hero && <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("boutique.hero.includes")}</p>}
-          <div className="flex flex-wrap gap-2">
-            {included.map((item) => (
-              <RarityFrame key={item.sku} rarity={item.rarity} className="h-10 w-10 shrink-0">
-                <ItemPreview item={item} tryOn={false} self={null} compact />
-              </RarityFrame>
-            ))}
+      {topTier ? (
+        included.length > 0 && (
+          <p className="text-xs text-[var(--muted)]">{tPlural("boutique.bundle.itemCount", included.length)}</p>
+        )
+      ) : (
+        included.length > 0 && (
+          <div>
+            {hero && <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("boutique.hero.includes")}</p>}
+            <div className="flex flex-wrap gap-2">
+              {included.map((item) => (
+                <RarityFrame key={item.sku} rarity={item.rarity} className="h-10 w-10 shrink-0">
+                  <ItemPreview item={item} tryOn={false} self={null} compact />
+                </RarityFrame>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--muted)]">
+              {tPlural("boutique.bundle.itemCount", included.length)}
+            </p>
           </div>
-          <p className="mt-1 text-[11px] text-[var(--muted)]">
-            {tPlural("boutique.bundle.itemCount", included.length)}
-          </p>
-        </div>
+        )
       )}
 
       {owned ? (
@@ -425,6 +457,7 @@ export function BoutiqueContent() {
 
   const items = useMemo(() => listStoreItems(), []);
   const bundles = useMemo(() => listBundles(), []);
+  const everythingBundle = bundles.find((b) => b.kind === "everything");
   const heroBundle = bundles.find((b) => b.kind === "supporter");
   const categoryBundles = bundles.filter((b) => b.kind === "category");
 
@@ -637,6 +670,18 @@ export function BoutiqueContent() {
 
       {showBundles ? (
         <>
+          {everythingBundle && (
+            <BundleCard
+              bundle={everythingBundle}
+              items={items}
+              owned={ownedSkus.has(everythingBundle.sku)}
+              signedIn={signedIn}
+              purchasing={purchasingSku === everythingBundle.sku}
+              onBuy={() => buy(everythingBundle.sku)}
+              topTier
+            />
+          )}
+
           {heroBundle && (
             <BundleCard
               bundle={heroBundle}
