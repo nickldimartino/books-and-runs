@@ -124,22 +124,27 @@ export const AVATAR_FRAME_ITEMS: readonly CatalogItem[] = [
 // ---------------------------------------------------------------------------
 // title — app/lib/profileCosmetics.ts's TITLE_OPTIONS boutique subset.
 // ---------------------------------------------------------------------------
+// Bare names (no trailing "Title") — matching TITLE_OPTIONS' own `label` and
+// how a title reads everywhere else it's shown once equipped. The Boutique
+// grid already has a "TITLES" section heading and rarity styling, so
+// appending the word again here was redundant and, for the longer names,
+// made the preview pill (a fixed-width card) wrap to two lines.
 export const TITLE_ITEMS: readonly CatalogItem[] = [
-  mkItem("title", "night_owl", "Night Owl Title", "common"),
-  mkItem("title", "backroom_regular", "Backroom Regular Title", "common"),
-  mkItem("title", "the_bluffer", "The Bluffer Title", "uncommon"),
-  mkItem("title", "silk_road", "Silk Road Title", "uncommon"),
-  mkItem("title", "velvet_hand", "Velvet Hand Title", "uncommon"),
-  mkItem("title", "midnight_dealer", "Midnight Dealer Title", "rare"),
-  mkItem("title", "the_fixer", "The Fixer Title", "rare"),
-  mkItem("title", "the_sharp", "The Sharp Title", "rare"),
-  mkItem("title", "last_call", "Last Call Title", "rare"),
-  mkItem("title", "the_collector", "The Collector Title", "epic"),
-  mkItem("title", "gilded_tongue", "Gilded Tongue Title", "epic"),
-  mkItem("title", "quiet_storm", "Quiet Storm Title", "epic"),
-  mkItem("title", "diamond_cut", "Diamond Cut Title", "mythic"),
-  mkItem("title", "smoke_and_mirrors", "Smoke and Mirrors Title", "mythic"),
-  mkItem("title", "table_legend", "Table Legend Title", "apex"),
+  mkItem("title", "night_owl", "Night Owl", "common"),
+  mkItem("title", "backroom_regular", "Backroom Regular", "common"),
+  mkItem("title", "the_bluffer", "The Bluffer", "uncommon"),
+  mkItem("title", "silk_road", "Silk Road", "uncommon"),
+  mkItem("title", "velvet_hand", "Velvet Hand", "uncommon"),
+  mkItem("title", "midnight_dealer", "Midnight Dealer", "rare"),
+  mkItem("title", "the_fixer", "The Fixer", "rare"),
+  mkItem("title", "the_sharp", "The Sharp", "rare"),
+  mkItem("title", "last_call", "Last Call", "rare"),
+  mkItem("title", "the_collector", "The Collector", "epic"),
+  mkItem("title", "gilded_tongue", "Gilded Tongue", "epic"),
+  mkItem("title", "quiet_storm", "Quiet Storm", "epic"),
+  mkItem("title", "diamond_cut", "Diamond Cut", "mythic"),
+  mkItem("title", "smoke_and_mirrors", "Smoke and Mirrors", "mythic"),
+  mkItem("title", "table_legend", "Table Legend", "apex"),
 ];
 
 // ---------------------------------------------------------------------------

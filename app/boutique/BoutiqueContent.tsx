@@ -181,19 +181,34 @@ function ItemPreview({
       );
     case "title": {
       const accent = RARITY_TEXT_ACCENT[item.rarity];
-      // Compact: no room for real text at icon size — a small lettered
-      // swatch in the same accent color stands in for it instead.
+      // Compact: no room for the full name at icon size, but a generic "Aa"
+      // told every title apart from every other title equally badly — the
+      // one thing a bundle-strip preview most needs to do. A 2-letter
+      // initialism (first letter of the first two words, e.g. "Night Owl"
+      // → "NO") is still real information at a glance, not filler.
+      const initials = item.name
+        .split(" ")
+        .filter((w) => w.length > 0)
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase();
       return compact ? (
         <span
           className="grid h-full w-full place-items-center rounded-lg border text-xs font-bold"
           style={accent ? { borderColor: accent, color: accent } : undefined}
           aria-hidden="true"
+          title={item.name}
         >
-          Aa
+          {initials}
         </span>
       ) : (
+        // rounded-xl, not rounded-full: a fully-rounded pill computes its
+        // radius from the box's own height, so once a long name wraps to a
+        // second line the taller box turned the rounded ends into huge
+        // parenthesis-like arcs instead of a normal pill border.
         <span
-          className="rounded-full border px-3 py-1.5 text-xs font-medium"
+          className="inline-block rounded-xl border px-3 py-1.5 text-xs font-medium leading-snug"
           style={accent ? { borderColor: accent, color: accent } : undefined}
         >
           {item.name}
