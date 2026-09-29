@@ -985,6 +985,9 @@ const zh = {
 
   "welcome.title": "欢迎来到 Books & Runs！",
   "welcome.subtitle": "还有几项快速设置。",
+  "welcome.identity": "昵称与头像",
+  "welcome.identity.namePlaceholder": "你的显示名称",
+  "welcome.identity.hint": "会显示给其他玩家。随时可以在个人资料中修改。",
   "welcome.language": "语言",
   "welcome.notifications": "通知",
   "welcome.push.body": "在多人游戏中轮到你时收到提醒。",

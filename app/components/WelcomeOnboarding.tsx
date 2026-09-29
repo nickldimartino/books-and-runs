@@ -2,11 +2,13 @@
 
 // A one-time "let's get you set up" prompt shown right after a brand-new
 // account finishes signing up (see onboardingStore.ts for how Home knows
-// to show this and only this once) — pick a language, optionally turn on
-// turn notifications. Both are also always reachable from Settings later,
-// so this is a convenience nudge at the one moment they're most likely to
-// matter, never a gate: every path out (X, backdrop, "Skip", "Done")
-// dismisses it for good on this account.
+// to show this and only this once) — pick a display name and avatar, pick
+// a language, optionally turn on turn notifications. All three are also
+// always reachable from Settings/the profile page later, so this is a
+// convenience nudge at the one moment they're most likely to matter, never
+// a gate: every path out (X, backdrop, "Skip", "Done") dismisses it for
+// good on this account, and leaving the name blank just keeps whatever the
+// account was created with.
 //
 // Deliberately doesn't auto-trigger the native notification permission
 // prompt — that's the "soft-ask" pattern modern apps use instead of
@@ -18,7 +20,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { pushLocale } from "../lib/accountSettingsSync";
+import { DEFAULT_COLOR, EMOJI_OPTIONS } from "../lib/avatarPresets";
 import { useT } from "../lib/i18n/LocaleProvider";
+import {
+  DisplayNameTakenError,
+  fetchOwnDisplayName,
+  MAX_DISPLAY_NAME_LENGTH,
+  updateLeaderboardAvatarEmoji,
+  updateLeaderboardDisplayName,
+} from "../lib/leaderboardStore";
 import { LocaleId, LOCALES } from "../lib/localeStore";
 import {
   getPushPermission,
@@ -26,14 +36,41 @@ import {
   isPushSupported,
   subscribeToPush,
 } from "../lib/pushSubscriptions";
+import { ContentRejectedError, contentRejectionKey } from "../lib/safetyStore";
 import { supabase } from "../lib/supabaseClient";
 import { translateError } from "../lib/i18n/serverErrors";
+
+// A compact subset, not the full 46 — this is a "pick something now, refine
+// later" step, not the real picker (that's the profile page, one tap away
+// from every avatar shown anywhere). Every emoji here is unconditionally
+// free, same list EMOJI_OPTIONS itself only ever holds.
+const ONBOARDING_EMOJI_CHOICES = EMOJI_OPTIONS.slice(0, 16);
 
 export function WelcomeOnboarding({ open, onDismiss }: { open: boolean; onDismiss: () => void }) {
   const { t, locale, setLocale } = useT();
   const { user } = useAuth();
   const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "denied" | "busy">("off");
   const [pushError, setPushError] = useState<string | null>(null);
+
+  // ── Identity: display name + avatar emoji ──────────────────────────────
+  // Both already exist and are always reachable from the profile page later
+  // — this is a nudge at the moment a new account is most likely to still
+  // be a generic default name, not a gate (skippable like everything else
+  // here). A fresh account already has a real (randomly assigned) name and
+  // avatar the instant it's created, so this only overwrites either one if
+  // the player actually picks something here.
+  const [nameInput, setNameInput] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameSaved, setNameSaved] = useState(false);
+  const [chosenEmoji, setChosenEmoji] = useState<string | null>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open || !supabase || !user) return;
+    fetchOwnDisplayName(supabase, user.id)
+      .then((name) => setNameInput(name ?? ""))
+      .catch(() => {});
+  }, [open, user]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,6 +79,35 @@ export function WelcomeOnboarding({ open, onDismiss }: { open: boolean; onDismis
   }, [open]);
 
   if (!open) return null;
+
+  async function handleNameBlur() {
+    if (!supabase || !user) return;
+    const trimmed = nameInput.trim();
+    setNameError(null);
+    setNameSaved(false);
+    if (!trimmed) return; // leaving it blank keeps the existing name, not an error here
+    try {
+      await updateLeaderboardDisplayName(supabase, user.id, trimmed);
+      setNameSaved(true);
+    } catch (err) {
+      if (err instanceof DisplayNameTakenError) setNameError(translateError(err.message, t));
+      else if (err instanceof ContentRejectedError) setNameError(t(contentRejectionKey(err.issue, "name")));
+      else console.error("Failed to save display name from onboarding:", err);
+    }
+  }
+
+  async function handleChooseEmoji(emoji: string) {
+    if (!supabase || !user) return;
+    setChosenEmoji(emoji);
+    setAvatarSaving(true);
+    try {
+      await updateLeaderboardAvatarEmoji(supabase, user.id, emoji, DEFAULT_COLOR);
+    } catch (err) {
+      console.error("Failed to save avatar from onboarding:", err);
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
 
   function handleLocaleChange(id: LocaleId) {
     setLocale(id);
@@ -73,7 +139,7 @@ export function WelcomeOnboarding({ open, onDismiss }: { open: boolean; onDismis
         if (e.target === e.currentTarget) onDismiss();
       }}
     >
-      <div className="flex w-full max-w-sm flex-col gap-5 rounded-2xl bg-[var(--panel)] p-5 shadow-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-sm flex-col gap-5 overflow-y-auto rounded-2xl bg-[var(--panel)] p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-bold text-[var(--heading)]">{t("welcome.title")}</h1>
@@ -94,6 +160,51 @@ export function WelcomeOnboarding({ open, onDismiss }: { open: boolean; onDismis
             </svg>
           </button>
         </div>
+
+        <section className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">
+            {t("welcome.identity")}
+          </p>
+          <div className="flex flex-col gap-1">
+            <input
+              id="onboarding-display-name"
+              type="text"
+              value={nameInput}
+              onChange={(e) => {
+                setNameInput(e.target.value);
+                setNameError(null);
+                setNameSaved(false);
+              }}
+              onBlur={handleNameBlur}
+              maxLength={MAX_DISPLAY_NAME_LENGTH}
+              placeholder={t("welcome.identity.namePlaceholder")}
+              aria-label={t("welcome.identity.namePlaceholder")}
+              className="rounded-lg bg-[var(--panel-soft)] px-3 py-2 text-sm text-[var(--heading)] outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+            />
+            {nameError && <p className="text-xs text-[var(--danger)]">{nameError}</p>}
+            {!nameError && nameSaved && <p className="text-xs text-[var(--muted)]">{t("common.saved")}</p>}
+          </div>
+          <div className="grid grid-cols-8 gap-1.5">
+            {ONBOARDING_EMOJI_CHOICES.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => handleChooseEmoji(emoji)}
+                disabled={avatarSaving}
+                aria-label={t("player.picture.useEmoji", { emoji })}
+                aria-pressed={chosenEmoji === emoji}
+                className={`grid aspect-square place-items-center rounded-lg text-lg transition ${
+                  chosenEmoji === emoji
+                    ? "bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]"
+                    : "bg-[var(--panel-soft)] hover:bg-[var(--elevated)]"
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-[var(--faint)]">{t("welcome.identity.hint")}</p>
+        </section>
 
         <section className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--faint)]">

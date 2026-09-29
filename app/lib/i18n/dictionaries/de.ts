@@ -1010,6 +1010,9 @@ const de = {
 
   "welcome.title": "Willkommen bei Books & Runs!",
   "welcome.subtitle": "Ein paar schnelle Dinge, um loszulegen.",
+  "welcome.identity": "Name & Avatar",
+  "welcome.identity.namePlaceholder": "Dein Anzeigename",
+  "welcome.identity.hint": "Wird anderen Spielern angezeigt. Jederzeit im Profil änderbar.",
   "welcome.language": "Sprache",
   "welcome.notifications": "Benachrichtigungen",
   "welcome.push.body": "Erhalte eine Benachrichtigung, wenn du in einem Mehrspieler-Spiel am Zug bist.",

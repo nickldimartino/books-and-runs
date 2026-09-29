@@ -1007,6 +1007,9 @@ const en = {
 
   "welcome.title": "Welcome to Books & Runs!",
   "welcome.subtitle": "A couple of quick things to set up.",
+  "welcome.identity": "Name & avatar",
+  "welcome.identity.namePlaceholder": "Your display name",
+  "welcome.identity.hint": "Shown to other players. Change it anytime in your profile.",
   "welcome.language": "Language",
   "welcome.notifications": "Notifications",
   "welcome.push.body": "Get notified when it's your turn in a multiplayer game.",

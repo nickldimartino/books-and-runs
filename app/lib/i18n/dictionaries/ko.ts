@@ -989,6 +989,9 @@ const ko = {
 
   "welcome.title": "Books & Runs에 오신 걸 환영해요!",
   "welcome.subtitle": "몇 가지만 빠르게 설정할게요.",
+  "welcome.identity": "이름 & 아바타",
+  "welcome.identity.namePlaceholder": "표시 이름",
+  "welcome.identity.hint": "다른 플레이어에게 보여요. 프로필에서 언제든 바꿀 수 있어요.",
   "welcome.language": "언어",
   "welcome.notifications": "알림",
   "welcome.push.body": "멀티플레이어 게임에서 내 차례가 되면 알려드려요.",

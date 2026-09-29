@@ -1038,6 +1038,9 @@ const ru = {
 
   "welcome.title": "Добро пожаловать в Books & Runs!",
   "welcome.subtitle": "Осталось настроить пару мелочей.",
+  "welcome.identity": "Имя и аватар",
+  "welcome.identity.namePlaceholder": "Отображаемое имя",
+  "welcome.identity.hint": "Видно другим игрокам. Можно изменить в профиле в любой момент.",
   "welcome.language": "Язык",
   "welcome.notifications": "Уведомления",
   "welcome.push.body": "Получай уведомление, когда наступает твой ход в сетевой игре.",

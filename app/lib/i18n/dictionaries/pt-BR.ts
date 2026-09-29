@@ -995,6 +995,9 @@ const ptBR = {
 
   "welcome.title": "Bem-vindo(a) ao Books & Runs!",
   "welcome.subtitle": "Algumas coisinhas rápidas para configurar.",
+  "welcome.identity": "Nome e avatar",
+  "welcome.identity.namePlaceholder": "Seu nome de exibição",
+  "welcome.identity.hint": "Aparece para outros jogadores. Você pode mudar quando quiser no seu perfil.",
   "welcome.language": "Idioma",
   "welcome.notifications": "Notificações",
   "welcome.push.body": "Seja avisado(a) quando for sua vez em uma partida multiplayer.",
