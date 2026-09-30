@@ -80,7 +80,12 @@ alter table public.community_milestones
 alter table public.community_milestones
   drop column if exists reward_sku;
 
-create or replace function public.community_milestone_progress()
+-- create or replace can't change a function's OUT-parameter row shape
+-- (0096 defined this returning ..., reward_sku text, ...) — has to be
+-- dropped first.
+drop function if exists public.community_milestone_progress();
+
+create function public.community_milestone_progress()
 returns table (id int, metric text, current_count bigint, target bigint, reward_xp integer, reached_at timestamptz)
 language plpgsql
 security definer
