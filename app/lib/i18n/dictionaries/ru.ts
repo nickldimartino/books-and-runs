@@ -2219,6 +2219,7 @@ const ru = {
     "Самый большой выигранный стол",
   "player.stats.tableSizeAbbr":
     "{count} игр.",
+  "player.stats.rating": "Рейтинг",
   "player.stats.loadError":
     "Не удалось загрузить твою статистику — проверь подключение и попробуй ещё раз.",
   "player.trophyCase.heading":

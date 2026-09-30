@@ -531,7 +531,15 @@ function PlayerProfilePageInner() {
           )}
 
           {/* ── Private — only you can see this ── */}
-          {isSelf && <PlayerStatsSection privateData={privateData} level={level} user={user} />}
+          {isSelf && (
+            <PlayerStatsSection
+              privateData={privateData}
+              level={level}
+              user={user}
+              mpRating={entry.mp_rating}
+              mpRatedGames={entry.mp_rated_games}
+            />
+          )}
         </>
       )}
 

@@ -1901,6 +1901,7 @@ const zh = {
   "player.stats.topHalfOfTable": "位列牌桌前半",
   "player.stats.biggestTableWon": "赢下的最大牌桌",
   "player.stats.tableSizeAbbr": "{count}人",
+  "player.stats.rating": "评分",
   "player.stats.loadError": "无法加载你的统计数据 — 请检查网络连接后重试。",
 
   "player.trophyCase.heading": "奖杯柜",

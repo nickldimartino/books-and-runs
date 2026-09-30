@@ -10,7 +10,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { LevelProgress } from "@/leveling";
-import { ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, tierNumber } from "@/achievements";
+import { ACHIEVEMENT_FAMILIES, ACHIEVEMENT_TIERS, MP_WIN_RATE_MIN_GAMES, tierNumber } from "@/achievements";
 import { AchievementIcon } from "../components/AchievementIcons";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -52,10 +52,18 @@ export function PlayerStatsSection({
   privateData,
   level,
   user,
+  mpRating,
+  mpRatedGames,
 }: {
   privateData: PlayerPrivateData;
   level: LevelProgress | null;
   user: User | null;
+  /** From this account's own leaderboard_entries row (page.tsx already has
+   * it loaded) — not part of privateData/mpStats since it comes from
+   * mp_my_stats() (migration 0011), a separate RPC that predates rating
+   * (0097) and has no reason to be extended just for this. */
+  mpRating: number;
+  mpRatedGames: number;
 }) {
   const { t, tPlural, locale } = useT();
   const {
@@ -234,6 +242,12 @@ export function PlayerStatsSection({
                     label={t("player.stats.biggestTableWon")}
                     value={t("player.stats.tableSizeAbbr", { count: mpStats.biggestTableBeaten })}
                   />
+                )}
+                {/* Same "not meaningful yet" gate the Leaderboard and Recap
+                    already use — a rating from fewer than 6 rated games
+                    swings too hard on one result to show as your number. */}
+                {mpRatedGames >= MP_WIN_RATE_MIN_GAMES && (
+                  <StatTile label={t("player.stats.rating")} value={mpRating} />
                 )}
               </div>
             </section>

@@ -1747,6 +1747,7 @@ const es = {
   "player.stats.topHalfOfTable": "mitad superior de la mesa",
   "player.stats.biggestTableWon": "Mesa más grande ganada",
   "player.stats.tableSizeAbbr": "{count}j",
+  "player.stats.rating": "Elo",
   "player.stats.loadError": "No se pudieron cargar tus estadísticas. Revisa tu conexión e inténtalo de nuevo.",
   "player.trophyCase.heading": "Vitrina de trofeos",
   "player.activity.heading": "Tu actividad",

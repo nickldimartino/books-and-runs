@@ -1805,6 +1805,7 @@ const fr = {
   "player.stats.topHalfOfTable": "moitié haute de la table",
   "player.stats.biggestTableWon": "Plus grande table gagnée",
   "player.stats.tableSizeAbbr": "{count}j",
+  "player.stats.rating": "Elo",
   "player.stats.loadError": "Impossible de charger tes statistiques — vérifie ta connexion et réessaie.",
   "player.trophyCase.heading": "Vitrine à trophées",
   "player.activity.heading": "Ton activité",

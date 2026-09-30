@@ -1954,6 +1954,7 @@ const de = {
   "player.stats.topHalfOfTable": "obere Tischhälfte",
   "player.stats.biggestTableWon": "Größter gewonnener Tisch",
   "player.stats.tableSizeAbbr": "{count} Sp.",
+  "player.stats.rating": "Elo",
   "player.stats.loadError": "Deine Statistiken konnten nicht geladen werden — überprüfe deine Verbindung und versuche es erneut.",
 
   "player.trophyCase.heading": "Pokalvitrine",

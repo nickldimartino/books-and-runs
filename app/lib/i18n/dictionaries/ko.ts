@@ -1803,6 +1803,7 @@ const ko = {
   "player.stats.topHalfOfTable": "테이블 상위 절반",
   "player.stats.biggestTableWon": "가장 큰 테이블에서의 승리",
   "player.stats.tableSizeAbbr": "{count}인",
+  "player.stats.rating": "레이팅",
   "player.stats.loadError": "통계를 불러오지 못했어요 — 연결 상태를 확인하고 다시 시도해 주세요.",
   "player.trophyCase.heading": "트로피 진열장",
   "player.activity.heading": "내 활동",

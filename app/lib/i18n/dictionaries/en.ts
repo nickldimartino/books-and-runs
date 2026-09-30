@@ -1939,6 +1939,7 @@ const en = {
   "player.stats.topHalfOfTable": "top half of the table",
   "player.stats.biggestTableWon": "Biggest table won",
   "player.stats.tableSizeAbbr": "{count}p",
+  "player.stats.rating": "Rating",
   "player.stats.loadError": "Couldn't load your stats — check your connection and try again.",
 
   "player.trophyCase.heading": "Trophy Case",

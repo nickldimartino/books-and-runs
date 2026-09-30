@@ -1796,6 +1796,7 @@ const ja = {
   "player.stats.topHalfOfTable": "テーブルの上位半分",
   "player.stats.biggestTableWon": "勝利した最大のテーブル",
   "player.stats.tableSizeAbbr": "{count}人",
+  "player.stats.rating": "レーティング",
   "player.stats.loadError": "統計を読み込めませんでした。接続を確認して、もう一度お試しください。",
   "player.trophyCase.heading": "トロフィーケース",
   "player.activity.heading": "あなたのアクティビティ",

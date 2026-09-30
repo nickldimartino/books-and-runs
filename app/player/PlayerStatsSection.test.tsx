@@ -61,17 +61,21 @@ function basePrivateData(overrides: Partial<PlayerPrivateData> = {}): PlayerPriv
 
 describe("PlayerStatsSection", () => {
   it("shows a loading spinner while private stats are loading", () => {
-    const { container } = render(<PlayerStatsSection privateData={basePrivateData({ privateLoading: true })} level={null} user={null} />);
+    const { container } = render(
+      <PlayerStatsSection privateData={basePrivateData({ privateLoading: true })} level={null} user={null} mpRating={1200} mpRatedGames={0} />
+    );
     expect(container.querySelector(".card-flip")).toBeTruthy();
   });
 
   it("shows the load-error message on a query failure", () => {
-    render(<PlayerStatsSection privateData={basePrivateData({ privateStatsError: true })} level={null} user={null} />);
+    render(
+      <PlayerStatsSection privateData={basePrivateData({ privateStatsError: true })} level={null} user={null} mpRating={1200} mpRatedGames={0} />
+    );
     expect(screen.getByText(/Couldn't load your stats/)).toBeTruthy();
   });
 
   it("shows the empty state for a brand-new account with no games yet", () => {
-    render(<PlayerStatsSection privateData={basePrivateData()} level={null} user={null} />);
+    render(<PlayerStatsSection privateData={basePrivateData()} level={null} user={null} mpRating={1200} mpRatedGames={0} />);
     expect(screen.getByText(/No games recorded yet/)).toBeTruthy();
     expect(screen.queryByText("Wins by AI difficulty faced")).toBeNull();
   });
@@ -88,7 +92,7 @@ describe("PlayerStatsSection", () => {
         wins_by_difficulty: { beginner: 0, easy: 1, medium: 1, hard: 0, expert: 0 },
       },
     });
-    render(<PlayerStatsSection privateData={privateData} level={null} user={null} />);
+    render(<PlayerStatsSection privateData={privateData} level={null} user={null} mpRating={1200} mpRatedGames={0} />);
     expect(screen.getByText("Wins by AI difficulty faced")).toBeTruthy();
     expect(screen.getAllByText("2").length).toBeGreaterThan(0); // games_won stat tile
   });
@@ -105,14 +109,38 @@ describe("PlayerStatsSection", () => {
         wins_by_difficulty: {},
       },
     });
-    const { rerender } = render(<PlayerStatsSection privateData={withoutMp} level={null} user={null} />);
+    const { rerender } = render(
+      <PlayerStatsSection privateData={withoutMp} level={null} user={null} mpRating={1200} mpRatedGames={0} />
+    );
     expect(screen.queryByText(/Multiplayer/)).toBeNull();
 
     const withMp = basePrivateData({
       privateStats: withoutMp.privateStats,
       mpStats: { ...EMPTY_MP_STATS, played: 3, won: 1 },
     });
-    rerender(<PlayerStatsSection privateData={withMp} level={null} user={null} />);
+    rerender(<PlayerStatsSection privateData={withMp} level={null} user={null} mpRating={1200} mpRatedGames={0} />);
     expect(screen.getByText(/Multiplayer/)).toBeTruthy();
+  });
+
+  it("only shows the Rating tile once the account has enough rated games", () => {
+    const privateData = basePrivateData({
+      privateStats: {
+        games_played: 1,
+        games_won: 0,
+        games_tied: 0,
+        best_score: 100,
+        worst_score: 100,
+        average_score: 100,
+        wins_by_difficulty: {},
+      },
+      mpStats: { ...EMPTY_MP_STATS, played: 6, won: 3 },
+    });
+    const { rerender } = render(
+      <PlayerStatsSection privateData={privateData} level={null} user={null} mpRating={1340} mpRatedGames={5} />
+    );
+    expect(screen.queryByText("1340")).toBeNull();
+
+    rerender(<PlayerStatsSection privateData={privateData} level={null} user={null} mpRating={1340} mpRatedGames={6} />);
+    expect(screen.getByText("1340")).toBeTruthy();
   });
 });

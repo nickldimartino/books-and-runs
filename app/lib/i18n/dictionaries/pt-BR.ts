@@ -1925,6 +1925,7 @@ const ptBR = {
   "player.stats.topHalfOfTable": "metade superior da mesa",
   "player.stats.biggestTableWon": "Maior mesa vencida",
   "player.stats.tableSizeAbbr": "{count}j",
+  "player.stats.rating": "Elo",
   "player.stats.loadError": "Não foi possível carregar suas estatísticas — verifique sua conexão e tente novamente.",
 
   "player.trophyCase.heading": "Vitrine de Troféus",
