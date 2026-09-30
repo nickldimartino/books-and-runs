@@ -194,6 +194,21 @@ async function checkWeeklyChallenge(): Promise<number> {
   return notifyAtRisk(rows, "streak_weekly", "weekly-challenge-reminder");
 }
 
+/** The community milestone (migration 0096) is checked here purely because
+ * this function already runs once a day via pg_cron — piggybacking avoids
+ * standing up a second scheduled function for something that only needs to
+ * be noticed once a day, not in real time. Independent of PUSH_ENABLED
+ * (this grants entitlements, it never sends a push) and of the two push
+ * checks below, so it runs even on a deployment with push not configured. */
+async function checkCommunityMilestone(): Promise<boolean> {
+  const { data, error } = await admin.rpc("check_and_grant_community_milestone");
+  if (error) {
+    console.error("Failed to check community milestone:", error);
+    return false;
+  }
+  return !!data;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -201,8 +216,10 @@ Deno.serve(async (req) => {
   if (!CRON_SECRET || !(await timingSafeEqual(authHeader, `Bearer ${CRON_SECRET}`))) {
     return json({ error: "unauthorized" }, 401);
   }
-  if (!PUSH_ENABLED) return json({ sent: 0, reason: "push not configured" });
+
+  const milestoneReached = await checkCommunityMilestone();
+  if (!PUSH_ENABLED) return json({ sent: 0, reason: "push not configured", milestoneReached });
 
   const [dailyDeal, weeklyChallenge] = await Promise.all([checkDailyDeal(), checkWeeklyChallenge()]);
-  return json({ sent: dailyDeal + weeklyChallenge, dailyDeal, weeklyChallenge });
+  return json({ sent: dailyDeal + weeklyChallenge, dailyDeal, weeklyChallenge, milestoneReached });
 });
