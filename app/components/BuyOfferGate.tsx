@@ -2,7 +2,7 @@
 
 import { Card } from "@/types";
 import { useT } from "../lib/i18n/LocaleProvider";
-import { PlayingCard } from "./PlayingCard";
+import { cardLabel, PlayingCard } from "./PlayingCard";
 
 interface BuyOfferGateProps {
   playerName: string;
@@ -28,7 +28,14 @@ export function BuyOfferGate({ playerName, card, onRespond }: BuyOfferGateProps)
       </div>
 
       <div className="flex flex-col items-center gap-3">
-        <PlayingCard card={card} />
+        {/* PlayingCard renders as a bare, unlabeled <div> by design (its own
+            doc: callers wrap it in their own labeled button) — here it's
+            never wrapped in anything at all, so without this the single
+            piece of information this whole screen exists to show (which
+            card is being offered) was invisible to a screen reader. */}
+        <div role="img" aria-label={cardLabel(card, t)}>
+          <PlayingCard card={card} />
+        </div>
         <p className="max-w-xs text-sm text-[var(--muted)]">{t("buyOfferGate.prompt")}</p>
       </div>
 

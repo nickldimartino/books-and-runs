@@ -36,13 +36,14 @@ import { SafetyMenu } from "../../components/SafetyMenu";
 import { TurnTimerBadge } from "../../components/TurnTimerBadge";
 import { SoundQuickToggle } from "../../components/SoundQuickToggle";
 import { DiscardPile, DrawPile } from "../../components/Piles";
-import { PlayingCard } from "../../components/PlayingCard";
+import { cardLabel, PlayingCard } from "../../components/PlayingCard";
 import { AchievementUnlockCard } from "../../components/AchievementUnlock";
 import { UnlockToast } from "../../components/UnlockToast";
 import { useMpGame } from "../../lib/useMpGame";
 import { AI_THEORETICAL_LEVEL } from "../../lib/aiPersonas";
 import { startAmbience, stopAmbience } from "../../lib/ambience";
 import { contractNeedLabel, wildStandInLabel } from "../../lib/contractDisplay";
+import { meldLabel } from "../../lib/meldLabel";
 import { applyHandOrder, compareByMode, mergeVisibleOrder, SortMode } from "../../lib/handSort";
 import { useT } from "../../lib/i18n/LocaleProvider";
 import { fetchBiosFor, fetchDisplayNamesFor } from "../../lib/leaderboardStore";
@@ -103,7 +104,7 @@ function GameShortcuts({ handlers }: { handlers: ShortcutHandlers }) {
 
 export default function MultiplayerPlayPage() {
   const router = useRouter();
-  const { t, tPlural } = useT();
+  const { t, tPlural, locale } = useT();
   const gameId = useGameId();
   const { loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
@@ -1124,6 +1125,7 @@ export default function MultiplayerPlayPage() {
           aiStatus={null}
           aiThinking={false}
           bios={bioBySeatId}
+          selfId={`seat-${view.yourSeat}`}
           renderPlayerActions={(p) => {
             // Report / Block live in the opponent's popover (tap their chip)
             // rather than on the table — human opponents only.
@@ -1288,7 +1290,15 @@ export default function MultiplayerPlayPage() {
               showLegalMoves && isMyTurn && !drawn && view.discardTop ? "legal-pulse" : ""
             }`}
             title={`${t("multiplayer.takeDiscardTop")} (Shift+D)`}
-            aria-label={t("multiplayer.takeDiscardTop")}
+            // Same fix as game/page.tsx's discard-pile button: the generic
+            // label gave no way to know which card sits on top before
+            // deciding to take it — a sighted player just looks at the
+            // face-up card.
+            aria-label={
+              view.discardTop
+                ? t("game.drawFromDiscardCard", { card: cardLabel(view.discardTop, t) })
+                : t("multiplayer.takeDiscardTop")
+            }
           >
             <DiscardPile cards={view.discardPile} canLayOff={discardTopCanLayOff} />
           </button>
@@ -1324,6 +1334,13 @@ export default function MultiplayerPlayPage() {
                         onClick={() => onMeldClick(meld)}
                         disabled={!armed || g.busy}
                         aria-busy={pending}
+                        // Previously had no label at all (unlike solo's
+                        // same button, which at least had "Book"/"Run") —
+                        // a screen-reader user choosing where to lay off a
+                        // selected card heard nothing distinguishing one
+                        // meld from another.
+                        title={meldLabel(meld, t, locale)}
+                        aria-label={meldLabel(meld, t, locale)}
                         className={`rounded-lg p-1 text-left transition ${armed ? "armed-target" : ""} ${pending ? "animate-pulse opacity-70" : ""}`}
                       >
                         <span className="flex items-end gap-1">

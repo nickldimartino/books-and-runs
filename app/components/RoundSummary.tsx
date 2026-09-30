@@ -38,6 +38,18 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
   const flushedRef = useRef<number | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementUnlockItem[]>([]);
   const [leveledUpTo, setLeveledUpTo] = useState<number | null>(null);
+  // Moves focus to the "Round N complete" heading the instant this screen
+  // mounts, the same fix GameOverScreen.tsx makes for the same reason: this
+  // fully replaces the board (game/page.tsx renders it in place, not as a
+  // toggled child) with nothing else moving focus here, so a screen-reader
+  // user would otherwise get total silence at every round transition. The
+  // "went out" h1 below is conditional (nobody goes out when the draw pile
+  // runs dry instead), so the always-present wrapper is the focus target,
+  // not the h1 itself.
+  const headingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [state.round]);
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const standings = [...state.players].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
   const lowestTotal = Math.min(...state.players.map((p) => p.cumulativeScore));
@@ -118,7 +130,7 @@ export function RoundSummary({ state, roundStartScores, onNextRound }: RoundSumm
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">
-      <div className="text-center">
+      <div ref={headingRef} tabIndex={-1} className="text-center outline-none">
         <p className="text-sm uppercase tracking-wide text-[var(--faint)]">{t("roundSummary.complete", { round: state.round })}</p>
         {wentOut && (
           <h1 className="mt-1 break-words text-2xl font-bold text-[var(--heading)]">{t("roundSummary.wentOut", { name: wentOut.name })}</h1>

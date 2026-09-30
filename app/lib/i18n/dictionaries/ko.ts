@@ -332,6 +332,8 @@ const ko = {
   "game.waitingFor": "{name}님을 기다리는 중",
   "game.drawFromPile": "더미에서 뽑기",
   "game.drawFromDiscard": "버리기 더미에서 뽑기",
+  "game.drawFromDiscardCard": "버리기 더미에서 {card} 뽑기",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "더미나 버리기 더미에서 카드를 뽑아 차례를 시작하세요.",
   "game.tableMelds.heading": "테이블 멜드",
   "game.tableMelds.empty":
@@ -490,6 +492,7 @@ const ko = {
   "opponentStrip.cardsInHand.other": "{count}장",
   "opponentStrip.chipLabel": "{name}, 손패 {cards}",
   "opponentStrip.chipLabelActive": "{name}, 손패 {cards}, 지금 차례",
+  "opponentStrip.chipLabelActiveSelf": "{name}, 손패 {cards}, 내 차례",
   "opponentStrip.inHandSuffix": "손에 있음",
   "opponentStrip.lastDiscard": "마지막으로 버린 카드",
   "opponentStrip.lastPickup": "마지막으로 가져온 카드",

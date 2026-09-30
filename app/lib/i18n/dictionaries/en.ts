@@ -346,6 +346,8 @@ const en = {
   "game.waitingFor": "Waiting for {name}",
   "game.drawFromPile": "Draw from pile",
   "game.drawFromDiscard": "Draw from discard",
+  "game.drawFromDiscardCard": "Draw the {card} from the discard pile",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "Draw a card from the pile or discard pile to start your turn.",
   "game.tableMelds.heading": "Table melds",
   "game.tableMelds.empty":
@@ -508,6 +510,7 @@ const en = {
   "opponentStrip.cardsInHand.other": "{count} cards",
   "opponentStrip.chipLabel": "{name}, {cards} in hand",
   "opponentStrip.chipLabelActive": "{name}, {cards} in hand, their turn",
+  "opponentStrip.chipLabelActiveSelf": "{name}, {cards} in hand, your turn",
   "opponentStrip.inHandSuffix": "in hand",
   "opponentStrip.lastDiscard": "Last discard",
   "opponentStrip.lastPickup": "Last pickup",

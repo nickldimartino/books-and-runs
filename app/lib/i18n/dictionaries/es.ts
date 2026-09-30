@@ -332,6 +332,8 @@ const es = {
   "game.waitingFor": "Esperando a {name}",
   "game.drawFromPile": "Robar del mazo",
   "game.drawFromDiscard": "Robar del descarte",
+  "game.drawFromDiscardCard": "Robar la {card} del descarte",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "Roba una carta del mazo o de la pila de descarte para empezar tu turno.",
   "game.tableMelds.heading": "Combinaciones en la mesa",
   "game.tableMelds.empty":
@@ -497,6 +499,7 @@ const es = {
   "opponentStrip.cardsInHand.other": "{count} cartas",
   "opponentStrip.chipLabel": "{name}, {cards} en mano",
   "opponentStrip.chipLabelActive": "{name}, {cards} en mano, su turno",
+  "opponentStrip.chipLabelActiveSelf": "{name}, {cards} en mano, tu turno",
   "opponentStrip.inHandSuffix": "en mano",
   "opponentStrip.lastDiscard": "Último descarte",
   "opponentStrip.lastPickup": "Última carta tomada",

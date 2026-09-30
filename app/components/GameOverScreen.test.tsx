@@ -165,3 +165,15 @@ describe("GameOverScreen — regular game quests", () => {
     expect(await screen.findByText("+30 XP — Quest: Win games")).toBeTruthy();
   });
 });
+
+describe("GameOverScreen — screen-reader confirmation", () => {
+  // This screen fully replaces the board (game/page.tsx swaps it in for
+  // state.gameOver) with nothing else moving focus — without this, a
+  // screen-reader user gets no signal at all that the game just ended.
+  it("moves focus to the win/tie headline on mount", () => {
+    verify.mockResolvedValue({ ok: true });
+    render(<GameOverScreen state={state} />);
+    expect(document.activeElement?.textContent).toContain("You won!");
+    expect(document.activeElement?.tagName).toBe("H1");
+  });
+});

@@ -334,6 +334,8 @@ const it = {
   "game.waitingFor": "In attesa di {name}",
   "game.drawFromPile": "Pesca dal mazzo",
   "game.drawFromDiscard": "Pesca dagli scarti",
+  "game.drawFromDiscardCard": "Pescare {card} dagli scarti",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "Pesca una carta dal mazzo o dalla pila degli scarti per iniziare il turno.",
   "game.tableMelds.heading": "Calate sul tavolo",
   "game.tableMelds.empty":
@@ -498,6 +500,7 @@ const it = {
   "opponentStrip.cardsInHand.other": "{count} carte",
   "opponentStrip.chipLabel": "{name}, {cards} in mano",
   "opponentStrip.chipLabelActive": "{name}, {cards} in mano, turno in corso",
+  "opponentStrip.chipLabelActiveSelf": "{name}, {cards} in mano, il tuo turno",
   "opponentStrip.inHandSuffix": "in mano",
   "opponentStrip.lastDiscard": "Ultimo scarto",
   "opponentStrip.lastPickup": "Ultima carta presa",

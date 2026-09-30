@@ -27,7 +27,7 @@ function player(overrides: Partial<Player>): Player {
   };
 }
 
-function renderStrip(players: Player[]) {
+function renderStrip(players: Player[], selfId?: string | null) {
   return render(
     <OpponentStrip
       players={players}
@@ -36,6 +36,7 @@ function renderStrip(players: Player[]) {
       pickupHistory={[]}
       aiStatus={null}
       aiThinking={false}
+      selfId={selfId}
     />
   );
 }
@@ -72,5 +73,25 @@ describe("OpponentStrip avatar", () => {
     const { container } = renderStrip([player({ id: "ai-1", name: "🦉 Hedda", isAI: true })]);
     const avatarSpan = container.querySelector('[aria-hidden="true"]');
     expect(avatarSpan?.textContent).toBe("🦉");
+  });
+});
+
+describe("OpponentStrip active-chip aria-label", () => {
+  // The bug: the active chip always said "…their turn", even for the seat
+  // that IS the person using the screen right now — for a screen-reader
+  // user this reads as third-person nonsense ("You, 13 cards in hand,
+  // their turn") in solo, and is just plain misleading in multiplayer
+  // (your own seat announced as if someone else were playing).
+  it("says 'your turn' for the active seat matching selfId", () => {
+    const { getByRole } = renderStrip([player({ id: "human-0", name: "You" })], "human-0");
+    expect(getByRole("button", { name: "You, 0 cards in hand, your turn" })).toBeTruthy();
+  });
+  it("still says 'their turn' for the active seat when it doesn't match selfId", () => {
+    const { getByRole } = renderStrip([player({ id: "human-0", name: "You" })], "seat-2");
+    expect(getByRole("button", { name: "You, 0 cards in hand, their turn" })).toBeTruthy();
+  });
+  it("defaults to 'their turn' when selfId is omitted, unchanged from before", () => {
+    const { getByRole } = renderStrip([player({ id: "human-0", name: "You" })]);
+    expect(getByRole("button", { name: "You, 0 cards in hand, their turn" })).toBeTruthy();
   });
 });

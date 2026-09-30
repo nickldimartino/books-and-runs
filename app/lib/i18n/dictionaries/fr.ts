@@ -332,6 +332,8 @@ const fr = {
   "game.waitingFor": "En attente de {name}",
   "game.drawFromPile": "Piocher dans la pile",
   "game.drawFromDiscard": "Piocher dans la défausse",
+  "game.drawFromDiscardCard": "Piocher {card} dans la défausse",
+  "game.meldLabelFull": "{type} : {cards}",
   "game.drawToStart": "Pioche une carte dans la pile ou la défausse pour commencer ton tour.",
   "game.tableMelds.heading": "Combinaisons sur la table",
   "game.tableMelds.empty":
@@ -497,6 +499,7 @@ const fr = {
   "opponentStrip.cardsInHand.other": "{count} cartes",
   "opponentStrip.chipLabel": "{name}, {cards} en main",
   "opponentStrip.chipLabelActive": "{name}, {cards} en main, à son tour",
+  "opponentStrip.chipLabelActiveSelf": "{name}, {cards} en main, à toi de jouer",
   "opponentStrip.inHandSuffix": "en main",
   "opponentStrip.lastDiscard": "Dernière défausse",
   "opponentStrip.lastPickup": "Dernière pioche",

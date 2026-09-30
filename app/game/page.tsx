@@ -14,6 +14,7 @@ import { useGameShortcuts, type ShortcutHandlers } from "../lib/useGameShortcuts
 import { KeyboardHelp } from "../components/KeyboardHelp";
 import { useMediaQuery, WIDE_TABLE_QUERY } from "../lib/useMediaQuery";
 import { contractProgress } from "../lib/contractProgress";
+import { meldLabel } from "../lib/meldLabel";
 import { playError } from "../lib/sound";
 import { speedFactor } from "../lib/motion";
 import { hapticError } from "../lib/haptics";
@@ -95,10 +96,6 @@ interface PendingGroupChoice {
   options: number[];
 }
 
-function meldLabel(meld: Meld, t: (key: TranslationKey) => string): string {
-  return meld.type === "book" ? t("game.meld.book") : t("game.meld.run");
-}
-
 type TPlural = (key: string, count: number, vars?: Vars) => string;
 
 /** One translated line per part of a contract's requirement ("1 book" /
@@ -131,7 +128,7 @@ function GameShortcuts({ handlers, enabled }: { handlers: ShortcutHandlers; enab
 
 export default function GamePage() {
   const router = useRouter();
-  const { t, tPlural } = useT();
+  const { t, tPlural, locale } = useT();
   const {
     state,
     hasDrawn,
@@ -1471,6 +1468,10 @@ export default function GamePage() {
         aiStatus={aiStatus}
         aiThinking={aiThinking}
         bios={opponentStripBios}
+        // No fixed "you" in solo/pass-and-play — the PassGate reveal means
+        // whichever human seat is active right now IS whoever is looking
+        // at the screen (see OpponentStrip's own doc on selfId).
+        selfId={!player.isAI ? player.id : null}
       />
 
       {canUndo && (
@@ -1583,7 +1584,20 @@ export default function GamePage() {
                 className={`rounded-lg disabled:opacity-50 ${
                   showLegalMoves && !hasDrawn && discardTop ? "legal-pulse" : ""
                 } ${showLegalMoves && hasDrawn && selectedCardIds.length === 1 ? "legal-ring" : ""}`}
-                aria-label={hasDrawn ? t("game.discardToPile") : t("game.drawFromDiscard")}
+                // The generic "Draw from discard" label gave a screen-reader
+                // user no way to know WHICH card sits on top before deciding
+                // to take it — a sighted player just looks at the face-up
+                // card. Naming it here is the only fix that helps before the
+                // action, not after (the sr-only `announcement` line already
+                // confirms what was drawn, but only once it's too late to
+                // change your mind).
+                aria-label={
+                  hasDrawn
+                    ? t("game.discardToPile")
+                    : discardTop
+                      ? t("game.drawFromDiscardCard", { card: cardLabel(discardTop, t) })
+                      : t("game.drawFromDiscard")
+                }
                 title={hasDrawn ? t("game.discardToPile") : `${t("game.drawFromDiscard")} (Shift+D)`}
               >
                 <DiscardPile cards={state.discardPile} canLayOff={discardTopCanLayOff} />
@@ -1724,7 +1738,14 @@ export default function GamePage() {
                               onClick={() => handleMeldClick(meld)}
                               disabled={!isValidTarget}
                               className={`max-w-full rounded-lg p-1 transition ${isValidTarget ? "armed-target" : ""}`}
-                              title={meldLabel(meld, t)}
+                              // title alone isn't reliably read as a
+                              // button's accessible name once it has any
+                              // visible child content (it's a low-priority
+                              // fallback in the accessible-name computation)
+                              // — aria-label always wins, and includes the
+                              // actual cards, not just "Book"/"Run".
+                              title={meldLabel(meld, t, locale)}
+                              aria-label={meldLabel(meld, t, locale)}
                             >
                               {/* overflow-x-auto lives on this inner div, not the
                                   button itself — a button that's also its own

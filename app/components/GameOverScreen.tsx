@@ -158,6 +158,15 @@ export function GameOverScreen({ state }: { state: GameState }) {
   // was exhausted).
   const wentOut = state.players.find((p) => p.hasMeldedContract && p.hand.length === 0);
   const recordedRef = useRef(false);
+  // Moves focus to the win/tie/tutorial-complete headline the instant this
+  // screen mounts — see the h1's own doc below for why. Every render path
+  // into this component is a genuinely fresh mount (game/page.tsx renders
+  // it in place of the board, not as a toggled child), so an effect with an
+  // empty dependency array is correct: it should fire exactly once.
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   // Anonymous completion event — see analytics.ts. Once per mount.
   const trackedRef = useRef(false);
@@ -690,7 +699,18 @@ export function GameOverScreen({ state }: { state: GameState }) {
         {!isTutorial && wentOut && (
           <p className="mt-1 break-words text-base font-semibold text-[var(--muted)]">{t("roundSummary.wentOut", { name: wentOut.name })}</p>
         )}
-        <h1 className="win-announce mt-1 break-words text-3xl font-bold text-[var(--heading)]">
+        {/* This screen fully replaces the game board (game/page.tsx returns
+            it instead of the board once state.gameOver is true) — nothing
+            moves focus here on its own, so a screen-reader user gets total
+            silence exactly at the one moment the whole game builds to.
+            tabIndex={-1} + focus-on-mount (below) makes this headline the
+            thing VoiceOver/NVDA announces; outline-none because it's
+            reached only programmatically, never by Tab. */}
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="win-announce mt-1 break-words text-3xl font-bold text-[var(--heading)] outline-none"
+        >
           {isTutorial
             ? t("gameOver.niceWork")
             : isTie

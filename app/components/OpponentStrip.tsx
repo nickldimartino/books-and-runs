@@ -9,7 +9,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { DiscardEvent, Player } from "@/types";
-import { PlayingCard } from "./PlayingCard";
+import { cardLabel, PlayingCard } from "./PlayingCard";
 import { personaBlurbFor } from "../lib/aiPersonas";
 import { useT } from "../lib/i18n/LocaleProvider";
 
@@ -32,6 +32,20 @@ interface OpponentStripProps {
    * multiplayer screen puts Report / Block here for human opponents).
    * Return null for a player that has none. */
   renderPlayerActions?: (player: Player) => ReactNode;
+  /**
+   * The id of the seat that IS the person using this device right now —
+   * used only to pick "your turn" over "their turn" in the active chip's
+   * aria-label, a screen-reader-only distinction (sighted players already
+   * see their own hand below and the highlighted chip). In multiplayer
+   * this is a fixed seat (`seat-${view.yourSeat}`) — turns really do
+   * belong to a different device. In solo/pass-and-play (game/page.tsx)
+   * there is no fixed "you": the PassGate reveal means whichever human
+   * seat is active IS whoever is currently looking at the screen, so that
+   * caller passes the currently-active player's own id whenever it isn't
+   * an AI turn. Omitted (or not matching any chip) falls back to "their
+   * turn" for every seat, the previous behavior.
+   */
+  selfId?: string | null;
 }
 
 /**
@@ -95,6 +109,7 @@ export function OpponentStrip({
   aiThinking,
   bios,
   renderPlayerActions,
+  selfId = null,
 }: OpponentStripProps) {
   const { t, tPlural } = useT();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -151,7 +166,9 @@ export function OpponentStrip({
               onClick={() => setOpenId(isOpen ? null : p.id)}
               aria-label={
                 active
-                  ? t("opponentStrip.chipLabelActive", { name: p.name, cards: tPlural("opponentStrip.cardsInHand", p.hand.length) })
+                  ? p.id === selfId
+                    ? t("opponentStrip.chipLabelActiveSelf", { name: p.name, cards: tPlural("opponentStrip.cardsInHand", p.hand.length) })
+                    : t("opponentStrip.chipLabelActive", { name: p.name, cards: tPlural("opponentStrip.cardsInHand", p.hand.length) })
                   : t("opponentStrip.chipLabel", { name: p.name, cards: tPlural("opponentStrip.cardsInHand", p.hand.length) })
               }
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition ${
@@ -231,6 +248,7 @@ export function OpponentStrip({
 }
 
 function ActivityCard({ label, card }: { label: string; card: DiscardEvent["card"] | null }) {
+  const { t } = useT();
   return (
     <div className="shrink-0 w-14 text-center">
       {/* No whitespace-nowrap here on purpose — a longer translated label
@@ -239,7 +257,13 @@ function ActivityCard({ label, card }: { label: string; card: DiscardEvent["card
       <p className="text-[11px] uppercase leading-tight tracking-wide text-[var(--faint)]">{label}</p>
       <div className="mt-1 flex justify-center">
         {card ? (
-          <PlayingCard card={card} small />
+          // PlayingCard renders as a bare <div> with no accessible name of
+          // its own (see BuyOfferGate.tsx's identical fix) — the visible
+          // "Last discard"/"Last pickup" label above says WHAT this is, but
+          // said nothing about WHICH card without this.
+          <div role="img" aria-label={cardLabel(card, t)}>
+            <PlayingCard card={card} small />
+          </div>
         ) : (
           <span className="flex h-14 w-10 items-center justify-center text-sm text-[var(--faint)]">—</span>
         )}

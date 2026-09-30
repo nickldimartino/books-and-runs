@@ -350,6 +350,8 @@ const ru = {
   "game.waitingFor": "Ожидание игрока {name}",
   "game.drawFromPile": "Взять из колоды",
   "game.drawFromDiscard": "Взять из сброса",
+  "game.drawFromDiscardCard": "Взять карту {card} из сброса",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "Возьми карту из колоды или из сброса, чтобы начать ход.",
   "game.tableMelds.heading": "Комбинации на столе",
   "game.tableMelds.empty":
@@ -518,6 +520,7 @@ const ru = {
   "opponentStrip.cardsInHand.other": "{count} карты",
   "opponentStrip.chipLabel": "{name}, карт в руке: {cards}",
   "opponentStrip.chipLabelActive": "{name}, карт в руке: {cards}, сейчас ходит",
+  "opponentStrip.chipLabelActiveSelf": "{name}, карт в руке: {cards}, твой ход",
   "opponentStrip.inHandSuffix": "в руке",
   "opponentStrip.lastDiscard": "Последний сброс",
   "opponentStrip.lastPickup": "Последнее взятие",

@@ -328,6 +328,8 @@ const zh = {
   "game.waitingFor": "等待 {name}",
   "game.drawFromPile": "从牌堆摸牌",
   "game.drawFromDiscard": "从弃牌堆摸牌",
+  "game.drawFromDiscardCard": "从弃牌堆摸取 {card}",
+  "game.meldLabelFull": "{type}：{cards}",
   "game.drawToStart": "从牌堆或弃牌堆摸一张牌以开始你的回合。",
   "game.tableMelds.heading": "桌面出组",
   "game.tableMelds.empty":
@@ -486,6 +488,7 @@ const zh = {
   "opponentStrip.cardsInHand.other": "{count} 张牌",
   "opponentStrip.chipLabel": "{name}，手中 {cards}",
   "opponentStrip.chipLabelActive": "{name}，手中 {cards}，正在他们的回合",
+  "opponentStrip.chipLabelActiveSelf": "{name}，手中 {cards}，轮到你了",
   "opponentStrip.inHandSuffix": "手中",
   "opponentStrip.lastDiscard": "上次弃牌",
   "opponentStrip.lastPickup": "上次摸牌",

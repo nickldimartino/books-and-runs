@@ -332,6 +332,8 @@ const ptBR = {
   "game.waitingFor": "Aguardando {name}",
   "game.drawFromPile": "Comprar do monte",
   "game.drawFromDiscard": "Comprar do descarte",
+  "game.drawFromDiscardCard": "Comprar {card} do descarte",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "Compre uma carta do monte ou do monte de descarte para começar seu turno.",
   "game.tableMelds.heading": "Combinações na mesa",
   "game.tableMelds.empty":
@@ -497,6 +499,7 @@ const ptBR = {
   "opponentStrip.cardsInHand.other": "{count} cartas",
   "opponentStrip.chipLabel": "{name}, {cards} na mão",
   "opponentStrip.chipLabelActive": "{name}, {cards} na mão, vez dele(a)",
+  "opponentStrip.chipLabelActiveSelf": "{name}, {cards} na mão, sua vez",
   "opponentStrip.inHandSuffix": "na mão",
   "opponentStrip.lastDiscard": "Último descarte",
   "opponentStrip.lastPickup": "Última compra",

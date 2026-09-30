@@ -338,6 +338,8 @@ const de = {
   "game.waitingFor": "Warten auf {name}",
   "game.drawFromPile": "Vom Stapel ziehen",
   "game.drawFromDiscard": "Vom Ablagestapel ziehen",
+  "game.drawFromDiscardCard": "{card} vom Ablagestapel ziehen",
+  "game.meldLabelFull": "{type}: {cards}",
   "game.drawToStart": "Ziehe eine Karte vom Stapel oder Ablagestapel, um deinen Zug zu beginnen.",
   "game.tableMelds.heading": "Tischmeldungen",
   "game.tableMelds.empty":
@@ -505,6 +507,7 @@ const de = {
   "opponentStrip.cardsInHand.other": "{count} Karten",
   "opponentStrip.chipLabel": "{name}, {cards} auf der Hand",
   "opponentStrip.chipLabelActive": "{name}, {cards} auf der Hand, am Zug",
+  "opponentStrip.chipLabelActiveSelf": "{name}, {cards} auf der Hand, du bist dran",
   "opponentStrip.inHandSuffix": "auf der Hand",
   "opponentStrip.lastDiscard": "Letzte Ablage",
   "opponentStrip.lastPickup": "Letzte Aufnahme",

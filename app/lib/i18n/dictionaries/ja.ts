@@ -332,6 +332,8 @@ const ja = {
   "game.waitingFor": "{name}を待っています",
   "game.drawFromPile": "山札から引く",
   "game.drawFromDiscard": "ディスカード山から引く",
+  "game.drawFromDiscardCard": "{card}をディスカード山から引く",
+  "game.meldLabelFull": "{type}：{cards}",
   "game.drawToStart": "ターンを開始するには山札またはディスカード山からカードを引いてください。",
   "game.tableMelds.heading": "テーブルのメルド",
   "game.tableMelds.empty":
@@ -491,6 +493,7 @@ const ja = {
   "opponentStrip.cardsInHand.other": "{count}枚",
   "opponentStrip.chipLabel": "{name}、手札{cards}",
   "opponentStrip.chipLabelActive": "{name}、手札{cards}、現在の手番",
+  "opponentStrip.chipLabelActiveSelf": "{name}、手札{cards}、あなたの番です",
   "opponentStrip.inHandSuffix": "手札",
   "opponentStrip.lastDiscard": "直前のディスカード",
   "opponentStrip.lastPickup": "直前に取ったカード",
