@@ -332,6 +332,8 @@ function emptyEntry(userId: string): LeaderboardEntry {
     mp_games_played: 0,
     mp_games_won: 0,
     mp_best_win_streak: 0,
+    mp_rating: 1200,
+    mp_rated_games: 0,
     updated_at: new Date(0).toISOString(),
   };
 }

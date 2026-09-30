@@ -1077,6 +1077,7 @@ const fr = {
   "leaderboard.column.mpWins": "Victoires MJ",
   "leaderboard.column.mpWinRate": "Taux de vict. MJ",
   "leaderboard.column.mpStreak": "Série MJ",
+  "leaderboard.column.mpRating": "Elo",
   "leaderboard.scope.allPlayers": "Tous les joueurs",
   "leaderboard.loadError": "Impossible de charger le classement — vérifie ta connexion et réessaie.",
   "leaderboard.emptyAll": "Personne n'a encore terminé une partie comptabilisée ni un Défi du jour — joue une partie pour être le premier.",

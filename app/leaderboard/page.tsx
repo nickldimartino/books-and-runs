@@ -86,7 +86,8 @@ type SortKey =
   | "daily_deal_best_streak"
   | "mp_games_won"
   | "mp_win_rate"
-  | "mp_best_win_streak";
+  | "mp_best_win_streak"
+  | "mp_rating";
 
 type T = (key: TranslationKey, vars?: Vars) => string;
 
@@ -169,6 +170,12 @@ function buildColumns(t: T): Column[] {
       label: t("leaderboard.column.mpStreak"),
       minWidth: "80px",
       render: (e) => e.mp_best_win_streak ?? 0,
+    },
+    {
+      key: "mp_rating",
+      label: t("leaderboard.column.mpRating"),
+      minWidth: "70px",
+      render: (e) => ((e.mp_rated_games ?? 0) >= MP_WIN_RATE_MIN_GAMES ? (e.mp_rating ?? 1200) : "—"),
     },
   ];
 }

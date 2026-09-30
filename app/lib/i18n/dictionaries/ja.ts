@@ -1071,6 +1071,7 @@ const ja = {
   "leaderboard.column.mpWins": "MP勝利数",
   "leaderboard.column.mpWinRate": "MP勝率",
   "leaderboard.column.mpStreak": "MP連続",
+  "leaderboard.column.mpRating": "レーティング",
   "leaderboard.scope.allPlayers": "全プレイヤー",
   "leaderboard.loadError": "ランキングを読み込めませんでした。接続を確認して、もう一度お試しください。",
   "leaderboard.emptyAll": "記録対象のゲームやデイリーディールを終えた人はまだいません。最初の一人になりましょう。",

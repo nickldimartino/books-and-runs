@@ -1087,6 +1087,7 @@ const ptBR = {
   "leaderboard.column.mpWins": "Vitórias MP",
   "leaderboard.column.mpWinRate": "Taxa de vitórias MP",
   "leaderboard.column.mpStreak": "Sequência MP",
+  "leaderboard.column.mpRating": "Elo",
   "leaderboard.scope.allPlayers": "Todos os jogadores",
   "leaderboard.loadError": "Não foi possível carregar o ranking — verifique sua conexão e tente novamente.",
   "leaderboard.emptyAll": "Ninguém terminou uma partida registrada ou uma Rodada Diária ainda — jogue uma para ser o primeiro.",

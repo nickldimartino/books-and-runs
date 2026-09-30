@@ -1076,6 +1076,7 @@ const zh = {
   "leaderboard.column.mpWins": "多人胜场",
   "leaderboard.column.mpWinRate": "多人胜率",
   "leaderboard.column.mpStreak": "多人连胜",
+  "leaderboard.column.mpRating": "评分",
   "leaderboard.scope.allPlayers": "所有玩家",
   "leaderboard.loadError": "无法加载排行榜 — 请检查网络连接后重试。",
   "leaderboard.emptyAll": "还没有人完成过记录对局或每日挑战 — 玩一局来抢占第一吧。",

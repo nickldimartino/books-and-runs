@@ -1077,6 +1077,7 @@ const ko = {
   "leaderboard.column.mpWins": "멀티 승리",
   "leaderboard.column.mpWinRate": "멀티 승률",
   "leaderboard.column.mpStreak": "멀티 연승",
+  "leaderboard.column.mpRating": "레이팅",
   "leaderboard.scope.allPlayers": "모든 플레이어",
   "leaderboard.loadError": "리더보드를 불러오지 못했어요 — 연결 상태를 확인하고 다시 시도해 주세요.",
   "leaderboard.emptyAll": "기록되는 게임이나 오늘의 딜을 끝낸 사람이 아직 없어요 — 한 판 해서 첫 번째가 되어 보세요.",

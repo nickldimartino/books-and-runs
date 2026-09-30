@@ -1104,6 +1104,7 @@ const de = {
   "leaderboard.column.mpWins": "MP-Siege",
   "leaderboard.column.mpWinRate": "MP-Siegquote",
   "leaderboard.column.mpStreak": "MP-Serie",
+  "leaderboard.column.mpRating": "Elo",
   "leaderboard.scope.allPlayers": "Alle Spieler",
   "leaderboard.loadError":
     "Die Bestenliste konnte nicht geladen werden — überprüfe deine Verbindung und versuche es erneut.",

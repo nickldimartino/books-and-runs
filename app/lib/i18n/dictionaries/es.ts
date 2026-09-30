@@ -1020,6 +1020,7 @@ const es = {
   "leaderboard.column.mpWins": "Victorias MP",
   "leaderboard.column.mpWinRate": "% victorias MP",
   "leaderboard.column.mpStreak": "Racha MP",
+  "leaderboard.column.mpRating": "Elo",
   "leaderboard.scope.allPlayers": "Todos los jugadores",
   "leaderboard.loadError": "No se pudo cargar la clasificación. Revisa tu conexión e inténtalo de nuevo.",
   "leaderboard.emptyAll": "Nadie ha terminado aún una partida registrada ni un Reparto Diario. Juega una para ser el primero.",

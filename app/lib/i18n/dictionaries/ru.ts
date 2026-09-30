@@ -1130,6 +1130,7 @@ const ru = {
   "leaderboard.column.mpWins": "Побед по сети",
   "leaderboard.column.mpWinRate": "Процент побед по сети",
   "leaderboard.column.mpStreak": "Серия по сети",
+  "leaderboard.column.mpRating": "Рейтинг",
   "leaderboard.scope.allPlayers": "Все игроки",
   "leaderboard.loadError": "Не удалось загрузить таблицу лидеров — проверь подключение и попробуй ещё раз.",
   "leaderboard.emptyAll": "Пока никто не завершил учитываемую игру или «Расклад дня» — сыграй, чтобы стать первым.",

@@ -1099,6 +1099,7 @@ const en = {
   "leaderboard.column.mpWins": "MP wins",
   "leaderboard.column.mpWinRate": "MP win rate",
   "leaderboard.column.mpStreak": "MP streak",
+  "leaderboard.column.mpRating": "Rating",
   "leaderboard.scope.allPlayers": "All players",
   "leaderboard.loadError": "Couldn't load the leaderboard — check your connection and try again.",
   "leaderboard.emptyAll": "Nobody's finished a tracked game or a Daily Deal yet — play one to be the first.",

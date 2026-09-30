@@ -18,6 +18,7 @@ import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 // implementation. Pinned exact, same convention as every other dep here.
 import webpush from "npm:web-push@3.6.7";
 import { corsHeaders, json } from "../_shared/cors.ts";
+import { computeEloUpdates, RatedParticipant } from "../_shared/eloRating.ts";
 import { computePlayerStatsUpdate, PlayerStatsFields } from "../_shared/playerStats.ts";
 import {
   buildPushPayload,
@@ -385,6 +386,37 @@ async function recordMpGameOutcome(
     .map((p) => p.seat);
   const tiedForLowest = winnerSeats.length > 1;
 
+  // Skill rating (migration 0097) — human-vs-human only. `participants` is
+  // already just the real accounts (AI seats have no mp_participants row),
+  // so length >= 2 alone is "at least 2 humans" with nothing further to
+  // filter. A table with only 1 human (the rest AI) never touches rating
+  // at all, matching how a normal solo/pass-and-play game never does either.
+  let ratingUpdates: { userId: string; rating: number; ratedGames: number }[] = [];
+  if (participants.length >= 2) {
+    const { data: current } = await admin
+      .from("leaderboard_entries")
+      .select("user_id, mp_rating, mp_rated_games")
+      .in(
+        "user_id",
+        participants.map((p) => p.user_id)
+      );
+    const ratingByUser = new Map((current ?? []).map((r) => [r.user_id as string, r as { mp_rating: number; mp_rated_games: number }]));
+    const ratedParticipants: RatedParticipant[] = participants
+      .map((p) => {
+        const you = s.players[p.seat];
+        if (!you) return null;
+        const row = ratingByUser.get(p.user_id);
+        return {
+          userId: p.user_id,
+          rating: row?.mp_rating ?? 1200,
+          ratedGames: row?.mp_rated_games ?? 0,
+          score: you.cumulativeScore,
+        };
+      })
+      .filter((r): r is RatedParticipant => r !== null);
+    ratingUpdates = computeEloUpdates(ratedParticipants);
+  }
+
   for (const participant of participants) {
     const you = s.players[participant.seat];
     if (!you) continue;
@@ -420,6 +452,15 @@ async function recordMpGameOutcome(
       winner_score: lowestScore,
     });
     if (historyError) console.error("Failed to record MP game_history for", participant.user_id, historyError);
+
+    const ratingUpdate = ratingUpdates.find((u) => u.userId === participant.user_id);
+    if (ratingUpdate) {
+      const { error: ratingError } = await admin
+        .from("leaderboard_entries")
+        .update({ mp_rating: ratingUpdate.rating, mp_rated_games: ratingUpdate.ratedGames })
+        .eq("user_id", participant.user_id);
+      if (ratingError) console.error("Failed to record MP rating for", participant.user_id, ratingError);
+    }
   }
 }
 

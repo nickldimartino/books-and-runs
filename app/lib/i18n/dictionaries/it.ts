@@ -1078,6 +1078,7 @@ const it = {
   "leaderboard.column.mpWins": "Vittorie MP",
   "leaderboard.column.mpWinRate": "% vittorie MP",
   "leaderboard.column.mpStreak": "Serie MP",
+  "leaderboard.column.mpRating": "Elo",
   "leaderboard.scope.allPlayers": "Tutti i giocatori",
   "leaderboard.loadError": "Impossibile caricare la classifica — controlla la connessione e riprova.",
   "leaderboard.emptyAll": "Nessuno ha ancora finito una partita registrata o un Daily Deal — gioca per essere il primo.",

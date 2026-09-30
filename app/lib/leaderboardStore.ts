@@ -88,6 +88,12 @@ export interface LeaderboardEntry {
   mp_games_played: number;
   mp_games_won: number;
   mp_best_win_streak: number;
+  /** Plain Elo, human-vs-human multiplayer only (migration 0097) — updated
+   * server-side in recordMpGameOutcome, never client-writable (see that
+   * migration's protect_mp_rating trigger). Default 1200, same as a fresh
+   * chess.com/Lichess account. */
+  mp_rating: number;
+  mp_rated_games: number;
   updated_at: string;
 }
 
