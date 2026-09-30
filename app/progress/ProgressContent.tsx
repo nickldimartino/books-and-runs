@@ -56,6 +56,12 @@ export function ProgressContent() {
 
       <div className="flex flex-col gap-2">
         <HubLink
+          href="/recap"
+          title={t("recap.title")}
+          description={t("progress.recapDesc")}
+          icon={HubIcons.recap}
+        />
+        <HubLink
           href="/achievements"
           title={t("home.progressTile.achievements")}
           description={t("progress.achievementsDesc")}

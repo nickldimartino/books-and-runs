@@ -25,6 +25,7 @@ const TAB_BY_PATH: Record<string, NavTab> = {
   "/achievements": "progress",
   "/leaderboard": "progress",
   "/stats": "progress",
+  "/recap": "progress",
   "/social": "social",
   "/friends": "social",
   "/clubs": "social",

@@ -82,6 +82,13 @@ export const HubIcons = {
       <circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
     </svg>
   ),
+  // A sparkle burst — the Recap's entry point (Progress hub), distinct from
+  // the trophy-star used for Achievements.
+  recap: (
+    <svg {...SVG}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
+    </svg>
+  ),
 };
 
 export function HubLink({

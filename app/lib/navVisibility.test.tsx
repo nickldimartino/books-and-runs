@@ -8,6 +8,7 @@ describe("navStateFor", () => {
       ["/progress", "progress"],
       ["/achievements", "progress"],
       ["/leaderboard", "progress"],
+      ["/recap", "progress"],
       ["/social", "social"],
       ["/friends", "social"],
       ["/clubs", "social"],

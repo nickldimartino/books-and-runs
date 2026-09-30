@@ -16,6 +16,7 @@ const PAGE_TITLE_KEYS: Record<string, TranslationKey> = {
   "/terms": "terms.title",
   "/privacy": "privacy.title",
   "/progress": "nav.progress",
+  "/recap": "recap.title",
   "/social": "nav.social",
   "/profile": "nav.profile",
   "/releases": "releases.title",
