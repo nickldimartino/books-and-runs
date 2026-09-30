@@ -50,6 +50,16 @@ interface DragTracker {
   width: number;
   height: number;
   dragging: boolean;
+  // Set the first time a swap actually happens (moveTo, below) — distinct
+  // from `dragging`, which only means the LONG_PRESS_MS timer fired or
+  // BIG_MOVE_PX was crossed. A press held past LONG_PRESS_MS but released
+  // without ever actually moving the card used to read as `dragging` at
+  // release time regardless, so finishDrag called onReorder with the
+  // unchanged order instead of onCardClick — a real tap (just held a beat
+  // longer than 180ms, easy on a touchscreen) silently did nothing at all,
+  // with no error and no visual sign anything was wrong. finishDrag now
+  // checks this instead of `dragging` alone.
+  everMoved: boolean;
   order: string[];
   holdTimer: ReturnType<typeof setTimeout>;
   detach: () => void;
@@ -333,6 +343,7 @@ export function DraggableHand({
       next.splice(currentIndex, 1);
       next.splice(targetIndex, 0, drag.id);
       drag.order = next;
+      drag.everMoved = true;
       setOrder(next);
     }
   }
@@ -343,7 +354,7 @@ export function DraggableHand({
     clearTimeout(drag.holdTimer);
     dragRef.current = null;
     setDragId(null);
-    if (drag.dragging) {
+    if (drag.everMoved) {
       onReorder(drag.order);
     } else {
       onCardClick(card);
@@ -416,6 +427,7 @@ export function DraggableHand({
       width: rect.width,
       height: rect.height,
       dragging: false,
+      everMoved: false,
       order: order.slice(),
       holdTimer: setTimeout(() => engageDrag(card), LONG_PRESS_MS),
       detach,
