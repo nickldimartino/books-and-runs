@@ -27,6 +27,7 @@ import {
   contractsFor,
   deleteCloudFavoriteGameConfig,
   describeFavoriteGameConfig,
+  MARATHON_ROUND_COUNT,
   FavoriteGameConfig,
   loadFavoriteGameConfigWithCloud,
   playerConfigsFor,
@@ -91,7 +92,7 @@ function AiBiosSection() {
   );
 }
 
-type RoundMode = "all" | "short" | "custom";
+type RoundMode = "all" | "short" | "custom" | "marathon";
 
 export default function NewLocalGamePage() {
   const router = useRouter();
@@ -479,6 +480,7 @@ export default function NewLocalGamePage() {
               ["all", t("newGameLocal.all7")],
               ["short", t("newGameLocal.short")],
               ["custom", t("newGameLocal.custom")],
+              ["marathon", t("newGameLocal.marathon")],
             ] as [RoundMode, string][]
           ).map(([mode, label]) => (
             <button
@@ -501,6 +503,9 @@ export default function NewLocalGamePage() {
               second: contractNeedLabel(1, 2, tPlural),
             })}
           </p>
+        )}
+        {roundMode === "marathon" && (
+          <p className="text-xs text-[var(--faint)]">{t("newGameLocal.marathonNote", { count: MARATHON_ROUND_COUNT })}</p>
         )}
         {roundMode === "custom" && (
           <div className="flex flex-col gap-2">

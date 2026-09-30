@@ -72,6 +72,7 @@ export const SAME_AS_ENGLISH_ALLOWLIST: Record<string, Entry> = {
   "achievementFamily.meldsWithZeroWilds.title": { locales: ["de"], reason: "'Purist' is the German word" },
   "achievementFamily.mpGamesPlayed.title": { locales: ["fr", "es"], reason: "'Sociable' is the local word" },
   "achievementFamily.weeklyChallengesCompleted.title": { locales: ["fr"], reason: "'Challenger' is a French word" },
+  "newGameLocal.marathon": { locales: ["de", "fr"], reason: "'Marathon' is spelled the same in German and French" },
 };
 
 export function allowsSameAsEnglish(locale: string, key: string): boolean {

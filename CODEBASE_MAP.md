@@ -222,7 +222,7 @@ stay with each caller.
 | `dailyDealStore.ts` | `dailyDeal` — Daily Deal results + streak; seeded deal by calendar date. |
 | `dailyDealLeaderboard.ts` | Per-deal friend leaderboard (migration 0018): `submitDailyDealScore`, `fetchDailyDealFriendScores`. |
 | `weeklyChallengeStore.ts` | `weeklyChallenge` — Daily Deal's bigger, harder sibling: full 7-round game vs. 3 Hard AIs, seeded deal by ISO week (`isoWeekKey`). Own results + streak, own save slot (`localSave.ts`'s `WEEKLY_CHALLENGE_SAVE_KEY`). No per-challenge friend leaderboard yet. |
-| `favoriteGameConfig.ts` | "My usual" saved solo/pass-and-play setup (localStorage): load/save/describe + `contractsFor` / `playerConfigsFor` deal helpers. |
+| `favoriteGameConfig.ts` | "My usual" saved solo/pass-and-play setup (localStorage): load/save/describe + `contractsFor` / `playerConfigsFor` deal helpers. `contractsFor`'s 4th `RoundMode`, `"marathon"`, cycles the standard 7 contracts 4x (`MARATHON_ROUND_COUNT` = 28) — a long-but-finite endurance run ("how low can you keep your score"), not a literal infinite mode; needs no engine change at all, since the engine only ever indexes `selectedContracts` by array position, never reads a contract's own `.round` field for anything beyond its label. |
 | `scorecardStore.ts` | `scorecard` — the standalone scorekeeper's grid. |
 | `pushSubscriptions.ts` | Web Push opt-in (Settings page): register `public/sw.js`, subscribe/unsubscribe via `PushManager`, keep `push_subscriptions` (migration 0020) in step. The actual send is server-side — see `mp/index.ts`'s `sendPushForEvent`. |
 | `pendingSaveQueue.ts` | `pendingSaves` — finished games whose Supabase write failed; retried by `PendingSaveSync`. |

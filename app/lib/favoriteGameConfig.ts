@@ -28,7 +28,22 @@ type TPlural = (key: string, count: number, vars?: Vars) => string;
 const KEY = "booksAndRuns:favoriteGame";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert"];
-type RoundMode = "all" | "short" | "custom";
+type RoundMode = "all" | "short" | "custom" | "marathon";
+
+/** 4 full cycles of the standard 7 contracts — long enough to feel like a
+ * real endurance run ("how low can you keep your cumulative score") without
+ * an actually-unbounded array. Nothing in the engine treats `.round` as
+ * unique across a game (round X of the played game always indexes
+ * `selectedContracts` by position, never by this field — see game/page.tsx's
+ * roundOf), so repeating the same 7 labels 4 times over is purely cosmetic
+ * and needs no engine change at all. */
+export const MARATHON_ROUND_COUNT = CONTRACTS.length * 4;
+function marathonContracts(): ContractRequirement[] {
+  return Array.from({ length: MARATHON_ROUND_COUNT }, (_, i) => ({
+    ...CONTRACTS[i % CONTRACTS.length],
+    round: i + 1,
+  }));
+}
 
 export interface FavoriteGameConfig {
   humanCount: number;
@@ -159,6 +174,7 @@ export function contractsFor(
 ): ContractRequirement[] {
   if (roundMode === "all") return CONTRACTS;
   if (roundMode === "short") return SHORT_GAME_CONTRACTS;
+  if (roundMode === "marathon") return marathonContracts();
   const set = customRounds instanceof Set ? customRounds : new Set(customRounds);
   return CONTRACTS.filter((c) => set.has(c.round));
 }

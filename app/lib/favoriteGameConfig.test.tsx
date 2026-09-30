@@ -9,6 +9,7 @@ import {
   FavoriteGameConfig,
   loadFavoriteGameConfig,
   loadFavoriteGameConfigWithCloud,
+  MARATHON_ROUND_COUNT,
   playerConfigsFor,
   saveFavoriteGameConfig,
 } from "./favoriteGameConfig";
@@ -100,6 +101,20 @@ describe("contractsFor", () => {
     expect(contractsFor("all", [])).toBe(CONTRACTS);
     expect(contractsFor("short", [])).toBe(SHORT_GAME_CONTRACTS);
     expect(contractsFor("custom", [1, 2]).map((c) => c.round)).toEqual([1, 2]);
+  });
+
+  it("marathon cycles the standard 7 contracts to a long, renumbered run", () => {
+    const marathon = contractsFor("marathon", []);
+    expect(marathon).toHaveLength(MARATHON_ROUND_COUNT);
+    expect(MARATHON_ROUND_COUNT).toBe(CONTRACTS.length * 4);
+    // Renumbered 1..N (not the source contract's own 1..7), matching the
+    // game's actual round counter it's indexed against.
+    expect(marathon.map((c) => c.round)).toEqual(Array.from({ length: MARATHON_ROUND_COUNT }, (_, i) => i + 1));
+    // Every 7th entry cycles back to the same underlying contract shape.
+    expect(marathon[0].label).toBe(CONTRACTS[0].label);
+    expect(marathon[7].label).toBe(CONTRACTS[0].label);
+    expect(marathon[CONTRACTS.length * 2].label).toBe(CONTRACTS[0].label);
+    expect(marathon[3].label).toBe(CONTRACTS[3].label);
   });
 });
 
