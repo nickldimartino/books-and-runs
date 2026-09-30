@@ -20,17 +20,97 @@
   var COLORBLIND_IDS = ["protanopia","deuteranopia","tritanopia"];
   var LOCALE_IDS = ["en","zh","ja","ko","de","fr","es","pt-BR","ru","it"];
 
-  // Applies a previously-chosen theme before first paint, so static
-  // export's server-rendered (theme-less) HTML doesn't flash Midnight
-  // before swapping to whatever the visitor picked last time. Also
-  // re-points the theme-color <meta> tag at the saved theme's own --bg.
-  try {
-    var t = localStorage.getItem("booksAndRuns:theme");
-    if (THEME_IDS.indexOf(t) !== -1) {
-      document.documentElement.setAttribute("data-theme", t);
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m && THEME_BG[t]) m.setAttribute("content", THEME_BG[t]);
+  // Automated holiday theming (see app/lib/holidayTheme.ts, the TS source
+  // of truth this is hand-duplicated from by the same necessity as
+  // THEME_IDS/THEME_BG above — holidayTheme.test.ts evaluates this exact
+  // block against that module across a wide date range to keep the two
+  // honest, instead of trusting them to stay in sync by eye). For 7 days
+  // before/after each of 9 US holidays, the *displayed* theme below
+  // defaults to that holiday's dark/light pair, without ever touching the
+  // saved "booksAndRuns:theme" value itself — see that file's own doc.
+  var HOLIDAY_WINDOW_DAYS = 7;
+  function easterDate(year) {
+    var a = year % 19, b = Math.floor(year / 100), c = year % 100;
+    var d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    var g = Math.floor((b - f + 1) / 3);
+    var h = (19 * a + b - d - g + 15) % 30;
+    var i = Math.floor(c / 4), k = c % 4;
+    var l = (32 + 2 * e + 2 * i - h - k) % 7;
+    var mm = Math.floor((a + 11 * h + 22 * l) / 451);
+    var month = Math.floor((h + l - 7 * mm + 114) / 31);
+    var day = ((h + l - 7 * mm + 114) % 31) + 1;
+    return [month, day];
+  }
+  function thanksgivingDate(year) {
+    var nov1Dow = new Date(Date.UTC(year, 10, 1)).getUTCDay();
+    var firstThursday = 1 + ((4 - nov1Dow + 7) % 7);
+    return [11, firstThursday + 21];
+  }
+  // Hand-maintained — see holidayTheme.ts's own table doc.
+  var HANUKKAH_FIRST_NIGHT = {2024:[12,25],2025:[12,14],2026:[12,4],2027:[12,24],2028:[12,12],2029:[12,1],2030:[12,20],2031:[12,9],2032:[11,27],2033:[12,16],2034:[12,6],2035:[12,25]};
+  var HOLIDAYS = [
+    { id: "valentines", dark: "valentines", light: "sweetheart", center: function () { return [2, 14]; } },
+    { id: "stpatricks", dark: "stpatricks", light: "cloverfield", center: function () { return [3, 17]; } },
+    { id: "easter", dark: "springdusk", light: "easter", center: easterDate },
+    { id: "july4th", dark: "july4th", light: "starsandstripes", center: function () { return [7, 4]; } },
+    { id: "halloween", dark: "halloween", light: "candycorn", center: function () { return [10, 31]; } },
+    { id: "thanksgiving", dark: "thanksgiving", light: "pumpkinspice", center: thanksgivingDate },
+    { id: "hanukkah", dark: "hanukkah", light: "festivaloflights", center: function (y) { return HANUKKAH_FIRST_NIGHT[y] || null; } },
+    { id: "christmas", dark: "christmas", light: "candycane", center: function () { return [12, 25]; } },
+    { id: "newyears", dark: "newyears", light: "confetti", center: function () { return [1, 1]; } }
+  ];
+  function activeHoliday(now) {
+    var y0 = now.getUTCFullYear();
+    var todayMs = Date.UTC(y0, now.getUTCMonth(), now.getUTCDate());
+    var best = null;
+    for (var hi = 0; hi < HOLIDAYS.length; hi++) {
+      var def = HOLIDAYS[hi];
+      for (var yo = -1; yo <= 1; yo++) {
+        var year = y0 + yo;
+        var c = def.center(year);
+        if (!c) continue;
+        var centerMs = Date.UTC(year, c[0] - 1, c[1]);
+        var distance = Math.abs(Math.round((todayMs - centerMs) / 86400000));
+        if (distance > HOLIDAY_WINDOW_DAYS) continue;
+        if (!best || distance < best.distance) best = { def: def, distance: distance, centerMs: centerMs };
+      }
     }
+    if (!best) return null;
+    // Midnight UTC of the day *after* the window's last day — see
+    // holidayTheme.ts's own comment on why this is exclusive, not inclusive.
+    return { id: best.def.id, dark: best.def.dark, light: best.def.light, windowEndMs: best.centerMs + (HOLIDAY_WINDOW_DAYS + 1) * 86400000 };
+  }
+  function prefersDark() {
+    try { return typeof window.matchMedia !== "function" || window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return true; }
+  }
+  function holidayOptOutActive(active) {
+    try {
+      var raw = localStorage.getItem("booksAndRuns:holidayThemeOptOut");
+      if (!raw) return false;
+      var parsed = JSON.parse(raw);
+      return !!parsed && parsed.holidayId === active.id && typeof parsed.untilMs === "number" && Date.now() < parsed.untilMs;
+    } catch (e) { return false; }
+  }
+  function getDisplayTheme(saved, now) {
+    var active = activeHoliday(now);
+    if (!active) return saved;
+    if (holidayOptOutActive(active)) return saved;
+    return prefersDark() ? active.dark : active.light;
+  }
+
+  // Applies a previously-chosen theme (or the holiday default, see above)
+  // before first paint, so static export's server-rendered (theme-less)
+  // HTML doesn't flash Midnight before swapping to the real thing. Also
+  // re-points the theme-color <meta> tag at the displayed theme's --bg.
+  var t;
+  try {
+    var savedTheme = localStorage.getItem("booksAndRuns:theme");
+    t = THEME_IDS.indexOf(savedTheme) !== -1 ? savedTheme : "midnight";
+    var displayTheme = getDisplayTheme(t, new Date());
+    document.documentElement.setAttribute("data-theme", displayTheme);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m && THEME_BG[displayTheme]) m.setAttribute("content", THEME_BG[displayTheme]);
+    t = displayTheme;
   } catch (e) {}
 
   // Same reasoning, for the colorblind card-color override. "off" is

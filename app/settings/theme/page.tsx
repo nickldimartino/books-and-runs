@@ -7,6 +7,7 @@ import { useT } from "../../lib/i18n/LocaleProvider";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { pushTheme } from "../../lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "../../lib/cardBackStore";
+import { recordExplicitThemePick } from "../../lib/holidayTheme";
 import { supabase } from "../../lib/supabaseClient";
 import { useThemeUnlockContext } from "../../lib/themeCosmeticUnlocks";
 import { applyTheme, loadLocalTheme, saveLocalTheme, ThemeId } from "../../lib/themeStore";
@@ -36,6 +37,10 @@ export default function ThemeSettingsPage() {
     setTheme(id);
     saveLocalTheme(id);
     applyTheme(id);
+    // "It can still be changed" — an explicit pick here always wins over
+    // the automated holiday default for the rest of that holiday's window
+    // (see holidayTheme.ts). A no-op when no holiday is currently active.
+    recordExplicitThemePick();
     // Card back mirrors the table theme by default (see cardBackStore.ts) —
     // re-apply it here too so a "match" card back visibly follows this
     // change immediately. A no-op whenever an explicit card back is already

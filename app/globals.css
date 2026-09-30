@@ -2572,6 +2572,19 @@ label {
   animation: legal-pulse 1.8s ease-in-out infinite;
   border-radius: 0.75rem;
 }
+
+/* Automated holiday theming's ambient edge decorations — see
+   components/HolidayDecorations.tsx. A slow, gentle drift so they read as
+   ambient rather than as something demanding attention; the app-wide
+   [data-reduce-motion="on"] kill-switch above already flattens this to a
+   single static frame. */
+@keyframes holiday-decoration-drift {
+  0%, 100% { transform: translateY(0) rotate(var(--holiday-decoration-rotate, 0deg)); }
+  50% { transform: translateY(-8px) rotate(var(--holiday-decoration-rotate, 0deg)); }
+}
+.holiday-decoration {
+  animation: holiday-decoration-drift 5s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .legal-pulse {
     animation: none;

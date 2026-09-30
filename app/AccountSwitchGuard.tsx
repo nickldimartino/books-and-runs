@@ -7,6 +7,7 @@ import { resetLocalPreferencesToDefaults } from "./lib/accountSettingsSync";
 import { applyCardBack, loadLocalCardBack } from "./lib/cardBackStore";
 import { resetDailyDealLocal } from "./lib/dailyDealStore";
 import { clearFavoriteGameConfig } from "./lib/favoriteGameConfig";
+import { getDisplayTheme } from "./lib/holidayTheme";
 import { clearDailyDealSave, clearSavedGame, clearWeeklyChallengeSave } from "./lib/localSave";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme } from "./lib/themeStore";
 import { resetSeenTips } from "./lib/tipsStore";
@@ -90,16 +91,22 @@ export function AccountSwitchGuard() {
       resetWeeklyChallengeLocal();
     }
 
-    // The theme is always default while signed out (see
+    // The *saved* theme is always default while signed out (see
     // settings/theme/page.tsx, which no longer lets a signed-out visitor
     // choose anything else) — checked on every confirmed-signed-out state,
     // not just a fresh sign-out, so a device that still has a non-default
     // theme cached from before this rule existed self-heals the next time
-    // it loads the app signed out, instead of staying wrong forever.
+    // it loads the app signed out, instead of staying wrong forever. What
+    // actually gets *painted* still goes through getDisplayTheme(), so a
+    // signed-out visitor sees the same holiday default as everyone else
+    // during a holiday window (see holidayTheme.ts) — "always default"
+    // means always on the ambient ownerless default, not always literally
+    // Midnight.
     if (loadLocalTheme() !== DEFAULT_THEME) {
       saveLocalTheme(DEFAULT_THEME);
-      applyTheme(DEFAULT_THEME);
-      applyCardBack(loadLocalCardBack(), DEFAULT_THEME);
+      const displayTheme = getDisplayTheme(DEFAULT_THEME);
+      applyTheme(displayTheme);
+      applyCardBack(loadLocalCardBack(), displayTheme);
     }
   }, [user, loading]);
 

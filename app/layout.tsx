@@ -15,6 +15,7 @@ import { NavTrailTracker } from "./components/NavTrailTracker";
 import { ShellEffects } from "./components/ShellEffects";
 import { ToastHost } from "./components/ToastHost";
 import { GamepadNavigation } from "./components/GamepadNavigation";
+import { HolidayDecorations } from "./components/HolidayDecorations";
 import { LocaleProvider } from "./lib/i18n/LocaleProvider";
 import { NotificationsProvider } from "./lib/NotificationsContext";
 import { LocalSaveSync } from "./LocalSaveSync";
@@ -142,6 +143,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
         <ServiceWorkerRegistrar />
         <LocaleProvider>
+          <HolidayDecorations />
           <UpdateAvailableBanner />
           <ToastHost />
           <DocumentTitleLocalizer />

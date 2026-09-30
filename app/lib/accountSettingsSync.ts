@@ -43,6 +43,7 @@ import {
   saveLocalSettings,
 } from "./settingsStore";
 import { applyTextScale, DEFAULT_TEXT_SCALE, loadLocalTextScale, saveLocalTextScale, TEXT_SCALES, TextScale } from "./textScaleStore";
+import { clearHolidayOptOut, getDisplayTheme } from "./holidayTheme";
 import { applyTheme, DEFAULT_THEME, loadLocalTheme, saveLocalTheme, THEMES, ThemeId } from "./themeStore";
 
 export interface AccountSettingsRow {
@@ -147,8 +148,12 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
   const localTheme = loadLocalTheme();
   if (validTheme) {
     saveLocalTheme(validTheme);
-    applyTheme(validTheme);
+    // Holiday-aware: signing in mid-window should show the holiday default
+    // immediately (unless this device already opted out of it), not a
+    // flash of the account's bare saved theme until the next reload.
+    applyTheme(getDisplayTheme(validTheme));
   }
+  const displayTheme = validTheme ? getDisplayTheme(validTheme) : null;
   const validCardBack =
     row.card_back &&
     (row.card_back === "match" ||
@@ -158,11 +163,12 @@ export function applyAccountSettings(row: AccountSettingsRow): void {
       : null;
   if (validCardBack) {
     saveLocalCardBack(validCardBack);
-    applyCardBack(validCardBack, validTheme ?? localTheme);
+    applyCardBack(validCardBack, displayTheme ?? localTheme);
   } else if (validTheme) {
     // Card back may be "match table theme" — re-apply it against the newly
-    // synced theme even when the account never set a card back of its own.
-    applyCardBack(loadLocalCardBack(), validTheme);
+    // synced (and possibly holiday-overridden) theme even when the account
+    // never set a card back of its own.
+    applyCardBack(loadLocalCardBack(), displayTheme ?? validTheme);
   }
   if (row.card_face && CARD_FACES.some((f) => f.id === row.card_face)) {
     saveLocalCardFace(row.card_face as CardFaceId);
@@ -240,9 +246,17 @@ export function resetLocalPreferencesToDefaults(): void {
   saveLocalSettings(DEFAULT_SETTINGS);
   applyReduceMotion(DEFAULT_SETTINGS.reduceMotion);
   saveLocalTheme(DEFAULT_THEME);
-  applyTheme(DEFAULT_THEME);
+  // A reset is a deliberate return to literal baseline — including
+  // forgetting any in-window "I picked my own theme" opt-out, so what gets
+  // *painted* right after a reset is "no preference," exactly like a
+  // brand-new visitor: DEFAULT_THEME normally, or the active holiday's
+  // theme during its window (the actual "default" per this feature's own
+  // brief — see holidayTheme.ts).
+  clearHolidayOptOut();
+  const resetDisplayTheme = getDisplayTheme(DEFAULT_THEME);
+  applyTheme(resetDisplayTheme);
   saveLocalCardBack(DEFAULT_CARD_BACK);
-  applyCardBack(DEFAULT_CARD_BACK, DEFAULT_THEME);
+  applyCardBack(DEFAULT_CARD_BACK, resetDisplayTheme);
   saveLocalCardFace(DEFAULT_CARD_FACE);
   saveLocalColorblindMode(DEFAULT_COLORBLIND_MODE);
   applyColorblindMode(DEFAULT_COLORBLIND_MODE);
