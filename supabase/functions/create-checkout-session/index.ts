@@ -33,6 +33,17 @@
 // (the safe default) otherwise. SITE_URL overrides the success/cancel
 // redirect origin (defaults to the production app) — useful for testing
 // against a local dev server with a Stripe test key.
+//
+// Gifting: `{ skus: [sku], recipientId }` buys ONE item for a friend
+// instead of yourself. The payer must already be an accepted friend of
+// `recipientId` and the friend must not already own the sku — both
+// enforced here via migration 0099's boutique_can_gift() RPC, called with
+// the payer's own JWT (so it can't be used to probe a non-friend's
+// entitlements). The payer's own ownership of the sku is irrelevant for a
+// gift, so the "already owned" check below is skipped entirely for a gift
+// request. `client_reference_id` stays the payer (their receipt); the
+// stripe-webhook grants the entitlement to `metadata.gift_recipient_id`
+// instead when it's present — see buildCheckoutSessionParams's own doc.
 
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
@@ -52,6 +63,8 @@ const AUTOMATIC_TAX = Deno.env.get("STRIPE_AUTOMATIC_TAX") === "1";
 // A generous cap, not a real cart-size product decision — just stops a
 // malformed/abusive request from building an enormous line_items list.
 const MAX_SKUS_PER_REQUEST = 50;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -87,15 +100,44 @@ Deno.serve(async (req) => {
   }
   if (skus.length > MAX_SKUS_PER_REQUEST) return json({ error: "too many items" }, 400);
 
+  const recipientId = typeof body.recipientId === "string" ? body.recipientId : null;
+  if (recipientId !== null) {
+    if (!UUID_RE.test(recipientId) || recipientId === user.id) {
+      return json({ error: "invalid recipient" }, 400);
+    }
+    if (skus.length !== 1) return json({ error: "gift only one item at a time" }, 400);
+    // Friendship + not-already-owned, both checked in one RPC call so a
+    // non-friend's entitlements are never exposed to this client at all —
+    // see migration 0099's own doc for why this has to be security definer.
+    const { data: canGift, error: giftCheckErr } = await userClient.rpc("boutique_can_gift", {
+      p_friend: recipientId,
+      p_sku: skus[0],
+    });
+    if (giftCheckErr) {
+      const msg = giftCheckErr.message ?? "";
+      if (/only gift to a friend/i.test(msg)) return json({ error: "you can only gift to a friend" }, 403);
+      console.error("create-checkout-session: boutique_can_gift failed:", giftCheckErr);
+      return json({ error: "something went wrong" }, 500);
+    }
+    if (!canGift) return json({ error: "your friend already owns this" }, 409);
+  }
+
   // What this account already owns — checked with the caller's own RLS-
   // scoped client (entitlements: owner can select their own rows, see
   // migration 0085), so this reads exactly what my_entitlements() would.
-  const { data: ownedRows, error: ownedErr } = await userClient.from("entitlements").select("sku").eq("user_id", user.id);
-  if (ownedErr) {
-    console.error("create-checkout-session: failed to read entitlements:", ownedErr);
-    return json({ error: "something went wrong" }, 500);
+  // Irrelevant for a gift (the payer isn't the one receiving the item, and
+  // the recipient's ownership was already checked above), so skipped
+  // entirely rather than filtering a cart the payer will never own by a
+  // set that has nothing to do with them.
+  let ownedSkus = new Set<string>();
+  if (!recipientId) {
+    const { data: ownedRows, error: ownedErr } = await userClient.from("entitlements").select("sku").eq("user_id", user.id);
+    if (ownedErr) {
+      console.error("create-checkout-session: failed to read entitlements:", ownedErr);
+      return json({ error: "something went wrong" }, 500);
+    }
+    ownedSkus = new Set((ownedRows ?? []).map((r) => r.sku as string));
   }
-  const ownedSkus = new Set((ownedRows ?? []).map((r) => r.sku as string));
 
   const built = buildCheckoutSessionParams({
     userId: user.id,
@@ -104,6 +146,7 @@ Deno.serve(async (req) => {
     catalog: CATALOG,
     siteUrl: SITE_URL,
     automaticTax: AUTOMATIC_TAX,
+    giftRecipientId: recipientId ?? undefined,
   });
   if (!built.ok) return json({ error: built.error }, built.status);
 

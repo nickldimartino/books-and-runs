@@ -17,7 +17,11 @@ const EXACT: Array<[string, TranslationKey]> = [
   // the 0056-0064 RPCs that a normal UI path never triggers; they still map
   // to the translated generic line rather than leaking English.
   ["invalid target", "err.generic"],
+  ["invalid recipient", "err.generic"],
   ["no such user", "err.generic"],
+  ["you can only gift to a friend", "boutique.error.giftNotFriend"],
+  ["your friend already owns this", "boutique.error.giftAlreadyOwned"],
+  ["gift only one item at a time", "boutique.error.giftMultiItem"],
   ["cannot report yourself", "err.generic"],
   ["invalid report", "err.generic"],
   ["not authenticated", "err.signedOut"],

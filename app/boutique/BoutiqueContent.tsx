@@ -41,7 +41,10 @@ import { CheckBadge, ThemeSwatchBlock } from "../settings/SwatchPicker";
 import type { ThemeId } from "../lib/themeStore";
 import { useT } from "../lib/i18n/LocaleProvider";
 import type { TranslationKey } from "../lib/i18n/keys";
+import { translateError } from "../lib/i18n/serverErrors";
 import { fetchAvatarsFor, fetchOwnDisplayName, AvatarInfo } from "../lib/leaderboardStore";
+import { Friend, getFriends } from "../lib/friendsStore";
+import { GiftPickerDialog } from "../components/GiftPickerDialog";
 import { RARITY_TEXT_ACCENT, RARITY_VISUAL, rarityHasFoil } from "../lib/cosmeticRarity";
 import {
   bundleSavingsPercent,
@@ -282,6 +285,12 @@ interface ItemCardProps {
    * disabled (see the "sign in to buy" branch below, which already asks
    * for sign-in for the one thing a guest here actually needs to do). */
   onToggleWishlist?: () => void;
+  /** Undefined for a signed-out visitor or an already-owned item — gifting
+   * something you already own to a friend is still allowed (see
+   * onToggleWishlist's own note on why "undefined = hide" beats "disabled"
+   * here too), so this only needs its own owned check where owned changes
+   * what the button DOES rather than whether it should exist. */
+  onGift?: () => void;
 }
 
 function ItemCard({
@@ -297,6 +306,7 @@ function ItemCard({
   highlighted,
   wishlisted,
   onToggleWishlist,
+  onGift,
 }: ItemCardProps) {
   const { t, locale } = useT();
   return (
@@ -306,6 +316,15 @@ function ItemCard({
         highlighted ? "border-[var(--accent)] ring-2 ring-[var(--accent)]" : "border-[var(--border)] bg-[var(--panel)]"
       }`}
     >
+      {onGift && (
+        <button
+          onClick={onGift}
+          aria-label={t("boutique.item.giftAria", { item: item.name })}
+          className="absolute left-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-full bg-[var(--panel)]/80 text-sm text-[var(--faint)] transition hover:text-[var(--accent)]"
+        >
+          🎁
+        </button>
+      )}
       {onToggleWishlist && !owned && (
         <button
           onClick={onToggleWishlist}
@@ -480,7 +499,17 @@ type ReturnState =
   | { kind: "idle" }
   | { kind: "processing" }
   | { kind: "success"; newSkus: string[] }
-  | { kind: "stillProcessing" };
+  | { kind: "stillProcessing" }
+  | { kind: "giftSuccess"; recipientName: string | null };
+
+/** sessionStorage shape remembered across the Stripe redirect — see the
+ * "Return from Stripe Checkout" effect below for why a bare sku array
+ * isn't enough once a purchase might be a gift. */
+interface PendingPurchase {
+  skus: string[];
+  giftRecipientId?: string;
+  giftRecipientName?: string | null;
+}
 
 export function BoutiqueContent() {
   const { t, tPlural } = useT();
@@ -505,7 +534,7 @@ export function BoutiqueContent() {
   const highlightedRef = useRef<HTMLDivElement | null>(null);
 
   const buy = useCallback(
-    async (sku: string) => {
+    async (sku: string, gift?: { recipientId: string; recipientName: string | null }) => {
       setPurchaseError(null);
       setPurchasingSku(sku);
       try {
@@ -513,21 +542,59 @@ export function BoutiqueContent() {
         // the right item(s) even though the webhook that actually grants
         // them runs asynchronously, after Stripe's own redirect lands us
         // back here with no other way to know what was just bought.
-        sessionStorage.setItem("boutique:pendingPurchase", JSON.stringify([sku]));
+        const pending: PendingPurchase = gift
+          ? { skus: [sku], giftRecipientId: gift.recipientId, giftRecipientName: gift.recipientName }
+          : { skus: [sku] };
+        sessionStorage.setItem("boutique:pendingPurchase", JSON.stringify(pending));
       } catch {
         /* sessionStorage unavailable (private mode etc.) — the return trip
-         * falls back to "newly appeared since page load" instead. */
+         * falls back to "newly appeared since page load" instead (a gift
+         * falls back to a plain "sent!" with no recipient name). */
       }
       try {
-        await startPurchase([sku]);
+        await startPurchase([sku], gift ? { giftRecipientId: gift.recipientId } : undefined);
         // startPurchase redirects the page on success — this line only
         // runs if it threw instead.
       } catch (err) {
         setPurchasingSku(null);
-        setPurchaseError(err instanceof PurchaseError ? err.message : t("boutique.error.purchaseFailed"));
+        setPurchaseError(
+          err instanceof PurchaseError ? translateError(err.message, t) : t("boutique.error.purchaseFailed")
+        );
       }
     },
     [t]
+  );
+
+  // ── Gifting ──────────────────────────────────────────────────────────────
+  const [giftItemSku, setGiftItemSku] = useState<string | null>(null);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [giftSendingTo, setGiftSendingTo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!signedIn || !supabase) return;
+    setFriendsLoading(true);
+    getFriends(supabase)
+      .then(setFriends)
+      .catch(() => setFriends([]))
+      .finally(() => setFriendsLoading(false));
+  }, [signedIn]);
+
+  const giftItem = giftItemSku ? findStoreItem(giftItemSku) : null;
+
+  const sendGift = useCallback(
+    async (friend: Friend) => {
+      if (!giftItemSku) return;
+      setGiftSendingTo(friend.userId);
+      await buy(giftItemSku, { recipientId: friend.userId, recipientName: friend.displayName });
+      // buy() redirects to Stripe on success — this only runs after an
+      // error. Close the dialog either way so the error banner (rendered
+      // on the page itself, below the filter bar) isn't left hidden behind
+      // the still-open modal overlay.
+      setGiftSendingTo(null);
+      setGiftItemSku(null);
+    },
+    [buy, giftItemSku]
   );
 
   // ── Deep link (?item=<sku>) — jump to and highlight that item ──────────
@@ -562,25 +629,34 @@ export function BoutiqueContent() {
     if (purchase !== "success") return; // "cancelled" — quiet, back to browsing.
     if (!signedIn || !user) return; // Wait for auth to resolve before polling.
 
-    let pending: string[] = [];
+    let pending: PendingPurchase = { skus: [] };
     try {
-      pending = JSON.parse(sessionStorage.getItem("boutique:pendingPurchase") ?? "[]");
+      pending = JSON.parse(sessionStorage.getItem("boutique:pendingPurchase") ?? '{"skus":[]}');
       sessionStorage.removeItem("boutique:pendingPurchase");
     } catch {
       /* ignore */
+    }
+
+    // A gift never changes the PAYER's own entitlements (the friend owns
+    // it, not them) — there is nothing to poll for on this account, so
+    // celebrate immediately rather than waiting on a signal that will
+    // never arrive.
+    if (pending.giftRecipientId) {
+      setReturnState({ kind: "giftSuccess", recipientName: pending.giftRecipientName ?? null });
+      return;
     }
 
     const initialOwned = new Set(ownedSkus);
     setReturnState({ kind: "processing" });
     pollForEntitlements(supabase, user.id, {
       shouldStop: (skus) =>
-        pending.length > 0 ? pending.every((s) => skus.includes(s)) : skus.length > initialOwned.size,
+        pending.skus.length > 0 ? pending.skus.every((s) => skus.includes(s)) : skus.length > initialOwned.size,
     }).then(({ skus, resolvedEarly }) => {
       if (!resolvedEarly) {
         setReturnState({ kind: "stillProcessing" });
         return;
       }
-      const newSkus = pending.length > 0 ? pending : skus.filter((s) => !initialOwned.has(s));
+      const newSkus = pending.skus.length > 0 ? pending.skus : skus.filter((s) => !initialOwned.has(s));
       setReturnState({ kind: "success", newSkus });
       refreshEntitlements({ force: true });
     });
@@ -721,6 +797,16 @@ export function BoutiqueContent() {
           })()}
         </div>
       )}
+      {returnState.kind === "giftSuccess" && (
+        <div className="flex items-center gap-3 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 p-4">
+          <p className="text-sm font-semibold text-[var(--heading)]">
+            🎁{" "}
+            {returnState.recipientName
+              ? t("boutique.gift.sentTo", { name: returnState.recipientName })
+              : t("boutique.gift.sent")}
+          </p>
+        </div>
+      )}
       {purchaseError && <p className="text-xs text-[var(--danger)]">{purchaseError}</p>}
 
       {showBundles ? (
@@ -785,6 +871,7 @@ export function BoutiqueContent() {
                         purchasing={purchasingSku === item.sku}
                         wishlisted={wishlistSkus.has(item.sku)}
                         onToggleWishlist={signedIn ? () => toggleWishlist(item.sku) : undefined}
+                        onGift={signedIn ? () => setGiftItemSku(item.sku) : undefined}
                         onBuy={() => buy(item.sku)}
                         tryOnEnabled={item.category === "avatar_frame" || item.category === "avatar_emoji" || item.category === "banner"}
                         tryOn={tryOnSku === item.sku}
@@ -807,6 +894,16 @@ export function BoutiqueContent() {
         </Link>
         {t("boutique.finePrint.suffix")}
       </p>
+
+      <GiftPickerDialog
+        open={giftItemSku !== null}
+        itemName={giftItem?.name ?? ""}
+        friends={friends}
+        loading={friendsLoading}
+        sending={giftSendingTo}
+        onClose={() => setGiftItemSku(null)}
+        onPick={sendGift}
+      />
     </main>
   );
 }

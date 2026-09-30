@@ -5,6 +5,7 @@
 // useNotifications.ts / appBadge.ts use (your-turn games, game invites,
 // incoming friend requests) — countPendingTurns()'s test pins that.
 
+import type { ReceivedGift } from "./giftStore";
 import type { MpGameSummary } from "./mpStore";
 import { readLocalStorage, writeLocalStorage } from "./localStorageUtil";
 import type { ReleaseEntry } from "./releases";
@@ -16,7 +17,8 @@ export type NotificationItem =
   | { kind: "friends"; id: string; count: number }
   | { kind: "shield"; id: string; day: string }
   | { kind: "quest"; id: string; quest: ClaimedQuest }
-  | { kind: "release"; id: string; release: ReleaseEntry };
+  | { kind: "release"; id: string; release: ReleaseEntry }
+  | { kind: "gift"; id: string; gift: ReceivedGift };
 
 export interface NotificationSources {
   userId: string | null;
@@ -30,6 +32,9 @@ export interface NotificationSources {
    * optional/opt-in like shieldSaveDay/claimedQuests, so existing callers
    * and tests that omit it are unaffected. */
   releases?: ReleaseEntry[];
+  /** Recent Boutique gifts from a friend (giftStore.ts's getRecentGifts) —
+   * optional/opt-in like the others above. */
+  gifts?: ReceivedGift[];
 }
 
 export function isYourTurn(g: MpGameSummary, userId: string | null): boolean {
@@ -55,6 +60,7 @@ export function buildNotificationItems(src: NotificationSources): NotificationIt
   if (src.shieldSaveDay) items.push({ kind: "shield", id: `shield:${src.shieldSaveDay}`, day: src.shieldSaveDay });
   for (const q of src.claimedQuests ?? []) items.push({ kind: "quest", id: `quest:${q.period}:${q.id}`, quest: q });
   for (const r of src.releases ?? []) items.push({ kind: "release", id: `release:${r.version}`, release: r });
+  for (const g of src.gifts ?? []) items.push({ kind: "gift", id: `gift:${g.id}`, gift: g });
   return items;
 }
 

@@ -81,4 +81,14 @@ describe("startPurchase", () => {
     await expect(startPurchase([])).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("posts { skus, recipientId } for a gift, omits recipientId otherwise", async () => {
+    const fetchMock = installFetch(200, { url: "https://checkout.stripe.com/session/gift" });
+    const { startPurchase } = await import("./purchasing");
+
+    await startPurchase(["badge:🎩"], { giftRecipientId: "friend-1" });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({ skus: ["badge:🎩"], recipientId: "friend-1" });
+  });
 });

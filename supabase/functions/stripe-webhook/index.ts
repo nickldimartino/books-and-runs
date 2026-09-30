@@ -147,6 +147,15 @@ Deno.serve(async (req) => {
     const skus = skusMeta.split(",").map((s) => s.trim()).filter(Boolean);
     if (skus.length === 0) return new Response("ok", { status: 200 });
 
+    // A gift (create-checkout-session/index.ts's `recipientId`, carried
+    // through as metadata.gift_recipient_id by buildCheckoutSessionParams)
+    // grants the entitlement to the FRIEND, never the payer — `userId`
+    // above stays the receipt owner (client_reference_id is always the
+    // payer, gift or not) but is never who ends up owning the sku.
+    const giftMeta = (session?.metadata as Record<string, unknown> | undefined)?.gift_recipient_id;
+    const giftRecipientId = typeof giftMeta === "string" && UUID_RE.test(giftMeta) ? giftMeta : null;
+    const entitlementUserId = giftRecipientId ?? userId;
+
     // Idempotent the same way supporter_payments is: a retried delivery of
     // the same session must not double-write. The receipt row uses the
     // session id as its own natural idempotency key; the entitlement rows
@@ -161,7 +170,14 @@ Deno.serve(async (req) => {
     // instead of "Card Back Bundle", would be confusing rather than more
     // useful — a receipt should read like what was actually bought.
     const { error: purchaseErr } = await admin.from("purchases").upsert(
-      { user_id: userId, stripe_session_id: sessionId, amount_cents: amountTotal, currency, sku_ids: skus },
+      {
+        user_id: userId,
+        stripe_session_id: sessionId,
+        amount_cents: amountTotal,
+        currency,
+        sku_ids: skus,
+        gift_recipient_id: giftRecipientId,
+      },
       { onConflict: "stripe_session_id", ignoreDuplicates: true }
     );
     if (purchaseErr) {
@@ -181,7 +197,12 @@ Deno.serve(async (req) => {
     // bundle card and re-buying it is correctly blocked.
     const expandedSkus = expandPurchasedSkus(skus);
     const { error: entitlementsErr } = await admin.from("entitlements").upsert(
-      expandedSkus.map((sku) => ({ user_id: userId, sku, source: "stripe", stripe_session_id: sessionId })),
+      expandedSkus.map((sku) => ({
+        user_id: entitlementUserId,
+        sku,
+        source: giftRecipientId ? "gift" : "stripe",
+        stripe_session_id: sessionId,
+      })),
       { onConflict: "user_id,sku", ignoreDuplicates: true }
     );
     if (entitlementsErr) {
@@ -191,6 +212,21 @@ Deno.serve(async (req) => {
       // retry here safely just finishes granting whichever skus didn't
       // make it the first time.
       return new Response("db error", { status: 500 });
+    }
+
+    // Let the recipient know — inbox-only (no push; this webhook has none
+    // of the push machinery mp/index.ts's addEvent() wires up, and a "your
+    // friend sent you a gift" toast doesn't need instant delivery the way
+    // a turn notification does). Best-effort: a failed insert here must
+    // never turn an already-granted gift into a retried/duplicated one.
+    if (giftRecipientId) {
+      const { error: eventErr } = await admin.from("mp_events").insert({
+        user_id: giftRecipientId,
+        kind: "gift_received",
+        actor_id: userId,
+        payload: { sku: skus[0] },
+      });
+      if (eventErr) console.error("Failed to record gift_received event:", eventErr);
     }
 
     return new Response("ok", { status: 200 });

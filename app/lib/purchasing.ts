@@ -40,12 +40,20 @@ interface CreateCheckoutSessionResponse {
  * back on `/boutique?purchase=success|cancelled` instead, a fresh page
  * load — see BoutiqueContent.tsx).
  *
+ * `giftRecipientId` buys the single sku for a friend instead of yourself —
+ * see migration 0099 and create-checkout-session/index.ts's own doc for
+ * the friendship/already-owned checks this triggers server-side. Passing
+ * it with more than one sku is rejected by the Edge Function, not here —
+ * this function stays exactly what its own name says, "start a purchase",
+ * not a place cart-shape rules get duplicated.
+ *
  * Throws PurchaseError (never resolves) when: the caller is signed out, an
- * unknown/already-owned sku was requested, or the Edge Function otherwise
- * rejects the request — the message is whatever the function's own JSON
- * error body says (via callEdgeFunction), so a caller can show it directly.
+ * unknown/already-owned sku was requested, a gift target isn't an accepted
+ * friend or already owns the item, or the Edge Function otherwise rejects
+ * the request — the message is whatever the function's own JSON error body
+ * says (via callEdgeFunction), so a caller can show it directly.
  */
-export async function startPurchase(skus: string[]): Promise<void> {
+export async function startPurchase(skus: string[], opts?: { giftRecipientId?: string }): Promise<void> {
   if (skus.length === 0) throw new PurchaseError("Nothing to buy.", 400);
 
   const supabase = liveSupabase ?? (await loadSupabase());
@@ -54,7 +62,7 @@ export async function startPurchase(skus: string[]): Promise<void> {
   const { url } = await callEdgeFunction<CreateCheckoutSessionResponse>(
     supabase,
     FN_URL,
-    { skus },
+    opts?.giftRecipientId ? { skus, recipientId: opts.giftRecipientId } : { skus },
     PurchaseError,
     { fallbackMessage: "Couldn't start checkout — try again in a moment." }
   );

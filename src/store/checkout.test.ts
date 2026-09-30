@@ -112,6 +112,38 @@ describe("buildCheckoutSessionParams", () => {
     const withTax = buildCheckoutSessionParams({ ...base, skus: ["badge:🎩"], automaticTax: true });
     expect(withTax.ok && withTax.params.automatic_tax).toEqual({ enabled: "true" });
   });
+
+  it("stamps metadata.gift_recipient_id for a gift, omits it otherwise", () => {
+    const gift = buildCheckoutSessionParams({ ...base, skus: ["badge:🎩"], giftRecipientId: "friend-1" });
+    expect(gift.ok && gift.params.metadata.gift_recipient_id).toBe("friend-1");
+    expect(gift.ok && gift.params.client_reference_id).toBe("user-123"); // still the payer, not the recipient
+    const notGift = buildCheckoutSessionParams({ ...base, skus: ["badge:🎩"] });
+    expect(notGift.ok && notGift.params.metadata.gift_recipient_id).toBeUndefined();
+  });
+
+  it("rejects a multi-item gift — one sku per gift, never a cart", () => {
+    expect(
+      buildCheckoutSessionParams({ ...base, skus: ["badge:🎩", "card_back:aurora"], giftRecipientId: "friend-1" })
+    ).toMatchObject({ ok: false, status: 400 });
+    // A duplicated single sku isn't a "multi-item" cart once deduped.
+    expect(
+      buildCheckoutSessionParams({ ...base, skus: ["badge:🎩", "badge:🎩"], giftRecipientId: "friend-1" })
+    ).toMatchObject({ ok: true });
+  });
+
+  it("ignores the payer's own entitlements for a gift — only the recipient's ownership matters", () => {
+    // ownedSkus here represents the PAYER's set; a gift caller always passes
+    // an empty set (see BuildCheckoutSessionInput's own doc), so this just
+    // documents that resolveLineItems has no special-case for gifting — the
+    // caller is responsible for passing the right set.
+    const result = buildCheckoutSessionParams({
+      ...base,
+      skus: ["badge:🎩"],
+      giftRecipientId: "friend-1",
+      ownedSkus: new Set(),
+    });
+    expect(result.ok).toBe(true);
+  });
 });
 
 describe("toStripeFormBody", () => {

@@ -25,6 +25,7 @@ const EMPTY: Notifications = {
   yourTurn: 0,
   total: 0,
   mpGames: [],
+  gifts: [],
   loading: false,
   refresh: () => {},
 };

@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { getFriendRequests } from "./friendsStore";
+import { getRecentGifts, ReceivedGift } from "./giftStore";
 import { getMyMpGames, MpGameSummary } from "./mpStore";
 import { isChannelDead, useResumeRefresh } from "./resumeRefresh";
 import { supabase } from "./supabaseClient";
@@ -21,6 +22,9 @@ export interface Notifications {
   /** Everything that wants the player's attention right now. */
   total: number;
   mpGames: MpGameSummary[];
+  /** Recent Boutique gifts from a friend — informational, not counted in
+   * `total` (see notificationItems.ts's actionableTotal). */
+  gifts: ReceivedGift[];
   loading: boolean;
   refresh: () => void;
 }
@@ -38,22 +42,27 @@ export function useNotifications(enabled = true): Notifications {
   const user = enabled ? authUser : null;
   const [friendRequests, setFriendRequests] = useState(0);
   const [mpGames, setMpGames] = useState<MpGameSummary[]>([]);
+  const [gifts, setGifts] = useState<ReceivedGift[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(() => {
     if (!supabase || !user) {
       setFriendRequests(0);
       setMpGames([]);
+      setGifts([]);
       setLoading(false);
       return;
     }
-    Promise.allSettled([getFriendRequests(supabase), getMyMpGames(supabase)]).then(([reqRes, gamesRes]) => {
-      if (reqRes.status === "fulfilled") {
-        setFriendRequests(reqRes.value.filter((r) => r.direction === "incoming").length);
+    Promise.allSettled([getFriendRequests(supabase), getMyMpGames(supabase), getRecentGifts(supabase)]).then(
+      ([reqRes, gamesRes, giftsRes]) => {
+        if (reqRes.status === "fulfilled") {
+          setFriendRequests(reqRes.value.filter((r) => r.direction === "incoming").length);
+        }
+        if (gamesRes.status === "fulfilled") setMpGames(gamesRes.value);
+        if (giftsRes.status === "fulfilled") setGifts(giftsRes.value);
+        setLoading(false);
       }
-      if (gamesRes.status === "fulfilled") setMpGames(gamesRes.value);
-      setLoading(false);
-    });
+    );
   }, [user]);
 
   const resubscribeRef = useRef<() => void>(() => {});
@@ -121,6 +130,7 @@ export function useNotifications(enabled = true): Notifications {
     yourTurn,
     total: friendRequests + gameRequests + yourTurn,
     mpGames,
+    gifts,
     loading,
     refresh,
   };

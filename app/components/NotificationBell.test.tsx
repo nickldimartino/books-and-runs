@@ -24,7 +24,7 @@ describe("NotificationBell", () => {
   // informational item (see releases.ts) — one more than the raw game/friend
   // count these tests would otherwise total.
   it("shows a capped badge, opens a dialog, clears the badge but keeps the item; Esc closes", () => {
-    render(<NotificationBell userId="me" notifications={{ friendRequests: 12, mpGames: [game], refresh }} />);
+    render(<NotificationBell userId="me" notifications={{ friendRequests: 12, mpGames: [game], gifts: [], refresh }} />);
     expect(screen.getByTestId("notification-badge").textContent).toBe("9+");
     fireEvent.click(screen.getByRole("button", { name: /Notifications, 14 new/ }));
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -35,13 +35,28 @@ describe("NotificationBell", () => {
     expect(screen.getByRole("button", { name: "Notifications" })).toBeTruthy();
   });
   it("falls back to just the newest release when there's nothing else — releases mean a signed-in user is never truly 'all caught up'", () => {
-    render(<NotificationBell userId="me" notifications={{ friendRequests: 0, mpGames: [], refresh }} />);
+    render(<NotificationBell userId="me" notifications={{ friendRequests: 0, mpGames: [], gifts: [], refresh }} />);
     fireEvent.click(screen.getByRole("button", { name: "Notifications, 1 new" }));
     expect(screen.queryByText("You're all caught up")).toBeNull();
     expect(screen.getByText(/Release notes/)).toBeTruthy();
   });
   it("renders nothing for a guest with nothing to show (releases don't count for a signed-out visitor)", () => {
-    const { container } = render(<NotificationBell userId={null} notifications={{ friendRequests: 0, mpGames: [], refresh }} />);
+    const { container } = render(<NotificationBell userId={null} notifications={{ friendRequests: 0, mpGames: [], gifts: [], refresh }} />);
     expect(container.firstChild).toBeNull();
+  });
+  it("shows a received gift, named when the sender's display name is known", () => {
+    render(
+      <NotificationBell
+        userId="me"
+        notifications={{
+          friendRequests: 0,
+          mpGames: [],
+          gifts: [{ id: "e1", sku: "badge:🎩", itemName: "Top Hat badge", fromName: "Ana", createdAt: "2026-09-25T00:00:00Z" }],
+          refresh,
+        }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Notifications, 2 new/ }));
+    expect(screen.getByText(/Ana sent you Top Hat badge!/)).toBeTruthy();
   });
 });

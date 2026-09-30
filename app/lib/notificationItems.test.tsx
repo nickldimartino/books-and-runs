@@ -23,9 +23,17 @@ describe("notification items", () => {
     expect(items.map((i) => i.kind)).toEqual(["turn", "invite", "friends"]);
   });
   it("includes informational items without counting them as actionable", () => {
-    const items = buildNotificationItems({ userId: "me", games: [], friendRequests: 0, shieldSaveDay: "2026-09-24", claimedQuests: [{ id: "q", period: "daily", xp: 5 }] });
-    expect(items).toHaveLength(2);
+    const items = buildNotificationItems({
+      userId: "me",
+      games: [],
+      friendRequests: 0,
+      shieldSaveDay: "2026-09-24",
+      claimedQuests: [{ id: "q", period: "daily", xp: 5 }],
+      gifts: [{ id: "e1", sku: "badge:🎩", itemName: "Top Hat badge", fromName: "Alex", createdAt: "2026-09-25T00:00:00Z" }],
+    });
+    expect(items).toHaveLength(3);
     expect(actionableTotal(items)).toBe(0);
+    expect(items.find((i) => i.kind === "gift")?.id).toBe("gift:e1");
   });
   it("seen state clears the count but keeps the items, and a new turn re-badges", () => {
     localStorage.clear();

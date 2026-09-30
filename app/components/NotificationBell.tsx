@@ -50,7 +50,7 @@ export function NotificationBell({
   className = "fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-40",
 }: {
   userId: string | null;
-  notifications: Pick<Notifications, "friendRequests" | "mpGames" | "refresh">;
+  notifications: Pick<Notifications, "friendRequests" | "mpGames" | "gifts" | "refresh">;
   shieldSaveDay?: string | null;
   claimedQuests?: ClaimedQuest[];
   /** Positioning of the bell's wrapper (the dialog anchors to it). Defaults
@@ -83,8 +83,9 @@ export function NotificationBell({
         // signed-out visitor gets no bell at all, same as before this kind
         // existed, rather than the bell suddenly appearing just for them.
         releases: userId ? NOTIFIABLE_RELEASES : undefined,
+        gifts: notifications.gifts,
       }),
-    [userId, notifications.mpGames, notifications.friendRequests, shieldSaveDay, claimedQuests]
+    [userId, notifications.mpGames, notifications.friendRequests, notifications.gifts, shieldSaveDay, claimedQuests]
   );
 
   useEffect(() => {
@@ -354,6 +355,20 @@ function Row({
             📣 {r.kind === "feature" ? r.title : t("releases.badge.fix")}
           </span>
           {r.kind === "feature" && <span className="mt-0.5 block truncate text-xs text-[var(--faint)]">{r.description}</span>}
+        </span>
+      </Link>
+    );
+  }
+  if (item.kind === "gift") {
+    const g = item.gift;
+    return (
+      <Link href={`/boutique?item=${encodeURIComponent(g.sku)}`} onClick={onNavigate} className={`${card} hover:bg-[var(--panel)]`}>
+        {dot}
+        <span className="text-sm font-medium text-[var(--heading)]">
+          🎁{" "}
+          {g.fromName
+            ? t("notifications.gift.from", { name: g.fromName, item: g.itemName })
+            : t("notifications.gift.anon", { item: g.itemName })}
         </span>
       </Link>
     );

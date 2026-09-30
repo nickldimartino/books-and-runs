@@ -56,7 +56,7 @@ export function resolveLineItems(
 export interface CheckoutSessionParams {
   mode: "payment";
   client_reference_id: string;
-  metadata: { user_id: string; skus: string };
+  metadata: { user_id: string; skus: string; gift_recipient_id?: string };
   success_url: string;
   cancel_url: string;
   consent_collection: { terms_of_service: "required" };
@@ -83,6 +83,17 @@ export interface BuildCheckoutSessionInput {
   /** Origin only, no trailing slash, e.g. "https://books-and-runs.vercel.app". */
   siteUrl: string;
   automaticTax?: boolean;
+  /**
+   * Present only for a gift purchase — the friend who will own the item(s),
+   * never the payer. The caller (create-checkout-session/index.ts) has
+   * already verified `giftRecipientId` is an accepted friend and doesn't
+   * already own the sku before this is ever called; this function only
+   * enforces the one product rule that's really about cart *shape*: a gift
+   * is always exactly one sku, never a multi-item cart, so `ownedSkus`
+   * should be passed as an empty set for a gift (the payer's own ownership
+   * is irrelevant — they're not the one receiving it).
+   */
+  giftRecipientId?: string;
 }
 
 export type BuildCheckoutSessionResult =
@@ -93,6 +104,10 @@ export type BuildCheckoutSessionResult =
  * Returns a 409 for an already-owned sku (a real conflict, not a bad
  * request) and 400 for anything else invalid. */
 export function buildCheckoutSessionParams(input: BuildCheckoutSessionInput): BuildCheckoutSessionResult {
+  if (input.giftRecipientId && new Set(input.skus).size !== 1) {
+    return { ok: false, status: 400, error: "gift only one item at a time" };
+  }
+
   const resolved = resolveLineItems(input.skus, input.ownedSkus ?? new Set(), input.catalog ?? CATALOG);
   if (!resolved.ok) {
     if (resolved.error === "empty_cart") return { ok: false, status: 400, error: "no skus in cart" };
@@ -118,6 +133,7 @@ export function buildCheckoutSessionParams(input: BuildCheckoutSessionInput): Bu
       },
     })),
   };
+  if (input.giftRecipientId) params.metadata.gift_recipient_id = input.giftRecipientId;
   if (input.automaticTax) params.automatic_tax = { enabled: "true" };
   return { ok: true, params };
 }
