@@ -108,3 +108,30 @@ export async function getClubStandings(supabase: SupabaseClient, clubId: string)
     bestWinStreak: r.best_win_streak,
   }));
 }
+
+/** The club's rolling weekly goal (migration 0095) — every member's own
+ * completed multiplayer games this ISO week, summed against a fixed
+ * target. Resets itself every Monday since it's derived live from
+ * mp_games.completed_at, not a stored counter. */
+export interface ClubGoalProgress {
+  gamesThisWeek: number;
+  goalTarget: number;
+  weekStart: string;
+}
+
+interface ClubGoalRow {
+  games_this_week: number;
+  goal_target: number;
+  week_start: string;
+}
+
+export async function getClubGoalProgress(supabase: SupabaseClient, clubId: string): Promise<ClubGoalProgress> {
+  const { data, error } = await supabase.rpc("club_goal_progress", { p_club_id: clubId });
+  if (error) throw error;
+  const row = ((data as ClubGoalRow[]) ?? [])[0];
+  return {
+    gamesThisWeek: row?.games_this_week ?? 0,
+    goalTarget: row?.goal_target ?? 0,
+    weekStart: row?.week_start ?? new Date().toISOString(),
+  };
+}

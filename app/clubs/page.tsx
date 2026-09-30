@@ -20,11 +20,13 @@ import { PageTip } from "../components/PageTip";
 import { useT } from "../lib/i18n/LocaleProvider";
 import {
   addClubMember,
+  ClubGoalProgress,
   ClubStanding,
   ClubSummary,
   createClub,
   deleteClub,
   getClub,
+  getClubGoalProgress,
   getClubMemberIds,
   getClubStandings,
   getMyClubs,
@@ -41,6 +43,50 @@ function Shell({ children }: { children: ReactNode }) {
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
       {children}
     </main>
+  );
+}
+
+/** A rolling weekly target every member's completed multiplayer games count
+ * toward (migration 0095) — something the club does together, not just a
+ * ranked list of each other. Silent on a load failure (a missing progress
+ * bar isn't worth an error banner on top of the real content below it). */
+function ClubGoalCard({ clubId }: { clubId: string }) {
+  const { t, tPlural } = useT();
+  const [progress, setProgress] = useState<ClubGoalProgress | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    getClubGoalProgress(supabase, clubId)
+      .then((p) => {
+        if (!cancelled) setProgress(p);
+      })
+      .catch((err) => console.error("Failed to load club goal progress:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [clubId]);
+
+  if (!progress) return null;
+  const pct = Math.min(100, Math.round((progress.gamesThisWeek / Math.max(1, progress.goalTarget)) * 100));
+  const met = progress.gamesThisWeek >= progress.goalTarget;
+
+  return (
+    <section className="flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-[var(--heading)]">{t("clubs.goal.title")}</h2>
+        <span className="text-xs font-medium text-[var(--muted)]">
+          {tPlural("clubs.goal.progress", progress.gamesThisWeek, { count: progress.gamesThisWeek, target: progress.goalTarget })}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-soft)]">
+        <div
+          className={`h-full rounded-full transition-[width] ${met ? "bg-[var(--accent)]" : "bg-[var(--accent)]/70"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-[var(--faint)]">{met ? t("clubs.goal.met") : t("clubs.goal.hint")}</p>
+    </section>
   );
 }
 
@@ -358,6 +404,8 @@ function ClubDetail({ clubId }: { clubId: string }) {
       </Link>
 
       {actionError && <p className="text-xs text-[var(--danger)]">{actionError}</p>}
+
+      <ClubGoalCard clubId={clubId} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
