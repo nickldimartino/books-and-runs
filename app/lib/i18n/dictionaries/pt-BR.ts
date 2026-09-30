@@ -2224,7 +2224,7 @@ const ptBR = {
   "recap.stat.weeklyBestStreak": "Melhor sequência semanal",
   "social.communityGoal.title": "Meta da comunidade",
   "social.communityGoal.body": "Toda Rodada Diária concluída, de qualquer jogador, conta: {current} de {target}.",
-  "social.communityGoal.reward": "Recompensa ao alcançar: {name}, grátis para todo mundo.",
+  "social.communityGoal.reward": "Recompensa ao alcançar: +{xp} XP para todo mundo.",
   "social.signInHint": "Entre na sua conta para adicionar amigos e jogar online.",
   "social.friendsDesc": "Código de amigo, pedidos e convites",
   "social.playDesc": "Comece uma partida por turnos com amigos",

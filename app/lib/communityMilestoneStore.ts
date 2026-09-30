@@ -1,6 +1,7 @@
 "use client";
 
-// The community milestone (migration 0096) — a rare, site-wide goal every
+// The community milestone (migration 0096, reward switched to XP by 0100 —
+// goals never hand out free Boutique items) — a rare, site-wide goal every
 // account contributes to just by playing, distinct from a per-account or
 // per-club goal. Public data (no account tie), read via
 // community_milestone_progress() (security definer, granted to anon too —
@@ -16,7 +17,7 @@ export interface CommunityMilestone {
   metric: string;
   currentCount: number;
   target: number;
-  rewardSku: string;
+  rewardXp: number;
   reachedAt: string | null;
 }
 
@@ -25,7 +26,7 @@ interface MilestoneRow {
   metric: string;
   current_count: number;
   target: number;
-  reward_sku: string;
+  reward_xp: number;
   reached_at: string | null;
 }
 
@@ -42,7 +43,7 @@ export async function getCommunityMilestone(supabase: SupabaseClient | null): Pr
     metric: row.metric,
     currentCount: row.current_count,
     target: row.target,
-    rewardSku: row.reward_sku,
+    rewardXp: row.reward_xp,
     reachedAt: row.reached_at,
   };
 }

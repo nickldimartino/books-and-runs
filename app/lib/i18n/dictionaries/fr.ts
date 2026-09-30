@@ -2089,7 +2089,7 @@ const fr = {
   "recap.stat.weeklyBestStreak": "Meilleure série hebdo",
   "social.communityGoal.title": "Objectif communautaire",
   "social.communityGoal.body": "Chaque défi du jour terminé, par n'importe quel joueur, compte : {current} sur {target}.",
-  "social.communityGoal.reward": "Récompense une fois atteint : {name}, offert à tout le monde.",
+  "social.communityGoal.reward": "Récompense une fois atteint : +{xp} XP pour tout le monde.",
   "social.signInHint": "Connecte-toi pour ajouter des amis et jouer en ligne.",
   "social.friendsDesc": "Code ami, demandes et invitations",
   "social.playDesc": "Lance une partie au tour par tour avec des amis",

@@ -2078,7 +2078,7 @@ const ja = {
   "recap.stat.weeklyBestStreak": "ウィークリー最長連続記録",
   "social.communityGoal.title": "コミュニティ目標",
   "social.communityGoal.body": "みんなが完了したデイリーディールがすべてカウントされます：{current} / {target}。",
-  "social.communityGoal.reward": "達成時の報酬：{name}（全員に無料で配布）。",
+  "social.communityGoal.reward": "達成時の報酬：全員に+{xp} XP。",
   "social.signInHint": "サインインしてフレンドを追加し、オンラインで遊ぼう。",
   "social.friendsDesc": "フレンドコード、リクエスト、招待",
   "social.playDesc": "フレンドとターン制ゲームを始める",

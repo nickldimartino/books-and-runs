@@ -2090,7 +2090,7 @@ const it = {
   "recap.stat.weeklyBestStreak": "Miglior serie settimanale",
   "social.communityGoal.title": "Obiettivo della community",
   "social.communityGoal.body": "Ogni Partita del giorno completata, da qualsiasi giocatore, conta: {current} su {target}.",
-  "social.communityGoal.reward": "Ricompensa al raggiungimento: {name}, gratis per tutti.",
+  "social.communityGoal.reward": "Ricompensa al raggiungimento: +{xp} XP per tutti.",
   "social.signInHint": "Accedi per aggiungere amici e giocare online.",
   "social.friendsDesc": "Codice amico, richieste e inviti",
   "social.playDesc": "Inizia una partita a turni con gli amici",

@@ -2240,7 +2240,7 @@ const en = {
   "recap.stat.weeklyBestStreak": "Best Weekly streak",
   "social.communityGoal.title": "Community goal",
   "social.communityGoal.body": "Every completed Daily Deal, from every player, counts: {current} of {target}.",
-  "social.communityGoal.reward": "Reward when we hit it: {name}, free for everyone.",
+  "social.communityGoal.reward": "Reward when we hit it: +{xp} XP for everyone.",
   "social.signInHint": "Sign in to add friends and play online.",
   "social.friendsDesc": "Friend code, requests and invites",
   "social.playDesc": "Start a turn-based game with friends",

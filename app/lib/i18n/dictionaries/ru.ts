@@ -2636,7 +2636,7 @@ const ru = {
   "recap.stat.weeklyBestStreak": "Лучшая серия «Испытания недели»",
   "social.communityGoal.title": "Общая цель",
   "social.communityGoal.body": "Считается каждый завершённый «Расклад дня» любого игрока: {current} из {target}.",
-  "social.communityGoal.reward": "Награда за достижение: {name} — бесплатно для всех.",
+  "social.communityGoal.reward": "Награда за достижение: +{xp} XP каждому.",
   "social.signInHint": "Войди, чтобы добавлять друзей и играть онлайн.",
   "social.friendsDesc": "Код друга, заявки и приглашения",
   "social.playDesc": "Начни пошаговую игру с друзьями",

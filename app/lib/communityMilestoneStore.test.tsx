@@ -22,7 +22,7 @@ describe("getCommunityMilestone", () => {
       metric: "daily_deals_completed",
       current_count: 42,
       target: 2000,
-      reward_sku: "badge:🎻",
+      reward_xp: 150,
       reached_at: null,
     });
     await expect(getCommunityMilestone(client)).resolves.toEqual({
@@ -30,7 +30,7 @@ describe("getCommunityMilestone", () => {
       metric: "daily_deals_completed",
       currentCount: 42,
       target: 2000,
-      rewardSku: "badge:🎻",
+      rewardXp: 150,
       reachedAt: null,
     });
   });

@@ -11,7 +11,6 @@ import { HubIcons, HubLink } from "../components/HubLink";
 import { CommunityMilestone, getCommunityMilestone } from "../lib/communityMilestoneStore";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { useSharedNotifications } from "../lib/NotificationsContext";
-import { findStoreItem } from "../lib/storeCatalog";
 import { supabase } from "../lib/supabaseClient";
 
 /** A rare, site-wide goal every account contributes to just by playing —
@@ -36,7 +35,6 @@ function CommunityGoalCard() {
 
   if (!milestone) return null;
   const pct = Math.min(100, Math.round((milestone.currentCount / Math.max(1, milestone.target)) * 100));
-  const reward = findStoreItem(milestone.rewardSku);
 
   return (
     <section className="flex flex-col gap-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
@@ -47,7 +45,7 @@ function CommunityGoalCard() {
       <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-soft)]">
         <div className="h-full rounded-full bg-[var(--accent)] transition-[width]" style={{ width: `${pct}%` }} />
       </div>
-      {reward && <p className="text-[11px] text-[var(--faint)]">{t("social.communityGoal.reward", { name: reward.name })}</p>}
+      <p className="text-[11px] text-[var(--faint)]">{t("social.communityGoal.reward", { xp: milestone.rewardXp })}</p>
     </section>
   );
 }

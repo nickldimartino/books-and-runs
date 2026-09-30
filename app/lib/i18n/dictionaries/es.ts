@@ -2088,7 +2088,7 @@ const es = {
   "recap.stat.weeklyBestStreak": "Mejor racha semanal",
   "social.communityGoal.title": "Meta de la comunidad",
   "social.communityGoal.body": "Cada Reparto Diario completado, de cualquier jugador, cuenta: {current} de {target}.",
-  "social.communityGoal.reward": "Recompensa al alcanzarla: {name}, gratis para todos.",
+  "social.communityGoal.reward": "Recompensa al alcanzarla: +{xp} XP para todos.",
   "social.signInHint": "Inicia sesión para agregar amigos y jugar en línea.",
   "social.friendsDesc": "Código de amigo, solicitudes e invitaciones",
   "social.playDesc": "Empieza una partida por turnos con amigos",

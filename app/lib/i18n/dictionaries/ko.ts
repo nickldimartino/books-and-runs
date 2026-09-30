@@ -2085,7 +2085,7 @@ const ko = {
   "recap.stat.weeklyBestStreak": "위클리 최다 연속 기록",
   "social.communityGoal.title": "커뮤니티 목표",
   "social.communityGoal.body": "모든 플레이어가 완료한 데일리 딜이 모두 집계돼요: {current} / {target}.",
-  "social.communityGoal.reward": "달성 시 보상: {name}, 모두에게 무료로 지급돼요.",
+  "social.communityGoal.reward": "달성 시 보상: 모두에게 +{xp} XP.",
   "social.signInHint": "로그인하면 친구를 추가하고 온라인으로 플레이할 수 있어요.",
   "social.friendsDesc": "친구 코드, 요청, 초대",
   "social.playDesc": "친구와 턴제 게임 시작하기",

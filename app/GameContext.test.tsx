@@ -143,6 +143,32 @@ describe("GameContext — turn flow", () => {
     expect(api.state!.currentPlayerIndex).toBe(0);
   });
 
+  // The bug: with 2+ AI seats between you and your next turn, a single tap
+  // only advanced one step of the pre-move/post-move pause chain, so
+  // reaching your turn meant tapping Skip roughly twice per AI in the way.
+  it("skipAiWait() drains every AI seat in one call, not just the next pause", () => {
+    mount();
+    act(() =>
+      api.startNewGame(
+        [
+          { id: YOU_PLAYER_ID, name: "You", isAI: false },
+          { id: "ai-1", name: "Bot One", isAI: true, difficulty: "medium" as const },
+          { id: "ai-2", name: "Bot Two", isAI: true, difficulty: "medium" as const },
+        ],
+        CONTRACTS
+      )
+    );
+    act(() => api.draw(false));
+    act(() => api.discard(api.state!.players[0].hand[0].id));
+    expect(api.state!.currentPlayerIndex).toBe(1); // ai-1 is up
+    const moveLogBefore = api.getMoveLog().length;
+    act(() => api.skipAiWait());
+    // Back to the human, with both AI seats having actually played (not
+    // skipped over) — the move log grew by both of their turns.
+    expect(api.state!.currentPlayerIndex).toBe(0);
+    expect(api.getMoveLog().length).toBeGreaterThan(moveLogBefore + 1);
+  });
+
   it("draw() takes exactly one card per turn, even when called rapidly", () => {
     mount();
     act(() => api.startNewGame(TWO_PLAYERS, CONTRACTS));

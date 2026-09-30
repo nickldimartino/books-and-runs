@@ -2198,7 +2198,7 @@ const zh = {
   "recap.stat.weeklyBestStreak": "每周挑战最长连续记录",
   "social.communityGoal.title": "社区目标",
   "social.communityGoal.body": "每位玩家完成的每日一局都会计入：{current} / {target}。",
-  "social.communityGoal.reward": "达成后的奖励：{name}，所有人免费获得。",
+  "social.communityGoal.reward": "达成后的奖励：所有人 +{xp} 经验值。",
   "social.signInHint": "登录后即可添加好友并在线对战。",
   "social.friendsDesc": "好友码、请求和邀请",
   "social.playDesc": "和朋友开一局回合制游戏",

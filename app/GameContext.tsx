@@ -241,6 +241,13 @@ export function needsPassGate(s: GameState | null): boolean {
 // turn now (see game/page.tsx), so there's something to watch.
 const AI_TURN_DELAY_MS = 450;
 const AI_RESULT_HOLD_MS = 900;
+// A generous but finite cap for skipAiWait's drain loop, not a real
+// turn-count limit — an 8-player table has at most 7 AI seats between two
+// human turns, and each AI turn passes through that loop twice (once to
+// fire its move, once to end its post-move hold and arm the next one's) —
+// this just stops a genuinely unexpected non-terminating chain from
+// hanging the tab.
+const SKIP_GUARD_MAX = 200;
 
 const RANK_WORD: Record<string, string> = { A: "Ace", K: "King", Q: "Queen", J: "Jack" };
 /** "the 7 of diamonds", "the King of hearts", "a Joker" — for the opponent
@@ -557,10 +564,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     aiWaitRef.current = { timer: setTimeout(run, ms), fn: run };
   }, []);
   const skipAiWait = useCallback(() => {
-    const w = aiWaitRef.current;
-    if (!w) return;
-    clearTimeout(w.timer);
-    w.fn();
+    // Drains every already-scheduled AI step synchronously, one after
+    // another, instead of firing just the one currently pending — with 2+
+    // AI seats between you and your next turn, a single skip used to only
+    // advance one step of that chain (the pre-move "thinking" pause OR the
+    // post-move "hold to read the result" pause, whichever was live), so
+    // reaching your turn meant tapping Skip roughly twice per AI in the
+    // way. Each `w.fn()` call below still runs the real turn logic
+    // (playAITurn, the move-log append, commit()) exactly as the original
+    // timer would have — this only compresses the pauses between those
+    // real actions, never substitutes for them. The loop's own
+    // termination is exactly "aiWaitRef has nothing left to skip",
+    // which `runAiLoop`'s own branches already guarantee becomes true the
+    // moment it's a human's turn or the round/game ends (see its own
+    // branches) — no separate "is it a human's turn yet" check needed here.
+    let guard = 0;
+    while (aiWaitRef.current && guard < SKIP_GUARD_MAX) {
+      const w = aiWaitRef.current;
+      clearTimeout(w.timer);
+      w.fn();
+      guard++;
+    }
   }, []);
 
   /** Runs AI turns one at a time (with a small delay for visibility) until it's a

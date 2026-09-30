@@ -2255,7 +2255,7 @@ const de = {
   "recap.stat.weeklyBestStreak": "Beste Wochen-Serie",
   "social.communityGoal.title": "Community-Ziel",
   "social.communityGoal.body": "Jeder abgeschlossene Tages-Deal von jedem Spieler zählt: {current} von {target}.",
-  "social.communityGoal.reward": "Belohnung bei Erreichen: {name}, kostenlos für alle.",
+  "social.communityGoal.reward": "Belohnung bei Erreichen: +{xp} XP für alle.",
   "social.signInHint": "Melde dich an, um Freunde hinzuzufügen und online zu spielen.",
   "social.friendsDesc": "Freundescode, Anfragen und Einladungen",
   "social.playDesc": "Starte ein rundenbasiertes Spiel mit Freunden",
