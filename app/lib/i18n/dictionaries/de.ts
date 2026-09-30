@@ -2193,7 +2193,7 @@ const de = {
   "err.mp.unknownAction": "Unbekannte Aktion.",
   "err.mp.movedOn": "Das Spiel ist weitergegangen – bitte neu laden.",
   "err.mp.signInFirst": "Melde dich zuerst an.",
-  "err.mp.unknownRoute": "Unbekannte Route.",
+  "err.mp.unknownRoute": "Etwas ist schiefgelaufen.",
   "err.mp.roundOver": "Die Runde ist vorbei.",
   "err.mp.notYourTurn": "Du bist nicht dran.",
   "err.mp.alreadyDrew": "Du hast in diesem Zug schon gezogen.",

@@ -2023,7 +2023,7 @@ const ko = {
   "err.mp.unknownAction": "알 수 없는 동작이에요.",
   "err.mp.movedOn": "게임이 진행되었어요. 새로고침해 주세요.",
   "err.mp.signInFirst": "먼저 로그인하세요.",
-  "err.mp.unknownRoute": "알 수 없는 경로예요.",
+  "err.mp.unknownRoute": "문제가 발생했어요.",
   "err.mp.roundOver": "라운드가 끝났어요.",
   "err.mp.notYourTurn": "당신 차례가 아니에요.",
   "err.mp.alreadyDrew": "이번 턴에 이미 카드를 뽑았어요.",

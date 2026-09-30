@@ -7,8 +7,8 @@
 // pattern as /player and /clubs.
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
@@ -45,14 +45,6 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-function useTournamentId(): string | null | undefined {
-  const [id, setId] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    setId(new URLSearchParams(window.location.search).get("id"));
-  }, []);
-  return id;
-}
-
 // Which key to translate a round's status with, resolved via
 // t(STATUS_LABEL_KEYS[status]) inside the component — the actual English
 // strings live only in the dictionary, not duplicated here.
@@ -63,10 +55,14 @@ const STATUS_LABEL_KEYS: Record<TournamentRound["status"], TranslationKey> = {
   cancelled: "tournaments.status.cancelled",
 };
 
-export default function TournamentsPage() {
+function TournamentsPageInner() {
   const { t } = useT();
   const { configured, loading: authLoading, user } = useAuth();
-  const tournamentId = useTournamentId();
+  // useSearchParams(), not a one-shot window.location.search read — see
+  // clubs/page.tsx's identical fix for why a manual read goes stale the
+  // moment you navigate between the list and a detail view without a full
+  // page reload (the same route/component instance, so nothing remounts).
+  const tournamentId = useSearchParams().get("id");
 
   if (!authLoading && !configured) {
     return <CenteredMessage title={t("tournaments.notSetUp.title")} body={t("tournaments.notSetUp.body")} />;
@@ -82,7 +78,7 @@ export default function TournamentsPage() {
     );
   }
 
-  if (authLoading || tournamentId === undefined) {
+  if (authLoading) {
     return (
       <Shell>
         <LoadingSpinner />
@@ -91,6 +87,20 @@ export default function TournamentsPage() {
   }
 
   return tournamentId ? <TournamentDetail tournamentId={tournamentId} /> : <TournamentList />;
+}
+
+export default function TournamentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <Shell>
+          <LoadingSpinner />
+        </Shell>
+      }
+    >
+      <TournamentsPageInner />
+    </Suspense>
+  );
 }
 
 function TournamentList() {

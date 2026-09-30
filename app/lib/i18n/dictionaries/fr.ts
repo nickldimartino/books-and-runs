@@ -2027,7 +2027,7 @@ const fr = {
   "err.mp.unknownAction": "Action inconnue.",
   "err.mp.movedOn": "La partie a avancé — actualise.",
   "err.mp.signInFirst": "Connecte-toi d'abord.",
-  "err.mp.unknownRoute": "Route inconnue.",
+  "err.mp.unknownRoute": "Un problème est survenu.",
   "err.mp.roundOver": "La manche est terminée.",
   "err.mp.notYourTurn": "Ce n'est pas ton tour.",
   "err.mp.alreadyDrew": "Tu as déjà pioché ce tour.",

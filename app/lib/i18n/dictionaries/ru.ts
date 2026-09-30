@@ -2574,7 +2574,7 @@ const ru = {
   "err.mp.unknownAction": "Неизвестное действие.",
   "err.mp.movedOn": "Игра продвинулась — обнови страницу.",
   "err.mp.signInFirst": "Сначала войди в аккаунт.",
-  "err.mp.unknownRoute": "Неизвестный маршрут.",
+  "err.mp.unknownRoute": "Что-то пошло не так.",
   "err.mp.roundOver": "Раунд окончен.",
   "err.mp.notYourTurn": "Сейчас не твой ход.",
   "err.mp.alreadyDrew": "В этом ходу ты уже брал карту.",

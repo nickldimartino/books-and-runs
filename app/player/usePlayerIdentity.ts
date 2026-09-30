@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LeaderboardEntry, syncLeaderboardStats } from "../lib/leaderboardStore";
 import { supabase } from "../lib/supabaseClient";
@@ -43,24 +44,22 @@ function emptyEntry(userId: string): LeaderboardEntry {
  * Which profile is this, and what does its public row say — the one thing
  * every other part of this page (header, edit dialog, stats, social) needs
  * before it can render anything. A bare "/player" (no `?id=`) means "my own
- * profile" (see the effect's own doc); `isSelf` is what everything else on
+ * profile" (see the doc just below); `isSelf` is what everything else on
  * the page branches on.
  */
 export function usePlayerIdentity(user: User | null) {
-  const [profileId, setProfileId] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    // A bare "/player" (no `?id=`) means "my own profile" — UnlockToast and
-    // this page's own Account tip both link that way rather than building
-    // playerProfileHref(user.id) themselves. Without this fallback,
-    // profileId stayed null forever for a signed-in visitor (nothing below
-    // ever loads without one), so the page just hung on its loading
-    // spinner. Re-runs once `user` resolves, since auth loads async and
-    // may not be ready on the first pass.
-    const idParam = new URLSearchParams(window.location.search).get("id");
-    if (idParam) setProfileId(idParam);
-    else if (user) setProfileId(user.id);
-  }, [user]);
+  // useSearchParams(), not a one-shot window.location.search read: the
+  // caller (page.tsx) is the same route/component instance whether you're
+  // looking at your own profile or someone else's (`?id=<uuid>`), so
+  // clicking from one profile to another is a client-side navigation that
+  // never remounts anything — a plain `useEffect(() => setId(...), [user])`
+  // only re-read the URL when `user` itself changed, so navigating between
+  // two profiles while signed in kept showing whichever one loaded first.
+  // A bare "/player" (no `?id=`) means "my own profile" — UnlockToast and
+  // this page's own Account tip both link that way rather than building
+  // playerProfileHref(user.id) themselves.
+  const idParam = useSearchParams().get("id");
+  const profileId = idParam ?? (user ? user.id : null);
 
   const [entry, setEntry] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);

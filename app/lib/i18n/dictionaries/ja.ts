@@ -2016,7 +2016,7 @@ const ja = {
   "err.mp.unknownAction": "不明な操作です。",
   "err.mp.movedOn": "ゲームが進みました。更新してください。",
   "err.mp.signInFirst": "先にサインインしてください。",
-  "err.mp.unknownRoute": "不明なルートです。",
+  "err.mp.unknownRoute": "問題が発生しました。",
   "err.mp.roundOver": "ラウンドは終了しました。",
   "err.mp.notYourTurn": "あなたの番ではありません。",
   "err.mp.alreadyDrew": "このターンはすでにドローしています。",

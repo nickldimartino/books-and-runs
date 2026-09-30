@@ -2026,7 +2026,7 @@ const es = {
   "err.mp.unknownAction": "Acción desconocida.",
   "err.mp.movedOn": "La partida ha avanzado; actualiza.",
   "err.mp.signInFirst": "Inicia sesión primero.",
-  "err.mp.unknownRoute": "Ruta desconocida.",
+  "err.mp.unknownRoute": "Algo salió mal.",
   "err.mp.roundOver": "La ronda ha terminado.",
   "err.mp.notYourTurn": "No es tu turno.",
   "err.mp.alreadyDrew": "Ya has robado en este turno.",

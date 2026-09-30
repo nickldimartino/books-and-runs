@@ -2162,7 +2162,7 @@ const ptBR = {
   "err.mp.unknownAction": "Ação desconhecida.",
   "err.mp.movedOn": "O jogo avançou — atualize.",
   "err.mp.signInFirst": "Entre primeiro.",
-  "err.mp.unknownRoute": "Rota desconhecida.",
+  "err.mp.unknownRoute": "Algo deu errado.",
   "err.mp.roundOver": "A rodada terminou.",
   "err.mp.notYourTurn": "Não é a sua vez.",
   "err.mp.alreadyDrew": "Você já comprou neste turno.",

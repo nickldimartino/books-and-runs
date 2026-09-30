@@ -2178,7 +2178,7 @@ const en = {
   "err.mp.unknownAction": "Unknown action.",
   "err.mp.movedOn": "The game moved on — refresh.",
   "err.mp.signInFirst": "Sign in first.",
-  "err.mp.unknownRoute": "Unknown route.",
+  "err.mp.unknownRoute": "Something went wrong.",
   "err.mp.roundOver": "The round is over.",
   "err.mp.notYourTurn": "It isn't your turn.",
   "err.mp.alreadyDrew": "You've already drawn this turn.",

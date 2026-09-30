@@ -42,8 +42,22 @@ export function recordPath(pathname: string | null | undefined): void {
   load();
   const path = normalizeTrailPath(pathname);
   if (path === last) return;
-  prev = last;
-  last = path;
+  if (path === prev) {
+    // Landed back on the page we just came from — a BackLink click is just
+    // a normal <Link>, indistinguishable to this tracker from any other
+    // forward navigation. Without this check, arriving here got recorded
+    // as a brand-new forward step (prev becomes the page you just left),
+    // so the *next* Back sent you right back to it instead of continuing
+    // further out — an A↔B ping-pong that never reaches anything before A.
+    // Clearing prev instead of shifting it means the next Back has nowhere
+    // left to send you beyond that page's own static fallback, same as any
+    // other "trail ran out" case.
+    prev = null;
+    last = path;
+  } else {
+    prev = last;
+    last = path;
+  }
   try {
     window.sessionStorage.setItem(KEY, JSON.stringify({ last, prev }));
   } catch {

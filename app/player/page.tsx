@@ -65,7 +65,7 @@ import { usePlayerEditState } from "./usePlayerEditState";
 import { usePlayerIdentity } from "./usePlayerIdentity";
 import { usePlayerPrivateData } from "./usePlayerPrivateData";
 import { usePlayerSocial } from "./usePlayerSocial";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 // Medal-ring colors for the trophy case — bronze/silver/gold/platinum/
 // diamond, matching the beginner→expert tier language used everywhere else
@@ -172,7 +172,7 @@ function EmptyTrophySlot({ size = 56 }: { size?: number }) {
   );
 }
 
-export default function PlayerProfilePage() {
+function PlayerProfilePageInner() {
   const { configured, loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
   const router = useRouter();
@@ -537,5 +537,17 @@ export default function PlayerProfilePage() {
 
       <BottomBackLink fallback="/" className="text-center text-sm text-[var(--faint)] hover:text-[var(--text)]" />
     </main>
+  );
+}
+
+// usePlayerIdentity calls useSearchParams() (see that file's own doc for
+// why — it has to be reactive to client-side navigation between two
+// profiles, not a one-shot read), which requires a Suspense boundary
+// somewhere above it.
+export default function PlayerProfilePage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PlayerProfilePageInner />
+    </Suspense>
   );
 }

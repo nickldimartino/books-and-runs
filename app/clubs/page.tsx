@@ -9,7 +9,8 @@
 // generate a page per club id ahead of time.
 
 import Link from "next/link";
-import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { BackLink } from "../components/BackLink";
 import { CenteredMessage } from "../components/CenteredMessage";
@@ -90,17 +91,17 @@ function ClubGoalCard({ clubId }: { clubId: string }) {
   );
 }
 
-function useClubId(): string | null | undefined {
-  const [id, setId] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    setId(new URLSearchParams(window.location.search).get("id"));
-  }, []);
-  return id;
-}
-
-export default function ClubsPage() {
+function ClubsPageInner() {
   const { configured, loading: authLoading, user } = useAuth();
-  const clubId = useClubId();
+  // useSearchParams(), not a one-shot window.location.search read: the list
+  // and detail views are the same route/component instance (a static
+  // export has no per-club page to navigate BETWEEN), so a client-side
+  // navigation between them never remounts anything — a plain
+  // `useEffect(() => setId(...), [])` read the URL once and then never
+  // again, so both "back to the list" and "into a club from the list"
+  // silently kept showing whatever view was already on screen. This hook
+  // is reactive to client-side navigation, which a manual read isn't.
+  const clubId = useSearchParams().get("id");
   const { t } = useT();
 
   if (!authLoading && !configured) {
@@ -111,7 +112,7 @@ export default function ClubsPage() {
     return <CenteredMessage title={t("clubs.signInTitle")} body={t("clubs.signInBody")} signIn />;
   }
 
-  if (authLoading || clubId === undefined) {
+  if (authLoading) {
     return (
       <Shell>
         <LoadingSpinner />
@@ -120,6 +121,20 @@ export default function ClubsPage() {
   }
 
   return clubId ? <ClubDetail clubId={clubId} /> : <ClubList />;
+}
+
+export default function ClubsPage() {
+  return (
+    <Suspense
+      fallback={
+        <Shell>
+          <LoadingSpinner />
+        </Shell>
+      }
+    >
+      <ClubsPageInner />
+    </Suspense>
+  );
 }
 
 function ClubList() {

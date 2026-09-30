@@ -2136,7 +2136,7 @@ const zh = {
   "err.mp.unknownAction": "未知操作。",
   "err.mp.movedOn": "游戏已推进——请刷新。",
   "err.mp.signInFirst": "请先登录。",
-  "err.mp.unknownRoute": "未知路径。",
+  "err.mp.unknownRoute": "出了点问题。",
   "err.mp.roundOver": "本回合已结束。",
   "err.mp.notYourTurn": "还没轮到你。",
   "err.mp.alreadyDrew": "你这回合已经摸过牌了。",

@@ -18,8 +18,8 @@
 // persist it as, and the server's own card order isn't meaningful here.
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../AuthContext";
 import { usePlayerLevel } from "../../PlayerLevelContext";
 import { BackLink } from "../../components/BackLink";
@@ -65,14 +65,6 @@ import { CONTRACTS } from "@/types";
 import type { Card, Meld, Player } from "@/types";
 import type { RedactedView } from "@/mp/types";
 
-function useGameId(): string | null {
-  const [id, setId] = useState<string | null>(null);
-  useEffect(() => {
-    setId(new URLSearchParams(window.location.search).get("g"));
-  }, []);
-  return id;
-}
-
 // OpponentStrip wants Player[] with a `.hand` array; a redacted view only has
 // counts, so pad the hand to the right length.
 function stripPlayers(view: RedactedView): Player[] {
@@ -102,10 +94,15 @@ function GameShortcuts({ handlers }: { handlers: ShortcutHandlers }) {
   return null;
 }
 
-export default function MultiplayerPlayPage() {
+function MultiplayerPlayPageInner() {
   const router = useRouter();
   const { t, tPlural, locale } = useT();
-  const gameId = useGameId();
+  // useSearchParams(), not a one-shot window.location.search read: rematch/
+  // notification/Home links all navigate here with a different `?g=` while
+  // this exact route+component may already be mounted, and a manual
+  // `useEffect(() => setId(...), [])` read the URL only once, so switching
+  // games without a full reload kept showing the first one.
+  const gameId = useSearchParams().get("g");
   const { loading: authLoading, user } = useAuth();
   const { level } = usePlayerLevel();
   const g = useMpGame(user ? gameId : null);
@@ -1422,6 +1419,16 @@ function Center({ children }: { children: ReactNode }) {
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
       {children}
     </main>
+  );
+}
+
+// Reads `?g=` via useSearchParams() (see MultiplayerPlayPageInner's own
+// doc), which requires a Suspense boundary somewhere above it.
+export default function MultiplayerPlayPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <MultiplayerPlayPageInner />
+    </Suspense>
   );
 }
 

@@ -13,7 +13,14 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { Card } from "@/types";
 import type { RedactedView } from "@/mp/types";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/multiplayer/play" }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/multiplayer/play",
+  // Re-reads window.location.search live (not a snapshot) — close enough to
+  // the real hook's reactivity for a test that sets the URL via
+  // window.history.pushState before rendering (see below).
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
 vi.mock("../../AuthContext", () => ({ useAuth: () => ({ user: { id: "u-me" }, loading: false }) }));
 vi.mock("../../PlayerLevelContext", () => ({ usePlayerLevel: () => ({ level: null }) }));
 vi.mock("../../lib/sound", () => ({

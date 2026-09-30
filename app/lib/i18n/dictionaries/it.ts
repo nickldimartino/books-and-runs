@@ -2028,7 +2028,7 @@ const it = {
   "err.mp.unknownAction": "Azione sconosciuta.",
   "err.mp.movedOn": "La partita è andata avanti — aggiorna.",
   "err.mp.signInFirst": "Accedi prima.",
-  "err.mp.unknownRoute": "Percorso sconosciuto.",
+  "err.mp.unknownRoute": "Qualcosa è andato storto.",
   "err.mp.roundOver": "Il round è finito.",
   "err.mp.notYourTurn": "Non è il tuo turno.",
   "err.mp.alreadyDrew": "Hai già pescato in questo turno.",
