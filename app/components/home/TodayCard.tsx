@@ -23,9 +23,18 @@ import type { UseQuests } from "../../lib/useQuests";
 import { useT } from "../../lib/i18n/LocaleProvider";
 import {
   DailyDealState,
+  DailyDealTwist,
   localDateKey,
   playedToday,
+  todaysDailyDealTwist,
 } from "../../lib/dailyDealStore";
+import type { TranslationKey } from "../../lib/i18n/keys";
+
+const DAILY_DEAL_TWIST_KEY: Record<Exclude<DailyDealTwist, "none">, TranslationKey> = {
+  gauntlet: "home.dailyDeal.twist.gauntlet",
+  crowd: "home.dailyDeal.twist.crowd",
+  duel: "home.dailyDeal.twist.duel",
+};
 import { WeeklyChallengeState, isoWeekKey, playedThisWeek } from "../../lib/weeklyChallengeStore";
 import { defaultTodayTab, loadTodayTab, resolveTodayTab, saveTodayTab, TodayTab, TODAY_TABS } from "../../lib/todayTab";
 import { dailyDisplayStreak, weeklyDisplayStreak } from "@/streakShield";
@@ -149,6 +158,7 @@ export function TodayCard({
 
   function challengePanel(kind: "daily" | "weekly") {
     const daily = kind === "daily";
+    const twist = daily ? todaysDailyDealTwist() : "none";
     const streak = daily ? dailyStreak : weeklyStreak;
     const played = daily ? dailyPlayed : weeklyPlayed;
     const shieldCovering = daily ? dailyShieldCovering : weeklyShieldCovering;
@@ -173,6 +183,11 @@ export function TodayCard({
                   ? t("home.dailyDeal.oneSeeded")
                   : t("home.weeklyChallenge.description")}
           </p>
+          {twist !== "none" && (
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+              🎲 {t(DAILY_DEAL_TWIST_KEY[twist])}
+            </p>
+          )}
           {played && (
             <p className="mt-0.5 text-[10px] text-[var(--faint)]">
               {daily ? t("home.dailyDeal.streakProtected") : t("home.weeklyChallenge.streakProtected")}

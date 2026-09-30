@@ -124,6 +124,32 @@ function dailyDealContract(rng: () => number): ContractRequirement {
   return CONTRACTS[Math.floor(rng() * CONTRACTS.length)];
 }
 
+/** A small, purely additive day-to-day twist — deliberately built from
+ * parameters the game already treats as safe, everyday input (AI
+ * difficulty, opponent count), never a rule or scoring change. A genuine
+ * rule/scoring twist ("wilds count double today") would need gameEngine.ts
+ * and solo-verify's replay path to agree on it byte-for-byte, which is real
+ * anti-cheat surface for a flavor feature — not worth that risk. This
+ * needs none of that: it only ever picks an already-valid difficulty/count
+ * combination, so solo-verify's replay (which re-derives the exact same
+ * table from the same date seed) verifies it exactly like any other day.
+ * ~1 in 5 days (seed % 5 === 0) gets a twist; the rest are today's normal
+ * deal, so a twist stays a notable event, not the everyday case. */
+export type DailyDealTwist = "none" | "gauntlet" | "crowd" | "duel";
+
+const TWIST_POOL: readonly Exclude<DailyDealTwist, "none">[] = ["gauntlet", "crowd", "duel"];
+
+export function dailyDealTwistFor(seed: number): DailyDealTwist {
+  if (seed % 5 !== 0) return "none";
+  return TWIST_POOL[Math.floor(seed / 5) % TWIST_POOL.length];
+}
+
+/** What today actually is, for the Home card — pure function of the local
+ * calendar day, no game state needed. */
+export function todaysDailyDealTwist(): DailyDealTwist {
+  return dailyDealTwistFor(dateSeed(localDateKey()));
+}
+
 /**
  * Today's fixed challenge: you vs. 2 or 3 Medium AIs (see
  * dailyDealOpponentCount — never fewer than 2, so this is never a 2-player
@@ -147,19 +173,33 @@ export function createDailyDealGame(): GameState {
   // dailyDealContract's own doc for why this one extra call, consumed here,
   // is what actually gives the contract choice a good spread across dates.
   const contract = dailyDealContract(rng);
+  // The twist (if any) only ever picks among already-valid difficulty/count
+  // combinations, straight from `seed` (not `rng`) — same reasoning as
+  // dailyDealOpponentCount, and it doesn't consume from the shared stream
+  // either, so today's deal/contract/faces are unaffected by whether a
+  // twist is active.
+  const twist = dailyDealTwistFor(seed);
+  const opponentCount = twist === "crowd" ? MAX_DAILY_DEAL_OPPONENTS : twist === "duel" ? MIN_DAILY_DEAL_OPPONENTS : dailyDealOpponentCount(seed);
+  const opponentDifficulty = twist === "gauntlet" ? ("hard" as const) : ("medium" as const);
   // Then the opponents, off the same stream: a full seeded shuffle of the
-  // Medium pool, sliced to today's head count. Consuming this here (between
-  // the contract and the deal) keeps the whole sequence a single
-  // deterministic stream, so every player still gets byte-for-byte the
-  // same table and deal today.
-  const opponents = shuffle(AI_PERSONAS.medium, rng).slice(0, dailyDealOpponentCount(seed));
+  // pool matching today's actual difficulty (medium normally, hard on a
+  // "gauntlet" twist — same convention pickAiPersonas uses for a normal
+  // game, so a Hard opponent always has a Hard-pool name, never a
+  // Medium-flavored one under the hood), sliced to today's head count.
+  // Every difficulty's pool is the same length (see AI_PERSONAS' own doc),
+  // so switching pools never changes how many rng() calls shuffle makes —
+  // the deterministic stream stays identical either way. Consuming this
+  // here (between the contract and the deal) keeps the whole sequence a
+  // single deterministic stream, so every player still gets byte-for-byte
+  // the same table and deal today.
+  const opponents = shuffle(AI_PERSONAS[opponentDifficulty], rng).slice(0, opponentCount);
   const configs: PlayerConfig[] = [
     { id: YOU_PLAYER_ID, name: "You", isAI: false },
     ...opponents.map((persona, i) => ({
       id: `daily-deal-ai-${i}`,
       name: `${persona.avatar} ${persona.name}`,
       isAI: true,
-      difficulty: "medium" as const,
+      difficulty: opponentDifficulty,
     })),
   ];
   return createGame(configs, [contract], rng);
