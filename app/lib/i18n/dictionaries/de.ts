@@ -862,6 +862,11 @@ const de = {
   "newGameMultiplayer.signInToPlay": "Melde dich an, um mit Freunden zu spielen",
   "newGameMultiplayer.backToNewGame": "← Neues Spiel",
   "newGameMultiplayer.title": "Neues Mehrspieler-Spiel",
+  "matchmaking.title": "Gegner finden",
+  "matchmaking.body": "Noch keine Freunde online? Wir suchen dir jemanden, der gerade auch nach einem Spiel sucht.",
+  "matchmaking.find": "Gegner finden",
+  "matchmaking.searching": "Suche nach einem Gegner …",
+  "matchmaking.error": "Konnte keinen Gegner finden — versuch es noch einmal.",
   "newGameMultiplayer.tip.title": "So funktioniert's",
   "newGameMultiplayer.tip.body":
     "Wähle Freunde zum Einladen aus und füge KI hinzu, um leere Plätze zu besetzen. Alle Eingeladenen müssen annehmen, bevor ausgeteilt wird — sobald es losgeht, machst du deinen Zug, wann es dir passt, dann ist der Nächste dran.",

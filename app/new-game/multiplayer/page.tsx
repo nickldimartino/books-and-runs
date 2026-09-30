@@ -13,6 +13,7 @@ import { useAuth } from "../../AuthContext";
 import { track } from "../../lib/analytics";
 import { BackLink, BottomBackLink } from "../../components/BackLink";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { MatchmakingCard } from "../../components/MatchmakingCard";
 import { PageTip } from "../../components/PageTip";
 import { pickAiPersonas } from "../../lib/aiPersonas";
 import { contractNeedLabel } from "../../lib/contractDisplay";
@@ -152,6 +153,8 @@ export default function NewMultiplayerGamePage() {
         <LoadingSpinner />
       ) : (
         <>
+          <MatchmakingCard />
+
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--faint)]">
               {t("newGameMultiplayer.inviteFriends")}

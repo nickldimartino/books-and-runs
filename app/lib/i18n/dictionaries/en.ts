@@ -866,6 +866,11 @@ const en = {
   "newGameMultiplayer.signInToPlay": "Sign in to play with friends",
   "newGameMultiplayer.backToNewGame": "← New Game",
   "newGameMultiplayer.title": "New multiplayer game",
+  "matchmaking.title": "Find an opponent",
+  "matchmaking.body": "No friends online yet? Get matched with another player looking for a game right now.",
+  "matchmaking.find": "Find an opponent",
+  "matchmaking.searching": "Looking for an opponent…",
+  "matchmaking.error": "Couldn't search for an opponent — try again.",
   "newGameMultiplayer.tip.title": "How this works",
   "newGameMultiplayer.tip.body":
     "Pick friends to invite, and add AI to fill any empty seats. Everyone you invite has to accept before the deal — once it starts, take your turn whenever works for you, then it's the next player's.",

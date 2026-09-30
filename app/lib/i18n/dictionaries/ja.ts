@@ -846,6 +846,11 @@ const ja = {
   "newGameMultiplayer.signInToPlay": "サインインしてフレンドとプレイ",
   "newGameMultiplayer.backToNewGame": "← 新規ゲーム",
   "newGameMultiplayer.title": "新しいマルチプレイヤーゲーム",
+  "matchmaking.title": "対戦相手を探す",
+  "matchmaking.body": "まだフレンドがオンラインにいませんか？今すぐ対戦相手を探している他のプレイヤーとマッチングします。",
+  "matchmaking.find": "対戦相手を探す",
+  "matchmaking.searching": "対戦相手を探しています…",
+  "matchmaking.error": "対戦相手を探せませんでした — もう一度お試しください。",
   "newGameMultiplayer.tip.title": "仕組み",
   "newGameMultiplayer.tip.body":
     "招待するフレンドを選び、空いている席はAIで埋められます。招待された全員がディール前に承諾する必要があります。開始後は、自分の都合の良いタイミングでターンをプレイすれば、次は相手の番です。",

@@ -669,6 +669,110 @@ async function tryStartIfEveryoneAccepted(
   return "started";
 }
 
+// ── matchmaking (migration 0098) ────────────────────────────────────────
+// Opt-in "find a stranger" queue — every other way to start a multiplayer
+// game needed a friend on the other end. A rough rating band (±300, mirrors
+// mp_rating's own K-factor scale) is preferred but not required: with few
+// people ever waiting at once, refusing to match outside the band would
+// just mean nobody gets matched at all, which is worse than an occasional
+// mismatch. New accounts get no special grace window yet (a real gap,
+// deliberately deferred rather than half-built).
+const MATCHMAKING_RATING_BAND = 300;
+
+async function handleMatchmakingJoin(uid: string): Promise<Response> {
+  // Already matched from a previous call (the client missed the response,
+  // or is re-polling) — hand back the same game id, not a second match.
+  const { data: mine } = await admin
+    .from("mp_matchmaking_queue")
+    .select("matched_game_id")
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (mine?.matched_game_id) return json({ status: "matched", game_id: mine.matched_game_id });
+
+  if ((await activeCount(uid)) >= MP_GAME_CAP) {
+    return json({ error: `You already have ${MP_GAME_CAP} multiplayer games going` }, 400);
+  }
+
+  const { data: entry } = await admin
+    .from("leaderboard_entries")
+    .select("mp_rating")
+    .eq("user_id", uid)
+    .maybeSingle();
+  const myRating = entry?.mp_rating ?? 1200;
+
+  // Oldest-first within the band, then oldest-first overall — a long wait
+  // gets first pick of the next joiner even if their rating is a bit off,
+  // rather than a fresh arrival always winning on exact rating closeness.
+  const { data: waiting } = await admin
+    .from("mp_matchmaking_queue")
+    .select("user_id, rating, joined_at")
+    .neq("user_id", uid)
+    .is("matched_game_id", null)
+    .order("joined_at", { ascending: true })
+    .limit(25);
+
+  let opponent: { user_id: string; rating: number } | null = null;
+  for (const band of [MATCHMAKING_RATING_BAND, Infinity]) {
+    const candidates = (waiting ?? []).filter((w) => Math.abs(w.rating - myRating) <= band);
+    for (const c of candidates) {
+      if (await isBlockedPair(uid, c.user_id)) continue;
+      if ((await activeCount(c.user_id)) >= MP_GAME_CAP) continue;
+      opponent = c;
+      break;
+    }
+    if (opponent) break;
+  }
+
+  if (!opponent) {
+    await admin.from("mp_matchmaking_queue").upsert({
+      user_id: uid,
+      rating: myRating,
+      joined_at: new Date().toISOString(),
+      matched_game_id: null,
+    });
+    return json({ status: "waiting" });
+  }
+
+  const names = await resolveNames([uid, opponent.user_id]);
+  const seats: MpConfig["seats"] = [
+    { seat: 0, kind: "human", userId: uid, name: names.get(uid) ?? placeholderName(uid) },
+    { seat: 1, kind: "human", userId: opponent.user_id, name: names.get(opponent.user_id) ?? placeholderName(opponent.user_id) },
+  ];
+  const { data: game, error } = await admin
+    .from("mp_games")
+    .insert({ host_id: uid, status: "pending", contract_rounds: VALID_ROUNDS, seats, round: 1 })
+    .select("id")
+    .single();
+  if (error || !game) return json({ error: "couldn't create the game" }, 500);
+
+  await admin.from("mp_participants").insert([
+    { game_id: game.id, user_id: uid, seat: 0, invite_status: "accepted", responded_at: new Date().toISOString() },
+    { game_id: game.id, user_id: opponent.user_id, seat: 1, invite_status: "accepted", responded_at: new Date().toISOString() },
+  ]);
+
+  const freshGame = await loadGame(game.id);
+  if (freshGame) await tryStartIfEveryoneAccepted(game.id, freshGame);
+
+  // The opponent may or may not already have a queue row (they could have
+  // been matched by someone else a moment ago and left it, or never
+  // upserted one if this is literally their first ever join) — upsert
+  // rather than update so either case lands the same matched_game_id.
+  await admin.from("mp_matchmaking_queue").upsert({
+    user_id: opponent.user_id,
+    rating: opponent.rating,
+    joined_at: new Date().toISOString(),
+    matched_game_id: game.id,
+  });
+  await admin.from("mp_matchmaking_queue").delete().eq("user_id", uid);
+
+  return json({ status: "matched", game_id: game.id });
+}
+
+async function handleMatchmakingLeave(uid: string): Promise<Response> {
+  await admin.from("mp_matchmaking_queue").delete().eq("user_id", uid);
+  return json({ ok: true });
+}
+
 async function handleRespond(uid: string, body: Record<string, unknown>): Promise<Response> {
   const gameId = String(body.game_id ?? "");
   const accept = body.accept === true;
@@ -1363,6 +1467,10 @@ Deno.serve(async (req) => {
         return await handleResign(user.id, body);
       case "nudge":
         return await handleNudge(user.id, body);
+      case "matchmaking_join":
+        return await handleMatchmakingJoin(user.id);
+      case "matchmaking_leave":
+        return await handleMatchmakingLeave(user.id);
       case "friend_push":
         return await handleFriendPush(user.id, body);
       case "resign_all":

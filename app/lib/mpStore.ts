@@ -27,7 +27,17 @@ export class MpError extends Error {
 
 async function callMp<T>(
   supabase: SupabaseClient,
-  path: "create" | "respond" | "cancel" | "state" | "move" | "resign" | "nudge" | "friend_push",
+  path:
+    | "create"
+    | "respond"
+    | "cancel"
+    | "state"
+    | "move"
+    | "resign"
+    | "nudge"
+    | "friend_push"
+    | "matchmaking_join"
+    | "matchmaking_leave",
   payload: Record<string, unknown>
 ): Promise<T> {
   return callEdgeFunction<T>(supabase, `${FN_BASE}/${path}`, payload, MpError);
@@ -156,6 +166,24 @@ export async function nudgeMpGame(supabase: SupabaseClient, gameId: string): Pro
     }
     throw err;
   }
+}
+
+// ── matchmaking (migration 0098) ─────────────────────────────────────────
+// Opt-in "find a stranger" — every other way into a multiplayer game
+// needed a friend on the other end. See mp/index.ts's own doc for the
+// server-side matching logic; these are thin wrappers, same shape as
+// every other call in this file.
+
+export type MatchmakingResult = { status: "matched"; game_id: string } | { status: "waiting" };
+
+export async function joinMatchmaking(supabase: SupabaseClient): Promise<MatchmakingResult> {
+  return callMp(supabase, "matchmaking_join", {});
+}
+
+/** Cancels an active search — safe to call even if not currently queued
+ * (leaving is a plain delete-my-row on the server, never an error). */
+export async function leaveMatchmaking(supabase: SupabaseClient): Promise<void> {
+  await callMp(supabase, "matchmaking_leave", {});
 }
 
 /** Asks the server to push about a friend request / acceptance you just made

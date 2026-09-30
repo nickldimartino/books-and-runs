@@ -844,6 +844,11 @@ const zh = {
   "newGameMultiplayer.signInToPlay": "登录以与好友一起游玩",
   "newGameMultiplayer.backToNewGame": "← 新游戏",
   "newGameMultiplayer.title": "新建多人游戏",
+  "matchmaking.title": "寻找对手",
+  "matchmaking.body": "还没有朋友在线？马上匹配一位同样在寻找对局的玩家。",
+  "matchmaking.find": "寻找对手",
+  "matchmaking.searching": "正在寻找对手……",
+  "matchmaking.error": "无法寻找对手 — 请重试。",
   "newGameMultiplayer.tip.title": "游玩方式",
   "newGameMultiplayer.tip.body":
     "选择要邀请的好友，并可用 AI 填补空位。发牌前需要所有受邀玩家先接受邀请 — 开始后，每位玩家可在方便时完成自己的回合，然后轮到下一位。",

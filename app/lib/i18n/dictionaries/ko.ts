@@ -848,6 +848,11 @@ const ko = {
   "newGameMultiplayer.signInToPlay": "로그인하고 친구와 플레이하기",
   "newGameMultiplayer.backToNewGame": "← 새 게임",
   "newGameMultiplayer.title": "새 멀티플레이어 게임",
+  "matchmaking.title": "상대 찾기",
+  "matchmaking.body": "아직 온라인 친구가 없나요? 지금 바로 게임 상대를 찾고 있는 다른 플레이어와 매칭해 드려요.",
+  "matchmaking.find": "상대 찾기",
+  "matchmaking.searching": "상대를 찾는 중…",
+  "matchmaking.error": "상대를 찾지 못했어요 — 다시 시도해 주세요.",
   "newGameMultiplayer.tip.title": "작동 방식",
   "newGameMultiplayer.tip.body":
     "초대할 친구를 선택하고, 빈 자리는 AI로 채우세요. 초대받은 모든 사람이 수락해야 카드가 나뉘어요 — 시작되면 각자 편한 시간에 차례를 진행하고, 그다음 다음 플레이어 차례가 돼요.",

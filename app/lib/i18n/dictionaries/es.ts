@@ -852,6 +852,11 @@ const es = {
   "newGameMultiplayer.signInToPlay": "Inicia sesión para jugar con amigos",
   "newGameMultiplayer.backToNewGame": "← Nueva partida",
   "newGameMultiplayer.title": "Nueva partida multijugador",
+  "matchmaking.title": "Buscar un rival",
+  "matchmaking.body": "¿Todavía no tienes amigos conectados? Te emparejamos con otro jugador que también busca partida ahora mismo.",
+  "matchmaking.find": "Buscar un rival",
+  "matchmaking.searching": "Buscando un rival…",
+  "matchmaking.error": "No se pudo buscar un rival — inténtalo de nuevo.",
   "newGameMultiplayer.tip.title": "Cómo funciona esto",
   "newGameMultiplayer.tip.body":
     "Elige a los amigos que quieres invitar y añade IA para llenar los asientos vacíos. Todos los invitados deben aceptar antes del reparto — una vez que empieza, juega tu turno cuando te convenga y luego será el del siguiente jugador.",
