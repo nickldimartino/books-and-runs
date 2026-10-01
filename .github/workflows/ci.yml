@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history, not the default shallow clone — scripts/check-
+          # release-notes.mjs below needs to `git diff` against a commit
+          # that's often well outside a depth-1 checkout.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -29,6 +34,15 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: node scripts/check-bundle.mjs
+      # See the script's own doc — fails loudly if this push/PR touches
+      # player-facing code without also touching app/lib/releases.ts,
+      # instead of relying on a human (or an AI assistant) to remember
+      # every single time, which had already failed once by the time this
+      # was added.
+      - run: node scripts/check-release-notes.mjs "$BASE_SHA" "$HEAD_SHA"
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
   e2e:
     runs-on: ubuntu-latest

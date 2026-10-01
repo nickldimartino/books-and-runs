@@ -72,8 +72,6 @@ describe("notifiableReleases", () => {
   it("never returns more than the requested cap, even once many releases exist after the cutoff", () => {
     expect(notifiableReleases(5).length).toBeLessThanOrEqual(5);
     expect(notifiableReleases(2).length).toBeLessThanOrEqual(2);
-    // With only one real release at/after the cutoff today, the cap can't
-    // actually bind yet — this just proves the parameter is honored.
     expect(notifiableReleases(0)).toEqual([]);
   });
 });
