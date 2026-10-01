@@ -101,3 +101,30 @@ describe("OAuth", () => {
     expect(screen.queryByRole("button", { name: /continue with/i })).toBeNull();
   });
 });
+
+// Regression: the <h1> used to be hardcoded to "Sign in" regardless of
+// which of the three modes was actually showing — switching to "Create
+// account" or "Send reset link" left the page's own heading saying "Sign
+// in" the whole time, while the submit button right below it (driven by
+// the same `mode`) correctly changed. Found via an adversarial click-
+// through, not a report.
+describe("heading tracks the active mode", () => {
+  it("switches from Sign in to Create account and back", async () => {
+    const user = userEvent.setup();
+    render(<SignInPage />);
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /need an account\? sign up/i }));
+    expect(screen.getByRole("heading", { name: "Create account" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /already have an account\? sign in/i }));
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
+  });
+
+  it("shows Send reset link while in forgot-password mode", async () => {
+    const user = userEvent.setup();
+    render(<SignInPage />);
+    await user.click(screen.getByRole("button", { name: /forgot password/i }));
+    expect(screen.getByRole("heading", { name: "Send reset link" })).toBeTruthy();
+  });
+});

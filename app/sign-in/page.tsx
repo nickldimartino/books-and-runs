@@ -201,7 +201,9 @@ export default function SignInPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-8 px-6 py-10">
       <BackLink href="/" />
-      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">{t("signIn.title")}</h1>
+      <h1 className="-mt-4 text-center text-2xl font-bold text-[var(--heading)]">
+        {mode === "sign-in" ? t("signIn.title") : mode === "sign-up" ? t("signIn.createAccount") : t("signIn.sendResetLink")}
+      </h1>
 
       {mfaPending ? (
         <form onSubmit={handleMfaSubmit} className="flex flex-col gap-3">
