@@ -134,6 +134,7 @@ export const RELEASES: readonly ReleaseEntry[] = [
   { version: "0.54.0", date: "2026-09-30", kind: "feature", title: "A faster Skip button, and fairer goal rewards", description: "The Skip button between turns now skips straight to your next turn instead of needing one tap per AI opponent. Also, the friend-referral and community-milestone rewards above now pay XP instead of a free Boutique item, so Boutique items stay something you always choose and never just receive." },
   { version: "0.55.0", date: "2026-09-30", kind: "feature", title: "Automated holiday theming", description: "The site now dresses itself up for 9 US holidays — Valentine's Day through New Year's — defaulting everyone to that holiday's theme for the week before and after, with small seasonal touches around the edges. Pick a different theme anytime; it'll stick for the rest of that holiday's week." },
   { version: "0.55.1", date: "2026-09-30", kind: "fix", title: FIX_TITLE, description: "Your Multiplayer stats now also show your skill rating. Fixed a card that could silently fail to select if you held it down slightly longer than a quick tap, and a sign-in page heading that didn't update when you switched to Create Account or Forgot Password." },
+  { version: "0.55.2", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "The notification bell no longer piles up a separate row for every recent release — they now collapse into one, with a simple count for anything older." },
 ];
 
 /** Releases dated/versioned at or after this one show up as bell
