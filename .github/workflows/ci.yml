@@ -97,6 +97,14 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
+    env:
+      # The container runs as root, and Firefox refuses to start as root
+      # unless $HOME is a directory root actually owns — GitHub Actions'
+      # default container $HOME (/github/home) is owned by the image's
+      # unprivileged `pwuser` instead, which fails with "Running Nightly as
+      # root in a regular user's session is not supported." This is
+      # Playwright's own documented workaround for exactly that image.
+      HOME: /root
     steps:
       - uses: actions/checkout@v4
       # No actions/setup-node here — the Playwright image already bundles a

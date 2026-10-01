@@ -29,6 +29,10 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
+    env:
+      # See the e2e-visual job in ci.yml for why this is needed — same
+      # image, same root-vs-$HOME-ownership issue for Firefox.
+      HOME: /root
     steps:
       - uses: actions/checkout@v4
       - run: npm ci

@@ -54,29 +54,35 @@ test("@visual home screen (signed out, no saved game, Midnight theme)", async ({
   await expect(page.getByRole("heading", { name: "Books & Runs" })).toBeVisible();
   // CardFanHero deals a fresh random five cards every load by design — mask
   // it out rather than compare pixels that are supposed to change.
+  // Generating a screenshot expectation for the first time (no baseline on
+  // disk yet, e.g. a fresh Linux run) takes several stable-frame retries,
+  // which the default 5s expect timeout can miss under a CI container's
+  // more limited CPU — bumped well past what any of these actually need
+  // once a baseline exists, so this only ever matters on generation.
   await expect(page).toHaveScreenshot("home.png", {
     fullPage: true,
     animations: "disabled",
     mask: [page.getByTestId("card-fan-hero")],
+    timeout: 15_000,
   });
 });
 
 test("@visual New Game fork screen", async ({ page }) => {
   await page.goto("/new-game");
   await expect(page.getByRole("heading", { name: "New Game" })).toBeVisible();
-  await expect(page).toHaveScreenshot("new-game.png", { fullPage: true, animations: "disabled" });
+  await expect(page).toHaveScreenshot("new-game.png", { fullPage: true, animations: "disabled", timeout: 15_000 });
 });
 
 test("@visual How to Play — the round contract table", async ({ page }) => {
   await page.goto("/how-to-play");
   await expect(page.getByRole("heading", { name: "How to Play" })).toBeVisible();
-  await expect(page).toHaveScreenshot("how-to-play.png", { fullPage: true, animations: "disabled" });
+  await expect(page).toHaveScreenshot("how-to-play.png", { fullPage: true, animations: "disabled", timeout: 15_000 });
 });
 
 test("@visual Settings — default state", async ({ page }) => {
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  await expect(page).toHaveScreenshot("settings.png", { fullPage: true, animations: "disabled" });
+  await expect(page).toHaveScreenshot("settings.png", { fullPage: true, animations: "disabled", timeout: 15_000 });
 });
 
 // Skipped: AccountSwitchGuard forces the default theme for every signed-out
