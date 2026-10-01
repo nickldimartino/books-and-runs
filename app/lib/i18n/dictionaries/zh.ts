@@ -717,6 +717,8 @@ const zh = {
   "notifications.bellCount": "通知，{count} 条新消息",
   "notifications.friends.one": "{count} 条好友请求",
   "notifications.friends.other": "{count} 条好友请求",
+  "notifications.releases.more.one": "还有 {count} 条更新",
+  "notifications.releases.more.other": "还有 {count} 条更新",
   "notifications.gift.from": "{name}送了你{item}！",
   "notifications.gift.anon": "一位好友送了你{item}！",
   "notifications.empty": "你已经全部看完了",

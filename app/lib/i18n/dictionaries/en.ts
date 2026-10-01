@@ -739,6 +739,8 @@ const en = {
   "notifications.bellCount": "Notifications, {count} new",
   "notifications.friends.one": "{count} friend request",
   "notifications.friends.other": "{count} friend requests",
+  "notifications.releases.more.one": "+{count} more update",
+  "notifications.releases.more.other": "+{count} more updates",
   "notifications.gift.from": "{name} sent you {item}!",
   "notifications.gift.anon": "A friend sent you {item}!",
   "notifications.empty": "You're all caught up",

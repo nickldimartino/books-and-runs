@@ -13,7 +13,12 @@ import { notifiableReleases } from "../lib/releases";
 // that count. Reading notifiableReleases() directly here means this can't
 // happen again: whatever RELEASES actually contains right now is what
 // these assertions check against.
-const RELEASE_COUNT = notifiableReleases().length;
+//
+// All notifiable releases collapse into exactly one row (see
+// NotificationItem's own "release" doc) — RELEASE_WEIGHT is 1 whenever
+// there's anything to show, never the raw count, however many releases
+// that actually is.
+const RELEASE_WEIGHT = notifiableReleases().length > 0 ? 1 : 0;
 const NEWEST_RELEASE = notifiableReleases()[0];
 // Mirrors NotificationBell's own Row rendering exactly (a "fix" release
 // shows the generic translated badge label, never its own — mostly
@@ -36,13 +41,14 @@ const game: MpGameSummary = {
 const refresh = () => {};
 
 describe("NotificationBell", () => {
-  // Signed-in users also always carry the newest release(s) as a low-priority
-  // informational item (see releases.ts) — RELEASE_COUNT more than the raw
-  // game/friend count these tests would otherwise total.
+  // Signed-in users also always carry the newest release(s) as a single,
+  // low-priority informational row (see NotificationItem's "release" doc)
+  // — RELEASE_WEIGHT (0 or 1, never the raw release count) more than the
+  // raw game/friend count these tests would otherwise total.
   it("shows a capped badge, opens a dialog, clears the badge but keeps the item; Esc closes", () => {
     render(<NotificationBell userId="me" notifications={{ friendRequests: 12, mpGames: [game], gifts: [], refresh }} />);
     expect(screen.getByTestId("notification-badge").textContent).toBe("9+");
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(`Notifications, ${12 + 1 + RELEASE_COUNT} new`) }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`Notifications, ${12 + 1 + RELEASE_WEIGHT} new`) }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByText("Ana")).toBeTruthy();
     expect(screen.queryByTestId("notification-badge")).toBeNull();
@@ -50,14 +56,18 @@ describe("NotificationBell", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("button", { name: "Notifications" })).toBeTruthy();
   });
-  it("falls back to just the newest release(s) when there's nothing else — releases mean a signed-in user is never truly 'all caught up'", () => {
+  it("falls back to just the newest release when there's nothing else — releases mean a signed-in user is never truly 'all caught up'", () => {
     render(<NotificationBell userId="me" notifications={{ friendRequests: 0, mpGames: [], gifts: [], refresh }} />);
-    fireEvent.click(screen.getByRole("button", { name: `Notifications, ${RELEASE_COUNT} new` }));
+    fireEvent.click(screen.getByRole("button", { name: `Notifications, ${RELEASE_WEIGHT} new` }));
     expect(screen.queryByText("You're all caught up")).toBeNull();
-    // getAllByText, not getByText: several notifiable releases can share the
-    // same generic "fix" label, so more than one match is expected, not an
-    // ambiguity bug.
-    expect(screen.getAllByText(new RegExp(NEWEST_RELEASE_LABEL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))).length).toBeGreaterThan(0);
+    expect(screen.getByText(new RegExp(NEWEST_RELEASE_LABEL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).toBeTruthy();
+  });
+  it("collapses every notifiable release into one row, never one row per release", () => {
+    render(<NotificationBell userId="me" notifications={{ friendRequests: 0, mpGames: [], gifts: [], refresh }} />);
+    fireEvent.click(screen.getByRole("button", { name: `Notifications, ${RELEASE_WEIGHT} new` }));
+    // Exactly one "📣 ..." headline no matter how many releases are
+    // notifiable — this is the whole point of the consolidation.
+    expect(screen.getAllByText(/📣/).length).toBe(1);
   });
   it("renders nothing for a guest with nothing to show (releases don't count for a signed-out visitor)", () => {
     const { container } = render(<NotificationBell userId={null} notifications={{ friendRequests: 0, mpGames: [], gifts: [], refresh }} />);
@@ -75,7 +85,7 @@ describe("NotificationBell", () => {
         }}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(`Notifications, ${1 + RELEASE_COUNT} new`) }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`Notifications, ${1 + RELEASE_WEIGHT} new`) }));
     expect(screen.getByText(/Ana sent you Top Hat badge!/)).toBeTruthy();
   });
 });

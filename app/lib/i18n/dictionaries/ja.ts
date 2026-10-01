@@ -719,6 +719,8 @@ const ja = {
   "notifications.bellCount": "通知（新着{count}件）",
   "notifications.friends.one": "フレンド申請{count}件",
   "notifications.friends.other": "フレンド申請{count}件",
+  "notifications.releases.more.one": "他に{count}件の更新",
+  "notifications.releases.more.other": "他に{count}件の更新",
   "notifications.gift.from": "{name}さんが{item}をプレゼントしてくれたよ！",
   "notifications.gift.anon": "フレンドが{item}をプレゼントしてくれたよ！",
   "notifications.empty": "すべて確認済み",

@@ -17,7 +17,13 @@ export type NotificationItem =
   | { kind: "friends"; id: string; count: number }
   | { kind: "shield"; id: string; day: string }
   | { kind: "quest"; id: string; quest: ClaimedQuest }
-  | { kind: "release"; id: string; release: ReleaseEntry }
+  /** One row for every notifiable release combined, newest first — not one
+   * row per release. releases.ts is a running log that only ever grows
+   * (nothing in it "clears"), so one row per entry doesn't shrink back down
+   * the way a turn or invite does once handled; it would just accumulate
+   * forever as more releases ship. See the id below for how re-badging
+   * still works with just one row. */
+  | { kind: "release"; id: string; releases: ReleaseEntry[] }
   | { kind: "gift"; id: string; gift: ReceivedGift };
 
 export interface NotificationSources {
@@ -59,7 +65,13 @@ export function buildNotificationItems(src: NotificationSources): NotificationIt
   }
   if (src.shieldSaveDay) items.push({ kind: "shield", id: `shield:${src.shieldSaveDay}`, day: src.shieldSaveDay });
   for (const q of src.claimedQuests ?? []) items.push({ kind: "quest", id: `quest:${q.period}:${q.id}`, quest: q });
-  for (const r of src.releases ?? []) items.push({ kind: "release", id: `release:${r.version}`, release: r });
+  // Keyed by the newest release's own version, not a fixed id — so the row
+  // re-badges as unseen the moment a new release ships, same as a turn
+  // item's id changing with a fresh turn_started_at, even though a player
+  // already dismissed (marked seen) the previous newest version.
+  if (src.releases && src.releases.length > 0) {
+    items.push({ kind: "release", id: `release:${src.releases[0].version}`, releases: src.releases });
+  }
   for (const g of src.gifts ?? []) items.push({ kind: "gift", id: `gift:${g.id}`, gift: g });
   return items;
 }

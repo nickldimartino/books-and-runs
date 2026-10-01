@@ -49,4 +49,42 @@ describe("notification items", () => {
     expect(badgeLabel(9)).toBe("9");
     expect(badgeLabel(10)).toBe("9+");
   });
+
+  // Regression: releases.ts is a running log that only ever grows — one
+  // notification row per entry would have accumulated forever as more
+  // releases shipped (exactly what prompted this fix: a 19-entry backfill
+  // would otherwise have dropped 5 release rows into every signed-in
+  // user's bell at once). Every notifiable release collapses into one row.
+  describe("releases collapse into a single row", () => {
+    const releases = [
+      { version: "0.3.0", date: "2026-09-29", kind: "feature" as const, title: "C", description: "c" },
+      { version: "0.2.0", date: "2026-09-28", kind: "feature" as const, title: "B", description: "b" },
+      { version: "0.1.0", date: "2026-09-27", kind: "feature" as const, title: "A", description: "a" },
+    ];
+
+    it("produces exactly one 'release' item regardless of how many releases are notifiable", () => {
+      const items = buildNotificationItems({ userId: "me", games: [], friendRequests: 0, releases });
+      const releaseItems = items.filter((i) => i.kind === "release");
+      expect(releaseItems).toHaveLength(1);
+      expect(releaseItems[0]).toMatchObject({ id: "release:0.3.0", releases });
+      // Weight 1, not 3 — a growing changelog shouldn't inflate the badge
+      // count just because it's long.
+      expect(unseenCount(items, new Set())).toBe(1);
+    });
+
+    it("re-badges as unseen the moment a newer release ships, even if the previous newest was already seen", () => {
+      localStorage.clear();
+      const items = buildNotificationItems({ userId: "me", games: [], friendRequests: 0, releases: releases.slice(1) }); // newest: 0.2.0
+      const seen = markSeen("me", items.map((i) => i.id));
+      expect(unseenCount(items, seen)).toBe(0);
+
+      const withNewRelease = buildNotificationItems({ userId: "me", games: [], friendRequests: 0, releases }); // newest: 0.3.0
+      expect(unseenCount(withNewRelease, seen)).toBe(1);
+    });
+
+    it("omits the release item entirely when nothing is notifiable", () => {
+      const items = buildNotificationItems({ userId: "me", games: [], friendRequests: 0, releases: [] });
+      expect(items.some((i) => i.kind === "release")).toBe(false);
+    });
+  });
 });

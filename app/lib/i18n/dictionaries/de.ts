@@ -736,6 +736,8 @@ const de = {
   "notifications.bellCount": "Benachrichtigungen, {count} neu",
   "notifications.friends.one": "{count} Freundschaftsanfrage",
   "notifications.friends.other": "{count} Freundschaftsanfragen",
+  "notifications.releases.more.one": "+{count} weitere Neuigkeit",
+  "notifications.releases.more.other": "+{count} weitere Neuigkeiten",
   "notifications.gift.from": "{name} hat dir {item} geschenkt!",
   "notifications.gift.anon": "Ein Freund hat dir {item} geschenkt!",
   "notifications.empty": "Alles erledigt",

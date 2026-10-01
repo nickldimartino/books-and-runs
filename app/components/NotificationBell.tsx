@@ -346,7 +346,12 @@ function Row({
     );
   }
   if (item.kind === "release") {
-    const r = item.release;
+    // The newest release gets the real headline; anything older in this
+    // same row (there's exactly one row no matter how many are notifiable —
+    // see NotificationItem's own doc) is summed into a plain "+N more"
+    // instead of getting its own line, so this can never grow past one row
+    // no matter how many releases have shipped.
+    const [r, ...rest] = item.releases;
     return (
       <Link href={`/releases#${r.version}`} onClick={onNavigate} className={`${card} hover:bg-[var(--panel)]`}>
         {dot}
@@ -355,6 +360,9 @@ function Row({
             📣 {r.kind === "feature" ? r.title : t("releases.badge.fix")}
           </span>
           {r.kind === "feature" && <span className="mt-0.5 block truncate text-xs text-[var(--faint)]">{r.description}</span>}
+          {rest.length > 0 && (
+            <span className="mt-0.5 block text-xs text-[var(--faint)]">{tPlural("notifications.releases.more", rest.length)}</span>
+          )}
         </span>
       </Link>
     );

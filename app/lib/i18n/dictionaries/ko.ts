@@ -721,6 +721,8 @@ const ko = {
   "notifications.bellCount": "알림, 새 알림 {count}개",
   "notifications.friends.one": "친구 요청 {count}개",
   "notifications.friends.other": "친구 요청 {count}개",
+  "notifications.releases.more.one": "+{count}개 업데이트 더보기",
+  "notifications.releases.more.other": "+{count}개 업데이트 더보기",
   "notifications.gift.from": "{name}님이 {item} 선물을 보냈어요!",
   "notifications.gift.anon": "친구가 {item} 선물을 보냈어요!",
   "notifications.empty": "모두 확인했어요",

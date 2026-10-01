@@ -726,6 +726,8 @@ const it = {
   "notifications.bellCount": "Notifiche, nuove: {count}",
   "notifications.friends.one": "{count} richiesta di amicizia",
   "notifications.friends.other": "{count} richieste di amicizia",
+  "notifications.releases.more.one": "+{count} altra novità",
+  "notifications.releases.more.other": "+{count} altre novità",
   "notifications.gift.from": "{name} ti ha regalato {item}!",
   "notifications.gift.anon": "Un amico ti ha regalato {item}!",
   "notifications.empty": "Sei in pari",

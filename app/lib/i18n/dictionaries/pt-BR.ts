@@ -727,6 +727,8 @@ const ptBR = {
   "notifications.bellCount": "Notificações, novas: {count}",
   "notifications.friends.one": "{count} pedido de amizade",
   "notifications.friends.other": "{count} pedidos de amizade",
+  "notifications.releases.more.one": "mais {count} novidade",
+  "notifications.releases.more.other": "mais {count} novidades",
   "notifications.gift.from": "{name} te presenteou com {item}!",
   "notifications.gift.anon": "Um amigo te presenteou com {item}!",
   "notifications.empty": "Tudo em dia",
