@@ -11,16 +11,22 @@ import { test, expect } from "@playwright/test";
 // Every title carries "@visual" so these can be pulled in or out of a run
 // with --grep/--grep-invert (see package.json's test:e2e:visual and
 // test:e2e:ci, and this repo's ci.yml). That split exists because
-// Playwright's screenshot comparison is platform-sensitive — a baseline
-// PNG made on macOS (this repo's committed ones) won't byte-match Linux's
-// font rasterizer, so the committed baselines here are a local, on-your-
-// own-machine tool, not something the Linux e2e CI job can check against
-// without its own Linux-generated baselines (e.g. from Playwright's own
-// Docker image) — not set up in this repo yet.
+// Playwright's screenshot comparison is platform-sensitive — a baseline PNG
+// made on macOS (this repo's *-darwin.png files, for local use) won't
+// byte-match Linux's font rasterizer. CI runs these in the e2e-visual job
+// against separate *-linux.png baselines instead, generated and committed
+// by .github/workflows/update-visual-baselines.yml (a workflow_dispatch
+// job — see its own doc) running inside the exact same pinned Playwright
+// Docker image that job uses, so the comparison is apples-to-apples.
 //
-// Regenerate after a deliberate visual change, on the same OS the existing
-// baselines were made on:
+// Regenerate the macOS baselines locally after a deliberate visual change,
+// on the same OS the existing ones were made on:
 //   npm run test:e2e:visual -- --update-snapshots
+// Regenerate the Linux (*-linux.png) baselines by running the
+// "Update visual baselines" workflow from the Actions tab (or
+// `gh workflow run update-visual-baselines.yml`) — never commit those by
+// hand off a local Linux/Docker run, since even a correctly-pinned image
+// run on a different host can drift in ways that are hard to eyeball.
 
 test.beforeEach(async ({ page }) => {
   // Skip the first-visit intro splash (its own spec covers the animation).

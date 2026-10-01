@@ -47,12 +47,11 @@ jobs:
       - run: npm install -g npm@11.19.0
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit firefox
-      # Excludes e2e/visual.spec.ts — its baselines were made on macOS, and
-      # Playwright's screenshot comparison is platform-sensitive (font
-      # rasterization differs enough between macOS and this runner's Linux
-      # to fail on rendering noise, not a real regression). Run those
-      # locally with `npm run test:e2e:visual` instead; see the spec file's
-      # own doc for what it'd take to run them here too.
+      # Excludes e2e/visual.spec.ts — see the e2e-visual job below, which
+      # runs those against Linux baselines in a pinned Docker image instead
+      # of plain ubuntu-latest (this job's bare Linux font rendering still
+      # wouldn't byte-match either the macOS baselines or a Docker-pinned
+      # Linux baseline reliably).
       # Includes e2e/pseudo-locale.spec.ts (no secrets needed): every guest route in the
       # dev-only pseudo-locale must show no plain-English runs.
       - run: npm run test:e2e:ci
@@ -74,5 +73,40 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Visual regression (e2e/visual.spec.ts), split out from the `e2e` job
+  # above because it needs Linux-rendered baselines, not the committed
+  # macOS ones — see that spec file's own doc. Runs inside Playwright's own
+  # Docker image rather than plain ubuntu-latest: that pins the exact
+  # browser builds *and* font/freetype stack a baseline was made with, so a
+  # diff here means a real pixel regression, not two Linux boxes
+  # rasterizing fonts slightly differently. The image tag's version must
+  # match package.json's @playwright/test version exactly (mismatched
+  # Playwright-vs-browser versions fail fast with a clear error rather than
+  # silently misbehaving) — bump both together.
+  #
+  # Baselines (e2e/visual.spec.ts-snapshots/*-linux.png) are generated and
+  # committed by the separate update-visual-baselines.yml workflow
+  # (workflow_dispatch) — this job only ever compares against them, never
+  # writes them, so a stale baseline fails loudly here instead of silently
+  # passing.
+  e2e-visual:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      # No actions/setup-node here — the Playwright image already bundles a
+      # compatible Node, and its own npm matches what this image's browsers
+      # were built against.
+      - run: npm ci
+      - run: npm run test:e2e:visual
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-visual
           path: playwright-report/
           retention-days: 7
