@@ -35,7 +35,22 @@ const WIDE_MIN_STEP = 22;
 /**
  * A compact, read-only preview of the active player's whole hand, pinned to
  * the bottom of the viewport — the permanent entry point to the hand drawer
- * at every screen size (see game/page.tsx). Cards only fan out — each one
+ * at every screen size (see game/page.tsx). Deliberately `sticky`, not
+ * `fixed`: iOS Safari positions a `bottom`-anchored `fixed` element against
+ * the layout viewport, not the visual one, so pinch-zooming (or the
+ * dynamic toolbar animating) can leave it floating over the middle of the
+ * page instead of docked to the real screen edge, with no amount of
+ * scrolling able to clear it — exactly what was reported as "blocks the
+ * other player's melds and I can't scroll to see them." `sticky bottom-0`
+ * as the very last element inside <main> (see game/page.tsx, no other
+ * ancestor scrolls) reaches the same "always pinned while scrolling"
+ * result through the normal flow/scroll-container algorithm instead,
+ * which iOS keeps in sync with the visual viewport. The page doesn't
+ * disable pinch-zoom itself as the alternative fix, since the Settings'
+ * own text-scale control is the app's accessible answer to "make text
+ * bigger," not a reason to take browser zoom away — and the existing
+ * wcag2aa axe sweep (e2e/a11y.spec.ts) would fail on a disabled-zoom
+ * viewport meta anyway. Cards only fan out — each one
  * overlapping the last, corner rank/suit only, the way a hand of real cards
  * held in a fan still reads at a glance — once the hand's too big to fit at
  * its natural spacing (see `fanned` below); shrinking every hand to fit,
@@ -126,7 +141,15 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
       onClick={onTap}
       aria-label={t("game.jumpToHand")}
       data-tutorial="hand-bar"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)]"
+      // block: position:fixed force-blockifies a <button>; position:sticky
+      // doesn't, so without this it'd shrink to an inline-block hugging its
+      // content instead of spanning the bar's full width.
+      // -mx-4: back in normal flow (unlike fixed), this button is now a
+      // child of <main>'s own px-4 padding — this cancels exactly that much
+      // padding on each side so the bar still reaches the screen edges
+      // full-bleed, the way it did under `fixed inset-x-0` (see the comment
+      // on the inner div below for why that full-bleed look matters here).
+      className="sticky bottom-0 z-40 -mx-4 block border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)]"
     >
       {/* max-w-2xl matches game/page.tsx's <main> exactly on a phone, so the
           fan lines up under the page's own centered content column instead

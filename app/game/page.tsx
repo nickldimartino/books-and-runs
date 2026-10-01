@@ -1879,15 +1879,6 @@ export default function GamePage() {
             </>
           )}
 
-          {/* Reserves room at the very bottom of the scrollable page for
-              HandPreviewBar's own fixed height — without it, whatever ends
-              up being the last real content on the page (Table melds, most
-              likely, with several players' melds pushing the page's true
-              end past the viewport) can be permanently covered with no way
-              to scroll further and reveal it: the bar never hides in this
-              layout, and the *page's own* scroll extent has no idea a fixed
-              element is sitting on top of its end. */}
-          {!isWide && <div aria-hidden="true" className="h-20 md:h-28" />}
         </>
       )}
 
