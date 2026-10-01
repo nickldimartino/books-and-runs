@@ -35,6 +35,11 @@ jobs:
       HOME: /root
     steps:
       - uses: actions/checkout@v4
+      # Running as root in the container, over a checkout owned by whatever
+      # UID actions/checkout used — git's own ownership guard (CVE-2022-24765)
+      # refuses to touch a repo it doesn't recognize as "mine" without this,
+      # failing every git command below with "detected dubious ownership".
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       - run: npm run test:e2e:visual -- --update-snapshots
       # Regenerating can touch macOS-named files too if a developer's local
