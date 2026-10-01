@@ -82,6 +82,16 @@ test("@visual How to Play — the round contract table", async ({ page }) => {
 test("@visual Settings — default state", async ({ page }) => {
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  // The heading alone isn't enough — unlike Home/New Game/How to Play,
+  // Settings renders behind its own loading state (a useEffect flips
+  // `loading` false after reading every local store) with only the
+  // heading outside that gate. Waiting on the heading let a real race
+  // through: the mobile-safari project captured mid-LoadingSpinner on a
+  // comparison run against the very baseline this same page produced,
+  // at roughly half the real page height. The tablist only exists once
+  // `loading` is false, so it's a real signal the actual content mounted,
+  // not just that the gate's about to open.
+  await expect(page.getByRole("tablist")).toBeVisible();
   await expect(page).toHaveScreenshot("settings.png", { fullPage: true, animations: "disabled", timeout: 15_000 });
 });
 

@@ -19,6 +19,17 @@
 // this site gets a new entry appended to the end, with a version bumped
 // from RELEASES[RELEASES.length - 1].version — minor for something a player
 // would notice and care about, patch for a fix/internal change.
+//
+// This file went completely unmaintained for ~2 days and ~24 real shipped
+// changes (2026-09-29 to 2026-10-01) before anyone noticed — see the dense
+// run of entries right after "Release notes" below, all backfilled at
+// once from git history once that was caught. CI now catches this going
+// forward: scripts/check-release-notes.mjs (wired into the `check` job in
+// .github/workflows/ci.yml) fails the build if a push/PR touches
+// player-facing code (app/, src/, public/, supabase/migrations/,
+// supabase/functions/) without also touching this file — add a real entry,
+// or, for a change that genuinely isn't player-facing, a commit message
+// line reading exactly `Release-note: none` instead.
 
 export type ReleaseKind = "feature" | "fix";
 
@@ -104,6 +115,25 @@ export const RELEASES: readonly ReleaseEntry[] = [
   { version: "0.40.0", date: "2026-09-29", kind: "feature", title: "Themes join the Boutique, plus an Everything Bundle", description: "30 more table themes are now purchasable in the Boutique (8 stay free forever), and a new Everything Bundle unlocks all 135 items at once." },
   { version: "0.40.1", date: "2026-09-29", kind: "fix", title: FIX_TITLE, description: "Fixed a bundle-purchase issue and a focus-highlight visual glitch." },
   { version: "0.41.0", date: "2026-09-29", kind: "feature", title: "Release notes", description: "You're looking at it — a running history of everything that's shipped on Books & Runs, back to day one. New releases will keep appearing here, and the newest ones will show up in your notification bell too." },
+  { version: "0.41.1", date: "2026-09-29", kind: "fix", title: FIX_TITLE, description: "A dialog's focus ring no longer shows up after a mouse click or tap, only real keyboard navigation. Removed the redundant \"Books X of Y ready\" progress line from the game screen. Multiplayer moves now show a clear pending state instead of looking stuck while they're saving." },
+  { version: "0.42.0", date: "2026-09-29", kind: "feature", title: "Windows High Contrast support", description: "The game now works correctly under Windows High Contrast and other forced-colors modes — the legal-move highlight and lay-off target ring used to disappear entirely, not just lose their color." },
+  { version: "0.42.1", date: "2026-09-29", kind: "feature", title: "Controller rumble", description: "A connected controller now rumbles for the same moments mobile haptics already cover, on browsers and controllers that support it." },
+  { version: "0.43.0", date: "2026-09-29", kind: "feature", title: "Pick your name and avatar when you sign up", description: "Signing up now asks for a display name and avatar up front, instead of leaving you with a generic default until you happen to visit your profile." },
+  { version: "0.44.0", date: "2026-09-29", kind: "feature", title: "A Boutique wishlist", description: "Star an item in the Boutique to save it for later — a new Wishlist tab collects everything you've starred." },
+  { version: "0.45.0", date: "2026-09-29", kind: "feature", title: "A reward for referring a friend", description: "Adding a friend now pays off — both of you get a free Boutique badge the first time a friend request between you is accepted." },
+  { version: "0.46.0", date: "2026-09-29", kind: "feature", title: "A weekly goal for your Club", description: "Clubs now have a shared weekly goal — 20 multiplayer games played by anyone in the club — tracked with a progress bar on the club page." },
+  { version: "0.47.0", date: "2026-09-29", kind: "feature", title: "A site-wide Community Milestone", description: "A new Community Milestone gives every player the same goal to chase together. Reach it, and everyone gets a free Boutique badge." },
+  { version: "0.48.0", date: "2026-09-30", kind: "feature", title: "Marathon mode", description: "A new Marathon mode cycles through all 7 contracts four times in a row — 28 rounds — for anyone who just wants to keep playing." },
+  { version: "0.49.0", date: "2026-09-30", kind: "feature", title: "Daily Deal twists", description: "About one day in five, the Daily Deal now comes with a twist — a tougher AI, a full table, or just one opponent — shown as a badge on Home." },
+  { version: "0.50.0", date: "2026-09-30", kind: "feature", title: "A skill rating for multiplayer", description: "Multiplayer games against real people now earn you a skill rating, separate from your level. Sort the leaderboard by Rating to see where you stand." },
+  { version: "0.51.0", date: "2026-09-30", kind: "feature", title: "Matchmaking", description: "Can't find a friend to play right now? A new matchmaking queue pairs you with another player looking for a game." },
+  { version: "0.52.0", date: "2026-09-30", kind: "feature", title: "Gift Boutique items to a friend", description: "Boutique items can now be gifted — buy something for a friend instead of yourself, from the same 🎁 button on each item." },
+  { version: "0.52.1", date: "2026-09-30", kind: "fix", title: FIX_TITLE, description: "A round of screen-reader fixes across solo, pass-and-play, and multiplayer: round transitions and game-over now announce themselves properly, whose-turn labeling was corrected, and the discard pile and table melds are now fully described." },
+  { version: "0.53.0", date: "2026-09-30", kind: "feature", title: "\"Your Recap\"", description: "A new Your Recap screen adds up everything you've done — games played, win rate, achievements, multiplayer record, a few fun facts, and more — from the Progress hub." },
+  { version: "0.53.1", date: "2026-09-30", kind: "fix", title: FIX_TITLE, description: "Fixed a club, tournament, or profile page not updating when you navigated straight from one to another without a full reload, and a back-button loop on a couple of pages." },
+  { version: "0.54.0", date: "2026-09-30", kind: "feature", title: "A faster Skip button, and fairer goal rewards", description: "The Skip button between turns now skips straight to your next turn instead of needing one tap per AI opponent. Also, the friend-referral and community-milestone rewards above now pay XP instead of a free Boutique item, so Boutique items stay something you always choose and never just receive." },
+  { version: "0.55.0", date: "2026-09-30", kind: "feature", title: "Automated holiday theming", description: "The site now dresses itself up for 9 US holidays — Valentine's Day through New Year's — defaulting everyone to that holiday's theme for the week before and after, with small seasonal touches around the edges. Pick a different theme anytime; it'll stick for the rest of that holiday's week." },
+  { version: "0.55.1", date: "2026-09-30", kind: "fix", title: FIX_TITLE, description: "Your Multiplayer stats now also show your skill rating. Fixed a card that could silently fail to select if you held it down slightly longer than a quick tap, and a sign-in page heading that didn't update when you switched to Create Account or Forgot Password." },
 ];
 
 /** Releases dated/versioned at or after this one show up as bell
