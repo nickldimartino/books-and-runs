@@ -174,7 +174,13 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
     // measurement would stick around stale (measured against the wrong
     // max-width class) for the rest of the component's life, since nothing
     // else would ever prompt a re-measure.
-  }, [isWide]);
+    //
+    // mounted matters for the same reason: until the portal exists,
+    // containerRef is null and the first measure() is a no-op, leaving width
+    // at 0 — which `step` below reads as "no room at all" and squeezes every
+    // hand, even a 3-card one, down to MIN_STEP overlap. Re-measuring once
+    // the bar actually mounts is what lets a small hand sit un-overlapped.
+  }, [isWide, mounted]);
 
   if (cards.length === 0 || !mounted) return null;
 
