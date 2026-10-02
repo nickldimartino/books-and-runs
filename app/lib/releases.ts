@@ -137,6 +137,7 @@ export const RELEASES: readonly ReleaseEntry[] = [
   { version: "0.55.2", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "The notification bell no longer piles up a separate row for every recent release — they now collapse into one, with a simple count for anything older." },
   { version: "0.55.3", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "Fixed the hand preview bar on phones sometimes drifting over the table mid-scroll and getting stuck there, blocking other players' melds with no way to scroll it clear." },
   { version: "0.55.4", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "Fixed the hand preview bar still drifting over the table when pinch-zoomed, in both solo and multiplayer games — the previous fix covered plain scrolling but not zoom." },
+  { version: "0.55.5", date: "2026-10-02", kind: "fix", title: FIX_TITLE, description: "Fixed the hand preview bar on phones visibly vibrating while you scroll — it now stays rock-steady at the bottom, as it did before." },
 ];
 
 /** Releases dated/versioned at or after this one show up as bell
