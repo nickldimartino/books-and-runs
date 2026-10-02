@@ -136,6 +136,7 @@ export const RELEASES: readonly ReleaseEntry[] = [
   { version: "0.55.1", date: "2026-09-30", kind: "fix", title: FIX_TITLE, description: "Your Multiplayer stats now also show your skill rating. Fixed a card that could silently fail to select if you held it down slightly longer than a quick tap, and a sign-in page heading that didn't update when you switched to Create Account or Forgot Password." },
   { version: "0.55.2", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "The notification bell no longer piles up a separate row for every recent release — they now collapse into one, with a simple count for anything older." },
   { version: "0.55.3", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "Fixed the hand preview bar on phones sometimes drifting over the table mid-scroll and getting stuck there, blocking other players' melds with no way to scroll it clear." },
+  { version: "0.55.4", date: "2026-10-01", kind: "fix", title: FIX_TITLE, description: "Fixed the hand preview bar still drifting over the table when pinch-zoomed, in both solo and multiplayer games — the previous fix covered plain scrolling but not zoom." },
 ];
 
 /** Releases dated/versioned at or after this one show up as bell

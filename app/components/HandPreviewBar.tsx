@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Card } from "@/types";
 import { useT } from "../lib/i18n/LocaleProvider";
 import { RED_SUITS, SUIT_SYMBOL } from "./PlayingCard";
@@ -35,22 +36,37 @@ const WIDE_MIN_STEP = 22;
 /**
  * A compact, read-only preview of the active player's whole hand, pinned to
  * the bottom of the viewport — the permanent entry point to the hand drawer
- * at every screen size (see game/page.tsx). Deliberately `sticky`, not
- * `fixed`: iOS Safari positions a `bottom`-anchored `fixed` element against
- * the layout viewport, not the visual one, so pinch-zooming (or the
- * dynamic toolbar animating) can leave it floating over the middle of the
- * page instead of docked to the real screen edge, with no amount of
- * scrolling able to clear it — exactly what was reported as "blocks the
- * other player's melds and I can't scroll to see them." `sticky bottom-0`
- * as the very last element inside <main> (see game/page.tsx, no other
- * ancestor scrolls) reaches the same "always pinned while scrolling"
- * result through the normal flow/scroll-container algorithm instead,
- * which iOS keeps in sync with the visual viewport. The page doesn't
- * disable pinch-zoom itself as the alternative fix, since the Settings'
- * own text-scale control is the app's accessible answer to "make text
- * bigger," not a reason to take browser zoom away — and the existing
- * wcag2aa axe sweep (e2e/a11y.spec.ts) would fail on a disabled-zoom
- * viewport meta anyway. Cards only fan out — each one
+ * at every screen size (see game/page.tsx).
+ *
+ * Positioning here is deliberately NOT plain CSS (neither `fixed` nor
+ * `sticky`, both tried and confirmed insufficient on a real device): iOS
+ * Safari computes both against the unzoomed *layout* viewport, but pinch-
+ * zoom is a compositor-level magnification of the already-laid-out page,
+ * not a re-layout. Once a visitor zooms and pans, a layout-viewport-
+ * anchored element can render anywhere inside that pan — exactly what was
+ * reported as the bar "blocking the other player's melds" with "no amount
+ * of scrolling" able to clear it. Disabling pinch-zoom outright (the other
+ * standard workaround) doesn't work either: iOS has ignored
+ * `user-scalable=no`/`maximum-scale` since iOS 10 specifically so pages
+ * can't take zoom away, so that meta tag is a no-op there — confirmed
+ * directly, the bar still drifted with it set.
+ *
+ * The actual fix: `createPortal` this straight onto `document.body` (so no
+ * ancestor's own position/transform can offset it) as `position: absolute;
+ * top: 0; left: 0`, then drive a `transform: translate(...)` every
+ * `requestAnimationFrame` from `window.visualViewport.pageLeft`/`pageTop` —
+ * the visual viewport's own top-left corner in *document* coordinates, with
+ * scroll and pinch-zoom pan already folded into one number by the spec.
+ * `window.scrollY`/`innerHeight` looked equivalent but aren't: innerHeight
+ * itself shrinks mid-pinch-zoom on iOS, so combining it with visualViewport
+ * data double-counted the zoom — confirmed directly against a live
+ * `getBoundingClientRect()` readout. A continuous rAF loop rather than
+ * `resize`/`scroll` listeners on `visualViewport`/`window`, because iOS
+ * doesn't reliably fire either on every intermediate frame of an active
+ * pinch gesture — confirmed directly, the bar lagged a stale position
+ * until the gesture ended. No `scale()` correction on the bar itself
+ * either: it just reads as zoomed along with the rest of the page, a fine
+ * trade for a formula that's actually correct. Cards only fan out — each one
  * overlapping the last, corner rank/suit only, the way a hand of real cards
  * held in a fan still reads at a glance — once the hand's too big to fit at
  * its natural spacing (see `fanned` below); shrinking every hand to fit,
@@ -65,9 +81,17 @@ const WIDE_MIN_STEP = 22;
  */
 export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
   const { t } = useT();
+  const barRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [isWide, setIsWide] = useState(false);
+  // createPortal needs document.body, which doesn't exist during SSR —
+  // this flips true in an effect (client-only) right after mount.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const mql = window.matchMedia(WIDE_BREAKPOINT);
@@ -78,6 +102,50 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
   }, []);
+
+  // See the component doc comment above for why this exists instead of
+  // plain `fixed`/`sticky` CSS. offsetHeight (not getBoundingClientRect,
+  // which reports the already-*transformed* size) is captured once per
+  // isWide value since that's the only thing that changes the bar's own
+  // natural height (WIDE_CARD_H vs CARD_H).
+  useLayoutEffect(() => {
+    const vv = window.visualViewport;
+    const el = barRef.current;
+    if (!vv || !el) return;
+    const barHeight = el.offsetHeight;
+    let rafId = 0;
+    function reposition() {
+      if (!el || !vv) return;
+      // pageLeft/pageTop are the visual viewport's own top-left corner in
+      // document coordinates — scroll and pinch-zoom pan already folded
+      // into one number by the spec, unlike window.scrollY/innerHeight
+      // (confirmed directly: innerHeight itself shrinks mid-pinch-zoom on
+      // iOS, so combining it with vv's offsets double-counted the zoom).
+      // No scale() correction either — the bar's own CSS size is left
+      // alone and simply reads as zoomed along with the rest of the page,
+      // which is a fine trade for a formula that's actually correct.
+      const tx = vv.pageLeft;
+      const ty = vv.pageTop + vv.height - barHeight;
+      el.style.transform = `translate(${tx}px, ${ty}px)`;
+      rafId = requestAnimationFrame(reposition);
+    }
+    // A continuous rAF loop, not resize/scroll listeners: mid-pinch-zoom,
+    // iOS doesn't reliably fire visualViewport's own 'scroll'/'resize' (or
+    // window's 'scroll') on every intermediate frame of the gesture —
+    // confirmed directly, the bar lagged behind and sat wherever the last
+    // event happened to land instead of tracking the live gesture. A rAF
+    // loop reads live state every frame regardless of which events fired,
+    // at the cost of this running continuously while the bar's mounted —
+    // cheap enough (one transform write) not to matter here.
+    reposition();
+    return () => cancelAnimationFrame(rafId);
+    // mounted is a real dependency, not just isWide: barRef.current is null
+    // until the portaled <button> actually exists in the DOM (see `mounted`
+    // above, gating createPortal itself) — without this, the effect's one
+    // and only run on mount finds el === null and bails out having attached
+    // nothing, and nothing afterward ever prompts it to try again once the
+    // button actually mounts.
+  }, [isWide, mounted]);
 
   useLayoutEffect(() => {
     function measure() {
@@ -101,7 +169,7 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
     // else would ever prompt a re-measure.
   }, [isWide]);
 
-  if (cards.length === 0) return null;
+  if (cards.length === 0 || !mounted) return null;
 
   const cardW = isWide ? WIDE_CARD_W : CARD_W;
   const cardH = isWide ? WIDE_CARD_H : CARD_H;
@@ -136,25 +204,24 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
   // other card in the app does instead.
   const fanned = step < naturalStep;
 
-  return (
+  return createPortal(
     <button
+      ref={barRef}
       onClick={onTap}
       aria-label={t("game.jumpToHand")}
       data-tutorial="hand-bar"
-      // block: position:fixed force-blockifies a <button>; position:sticky
-      // doesn't, so without this it'd shrink to an inline-block hugging its
-      // content instead of spanning the bar's full width.
-      // -mx-4: back in normal flow (unlike fixed), this button is now a
-      // child of <main>'s own px-4 padding — this cancels exactly that much
-      // padding on each side so the bar still reaches the screen edges
-      // full-bleed, the way it did under `fixed inset-x-0` (see the comment
-      // on the inner div below for why that full-bleed look matters here).
-      className="sticky bottom-0 z-40 -mx-4 block border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)]"
+      // top-0, not bottom-0: the reposition() effect above needs a known
+      // (0, 0) corner to translate from — see the component doc comment
+      // for the full reasoning. The effect's transform is what actually
+      // puts it at the visible bottom edge. Portaled onto document.body
+      // (see the return below), so inset-x-0 spans the full document width
+      // with no ancestor padding to work around.
+      className="absolute inset-x-0 top-0 z-40 border-t border-[var(--border)] bg-[var(--panel)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.25)]"
     >
       {/* max-w-2xl matches game/page.tsx's <main> exactly on a phone, so the
           fan lines up under the page's own centered content column instead
           of the viewport's raw edges (this bar itself spans full-bleed —
-          fixed inset-x-0, above — like a toolbar). isWide widens this well
+          absolute inset-x-0, above — like a toolbar). isWide widens this well
           past that — not so the fan stretches out to match (see `step`
           below, which never does), but so a full hand at its larger, more
           spaced-out natural size almost never needs to compress at all: the
@@ -184,7 +251,8 @@ export function HandPreviewBar({ cards, onTap }: HandPreviewBarProps) {
           />
         ))}
       </div>
-    </button>
+    </button>,
+    document.body
   );
 }
 
